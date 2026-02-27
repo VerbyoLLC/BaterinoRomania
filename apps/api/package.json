@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "prisma generate && prisma migrate deploy",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
     "seed": "node prisma/seed.js"
@@ -22,11 +23,10 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.19.0"
-  },
-  "devDependencies": {
+    "pg": "^8.19.0",
     "prisma": "^7.4.1"
   },
+  "devDependencies": {},
   "prisma": {
     "seed": "node prisma/seed.js"
   }
