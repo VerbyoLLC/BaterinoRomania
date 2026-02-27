@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { getAuthEmail, getPartnerProfile } from '../../lib/api'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconProfile() {
@@ -62,10 +63,10 @@ function IconLogout() {
 
 const NAV_MAIN = [
   { to: '/partner', label: 'Dashboard', icon: <IconDashboard />, end: true },
-  { to: '/partner/profil', label: 'Profil Public', icon: <IconProfile />, end: false },
   { to: '/partner/produse', label: 'Produse', icon: <IconProducts />, end: false },
   { to: '/partner/comenzi', label: 'Comenzi', icon: <IconOrders />, end: false },
   { to: '/partner/servicii', label: 'Servicii', icon: <IconService />, end: false },
+  { to: '/partner/profil', label: 'Profil Public', icon: <IconProfile />, end: false },
 ]
 
 const NAV_BOTTOM = [
@@ -75,7 +76,23 @@ const NAV_BOTTOM = [
 
 export default function PartnerLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    getPartnerProfile()
+      .then((p: { isSuspended?: boolean }) => setIsSuspended(p?.isSuspended === true))
+      .catch(() => setIsSuspended(null))
+  }, [])
+
+  const allowedWhenSuspended = (path: string) =>
+    path === '/partner' || path.startsWith('/partner/setari') || path.startsWith('/partner/suport')
+  useEffect(() => {
+    if (isSuspended && !allowedWhenSuspended(location.pathname)) {
+      navigate('/partner', { replace: true })
+    }
+  }, [isSuspended, location.pathname, navigate])
 
   return (
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
@@ -94,7 +111,7 @@ export default function PartnerLayout() {
         <div className="flex flex-col h-full py-6 px-4">
 
           {/* Logo */}
-          <a href="/" className="flex items-center gap-3 px-3 pb-6 mb-4 border-b border-slate-700/50">
+          <a href="/" className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50">
             <img
               src="/images/shared/baterino-logo-white.png"
               alt="Baterino"
@@ -107,24 +124,39 @@ export default function PartnerLayout() {
 
           {/* Nav */}
           <nav className="flex-1 flex flex-col gap-1">
-            {NAV_MAIN.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`
-                }
-              >
-                {item.icon}
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV_MAIN.map((item) => {
+              const isDashboard = item.to === '/partner' && item.end
+              const disabledWhenSuspended = isSuspended && !isDashboard
+              if (disabledWhenSuspended) {
+                return (
+                  <span
+                    key={item.to}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-500 opacity-60 cursor-not-allowed"
+                  >
+                    {item.icon}
+                    {item.label}
+                  </span>
+                )
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+                      isActive
+                        ? 'bg-white/10 text-white'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  {item.icon}
+                  {item.label}
+                </NavLink>
+              )
+            })}
             <div className="flex-1 min-h-[1rem]" />
             {NAV_BOTTOM.map((item) => (
               <NavLink
@@ -154,7 +186,7 @@ export default function PartnerLayout() {
               </div>
               <div className="min-w-0">
                 <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Partener</p>
-                <p className="text-slate-400 text-xs font-['Inter'] truncate">partner@exemplu.ro</p>
+                <p className="text-slate-400 text-xs font-['Inter'] truncate">{getAuthEmail() || '—'}</p>
               </div>
             </div>
             <button

@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer')
 const { getClientTemplate, getPartnerTemplate } = require('../templates/verification-email.js')
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
+const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -62,4 +63,21 @@ async function sendPasswordResetEmail(email, resetUrl) {
   })
 }
 
-module.exports = { sendVerificationCode, sendPasswordResetEmail, isMailConfigured }
+async function sendAccountDeletedEmail(email) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] SMTP not configured – skipping account deleted email.')
+    return
+  }
+
+  const subject = `Contul tău a fost șters – ${SITE_NAME}`
+  const html = getAccountDeletedTemplate({ email })
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject,
+    html,
+  })
+}
+
+module.exports = { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured }

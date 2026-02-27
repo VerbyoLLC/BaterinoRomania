@@ -1,23 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getPartnerProfile, savePartnerProfile, getAuthToken } from '../../lib/api'
-
-const ROMANIAN_COUNTIES = [
-  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brașov', 'Brăila',
-  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița',
-  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov',
-  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu',
-  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vaslui', 'Vâlcea', 'Vrancea',
-]
-
-const ROMANIAN_CITIES = [
-  'Alba Iulia', 'Arad', 'Pitești', 'Bacău', 'Oradea', 'Bistrița', 'Botoșani', 'Brașov', 'Brăila',
-  'București', 'Buzău', 'Călărași', 'Reșița', 'Cluj-Napoca', 'Constanța', 'Sfântu Gheorghe', 'Târgoviște',
-  'Craiova', 'Galați', 'Giurgiu', 'Târgu Jiu', 'Miercurea Ciuc', 'Deva', 'Slobozia', 'Iași',
-  'Baia Mare', 'Drobeta-Turnu Severin', 'Târgu Mureș', 'Piatra Neamț', 'Slatina', 'Ploiești',
-  'Zalău', 'Satu Mare', 'Sibiu', 'Suceava', 'Alexandria', 'Timișoara', 'Tulcea', 'Vaslui',
-  'Râmnicu Vâlcea', 'Focșani',
-]
+import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 
 const SERVICII_OPTIONS = [
   { id: 'fotovoltaice', label: 'Instalare sisteme fotovoltaice' },
@@ -63,16 +47,17 @@ type PartnerData = {
   isPublic?: boolean
 }
 
-function Field({ label, type = 'text', placeholder, value, onChange }: {
+function Field({ label, type = 'text', placeholder, value, onChange, required }: {
   label: string
   type?: string
   placeholder: string
   value: string
   onChange: (v: string) => void
+  required?: boolean
 }) {
   return (
     <div>
-      <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <input
         type={type}
         placeholder={placeholder}
@@ -84,16 +69,17 @@ function Field({ label, type = 'text', placeholder, value, onChange }: {
   )
 }
 
-function SelectField({ label, options, value, onChange, placeholder }: {
+function SelectField({ label, options, value, onChange, placeholder, required }: {
   label: string
   options: string[]
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  required?: boolean
 }) {
   return (
     <div>
-      <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -193,6 +179,14 @@ export default function PartnerPublicProfile() {
     setServicii((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]))
   }
 
+  const citiesForCounty = useMemo(() => getCitiesForCounty(county), [county])
+
+  function handleCountyChange(newCounty: string) {
+    setCounty(newCounty)
+    const cities = getCitiesForCounty(newCounty)
+    if (city && !cities.includes(city)) setCity('')
+  }
+
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) return
@@ -290,17 +284,38 @@ export default function PartnerPublicProfile() {
   async function handleSavePublic(e: React.FormEvent) {
     e.preventDefault()
     setSaveError('')
+
+    const publicNameTrimmed = publicName.trim()
+    const streetTrimmed = street.trim()
+    const countyTrimmed = county.trim()
+    const cityTrimmed = city.trim()
+    const descriptionTrimmed = description.trim()
+    const publicPhoneTrimmed = publicPhone.trim()
+
+    if (!publicNameTrimmed || !streetTrimmed || !countyTrimmed || !cityTrimmed || !descriptionTrimmed || servicii.length === 0 || !publicPhoneTrimmed) {
+      const missing: string[] = []
+      if (!publicNameTrimmed) missing.push('Nume public')
+      if (!streetTrimmed) missing.push('Stradă')
+      if (!countyTrimmed) missing.push('Județ')
+      if (!cityTrimmed) missing.push('Oraș')
+      if (!descriptionTrimmed) missing.push('Descriere')
+      if (servicii.length === 0) missing.push('Servicii oferite (cel puțin 1)')
+      if (!publicPhoneTrimmed) missing.push('Telefon')
+      setSaveError(`Completează câmpurile obligatorii: ${missing.join(', ')}.`)
+      return
+    }
+
     setSaving(true)
     try {
       const updated = await savePartnerProfile({
-        publicName: publicName.trim() || undefined,
-        street: street.trim() || undefined,
-        county: county || undefined,
-        city: city || undefined,
+        publicName: publicNameTrimmed,
+        street: streetTrimmed,
+        county: countyTrimmed,
+        city: cityTrimmed,
         zipCode: zipCode.trim() || undefined,
-        description: description.trim() || undefined,
+        description: descriptionTrimmed,
         services: servicii.length ? servicii : undefined,
-        publicPhone: publicPhone.trim() || undefined,
+        publicPhone: publicPhoneTrimmed,
         whatsapp: whatsapp.trim() || undefined,
         website: website.trim() || undefined,
         facebookUrl: facebookUrl.trim() || undefined,
@@ -434,8 +449,8 @@ export default function PartnerPublicProfile() {
               <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} />
               <Field label="Stradă" placeholder="ex: Str. Exemplu nr. 1" value={street} onChange={setStreet} />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <SelectField label="Județ" options={ROMANIAN_COUNTIES} value={county} onChange={setCounty} placeholder="Selectează" />
-                <SelectField label="Oraș" options={ROMANIAN_CITIES} value={city} onChange={setCity} placeholder="Selectează" />
+                <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează" />
+                <SelectField label="Oraș" options={citiesForCounty} value={city} onChange={setCity} placeholder={county ? 'Selectează' : 'Selectează mai întâi județul'} />
                 <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={setZipCode} />
               </div>
               <div>
@@ -544,10 +559,10 @@ export default function PartnerPublicProfile() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => setIsEditingPublic(true)}
                       className="h-10 px-5 bg-slate-900 rounded-[10px] text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 transition-colors flex-shrink-0"
                     >
-                      Completează
+                      Completează profilul
                     </button>
                   )}
                 </div>
@@ -555,20 +570,24 @@ export default function PartnerPublicProfile() {
             )
           })()}
 
-          {/* Profil Public - view only, Edit opens panel in right area */}
+          {/* Profil Public - view only; Editează in this box when profile is filled */}
           <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm relative">
-            <button
-              type="button"
-              onClick={() => setIsEditingPublic(true)}
-              className="absolute top-6 right-6 flex items-center gap-2 h-10 px-4 bg-slate-900 rounded-[10px] text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 transition-colors"
-            >
-              Editează
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <h3 className="text-lg font-bold font-['Inter'] text-slate-900 mb-6 pr-28 sm:pr-36">Profil public</h3>
-            <div className="flex flex-col sm:flex-row gap-6 items-start pr-0 sm:pr-24">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h3 className="text-lg font-bold font-['Inter'] text-slate-900">Profil public</h3>
+              {hasPublicInfo && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPublic(true)}
+                  className="flex items-center gap-2 h-10 px-4 bg-slate-900 rounded-[10px] text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 transition-colors self-start sm:self-auto"
+                >
+                  Editează profilul
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
               <div className="relative flex-shrink-0">
                 <div
                   className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-gray-400 transition-colors"
@@ -706,15 +725,15 @@ export default function PartnerPublicProfile() {
             {saveError && (
               <p className="text-sm text-red-600 font-['Inter']">{saveError}</p>
             )}
-            <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} />
-            <Field label="Stradă" placeholder="ex: Str. Exemplu nr. 1" value={street} onChange={setStreet} />
+            <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} required />
+            <Field label="Stradă" placeholder="ex: Str. Exemplu nr. 1" value={street} onChange={setStreet} required />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SelectField label="Județ" options={ROMANIAN_COUNTIES} value={county} onChange={setCounty} placeholder="Selectează" />
-              <SelectField label="Oraș" options={ROMANIAN_CITIES} value={city} onChange={setCity} placeholder="Selectează" />
+              <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează" required />
+              <SelectField label="Oraș" options={citiesForCounty} value={city} onChange={setCity} placeholder={county ? 'Selectează' : 'Selectează mai întâi județul'} required />
               <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={setZipCode} />
             </div>
             <div>
-              <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">Descriere</label>
+              <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">Descriere <span className="text-red-500">*</span></label>
               <textarea
                 placeholder="Descrierea companiei tale..."
                 rows={3}
@@ -724,7 +743,7 @@ export default function PartnerPublicProfile() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Servicii oferite</label>
+              <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Servicii oferite <span className="text-red-500">*</span> <span className="font-normal text-gray-500">(cel puțin 1)</span></label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {SERVICII_OPTIONS.map((opt) => (
                   <label key={opt.id} className="flex items-center gap-3 cursor-pointer p-2 rounded-[8px] border border-gray-200 hover:border-gray-300">
@@ -740,7 +759,7 @@ export default function PartnerPublicProfile() {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Telefon" type="tel" placeholder="+40 7XX XXX XXX" value={publicPhone} onChange={setPublicPhone} />
+              <Field label="Telefon" type="tel" placeholder="+40 7XX XXX XXX" value={publicPhone} onChange={setPublicPhone} required />
               <Field label="WhatsApp" type="tel" placeholder="+40 7XX XXX XXX" value={whatsapp} onChange={setWhatsapp} />
             </div>
             <Field label="Website" type="url" placeholder="https://www.exemplu.ro" value={website} onChange={setWebsite} />

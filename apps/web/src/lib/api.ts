@@ -1,5 +1,9 @@
-// In dev, Vite proxies /api to localhost:3001. No CORS needed.
-const API_BASE = '/api'
+// Dev pe localhost: folosește direct API-ul (evită probleme cu proxy). Prod: /api sau VITE_API_URL.
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string) ||
+  (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3001/api'
+    : '/api')
 
 export type AuthUser = { id: string; email: string; role: string }
 
@@ -92,6 +96,18 @@ export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
 }
 
+/** Extrage email-ul din token (pentru afișare). Returnează null dacă token invalid/lipsă. */
+export function getAuthEmail(): string | null {
+  const token = getAuthToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.email ?? null
+  } catch {
+    return null
+  }
+}
+
 export function clearAuth() {
   localStorage.removeItem('auth_token')
 }
@@ -147,4 +163,124 @@ export async function getPartnerProfile() {
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la citirea profilului.')
   return json
+}
+
+export async function deletePartnerAccount() {
+  const res = await fetch(`${API_BASE}/partner/account`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la ștergerea contului.')
+  return json
+}
+
+export type AdminCompany = {
+  id: string
+  userId: string
+  companyName: string
+  cui: string
+  address: string | null
+  tradeRegisterNumber: string | null
+  activityTypes: string
+  contactFirstName: string
+  contactLastName: string
+  phone: string
+  publicName: string | null
+  street: string | null
+  county: string | null
+  city: string | null
+  zipCode: string | null
+  description: string | null
+  services: string | null
+  publicPhone: string | null
+  whatsapp: string | null
+  website: string | null
+  facebookUrl: string | null
+  linkedinUrl: string | null
+  logoUrl: string | null
+  isPublic: boolean
+  isSuspended: boolean
+  isApproved: boolean
+  partnerDiscountPercent: number | null
+  createdAt: string
+  user: { email: string }
+}
+
+export async function approveAdminCompany(id: string): Promise<AdminCompany> {
+  const res = await fetch(`${API_BASE}/admin/companies/${id}/approve`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la aprobare.')
+  return json
+}
+
+export async function updateAdminCompanyDiscount(id: string, discountPercent: number | null): Promise<AdminCompany> {
+  const res = await fetch(`${API_BASE}/admin/companies/${id}/discount`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ discountPercent }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
+  return json
+}
+
+/** Profilul public e complet când partenerul a completat câmpurile obligatorii. */
+export function isPublicProfileComplete(c: AdminCompany): boolean {
+  return !!(
+    c.publicName?.trim() &&
+    c.street?.trim() &&
+    c.county?.trim() &&
+    c.city?.trim() &&
+    c.description?.trim() &&
+    (c.services?.trim() || c.publicPhone?.trim())
+  )
+}
+
+export async function suspendAdminCompany(id: string, suspended: boolean): Promise<AdminCompany> {
+  const res = await fetch(`${API_BASE}/admin/companies/${id}/suspend`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ suspended }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
+  return json
+}
+
+/** Test conexiune API + Prisma (fără auth). Pentru diagnostic. */
+export async function testApiDb(): Promise<{ ok: boolean; partnersCount?: number; error?: string }> {
+  const base = (import.meta.env.VITE_API_URL as string) ||
+    (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:3001/api'
+      : '/api')
+  try {
+    const res = await fetch(`${base}/debug/db`)
+    const json = await res.json().catch(() => ({}))
+    if (res.ok) return json
+    return { ok: false, error: json.error || `HTTP ${res.status}` }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Eroare de rețea' }
+  }
+}
+
+export async function getAdminCompanies(): Promise<AdminCompany[]> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/companies`, { headers: authHeaders() })
+  } catch (err) {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    if (res.status === 502 || res.status === 503) throw new Error('API-ul nu răspunde. Pornește API-ul cu: npm run dev:api')
+    const detail = json.path ? ` (path: ${json.path})` : ''
+    throw new Error((json.error || `Eroare la încărcarea companiilor (${res.status})`) + detail)
+  }
+  return Array.isArray(json) ? json : []
 }

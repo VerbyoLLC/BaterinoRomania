@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require('./generated/prisma/index.js')
-const { sendVerificationCode, sendPasswordResetEmail, isMailConfigured } = require('./lib/mail.js')
+const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured } = require('./lib/mail.js')
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -32,6 +32,13 @@ function authMiddleware(req, res, next) {
   } catch {
     return res.status(401).json({ error: 'Token invalid.' })
   }
+}
+
+function adminAuthMiddleware(req, res, next) {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ error: 'Acces restricționat. Doar administratorii pot accesa.' })
+  }
+  next()
 }
 
 // ── Auth: Signup (step 1) ─────────────────────────────────────────────
@@ -344,7 +351,7 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       })
     }
 
-    const createData = { userId, ...legal }
+    const createData = { userId, ...legal, isApproved: false }
     for (const [k, v] of Object.entries(publicFields)) {
       if (v !== undefined && v !== null && v !== '') createData[k] = v
     }
@@ -388,8 +395,130 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
   }
 })
 
+app.delete('/api/partner/account', authMiddleware, async (req, res) => {
+  try {
+    if (req.userRole !== 'partener') {
+      return res.status(403).json({ error: 'Doar partenerii pot accesa acest endpoint.' })
+    }
+    const userId = req.userId
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+
+    await sendAccountDeletedEmail(user.email)
+
+    await prisma.$transaction(async (tx) => {
+      await tx.partner.deleteMany({ where: { userId } })
+      await tx.user.delete({ where: { id: userId } })
+    })
+    return res.json({ message: 'Cont șters.' })
+  } catch (err) {
+    console.error('Delete account error:', err)
+    res.status(500).json({ error: 'Eroare la ștergerea contului.' })
+  }
+})
+
+// ── Debug: test Prisma (fără auth, doar pentru diagnostic) ─────────────
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    const count = await prisma.partner.count()
+    return res.json({ ok: true, partnersCount: count })
+  } catch (err) {
+    console.error('Debug DB error:', err)
+    return res.status(500).json({ ok: false, error: err?.message || String(err) })
+  }
+})
+
+// ── Admin: list companies (partners) ───────────────────────────────────
+const adminCompaniesHandler = async (req, res) => {
+  try {
+    const partners = await prisma.partner.findMany({
+      include: { user: { select: { email: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    return res.json(partners)
+  } catch (err) {
+    console.error('Admin companies error:', err)
+    const msg = err?.message || 'Eroare la încărcarea companiilor.'
+    res.status(500).json({ error: msg })
+  }
+}
+app.get('/api/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
+app.get('/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
+
+// ── Admin: update company discount ──────────────────────────────────────
+app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { discountPercent } = req.body
+    if (discountPercent !== null && discountPercent !== undefined) {
+      const num = Number(discountPercent)
+      if (Number.isNaN(num) || num < 0.5 || num > 60) {
+        return res.status(400).json({ error: 'Reducerea trebuie să fie între 0.5 și 60.' })
+      }
+    }
+    const partner = await prisma.partner.update({
+      where: { id },
+      data: { partnerDiscountPercent: discountPercent === '' || discountPercent === null || discountPercent === undefined ? null : Number(discountPercent) },
+      include: { user: { select: { email: true } } },
+    })
+    return res.json(partner)
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
+    console.error('Admin discount error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+})
+
+// ── Admin: approve company ───────────────────────────────────────────────
+app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const partner = await prisma.partner.update({
+      where: { id },
+      data: { isApproved: true },
+      include: { user: { select: { email: true } } },
+    })
+    return res.json(partner)
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
+    console.error('Admin approve error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la aprobare.' })
+  }
+})
+
+// ── Admin: suspend/unsuspend company ────────────────────────────────────
+app.patch('/api/admin/companies/:id/suspend', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { suspended } = req.body
+    if (typeof suspended !== 'boolean') {
+      return res.status(400).json({ error: 'Parametrul "suspended" (boolean) este obligatoriu.' })
+    }
+    const partner = await prisma.partner.update({
+      where: { id },
+      data: { isSuspended: suspended },
+      include: { user: { select: { email: true } } },
+    })
+    return res.json(partner)
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
+    console.error('Admin suspend error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+})
+
 // ── Health ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }))
+app.get('/health', (req, res) => res.json({ ok: true }))
+
+// ── 404 catch-all (pentru debug) ───────────────────────────────────────
+app.use((req, res) => {
+  console.log('[404]', req.method, req.url)
+  res.status(404).json({ error: 'Rută negăsită', path: req.url, method: req.method })
+})
 
 const server = app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`)
