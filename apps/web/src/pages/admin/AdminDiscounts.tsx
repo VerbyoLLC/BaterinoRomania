@@ -42,13 +42,15 @@ function SmileyPopover({ icon, info }: { icon: string; info?: { title: string; t
 }
 
 const labelClass = "block text-xs font-medium font-['Inter'] text-gray-700 mb-0.5"
-const inputClass = "w-full h-9 px-2.5 rounded-lg border border-zinc-200 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+const inputClass = "w-full h-9 px-2.5 rounded-lg border border-zinc-200 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 
 export default function AdminDiscounts() {
   const { programs } = getReduceriTranslations('ro')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [panelOpen, setPanelOpen] = useState(false)
+  type EditingTarget = null | 'new' | { type: 'program'; index: number } | { type: 'draft'; id: string }
+  const [editingTarget, setEditingTarget] = useState<EditingTarget>(null)
+  const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [drafts, setDrafts] = useState<DraftProgram[]>([])
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [deletedProgramIndices, setDeletedProgramIndices] = useState<Set<number>>(new Set())
@@ -109,6 +111,45 @@ export default function AdminDiscounts() {
     handleFile(null)
   }
 
+  const loadFormFromProgram = (p: ReducereProgram | DraftProgram) => {
+    setForm({
+      programLabel: p.programLabel,
+      title: p.title,
+      descriereScurta: p.descriereScurta ?? '',
+      description: p.description ?? '',
+      stiaiCaEnabled: !!p.stiaiCa,
+      stiaiCaTitle: p.stiaiCa?.title ?? '',
+      stiaiCaText: p.stiaiCa?.text ?? '',
+      durataProgram: p.durataProgram ?? '',
+      discountPercent: p.discountPercent != null ? String(p.discountPercent) : '',
+    })
+    handleFile(null)
+    setPhotoPreview(p.photo)
+  }
+
+  const handleEditClick = (p: ReducereProgram | DraftProgram, target: EditingTarget) => {
+    loadFormFromProgram(p)
+    setEditingTarget(target)
+  }
+
+  const handleAddNew = () => {
+    resetForm()
+    setEditingTarget('new')
+  }
+
+  const handleClosePanel = () => {
+    setIsClosingPanel(true)
+  }
+
+  const handlePanelTransitionEnd = (e: React.TransitionEvent) => {
+    if (e.target !== e.currentTarget) return
+    if (isClosingPanel) {
+      setEditingTarget(null)
+      setIsClosingPanel(false)
+      resetForm()
+    }
+  }
+
   const saveAsDraft = () => {
     const draft: DraftProgram = {
       id: `draft-${Date.now()}`,
@@ -127,7 +168,7 @@ export default function AdminDiscounts() {
     }
     setDrafts((d) => [...d, draft])
     resetForm()
-    setPanelOpen(false)
+    handleClosePanel()
   }
 
   const handleCancel = () => {
@@ -137,10 +178,7 @@ export default function AdminDiscounts() {
   const handleCancelConfirm = (saveDraft: boolean) => {
     setCancelConfirmOpen(false)
     if (saveDraft) saveAsDraft()
-    else {
-      resetForm()
-      setPanelOpen(false)
-    }
+    else handleClosePanel()
   }
 
   const handleDeleteClick = (target: { type: 'program'; index: number } | { type: 'draft'; id: string }) => {
@@ -165,31 +203,40 @@ export default function AdminDiscounts() {
     .filter((p) => !deletedProgramIndices.has(p._programIndex))
   const allPrograms = [...visiblePrograms, ...drafts]
 
+  const panelOpen = editingTarget !== null || isClosingPanel
+
   return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-5">
+    <div className={`flex flex-col w-full min-h-0 ${panelOpen ? 'h-[calc(100vh-4rem)] lg:h-screen overflow-hidden' : ''}`}>
+      {/* Tab bar — full width */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white shrink-0">
         <h1 className="text-xl font-bold font-['Inter'] text-black">Programe Reduceri</h1>
         {!panelOpen && (
           <button
             type="button"
-            onClick={() => setPanelOpen(true)}
-            className="h-9 px-5 bg-emerald-600 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-emerald-700 transition-colors"
+            onClick={handleAddNew}
+            className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
           >
             + Adaugă program nou
           </button>
         )}
       </div>
 
-      <div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch max-h-[calc(100vh-140px)] overflow-y-auto pr-1">
+      {/* Content: cards left, panel right */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Left: cards grid — half screen */}
+        <div className={`w-1/2 min-w-0 shrink-0 p-5 overflow-y-auto ${panelOpen ? 'overflow-hidden' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
             {allPrograms.map((p) => {
               const isDraft = 'isDraft' in p && p.isDraft
               const deleteTargetItem = isDraft
                 ? { type: 'draft' as const, id: (p as DraftProgram).id }
                 : { type: 'program' as const, index: (p as ReducereProgram & { _programIndex: number })._programIndex }
+              const editTarget: EditingTarget = isDraft
+                ? { type: 'draft', id: (p as DraftProgram).id }
+                : { type: 'program', index: (p as ReducereProgram & { _programIndex: number })._programIndex }
               const programName = p.programLabel.replace(/^PROGRAMUL\s*/i, '')
               return (
-                <div key={isDraft ? (p as DraftProgram).id : `p-${(p as ReducereProgram & { _programIndex: number })._programIndex}`} className="flex flex-col h-full lg:col-span-3">
+                <div key={isDraft ? (p as DraftProgram).id : `p-${(p as ReducereProgram & { _programIndex: number })._programIndex}`} className="flex flex-col h-full">
                   {/* Card box — matches Reduceri page */}
                   <div className="flex flex-col flex-1 bg-neutral-100 rounded-[10px] overflow-hidden transition-shadow duration-300 hover:shadow-md">
                     {/* Photo */}
@@ -231,6 +278,7 @@ export default function AdminDiscounts() {
                   <div className="flex gap-2 mt-5">
                     <button
                       type="button"
+                      onClick={() => handleEditClick(p, editTarget)}
                       className="flex-1 h-12 rounded-[10px] border border-zinc-300 text-base font-medium font-['Inter'] text-gray-700 hover:bg-zinc-50 transition-colors"
                     >
                       Editează
@@ -247,26 +295,42 @@ export default function AdminDiscounts() {
               )
             })}
           </div>
-      </div>
+        </div>
 
-      {/* Add program modal */}
-      {panelOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-bold font-['Inter'] text-black mb-4">
-              Adaugă program nou
-            </h2>
+        {/* Right: empty half, edit panel slides in when open */}
+        <div className="w-1/2 shrink-0 overflow-hidden border-l border-gray-200 bg-white overflow-y-auto">
+        <div
+          className={`w-full min-h-full p-6 sm:p-8 shadow-lg transition-transform duration-300 ease-out ${
+            isClosingPanel ? '-translate-x-full' : editingTarget ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onTransitionEnd={handlePanelTransitionEnd}
+        >
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-bold font-['Inter'] text-black">
+                {editingTarget === 'new' ? 'Adaugă program nou' : 'Editează program'}
+              </h2>
+              <button
+                type="button"
+                onClick={handleClosePanel}
+                className="text-gray-500 hover:text-slate-900 p-1"
+                aria-label="Închide"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={(e) => e.preventDefault()}
-            >
               {/* Photo upload */}
               <div>
                 <label className={labelClass}>Foto</label>
                 <div
                   className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                    isDragging ? 'border-emerald-500 bg-emerald-50/50' : 'border-zinc-300 hover:border-zinc-400'
+                    isDragging ? 'border-slate-500 bg-slate-50/50' : 'border-zinc-300 hover:border-zinc-400'
                   }`}
                   onDrop={onDrop}
                   onDragOver={onDragOver}
@@ -375,7 +439,7 @@ export default function AdminDiscounts() {
                   id="stiaiCa"
                   checked={form.stiaiCaEnabled}
                   onChange={(e) => update('stiaiCaEnabled', e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
                 />
                 <label htmlFor="stiaiCa" className="text-sm font-medium font-['Inter'] text-gray-700 cursor-pointer">
                   Știai că?
@@ -410,7 +474,7 @@ export default function AdminDiscounts() {
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="submit"
-                  className="h-9 px-6 bg-emerald-600 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-emerald-700 transition-colors"
+                  className="h-9 px-6 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
                 >
                   Salvează program
                 </button>
@@ -432,7 +496,7 @@ export default function AdminDiscounts() {
             </form>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Delete confirmation modal */}
       {deleteTarget && (

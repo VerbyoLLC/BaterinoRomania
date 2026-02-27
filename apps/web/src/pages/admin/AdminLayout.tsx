@@ -1,4 +1,6 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { getAuthToken } from '../../lib/api'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconDashboard() {
@@ -70,89 +72,124 @@ function IconLogout() {
   )
 }
 
-/* ── Nav items ──────────────────────────────────────────────────── */
 const NAV_ITEMS = [
-  { to: '/admin',            label: 'Dashboard', icon: <IconDashboard />,  end: true  },
-  { to: '/admin/products',   label: 'Products',  icon: <IconProducts />,   end: false },
-  { to: '/admin/clients',    label: 'Clients',   icon: <IconClients />,    end: false },
-  { to: '/admin/companies',  label: 'Companies', icon: <IconCompanies />,  end: false },
-  { to: '/admin/articles',   label: 'Articles',  icon: <IconArticles />,   end: false },
-  { to: '/admin/stocks',     label: 'Stocks',    icon: <IconStocks />,     end: false },
-  { to: '/admin/orders',     label: 'Orders',    icon: <IconOrders />,     end: false },
-  { to: '/admin/discounts',  label: 'Discounts', icon: <IconDiscounts />,  end: false },
+  { to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
+  { to: '/admin/products', label: 'Produse', icon: <IconProducts />, end: false },
+  { to: '/admin/clients', label: 'Clienți', icon: <IconClients />, end: false },
+  { to: '/admin/companies', label: 'Companii', icon: <IconCompanies />, end: false },
+  { to: '/admin/articles', label: 'Articole', icon: <IconArticles />, end: false },
+  { to: '/admin/stocks', label: 'Stocuri', icon: <IconStocks />, end: false },
+  { to: '/admin/orders', label: 'Comenzi', icon: <IconOrders />, end: false },
+  { to: '/admin/discounts', label: 'Reduceri', icon: <IconDiscounts />, end: false },
 ]
 
-/* ── Layout ─────────────────────────────────────────────────────── */
 export default function AdminLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    if (!getAuthToken() && location.pathname !== '/admin/login') {
+      navigate('/admin/login', { replace: true })
+    }
+  }, [location.pathname, navigate])
 
   return (
-    <div className="flex min-h-screen bg-neutral-100">
+    <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
+
+      {/* ── Mobile overlay ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden
+        />
+      )}
 
       {/* ── Sidebar ── */}
-      <aside className="w-[168px] flex-shrink-0 bg-emerald-50 rounded-br-[20px] flex flex-col justify-between py-4 px-3 min-h-screen sticky top-0">
-
-        {/* Top: logo + nav */}
-        <div className="flex flex-col gap-1">
+      <aside className={`w-64 flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-transform duration-200 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex flex-col h-full py-6 px-4">
 
           {/* Logo */}
-          <div className="flex flex-col items-center px-3 pt-2 pb-4 gap-1">
+          <a href="/" className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50">
             <img
-              src="/images/shared/baterino-pro-alb-logo.png"
+              src="/images/shared/baterino-logo-white.png"
               alt="Baterino"
-              className="h-6 w-auto object-contain"
-              style={{ filter: 'invert(1)' }}
+              className="h-7 w-auto object-contain"
             />
-            <span className="text-black text-xs font-semibold font-['Inter'] tracking-widest uppercase mt-0.5">
-              Admin Panel
+            <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
+              Admin
             </span>
-          </div>
+          </a>
 
-          {/* Nav items */}
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-['Inter'] transition-colors ${
-                  isActive
-                    ? 'bg-black/8 font-semibold text-black'
-                    : 'text-black/70 hover:bg-black/5 hover:text-black font-normal'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
+          {/* Nav */}
+          <nav className="flex-1 flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+                    isActive
+                      ? 'bg-white/10 text-white'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  }`
+                }
+              >
+                {item.icon}
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
 
-        {/* Bottom: user + logout */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2.5 px-3 py-2">
-            <div className="w-7 h-7 rounded-full bg-slate-300 flex items-center justify-center text-xs font-bold text-slate-700 flex-shrink-0">
-              A
+          {/* User + Logout */}
+          <div className="pt-6 border-t border-slate-700/50 flex flex-col gap-1">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                A
+              </div>
+              <div className="min-w-0">
+                <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Admin</p>
+                <p className="text-slate-400 text-xs font-['Inter'] truncate">admin@baterino.ro</p>
+              </div>
             </div>
-            <span className="text-black text-sm font-normal font-['Inter'] truncate">Power Admin</span>
+            <button
+              onClick={() => {
+                localStorage.removeItem('auth_token')
+                navigate('/admin/login')
+              }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left"
+            >
+              <IconLogout />
+              Deconectare
+            </button>
           </div>
-
-          <button
-            onClick={() => navigate('/admin/login')}
-            className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-sm font-['Inter'] text-black/70 hover:bg-black/5 hover:text-black transition-colors w-full text-left"
-          >
-            <IconLogout />
-            Logout
-          </button>
         </div>
-
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
+        {/* Mobile header */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            aria-label="Deschide meniul"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <a href="/" className="flex-shrink-0">
+            <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
+          </a>
+          <div className="w-10" />
+        </div>
         <Outlet />
       </main>
-
     </div>
   )
 }

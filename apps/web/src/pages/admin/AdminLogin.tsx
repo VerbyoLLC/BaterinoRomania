@@ -1,22 +1,31 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PasswordInput from '../../components/PasswordInput'
+import { login, setAuthToken } from '../../lib/api'
 
 export default function AdminLogin() {
-  const navigate   = useNavigate()
-  const [email,    setEmail]    = useState('')
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error,    setError]    = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-
-    // Demo credentials — replace with real auth
-    if (email === 'admin@baterino.ro' && password === 'admin1234') {
+    setLoading(true)
+    try {
+      const { token, user } = await login(email, password)
+      if (user.role !== 'admin') {
+        setError('Acces restricționat. Doar administratorii pot accesa acest panou.')
+        return
+      }
+      setAuthToken(token)
       navigate('/admin')
-    } else {
-      setError('Email sau parolă incorectă.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Email sau parolă incorectă.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -77,9 +86,10 @@ export default function AdminLogin() {
           {/* Submit */}
           <button
             type="submit"
-            className="h-12 w-full bg-slate-900 text-white rounded-[10px] text-base font-semibold font-['Inter'] hover:bg-slate-700 active:bg-black transition-colors mt-1"
+            disabled={loading}
+            className="h-12 w-full bg-slate-900 text-white rounded-[10px] text-base font-semibold font-['Inter'] hover:bg-slate-700 active:bg-black transition-colors mt-1 disabled:opacity-50"
           >
-            Login
+            {loading ? 'Se conectează...' : 'Login'}
           </button>
 
         </form>

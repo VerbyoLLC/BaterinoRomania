@@ -1,24 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
 import { savePartnerProfile, getAuthToken } from '../lib/api'
-
-const ROMANIAN_COUNTIES = [
-  'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brașov', 'Brăila',
-  'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița',
-  'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov',
-  'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu',
-  'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vaslui', 'Vâlcea', 'Vrancea',
-]
-
-const ROMANIAN_CITIES = [
-  'Alba Iulia', 'Arad', 'Pitești', 'Bacău', 'Oradea', 'Bistrița', 'Botoșani', 'Brașov', 'Brăila',
-  'București', 'Buzău', 'Călărași', 'Reșița', 'Cluj-Napoca', 'Constanța', 'Sfântu Gheorghe', 'Târgoviște',
-  'Craiova', 'Galați', 'Giurgiu', 'Târgu Jiu', 'Miercurea Ciuc', 'Deva', 'Slobozia', 'Iași',
-  'Baia Mare', 'Drobeta-Turnu Severin', 'Târgu Mureș', 'Piatra Neamț', 'Slatina', 'Ploiești',
-  'Zalău', 'Satu Mare', 'Sibiu', 'Suceava', 'Alexandria', 'Timișoara', 'Tulcea', 'Vaslui',
-  'Râmnicu Vâlcea', 'Focșani',
-]
+import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../lib/romanian-counties-cities'
 
 const SERVICII_OPTIONS = [
   { id: 'fotovoltaice', label: 'Instalare sisteme fotovoltaice' },
@@ -174,6 +158,14 @@ export default function SignupParteneriProfilPublic() {
     }
   }
 
+  const citiesForCounty = useMemo(() => getCitiesForCounty(county), [county])
+
+  function handleCountyChange(newCounty: string) {
+    setCounty(newCounty)
+    const cities = getCitiesForCounty(newCounty)
+    if (city && !cities.includes(city)) setCity('')
+  }
+
   return (
     <AuthLayout
       image="/images/login/login-partner.jpg"
@@ -194,7 +186,7 @@ export default function SignupParteneriProfilPublic() {
         </button>
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/partner')}
           className="text-sm font-['Inter'] text-gray-500 hover:text-black transition-colors"
         >
           Sari peste
@@ -251,17 +243,17 @@ export default function SignupParteneriProfilPublic() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <SelectField
                   label="Județ"
-                  options={ROMANIAN_COUNTIES}
+                  options={[...ROMANIAN_COUNTIES]}
                   value={county}
-                  onChange={setCounty}
+                  onChange={handleCountyChange}
                   placeholder="Selectează județul"
                 />
                 <SelectField
                   label="Oraș"
-                  options={ROMANIAN_CITIES}
+                  options={citiesForCounty}
                   value={city}
                   onChange={setCity}
-                  placeholder="Selectează orașul"
+                  placeholder={county ? 'Selectează orașul' : 'Selectează mai întâi județul'}
                 />
                 <div>
                   <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">
