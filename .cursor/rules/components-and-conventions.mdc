@@ -1,0 +1,106 @@
+---
+description: Reusable components, SEO, i18n and typography conventions for Baterino Romania
+globs: apps/web/src/**/*.tsx
+alwaysApply: false
+---
+
+# Components & Conventions — Baterino Romania
+
+## SEO — `<SEO>` component
+Every page must include SEO. Import from `../components/SEO`.
+```tsx
+<SEO
+  title="Page Title"                         // appends "| Baterino Romania"
+  description="150–160 char description"
+  canonical="/path/to/page"
+  ogImage="/images/.../hero.jpg"             // defaults to site OG image
+  lang={language.code}                       // 'ro' | 'en' | 'zh'
+/>
+```
+`HelmetProvider` is already wrapped at App level.
+
+## i18n — Language Pattern
+- `useLanguage()` from `../contexts/LanguageContext` → `{ language, setLanguage }`
+- Each page has its own `apps/web/src/i18n/pagename.ts` file
+- Export a typed `PageTranslations` type + `getPageTranslations(lang: LangCode)` function
+- Supported codes: `'ro' | 'en' | 'zh'`
+
+```ts
+// i18n file structure
+export type PageTranslations = { heroTitle: string; ... }
+const translations: Record<LangCode, PageTranslations> = { ro: {...}, en: {...}, zh: {...} }
+export function getPageTranslations(lang: LangCode): PageTranslations {
+  return translations[lang] ?? translations.ro
+}
+```
+
+## Reusable Components
+| Component | Path | Usage |
+|---|---|---|
+| `<SEO>` | `components/SEO.tsx` | Every page, see above |
+| `<OutlineButton>` | `components/OutlineButton.tsx` | Secondary/Load More buttons |
+| `<ImageCard>` | `components/ImageCard.tsx` | "Aplicații Reale" image cards with overlay label |
+| `<LanguageDropdown>` | `components/LanguageDropdown.tsx` | Language switcher in sub-nav |
+| `<Layout>` | `components/Layout.tsx` | Wraps all pages (header + footer full-width) |
+
+### ImageCard
+Full-bleed image with gradient overlay and bold label. Used in all "Aplicații Reale" sections.
+Label: `text-2xl` mobile → `text-[26px]` desktop.
+```tsx
+<ImageCard
+  src="/images/divizii/page/image.jpg"
+  alt="Description"
+  label="CARD LABEL"
+  className={i >= visibleCount ? 'hidden lg:block' : ''}  // for load-more pagination
+/>
+```
+Load More button text: **"VEZI MAI MULT"** (not "ÎNCARCĂ MAI MULT")
+
+### OutlineButton
+```tsx
+<OutlineButton onClick={() => ...} className="optional-override">
+  BUTTON TEXT
+</OutlineButton>
+```
+Style: transparent bg, `outline-slate-900`, hover `bg-zinc-100`, active `bg-zinc-200`.
+
+## Typography Scale (mobile → desktop)
+| Element | Mobile | Desktop |
+|---|---|---|
+| H1 hero | `text-2xl leading-8` | `lg:text-5xl lg:leading-[56px]` |
+| H2 section | `text-xl leading-7` | `lg:text-3xl lg:leading-10` |
+| H3 / label | `text-lg leading-7` | `lg:text-2xl lg:leading-9` |
+| Uppercase label | `text-sm tracking-wider` | `lg:text-lg lg:tracking-normal` |
+| Body large | `text-base leading-6` | `lg:text-lg lg:leading-7` |
+| Body default | `text-base leading-6` | (unchanged) |
+| Font families | `font-['Inter']` headings & UI · `font-['Nunito_Sans']` card labels |
+
+## Button Styles
+**Primary (dark fill):**
+```
+bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300
+h-12 px-6 min-w-[288px] w-auto text-white font-semibold text-base
+hover:bg-transparent hover:outline-slate-900 hover:text-black
+active:bg-zinc-100 active:outline-slate-900 active:text-black
+```
+
+**Secondary (outline):** use `<OutlineButton>` component.
+
+## Hover Effects on Cards
+Product/image cards use `group` pattern:
+```tsx
+<div className="group ... overflow-hidden hover:shadow-md transition-shadow duration-300">
+  <img className="... transition-transform duration-300 group-hover:scale-110" />
+</div>
+```
+
+## Image Cards with Overlay Label
+```tsx
+<div className="relative h-96 rounded-[10px] overflow-hidden group">
+  <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+  <span className="absolute left-[22px] right-4 bottom-5 text-white text-lg lg:text-[26px] font-bold font-['Inter'] leading-7 lg:leading-9">
+    Label
+  </span>
+</div>
+```

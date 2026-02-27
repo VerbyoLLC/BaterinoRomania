@@ -1,0 +1,17 @@
+{
+  "name": "baterino-romania",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix apps/web",
+    "dev:api": "npm run start --prefix apps/api",
+    "dev:all": "concurrently \"cd apps/api && node index.js\" \"npm run dev\"",
+    "build": "npm run build --prefix apps/web",
+    "preview": "npm run preview --prefix apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "nodemailer": "^8.0.1"
+  }
+}

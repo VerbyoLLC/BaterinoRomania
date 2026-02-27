@@ -1,0 +1,101 @@
+---
+description: Standard page anatomy and patterns for Baterino Romania pages
+globs: apps/web/src/pages/*.tsx
+alwaysApply: false
+---
+
+# Page Template — Baterino Romania
+
+Reference implementation: `apps/web/src/pages/Rezidential.tsx`
+
+## Page Structure Skeleton
+```tsx
+export default function PageName() {
+  // 1. contexts
+  const { setReplaceMainHeader } = useViziuneHeader()
+  const { language, setLanguage } = useLanguage()
+  const tr = getPageTranslations(language.code)
+
+  // 2. state
+  const [showSubNav, setShowSubNav] = useState(false)
+  const [activeSection, setActiveSection] = useState<SectionId>('first')
+
+  // 3. refs + scroll tracking (IntersectionObserver)
+
+  return (
+    <>
+      <SEO title="..." description="..." canonical="/path" lang={language.code} />
+      <article className="max-w-content mx-auto px-5 lg:px-3 pt-24 pb-16">
+        {/* Hero */}
+        {/* Sticky sub-nav */}
+        {/* Sections */}
+        {/* CTA bar */}
+      </article>
+    </>
+  )
+}
+```
+
+## Hero Section
+```tsx
+<div ref={heroRef} className="w-full mx-auto mb-16 flex flex-col items-center gap-0">
+  <h1 className="w-full text-center text-black text-2xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-8 sm:leading-[48px] lg:leading-[56px]">
+    {tr.heroTitle}
+  </h1>
+  <p className="max-w-[739px] text-center text-neutral-600 text-base sm:text-lg lg:text-xl font-medium font-['Inter'] leading-6 sm:leading-7 lg:leading-8 mt-[14px] mb-[60px]">
+    {tr.heroTagline}
+  </p>
+  <div className="w-full relative">
+    <picture>
+      <source media="(max-width: 1023px)" srcSet="/images/.../hero-mobile.jpg" />
+      <img src="/images/.../hero.jpg" alt={tr.heroTitle} className="relative w-full object-cover rounded-[10px]" style={{ height: '440px' }} />
+    </picture>
+    {/* Logo watermark: centered mobile, bottom-right desktop */}
+    <img src="/images/shared/baterino-logo-white.png" className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 h-9 w-auto" />
+  </div>
+</div>
+```
+
+## Sections Pattern
+- Each section: `<section id="slug" ref={...} className="mb-20 scroll-mt-20">`
+- Section H2: `text-xl lg:text-3xl font-bold font-['Inter'] leading-7 lg:leading-10`
+- Body copy: `text-base font-normal lg:font-medium font-['Inter'] leading-6`
+- Large body: `text-base lg:text-lg font-normal lg:font-medium font-['Inter'] leading-6 lg:leading-7`
+- Dividers between sections: `<hr className="border-t border-gray-200 my-16" />`
+
+## Load More Pattern (mobile pagination)
+```tsx
+const [visibleCount, setVisibleCount] = useState(2)
+
+{items.map((item, i) => (
+  <div key={item.id} className={`...${i >= visibleCount ? ' hidden lg:block' : ''}`}>
+    ...
+  </div>
+))}
+{visibleCount < items.length && (
+  <div className="flex justify-center mt-10 lg:hidden">
+    <OutlineButton onClick={() => setVisibleCount(c => Math.min(c + 2, items.length))}>
+      ÎNCARCĂ MAI MULT
+    </OutlineButton>
+  </div>
+)}
+```
+
+## CTA Bar
+```tsx
+{/* Desktop CTA bar */}
+<section className="grid-12 items-center bg-zinc-100 rounded-[10px] lg:h-44 mx-4 lg:mx-0 my-4 lg:my-0 px-4 lg:px-0">
+  <div className="col-span-4 lg:col-span-3 flex items-center justify-center lg:justify-start h-full py-6 lg:py-0 lg:pl-10">
+    <img src="/images/shared/baterino-logo-black.svg" className="h-10 w-auto object-contain" />
+  </div>
+  <div className="col-span-4 lg:col-span-5 flex flex-col items-center lg:items-start justify-center gap-1 lg:pl-2">
+    <h2 className="text-black text-lg lg:text-2xl font-bold font-['Inter'] leading-7 lg:leading-9 m-0 text-center lg:text-left">{tr.ctaTitle}</h2>
+    <p className="text-black text-base font-normal font-['Inter'] leading-6 max-w-[400px] text-center lg:text-left">{tr.ctaDesc}</p>
+  </div>
+  <div className="col-span-4 flex items-center justify-center h-full pb-6 lg:pb-0 lg:pr-10">
+    <Link to="/companie/contact" className="min-w-[288px] w-auto h-12 px-6 py-[5px] bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center gap-3.5 text-white hover:bg-transparent hover:outline-slate-900 hover:text-black active:bg-zinc-100 transition-colors font-semibold text-base whitespace-nowrap">
+      {tr.ctaButton}
+    </Link>
+  </div>
+</section>
+```

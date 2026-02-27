@@ -8,9 +8,9 @@ export default function Layout() {
   return (
     <LanguageProvider>
       <ViziuneHeaderProvider>
-        <div className="min-h-screen w-full bg-white max-w-site mx-auto flex flex-col overflow-x-hidden">
+        <div className="min-h-screen w-full min-w-0 bg-white flex flex-col overflow-x-hidden">
           <Header />
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             <Outlet />
           </main>
           <Footer />

@@ -2,19 +2,55 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --max-width-content: 1200px;
+  --max-width-site: 1440px;
+}
+
+@layer utilities {
+  /*
+   * Responsive column grid
+   * Mobile  : 4 cols · margin 20px (px-5 on container) · gutter 20px
+   * Desktop : 12 cols · margin 12px (px-3 on container) · gutter 24px
+   *
+   * Mobile  col width : (viewport - 2×20 - 3×20) / 4  ≈ 72px  @ 390px
+   * Desktop col width : (1200 - 2×12 - 11×24)   / 12 = 76px
+   */
+  .grid-12 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem; /* 20px */
+  }
+  @media (min-width: 1024px) {
+    .grid-12 {
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.5rem; /* 24px */
+    }
+  }
 }
 
 @layer base {
+  :root {
+    /* Left/right offset matching max-w-content mx-auto px-5 lg:px-3 */
+    --grid-edge: max(20px, calc((100vw - 1200px) / 2 + 20px));
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --grid-edge: max(12px, calc((100vw - 1200px) / 2 + 12px));
+    }
+  }
+
   html {
     font-family: var(--font-sans);
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    overflow-x: hidden;
   }
   body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     font-size: 1rem; /* 16px minimum for mobile readability, avoids iOS zoom */
     line-height: 1.6;
@@ -22,7 +58,9 @@
   }
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
     width: 100%;
+    overflow-x: hidden;
   }
   *, *::before, *::after {
     box-sizing: inherit;

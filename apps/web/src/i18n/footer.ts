@@ -19,6 +19,7 @@ export type FooterTranslations = {
   sigurantaClientului: string
   suportClienti: string
   termeniConditii: string
+  termeniReduceri: string
   politicaConfidentialitate: string
   // Divizii
   rezidential: string
@@ -46,11 +47,12 @@ const translations: Record<LangCode, FooterTranslations> = {
     elarionGlobal: 'Elarion Global',
     despreNoi: 'Despre noi',
     promisiune: 'Promisiune',
-    lithtech: 'LithTech',
+    lithtech: 'Parteneriat LithTech',
     cariere: 'Cariere',
     sigurantaClientului: 'Siguranta clientului',
     suportClienti: 'Suport Clienti',
     termeniConditii: 'Termeni si Conditii',
+    termeniReduceri: 'Termeni Reduceri',
     politicaConfidentialitate: 'Politica de confidentialitate',
     rezidential: 'Rezidential',
     industrial: 'Industrial',
@@ -73,11 +75,12 @@ const translations: Record<LangCode, FooterTranslations> = {
     elarionGlobal: 'Elarion Global',
     despreNoi: 'About us',
     promisiune: 'Promise',
-    lithtech: 'LithTech',
+    lithtech: 'LithTech Partnership',
     cariere: 'Careers',
     sigurantaClientului: 'Customer safety',
     suportClienti: 'Customer Support',
     termeniConditii: 'Terms and Conditions',
+    termeniReduceri: 'Discount Terms',
     politicaConfidentialitate: 'Privacy Policy',
     rezidential: 'Residential',
     industrial: 'Industrial',
@@ -100,11 +103,12 @@ const translations: Record<LangCode, FooterTranslations> = {
     elarionGlobal: 'Elarion Global',
     despreNoi: '关于我们',
     promisiune: '承诺',
-    lithtech: 'LithTech',
+    lithtech: 'LithTech合作',
     cariere: '招聘',
     sigurantaClientului: '客户安全',
     suportClienti: '客户支持',
     termeniConditii: '条款与条件',
+    termeniReduceri: '折扣条款',
     politicaConfidentialitate: '隐私政策',
     rezidential: '住宅',
     industrial: '工业',

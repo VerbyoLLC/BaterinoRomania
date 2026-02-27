@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { useViziuneHeader } from '../contexts/ViziuneHeaderContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LanguageDropdown } from './LanguageDropdown'
+import MobileMenu from './MobileMenu'
 
 const DIVIZII_PATHS = [
   { key: 'rezidential', path: '/divizii/rezidential' },
@@ -14,8 +15,8 @@ const DIVIZII_PATHS = [
 
 const COMPANIE_PATHS = [
   { key: 'viziune', path: '/companie/viziune' },
-  { key: 'promisiune', path: '/companie/promisiune' },
-  { key: 'contact', path: '/companie/contact' },
+  { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino' },
+  { key: 'contact', path: '/companie' },
 ]
 
 function NavDropdown({
@@ -99,11 +100,10 @@ export default function Header() {
             <img src="/images/shared/baterino-logo-black.svg" alt="Baterino Romania" className="h-8 w-auto" />
           </Link>
           <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
-            <Link to="/" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.home}</Link>
             <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.produse}</Link>
+            <Link to="/reduceri" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.reduceri}</Link>
             <Link to="/siguranta" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.siguranta}</Link>
             <NavDropdown label={t.divizii} items={diviziiItems} isOpen={diviziiOpen} onToggle={() => { setDiviziiOpen(!diviziiOpen); setCompanieOpen(false); setLangOpen(false); }} />
-            <Link to="/lithtech" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.lithtech}</Link>
             <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.instalatori}</Link>
             <NavDropdown label={t.companie} items={companieItems} isOpen={companieOpen} onToggle={() => { setCompanieOpen(!companieOpen); setDiviziiOpen(false); setLangOpen(false); }} />
           </nav>
@@ -111,29 +111,13 @@ export default function Header() {
             <Link to="/login" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.login}</Link>
             <LanguageDropdown current={language} isOpen={langOpen} onToggle={() => { setLangOpen(!langOpen); setDiviziiOpen(false); setCompanieOpen(false); }} onSelect={setLanguage} />
           </div>
-          <div className="flex items-center gap-2 md:hidden ml-auto">
-            <LanguageDropdown current={language} isOpen={langOpen} onToggle={() => { setLangOpen(!langOpen); setMobileOpen(false); }} onSelect={setLanguage} />
-            <button type="button" className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Menu" onClick={() => setMobileOpen(!mobileOpen)}>
+          <div className="flex items-center md:hidden ml-auto">
+            <button type="button" className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> : <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>}
             </button>
           </div>
         </div>
-        {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-gray-100">
-            <div className="flex flex-col gap-1">
-              <Link to="/" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.home}</Link>
-              <Link to="/produse" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.produse}</Link>
-              <Link to="/siguranta" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.siguranta}</Link>
-              <span className="px-2 py-2 text-gray-500 text-sm font-medium">{t.divizii}</span>
-              {diviziiItems.map((item) => <Link key={item.path} to={item.path} className="pl-6 py-2 text-gray-600" onClick={() => setMobileOpen(false)}>{item.label}</Link>)}
-              <Link to="/lithtech" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.lithtech}</Link>
-              <Link to="/instalatori" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.instalatori}</Link>
-              <span className="px-2 py-2 text-gray-500 text-sm font-medium">{t.companie}</span>
-              {companieItems.map((item) => <Link key={item.path} to={item.path} className="pl-6 py-2 text-gray-600" onClick={() => setMobileOpen(false)}>{item.label}</Link>)}
-              <Link to="/login" className="px-2 py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>{t.login}</Link>
-            </div>
-          </div>
-        )}
+        <MobileMenu isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       </div>
     </header>
   )
