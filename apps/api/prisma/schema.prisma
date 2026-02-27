@@ -1,14 +1,60 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id                        String    @id @default(cuid())
+  email                     String    @unique
+  password                  String
+  role                      String    // "client" | "partener"
+  verificationCode          String?
+  verificationCodeExpiresAt DateTime?
+  passwordResetToken        String?
+  passwordResetExpiresAt    DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  partner                   Partner?
+}
+
+model Partner {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profil legal (SignupParteneriProfil)
+  companyName           String
+  cui                   String
+  address               String?
+  tradeRegisterNumber   String?
+  activityTypes         String   // "instalator,distribuitor,integrator,altul" (comma-separated)
+  contactFirstName      String
+  contactLastName       String
+  phone                 String   // telefon contact principal
+
+  // Profil public (SignupParteneriProfilPublic)
+  logoUrl               String?
+  publicName            String?
+  street                String?
+  county                String?
+  city                  String?
+  zipCode               String?
+  description           String?
+  services              String?  // "fotovoltaice,baterii,..." (comma-separated)
+  publicPhone           String?
+  whatsapp              String?
+  website               String?
+  facebookUrl           String?
+  linkedinUrl           String?
+  isPublic              Boolean  @default(true)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }

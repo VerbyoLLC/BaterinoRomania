@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { getViziuneTranslations } from '../i18n/viziune'
 import { LanguageDropdown } from '../components/LanguageDropdown'
+import SEO from '../components/SEO'
 
 const SECTIONS = [
   { id: 'viziune', labelKey: 'viziune' as const },
@@ -104,19 +105,27 @@ export default function Viziune() {
     return () => observers.forEach((ob) => ob.disconnect())
   }, [])
 
+  const seoTitles: Record<string, string> = {
+    ro: 'Viziune, Misiune & Echipă',
+    en: 'Vision, Mission & Team',
+    zh: '愿景、使命与团队',
+  }
+  const seoDescriptions: Record<string, string> = {
+    ro: 'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
+    en: 'Discover the vision and mission of Baterino Romania — a distributor of LiFePo4 energy storage systems, dedicated to safety, quality and long-term technical support.',
+    zh: '了解Baterino Romania的愿景与使命——专注于LiFePo4储能系统分销，致力于安全、质量和长期技术支持。',
+  }
+
   return (
-    <article className="max-w-[800px] mx-auto px-4 py-16">
-      <div
-        ref={heroRef}
-        className="w-full max-w-[888px] mx-auto mb-16 flex flex-col items-center gap-0"
-      >
-        <div className="text-black text-lg sm:text-xl font-medium leading-tight">
-          {tv.heroTitle}
-        </div>
-        <div className="text-black text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight -mt-1">
-          BATERINO
-        </div>
-      </div>
+    <>
+    <SEO
+      title={seoTitles[language.code] ?? seoTitles.ro}
+      description={seoDescriptions[language.code] ?? seoDescriptions.ro}
+      canonical="/companie/viziune"
+      ogImage="/images/companie/viziune-og.jpg"
+      lang={language.code}
+    />
+    <article className="max-w-content mx-auto px-5 lg:px-3 py-16">
 
       {/* Sub-nav: replaces main header on scroll – fixed, with logo + section nav + login + language */}
       <div
@@ -175,7 +184,7 @@ export default function Viziune() {
           showSubNav && !footerInView ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         style={{
-          right: 'max(1rem, calc((100vw - 800px) / 2 + 1rem))',
+          right: 'max(1rem, calc((100vw - 1200px) / 2 + 1rem))',
           bottom: '2rem',
           transform: 'translateX(100px)',
         }}
@@ -191,6 +200,23 @@ export default function Viziune() {
           </svg>
         </button>
       </div>
+
+      {/* 12-col grid: content spans 10 cols centered on desktop, full 4 cols on mobile */}
+      <div className="grid-12">
+      <div className="col-span-4 lg:col-span-10 lg:col-start-2">
+
+        {/* Hero */}
+        <div
+          ref={heroRef}
+          className="w-full mb-16 flex flex-col items-center gap-0"
+        >
+          <div className="text-black text-lg sm:text-xl font-medium leading-tight">
+            {tv.heroTitle}
+          </div>
+          <div className="text-black text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight -mt-1">
+            BATERINO
+          </div>
+        </div>
 
       <section className="mb-20 scroll-mt-20" id="viziune" ref={(el) => { sectionRefs.current.viziune = el }}>
         <div className="flex flex-col items-center gap-2 mb-6">
@@ -231,7 +257,21 @@ export default function Viziune() {
         <p className="text-base text-gray-700 leading-relaxed mb-4">{tv.echipaP1}</p>
         <p className="text-base text-gray-700 leading-relaxed mb-4">{tv.echipaP2}</p>
         <p className="text-base text-gray-700 leading-relaxed">{tv.echipaP3}</p>
+        <div className="flex justify-center mt-16">
+          <Link
+            to="/companie"
+            className="w-72 h-12 px-2.5 py-[5px] bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center gap-3.5 text-white hover:bg-transparent hover:outline-slate-900 hover:text-black active:bg-zinc-100 active:outline-slate-900 active:text-black transition-colors"
+          >
+            <span className="text-center text-base font-semibold font-['Inter'] leading-normal text-inherit">
+              {tv.discutaCuNoi}
+            </span>
+          </Link>
+        </div>
       </section>
+
+      </div>{/* col-span-10 */}
+      </div>{/* grid-12 */}
     </article>
+    </>
   )
 }

@@ -15,7 +15,7 @@ function Footer() {
 
   return (
     <footer className="border-t border-gray-200 bg-gray-50">
-      <div className="max-w-[1157px] mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-14">
+      <div className="max-w-content mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-14">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-6 lg:gap-10">
           {/* Column 1: BATERINO */}
           <div className="flex flex-col gap-3">
@@ -28,6 +28,7 @@ function Footer() {
             <nav className="flex flex-col gap-2.5">
               <a href="https://baterino.com" target="_blank" rel="noopener noreferrer" className={linkClass}>{t.baterinoGlobal}</a>
               <a href="https://elarionglobal.com" target="_blank" rel="noopener noreferrer" className={linkClass}>{t.elarionGlobal}</a>
+              <a href="https://www.ltc-energy.com/" target="_blank" rel="noopener noreferrer" className={linkClass}>LithTech</a>
             </nav>
           </div>
           {/* Column 2: Companie */}
@@ -35,8 +36,8 @@ function Footer() {
             <div className={headingClass}>{t.companie}</div>
             <nav className="flex flex-col gap-2.5">
               <Link to="/companie/viziune" className={linkClass}>{t.despreNoi}</Link>
-              <Link to="/companie/promisiune" className={linkClass}>{t.promisiune}</Link>
-              <Link to="/lithtech" className={linkClass}>{t.lithtech}</Link>
+              <Link to="/parteneriat-strategic-lithtech-baterino" className={linkClass}>{t.lithtech}</Link>
+              <Link to="/suport" className={linkClass}>{t.suportClienti}</Link>
               <Link to="/cariere" className={linkClass}>{t.cariere}</Link>
             </nav>
           </div>
@@ -45,9 +46,9 @@ function Footer() {
             <div className={headingClass}>{t.suportLegal}</div>
             <nav className="flex flex-col gap-2.5">
               <Link to="/siguranta" className={linkClass}>{t.sigurantaClientului}</Link>
-              <Link to="/suport" className={linkClass}>{t.suportClienti}</Link>
-              <Link to="/termeni-conditii" className={linkClass}>{t.termeniConditii}</Link>
-              <Link to="/confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>
+              <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
+              <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
+              <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>
             </nav>
           </div>
           {/* Column 4: Divizii */}
@@ -64,10 +65,10 @@ function Footer() {
           <div className="flex flex-col">
             <div className={headingClass}>{t.partneri}</div>
             <nav className="flex flex-col gap-2.5">
-              <Link to="/clienti" className={linkClass}>{t.clienti}</Link>
+              <Link to="/login" className={linkClass}>{t.clienti}</Link>
               <Link to="/instalatori" className={linkClass}>{t.instalatori}</Link>
-              <Link to="/distribuitori" className={linkClass}>{t.distribuitori}</Link>
-              <Link to="/centre-medicale" className={linkClass}>{t.centreMedicale}</Link>
+              <Link to="/instalatori" className={linkClass}>{t.distribuitori}</Link>
+              <Link to="/login?tab=partener" className={linkClass}>{t.centreMedicale}</Link>
             </nav>
           </div>
           {/* Column 6: Media */}
@@ -96,19 +97,19 @@ function Footer() {
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                 </svg>
               </a>
-              <a
-                href="#"
+              <Link
+                to="/blog"
                 className="size-9 rounded-lg bg-gray-200 flex items-center justify-center text-gray-600 transition-colors hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                 aria-label="Blog"
               >
                 <svg className="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
                 </svg>
-              </a>
+              </Link>
             </div>
             <nav className="flex flex-col gap-2.5">
-              <Link to="/presa" className={linkClass}>{t.presa}</Link>
-              <Link to="/companie/contact" className={linkClass}>{t.contact}</Link>
+              <Link to="/blog" className={linkClass}>{t.presa}</Link>
+              <Link to="/contact" className={linkClass}>{t.contact}</Link>
             </nav>
           </div>
         </div>

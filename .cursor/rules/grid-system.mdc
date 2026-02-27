@@ -1,0 +1,48 @@
+---
+description: Responsive grid system and layout constraints for Baterino Romania
+globs: apps/web/src/**/*.tsx
+alwaysApply: false
+---
+
+# Grid System & Layout Constraints
+
+## Breakpoints
+- **Mobile**: < 1024px (`lg:` is the main breakpoint)
+- **Desktop**: ≥ 1024px
+
+## Site Widths
+- Full site width: `max-w-site` = 1440px (header, footer span full viewport)
+- Content container: `max-w-content` = 1200px → always `max-w-content mx-auto`
+- Defined in `apps/web/src/style.css` `@theme` block (NOT in tailwind.config.js)
+
+## `.grid-12` Utility (defined in style.css)
+- **Mobile**: 4 columns, 20px gap → container uses `px-5`
+- **Desktop**: 12 columns, 24px gap → container uses `px-3`
+
+```tsx
+// ✅ Page article wrapper
+<article className="max-w-content mx-auto px-5 lg:px-3 pt-24 pb-16">
+  <div className="grid-12">
+    <div className="col-span-4 lg:col-span-6">...</div>   {/* half on desktop, full on mobile */}
+    <div className="col-span-4 lg:col-span-6">...</div>
+  </div>
+</article>
+```
+
+## Column Span Reference (col-span-N)
+| Mobile (4-col) | Desktop (12-col) | Usage |
+|---|---|---|
+| `col-span-4` | `col-span-4` | Full-width mobile, 1/3 desktop |
+| `col-span-2` | `col-span-4` | Half mobile, 1/3 desktop |
+| `col-span-4 lg:col-span-6` | | Half desktop, full mobile |
+| `col-span-4 lg:col-span-3` | | Quarter desktop, full mobile |
+
+## Margins
+- Article horizontal padding: `px-5` mobile (20px), `lg:px-3` desktop (12px)
+- CTA box mobile margin: `mx-4 my-4` mobile, `lg:mx-0 lg:my-0` desktop
+
+## Explicit Grid Override
+For sections that need a fixed column count regardless of `grid-12` context:
+```tsx
+<ul className="grid grid-cols-1 lg:grid-cols-4 gap-5">  {/* always 4 on desktop */}
+```

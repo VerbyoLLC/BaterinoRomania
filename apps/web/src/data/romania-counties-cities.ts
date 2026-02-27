@@ -1,0 +1,57 @@
+/**
+ * Romania counties (județe) and cities (orașe) – county seat + main cities per county
+ */
+export const DEPARTAMENTE = [
+  { value: 'vanzari', label: 'Vanzari' },
+  { value: 'tehnic', label: 'Tehnic' },
+  { value: 'logistica', label: 'Logistica' },
+  { value: 'it', label: 'IT' },
+  { value: 'electricieni', label: 'Electricieni' },
+] as const
+
+export const JUDETE_CU_ORASE: Record<string, string[]> = {
+  'Alba': ['Alba Iulia', 'Blaj', 'Aiud', 'Sebeș', 'Cugir', 'Ocna Mureș', 'Abrud', 'Baia de Arieș', 'Câmpeni', 'Teiuș', 'Zlatna'],
+  'Arad': ['Arad', 'Lipova', 'Chișineu-Criș', 'Curtici', 'Ineu', 'Nădlac', 'Pâncota', 'Pecica', 'Santana', 'Sebiș'],
+  'Argeș': ['Pitești', 'Câmpulung', 'Curtea de Argeș', 'Mioveni', 'Ștefănești', 'Costești', 'Topoloveni'],
+  'Bacău': ['Bacău', 'Onești', 'Moinești', 'Comănești', 'Buhuși', 'Târgu Ocna', 'Dărmănești'],
+  'Bihor': ['Oradea', 'Salonta', 'Marghita', 'Beiuș', 'Valea lui Mihai', 'Ștei', 'Alesd'],
+  'Bistrița-Năsăud': ['Bistrița', 'Beclean', 'Năsăud', 'Sângeorz-Băi'],
+  'Botoșani': ['Botoșani', 'Dorohoi', 'Săveni', 'Bucecea', 'Ștefănești', 'Flămânzi'],
+  'Brăila': ['Brăila', 'Făurei', 'Ianca', 'Însurăței'],
+  'Brașov': ['Brașov', 'Făgăraș', 'Codlea', 'Săcele', 'Râșnov', 'Zărnești', 'Victoria', 'Rupea', 'Predeal'],
+  'București': ['București', 'Sector 1', 'Sector 2', 'Sector 3', 'Sector 4', 'Sector 5', 'Sector 6'],
+  'Buzău': ['Buzău', 'Râmnicu Sărat', 'Pătârlagele', 'Nehoiu', 'Pogoanele'],
+  'Caraș-Severin': ['Reșița', 'Caransebeș', 'Oravița', 'Moldova Nouă', 'Băile Herculane', 'Anina'],
+  'Călărași': ['Călărași', 'Oltenița', 'Budești', 'Fundulea', 'Lehliu-Gară'],
+  'Cluj': ['Cluj-Napoca', 'Dej', 'Turda', 'Câmpia Turzii', 'Gherla', 'Huedin', 'Florești'],
+  'Constanța': ['Constanța', 'Mangalia', 'Medgidia', 'Cernavodă', 'Navodari', 'Eforie', 'Techirghiol', 'Ovidiu', 'Murfatlar'],
+  'Covasna': ['Sfântu Gheorghe', 'Târgu Secuiesc', 'Covasna', 'Baraolt', 'Întorsura Buzăului'],
+  'Dâmbovița': ['Târgoviște', 'Moreni', 'Găești', 'Pucioasa', 'Titu', 'Fieni', 'Răcari'],
+  'Dolj': ['Craiova', 'Băilești', 'Calafat', 'Filiași', 'Segarcea', 'Bechet'],
+  'Galați': ['Galați', 'Tecuci', 'Târgu Bujor', 'Beresti'],
+  'Giurgiu': ['Giurgiu', 'Bolintin-Vale', 'Mihăilești'],
+  'Gorj': ['Târgu Jiu', 'Motru', 'Rovinari', 'Târgu Cărbunești', 'Novaci'],
+  'Harghita': ['Miercurea Ciuc', 'Odorheiu Secuiesc', 'Gheorgheni', 'Toplița', 'Cristuru Secuiesc', 'Băile Tușnad'],
+  'Hunedoara': ['Deva', 'Hunedoara', 'Petroșani', 'Orăștie', 'Brad', 'Vulcan', 'Lupeni', 'Călan', 'Simeria', 'Hațeg'],
+  'Ialomița': ['Slobozia', 'Fetești', 'Urziceni', 'Tândărei', 'Amara', 'Călărași'],
+  'Iași': ['Iași', 'Pașcani', 'Târgu Frumos', 'Hârlău', 'Podu Iloaiei', 'Târgu Neamț'],
+  'Ilfov': ['București', 'Voluntari', 'Bragadiru', 'Chitila', 'Măgurele', 'Otopeni', 'Pantelimon', 'Popești-Leordeni', 'Berceni', 'Cernica', 'Clinceni', 'Corbeanca', 'Dobroești', 'Domnești', 'Dragomirești-Vale', 'Găneasa', 'Glina', 'Grădiștea', 'Jilava', 'Moara Vlăsiei', 'Pantelimon', 'Periș', 'Petrăchioaia', 'Snagov', 'Ștefăneștii de Jos', 'Tunari', 'Vidra'],
+  'Maramureș': ['Baia Mare', 'Sighetu Marmației', 'Borșa', 'Cavnic', 'Târgu Lăpuș', 'Vișeu de Sus', 'Ulmeni'],
+  'Mehedinți': ['Drobeta-Turnu Severin', 'Orșova', 'Strehaia', 'Vânju Mare', 'Baia de Aramă'],
+  'Mureș': ['Târgu Mureș', 'Sighișoara', 'Reghin', 'Luduș', 'Târnăveni', 'Iernut', 'Sovata'],
+  'Neamț': ['Piatra Neamț', 'Roman', 'Târgu Neamț', 'Bicaz', 'Roznov', 'Săvinești'],
+  'Olt': ['Slatina', 'Caracal', 'Corabia', 'Balș', 'Scornicești', 'Drăgănești-Olt'],
+  'Prahova': ['Ploiești', 'Câmpina', 'Sinaia', 'Băicoi', 'Breaza', 'Bușteni', 'Comarnic', 'Mizil', 'Plopeni', 'Urlați', 'Vălenii de Munte'],
+  'Sălaj': ['Zalău', 'Jibou', 'Șimleu Silvaniei', 'Cehu Silvaniei', 'Crasna'],
+  'Satu Mare': ['Satu Mare', 'Carei', 'Negrești-Oaș', 'Tășnad', 'Ardud', 'Livada'],
+  'Sibiu': ['Sibiu', 'Mediaș', 'Cisnădie', 'Avrig', 'Agnita', 'Copsa Mică', 'Dumbrăveni', 'Miercurea Sibiului', 'Săliște', 'Tălmaciu'],
+  'Suceava': ['Suceava', 'Fălticeni', 'Rădăuți', 'Câmpulung Moldovenesc', 'Vatra Dornei', 'Gura Humorului', 'Siret', 'Salcea', 'Liteni'],
+  'Teleorman': ['Alexandria', 'Roșiorii de Vede', 'Turnu Măgurele', 'Zimnicea', 'Videle', 'Orbeasca'],
+  'Timiș': ['Timișoara', 'Lugoj', 'Sânnicolau Mare', 'Jimbolia', 'Buziaș', 'Făget', 'Deta', 'Recaș', 'Gătaia'],
+  'Tulcea': ['Tulcea', 'Babadag', 'Măcin', 'Sulina', 'Isaccea', 'Chilia Veche'],
+  'Vâlcea': ['Râmnicu Vâlcea', 'Drăgășani', 'Călimănești', 'Brezoi', 'Horezu', 'Băile Govora', 'Băile Olănești'],
+  'Vaslui': ['Vaslui', 'Bârlad', 'Huși', 'Negrești', 'Murgeni', 'Văleni'],
+  'Vrancea': ['Focșani', 'Adjud', 'Mărășești', 'Odobești', 'Panciu', 'Vidra'],
+} as const
+
+export const JUDETE = Object.keys(JUDETE_CU_ORASE) as string[]

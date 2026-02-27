@@ -23,6 +23,7 @@ export type ViziuneTranslations = {
   echipaP1: string
   echipaP2: string
   echipaP3: string
+  discutaCuNoi: string
 }
 
 const translations: Record<LangCode, ViziuneTranslations> = {
@@ -62,6 +63,7 @@ const translations: Record<LangCode, ViziuneTranslations> = {
       'Baterino este definită prin dinamism și profesionalism. Am adus împreună o echipă multidisciplinară, formată din specialiști în logistică, energie, media și relații internaționale — profesioniști cu o înțelegere profundă a pieței și a contextului economic actual.',
     echipaP3:
       'Echipa noastră nu este construită în jurul unui singur individ, ci în jurul unui obiectiv comun: să oferim produse și servicii de calitate, cu impact real în viața de zi cu zi și în dezvoltarea mediului industrial din România. Credem în responsabilitate, colaborare și rezultate măsurabile.',
+    discutaCuNoi: 'DISCUTĂ CU NOI',
   },
   en: {
     heroTitle: 'ABOUT US',
@@ -99,6 +101,7 @@ const translations: Record<LangCode, ViziuneTranslations> = {
       'Baterino is defined by dynamism and professionalism. We have brought together a multidisciplinary team of specialists in logistics, energy, media and international relations — professionals with a deep understanding of the market and the current economic context.',
     echipaP3:
       'Our team is not built around a single individual, but around a common goal: to offer quality products and services with real impact on daily life and on the development of the industrial environment in Romania. We believe in responsibility, collaboration and measurable results.',
+    discutaCuNoi: 'TALK TO US',
   },
   zh: {
     heroTitle: '关于我们',
@@ -136,6 +139,7 @@ const translations: Record<LangCode, ViziuneTranslations> = {
       'Baterino 以活力和专业精神为特点。我们汇聚了一支多学科团队，包括物流、能源、媒体和国际关系领域的专家——对市场和当前经济背景有深刻理解的专业人士。',
     echipaP3:
       '我们的团队不是围绕某一个人，而是围绕一个共同目标：提供高质量的产品和服务，对日常生活和罗马尼亚工业环境的发展产生实际影响。我们相信责任、协作和可衡量的成果。',
+    discutaCuNoi: '与我们交谈',
   },
 }
 
