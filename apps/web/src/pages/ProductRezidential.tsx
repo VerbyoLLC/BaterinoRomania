@@ -155,7 +155,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 /* ── Page ─────────────────────────────────────────────────────────── */
 export default function ProductRezidential() {
   const { id } = useParams<{ id: string }>()
-  const language = useLanguage()
+  const { language } = useLanguage()
   const product = PRODUCTS.find(p => p.id === id)
   const details  = DETAILS[id ?? '']
   const { programs } = getReduceriTranslations(language.code)

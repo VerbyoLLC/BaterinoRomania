@@ -63,41 +63,6 @@ function HomeProductCard({
   )
 }
 
-/* ── Division card ───────────────────────────────────────────── */
-function DivisionCard({
-  image, title, to, className = '',
-}: {
-  image: string
-  title: string
-  to: string
-  className?: string
-}) {
-  return (
-    <Link
-      to={to}
-      className={`group relative rounded-[10px] overflow-hidden bg-neutral-100 block transition-shadow duration-300 hover:shadow-md ${className}`}
-    >
-      <img
-        src={image}
-        alt={title}
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-      />
-      <div className="absolute inset-0 bg-black/35 group-hover:bg-black/25 transition-colors duration-300" />
-      <img
-        src="/images/shared/baterino-logo-white.png"
-        alt="Baterino"
-        className="absolute top-4 right-4 h-5 w-auto object-contain"
-      />
-      <div className="absolute bottom-4 left-4">
-        <span className="block text-white text-sm font-bold font-['Inter'] tracking-wider">
-          {title}
-        </span>
-      </div>
-    </Link>
-  )
-}
-
 /* ── Page ────────────────────────────────────────────────────── */
 export default function Home() {
   const { language } = useLanguage()
@@ -182,12 +147,6 @@ export default function Home() {
       ? (featuresSliderRef.current.firstElementChild as HTMLElement).offsetWidth + CARD_GAP
       : featuresSliderRef.current.offsetWidth / 3
     featuresSliderRef.current.scrollBy({ left: dir === 'right' ? cardWidth : -cardWidth, behavior: 'smooth' })
-  }
-
-  function slideDivisions(dir: 'left' | 'right') {
-    if (!divisionsSliderRef.current) return
-    const cardWidth = DIVISIONS_CARD_WIDTH + CARD_GAP
-    divisionsSliderRef.current.scrollBy({ left: dir === 'right' ? cardWidth : -cardWidth, behavior: 'smooth' })
   }
 
   const featuredProducts = useMemo(() => {
