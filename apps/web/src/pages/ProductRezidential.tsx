@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams, Navigate } from 'react-router-dom'
+import { useLanguage } from '../contexts/LanguageContext'
 import { PRODUCTS } from '../i18n/produse'
+import { getReduceriTranslations } from '../i18n/reduceri'
 import SEO from '../components/SEO'
 
 /* ── Types ──────────────────────────────────────────────────────── */
@@ -21,10 +23,11 @@ const DETAILS: Record<string, ProductDetail> = {
       'Pentru locuințe individuale cu 2–4 camere, optimizat pentru integrare cu invertoare de 10–15 kVA.',
     specs: [
       { label: 'Capacitate',           value: '100Ah' },
+      { label: 'Capacitate nominală',   value: '5.1 kWh' },
       { label: 'Cicluri de descărcare', value: '5,000 (la 60% DOD)' },
       { label: 'Compatibilitate',       value: 'Nivel 4 — Siguranță ridicată' },
       { label: 'Dimensiuni',            value: '460 × 400 × 130 mm' },
-      { label: 'Capacitate nominală',   value: '5.1 kWh' },
+      { label: 'Greutate',              value: '46 kg' },
       { label: 'Temperatura operare',   value: '-20 ~ 55°C' },
     ],
     images: ['/images/shared/eco-home5kwh-lithtech.png'],
@@ -77,10 +80,11 @@ const DETAILS: Record<string, ProductDetail> = {
     shortDesc: 'Sistem All-in-One cu invertor integrat, ideal pentru case cu consum ridicat și back-up automat.',
     specs: [
       { label: 'Capacitate',           value: '200Ah' },
+      { label: 'Capacitate nominală',   value: '10.24 kWh' },
       { label: 'Cicluri de descărcare', value: '6,000 (la 80% DOD)' },
       { label: 'Compatibilitate',       value: 'All-in-One — invertor integrat' },
       { label: 'Dimensiuni',            value: '600 × 220 × 700 mm' },
-      { label: 'Capacitate nominală',   value: '10.24 kWh' },
+      { label: 'Greutate',              value: '82 kg' },
       { label: 'Temperatura operare',   value: '-10 ~ 50°C' },
     ],
     images: ['/images/shared/HP2000-all-in-one.png'],
@@ -151,11 +155,13 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 /* ── Page ─────────────────────────────────────────────────────────── */
 export default function ProductRezidential() {
   const { id } = useParams<{ id: string }>()
+  const language = useLanguage()
   const product = PRODUCTS.find(p => p.id === id)
   const details  = DETAILS[id ?? '']
+  const { programs } = getReduceriTranslations(language.code)
 
   const [activeImage, setActiveImage] = useState(0)
-  const [qty, setQty]                 = useState(1)
+  const [qty, setQty]                 = useState(2)
 
   if (!product || !details) return <Navigate to="/produse" replace />
 
@@ -210,7 +216,7 @@ export default function ProductRezidential() {
             {/* Quantity */}
             <div className="mb-5">
               <p className="text-xs font-bold font-['Inter'] text-gray-400 uppercase tracking-widest mb-2">
-                PRODUS NECESAR
+                CANTITATE
               </p>
               <div className="flex items-center gap-3">
                 <button
@@ -231,15 +237,19 @@ export default function ProductRezidential() {
               </div>
             </div>
 
-            {/* TVA / discount selector */}
-            <div className="mb-7">
+            {/* Discount selector */}
+            <div className="mb-7 py-3">
               <p className="text-xs font-bold font-['Inter'] text-gray-400 uppercase tracking-widest mb-2">
-                TVA COMANDĂ RAPIDĂ
+                ALEGE PROGRAM REDUCERI
               </p>
               <div className="relative inline-flex items-center">
                 <select className="appearance-none h-10 pl-4 pr-10 bg-neutral-100 rounded-[10px] text-black text-sm font-semibold font-['Inter'] cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 transition-colors">
-                  <option>TVA: COMANDĂ RAPIDĂ -{discount}%</option>
                   <option>Fără reducere</option>
+                  {programs.map((p, i) => (
+                    <option key={i} value={p.discountPercent ?? 0}>
+                      {p.title}
+                    </option>
+                  ))}
                 </select>
                 <svg className="pointer-events-none absolute right-3 w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -276,7 +286,7 @@ export default function ProductRezidential() {
           <div className="lg:col-span-6 lg:col-start-7 flex flex-col gap-5">
 
             {/* Image carousel */}
-            <div className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[460px]">
+            <div className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[460px] cursor-zoom-in">
               <img
                 src={details.images[activeImage]}
                 alt={product.name}
@@ -344,12 +354,12 @@ export default function ProductRezidential() {
             {/* Documents */}
             <div>
               <h3 className="text-black text-base font-bold font-['Inter'] mb-3">Documente Tehnice</h3>
-              <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {details.documents.map((doc, i) => (
                   <a
                     key={i}
                     href={doc.url}
-                    className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-zinc-200 hover:bg-neutral-50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-zinc-200 hover:bg-neutral-50 hover:border-slate-400 hover:shadow-md transition-all duration-200"
                   >
                     <img src="/images/shared/download-icon.svg" alt="" aria-hidden className="w-5 h-5 flex-shrink-0" />
                     <span className="text-black text-sm font-medium font-['Inter'] flex-1">
