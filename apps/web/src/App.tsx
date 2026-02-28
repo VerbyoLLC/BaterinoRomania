@@ -26,6 +26,7 @@ import AdminLogin from './pages/admin/AdminLogin'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCompanies from './pages/admin/AdminCompanies'
+import AdminProducts from './pages/admin/AdminProducts'
 import AdminDiscounts from './pages/admin/AdminDiscounts'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
@@ -51,7 +52,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="products"  element={<AdminDashboard />} />
+          <Route path="products"  element={<AdminProducts />} />
           <Route path="clients"   element={<AdminDashboard />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="articles"  element={<AdminDashboard />} />
