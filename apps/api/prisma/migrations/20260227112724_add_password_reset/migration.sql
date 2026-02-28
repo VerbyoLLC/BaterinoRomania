@@ -1,3 +1,2 @@
--- AlterTable
-ALTER TABLE "User" ADD COLUMN "passwordResetToken" TEXT,
-ADD COLUMN "passwordResetExpiresAt" TIMESTAMP(3);
+-- No-op: columns already added in 20260227042726_add_password_reset
+SELECT 1;
