@@ -1,12 +1,17 @@
 require('dotenv').config()
 const crypto = require('crypto')
+const path = require('path')
 const express = require('express')
 const cors = require('cors')
+const multer = require('multer')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
-const { PrismaClient, Prisma } = require('./generated/prisma/index.js')
+const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
 const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured } = require('./lib/mail.js')
+const { uploadToR2, generateKey, isR2Configured } = require('./lib/r2.js')
+
+const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -488,6 +493,102 @@ app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddlewar
     res.status(500).json({ error: err?.message || 'Eroare la aprobare.' })
   }
 })
+
+// ── Admin: file upload (images, PDFs) → R2 ─────────────────────────────────────────
+const uploadHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Fișier lipsă.' })
+    if (!isR2Configured()) {
+      return res.status(503).json({ error: 'Stocare fișiere neconfigurată. Verifică R2 în .env.' })
+    }
+    const isPdf = req.file.mimetype === 'application/pdf'
+    const prefix = isPdf ? 'docs' : 'products'
+    const key = generateKey(req.file.originalname, prefix, req.file.mimetype)
+    const url = await uploadToR2(req.file.buffer, key, req.file.mimetype)
+    return res.json({ url })
+  } catch (err) {
+    console.error('Upload error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.post('/api/admin/upload', authMiddleware, adminAuthMiddleware, uploadMiddleware.single('file'), uploadHandler)
+app.post('/admin/upload', authMiddleware, adminAuthMiddleware, uploadMiddleware.single('file'), uploadHandler)
+
+// ── Admin: create product ───────────────────────────────────────────────
+const createProductHandler = async (req, res) => {
+  try {
+    if (!prisma.product) {
+      console.error('Prisma Product model missing. Run: npx prisma generate')
+      return res.status(500).json({ error: 'Server misconfiguration. Contact administrator.' })
+    }
+    const body = req.body || {}
+    const status = body.status === 'published' ? 'published' : 'draft'
+    const title = String(body.title || '').trim()
+    const sku = String(body.sku || '').trim()
+    const tipProdus = ['rezidential', 'industrial'].includes(body.tipProdus) ? body.tipProdus : 'rezidential'
+
+    if (!title || !sku) {
+      return res.status(400).json({ error: 'Titlul și SKU sunt obligatorii.' })
+    }
+
+    const landedPrice = parseDecimal(body.landedPrice, 0)
+    const salePrice = parseDecimal(body.salePrice, 0)
+    const vat = parseDecimal(body.vat, 19)
+
+    const images = Array.isArray(body.images) ? body.images : []
+    const documenteTehnice = Array.isArray(body.documenteTehnice) ? body.documenteTehnice : []
+    const faq = Array.isArray(body.faq) ? body.faq : []
+
+    const product = await prisma.product.create({
+      data: {
+        status,
+        title,
+        sku,
+        description: body.description?.trim() || null,
+        tipProdus,
+        landedPrice,
+        salePrice,
+        vat,
+        energieNominala: body.energieNominala?.trim() || null,
+        capacitate: body.capacitate?.trim() || null,
+        curentMaxDescarcare: body.curentMaxDescarcare?.trim() || null,
+        curentMaxIncarcare: body.curentMaxIncarcare?.trim() || null,
+        cicluriDescarcare: body.cicluriDescarcare?.trim() || null,
+        adancimeDescarcare: body.adancimeDescarcare?.trim() || null,
+        greutate: body.greutate?.trim() || null,
+        dimensiuni: body.dimensiuni?.trim() || null,
+        protectie: body.protectie?.trim() || null,
+        certificari: body.certificari?.trim() || null,
+        garantie: body.garantie?.trim() || null,
+        tensiuneNominala: body.tensiuneNominala?.trim() || null,
+        eficientaCiclu: body.eficientaCiclu?.trim() || null,
+        temperaturaFunctionare: body.temperaturaFunctionare?.trim() || null,
+        temperaturaStocare: body.temperaturaStocare?.trim() || null,
+        umiditate: body.umiditate?.trim() || null,
+        images,
+        documenteTehnice,
+        faq,
+      },
+    })
+    return res.status(201).json(product)
+  } catch (err) {
+    console.error('Create product error:', err)
+    let errorMsg = 'Eroare la salvarea produsului.'
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') errorMsg = 'Există deja un produs cu acest SKU.'
+      else if (err.code === 'P2003') errorMsg = 'Date invalide.'
+    } else if (err?.message) errorMsg = err.message
+    res.status(500).json({ error: errorMsg })
+  }
+}
+app.post('/api/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
+app.post('/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
+
+function parseDecimal(val, fallback) {
+  if (val === '' || val === null || val === undefined) return fallback
+  const n = Number(String(val).replace(',', '.'))
+  return Number.isNaN(n) ? fallback : n
+}
 
 // ── Admin: suspend/unsuspend company ────────────────────────────────────
 app.patch('/api/admin/companies/:id/suspend', authMiddleware, adminAuthMiddleware, async (req, res) => {
