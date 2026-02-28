@@ -14,7 +14,7 @@ export default function SignupVerifyCode({ email, userType, onBack, onSuccess }:
   const [digits, setDigits] = useState(['', '', '', ''])
   const [codeError, setCodeError] = useState(false)
   const [resent, setResent] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [, setLoading] = useState(false)
   const inputsRef = useRef<(HTMLInputElement | null)[]>([])
 
   function handleChange(index: number, value: string) {

@@ -15,12 +15,11 @@ export async function signup(email: string, password: string, role: 'client' | '
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, role }),
     })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Eroare de rețea'
+  } catch {
     throw new Error(`Nu s-a putut conecta la API (${API_BASE}). Pornește API-ul: npm run dev:api`)
   }
   const text = await res.text()
-  let data: { error?: string } = {}
+  let data: { error?: string; debug?: string } = {}
   try {
     data = text ? JSON.parse(text) : {}
   } catch {
