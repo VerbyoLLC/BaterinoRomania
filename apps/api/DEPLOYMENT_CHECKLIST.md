@@ -57,7 +57,19 @@ Când clonezi repo-ul și vrei să deployezi pe Railway, urmează pașii de mai 
 
 ---
 
-## 4. După deploy
+## 4. Vercel (frontend) – variabilă obligatorie
+
+Dacă frontend-ul e pe Vercel, setează în **Vercel → Project → Settings → Environment Variables**:
+
+| Variabilă | Valoare |
+|-----------|---------|
+| `VITE_API_URL` | URL-ul API-ului Railway, ex. `https://baterino-api-production.up.railway.app/api` |
+
+Fără această variabilă, frontend-ul va încerca `/api` pe domeniul Vercel (inexistent) și va afișa „API indisponibil”.
+
+---
+
+## 5. După deploy
 
 - [ ] **Generate Domain**: Settings → Networking → **Generate Domain**
 - [ ] Verifică healthcheck: `https://<domeniu-railway>/health` → `{"ok":true}`
@@ -65,6 +77,6 @@ Când clonezi repo-ul și vrei să deployezi pe Railway, urmează pașii de mai 
 
 ---
 
-## 5. Template .env (pentru referință locală)
+## 6. Template .env (pentru referință locală)
 
 Copiază `apps/api/.env.example` în `apps/api/.env` și completează valorile. **Nu comite .env** – e în `.gitignore`.

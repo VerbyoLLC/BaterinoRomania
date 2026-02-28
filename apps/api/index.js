@@ -615,6 +615,12 @@ app.patch('/api/admin/companies/:id/suspend', authMiddleware, adminAuthMiddlewar
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 app.get('/health', (req, res) => res.json({ ok: true }))
 
+// R2 status (verificare config, fără auth)
+app.get('/api/r2-status', (req, res) => {
+  const configured = isR2Configured()
+  res.json({ configured, message: configured ? 'R2 configurat' : 'R2 neconfigurat (lipsește .env)' })
+})
+
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────
 app.use((req, res) => {
   console.log('[404]', req.method, req.url)
