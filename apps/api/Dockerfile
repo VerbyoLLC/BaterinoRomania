@@ -23,6 +23,7 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/generated ./generated
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 COPY index.js ./
 COPY lib ./lib/
 COPY templates ./templates/

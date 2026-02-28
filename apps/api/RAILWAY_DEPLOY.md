@@ -26,6 +26,11 @@
 | `SMTP_PASS` | Parolă SMTP | |
 | `MAIL_FROM` | Adresa expeditor | `Baterino <noreply@tudomeniu.com>` |
 | `SITE_NAME` | Nume site | `Baterino Romania` |
+| `R2_ENDPOINT` | Cloudflare R2 endpoint | `https://xxx.eu.r2.cloudflarestorage.com` |
+| `R2_ACCESS_KEY_ID` | R2 API key | |
+| `R2_SECRET_ACCESS_KEY` | R2 API secret | |
+| `R2_BUCKET` | Nume bucket R2 | `baterinoromania` |
+| `R2_PUBLIC_URL` | URL public pentru fișiere | `https://media.baterino.ro` |
 
 ## 4. Deploy
 

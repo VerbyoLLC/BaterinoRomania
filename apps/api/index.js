@@ -621,8 +621,9 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Rută negăsită', path: req.url, method: req.method })
 })
 
-const server = app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`)
+const host = process.env.HOST || '0.0.0.0'
+const server = app.listen(PORT, host, () => {
+  console.log(`API running on http://${host}:${PORT}`)
 })
 
 // Prevent process from exiting when run under npm/concurrently
