@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "prisma generate && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "prisma generate && prisma migrate deploy",
     "migrate:deploy": "prisma migrate deploy",
@@ -15,7 +15,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "nodemailer": "^6.9.16",
+    "@aws-sdk/client-s3": "^3.1000.0",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
     "bcryptjs": "^3.0.3",
@@ -23,10 +23,11 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.0",
+    "nodemailer": "^6.9.16",
     "pg": "^8.19.0",
     "prisma": "^7.4.1"
   },
-  "devDependencies": {},
   "prisma": {
     "seed": "node prisma/seed.js"
   },

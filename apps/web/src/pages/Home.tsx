@@ -207,33 +207,33 @@ export default function Home() {
                     />
                     <div className="absolute inset-0 bg-black/40" />
                     {i === 0 && (
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-72 h-44 text-center">
-                        <div className="w-full h-28 text-white text-2xl font-bold font-['Inter'] uppercase leading-8">
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
+                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
                           Sisteme de stocare a energiei cu baterii LiFePO4
-                        </div>
-                        <div className="w-full h-14 text-white text-lg font-bold font-['Inter'] leading-7">
+                        </h1>
+                        <p className="text-white text-base sm:text-lg font-bold font-['Inter'] leading-6 sm:leading-7">
                           Pentru locuințe individuale și micro-grid-uri.
-                        </div>
+                        </p>
                       </div>
                     )}
                     {i === 1 && (
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-72 h-52 text-center">
-                        <div className="w-full h-28 text-white text-2xl font-bold font-['Inter'] uppercase leading-8">
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
+                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
                           Soluții BESS pentru stocare de energie la nivel MW
-                        </div>
-                        <div className="w-full h-20 text-white text-xl font-bold font-['Inter'] leading-7">
+                        </h1>
+                        <p className="text-white text-sm sm:text-xl font-bold font-['Inter'] leading-6 sm:leading-7">
                           Proiecte integrate pentru industrie și parcuri fotovoltaice.
-                        </div>
+                        </p>
                       </div>
                     )}
                     {i === 2 && (
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-72 h-52 text-center">
-                        <div className="w-full h-28 text-white text-2xl font-bold font-['Inter'] uppercase leading-8">
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
+                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
                           Soluții BESS pentru infrastructura medicala critica
-                        </div>
-                        <div className="w-full h-20 text-white text-lg font-bold font-['Inter'] leading-6">
+                        </h1>
+                        <p className="text-white text-sm sm:text-lg font-bold font-['Inter'] leading-6">
                           Pentru clinici de imagistică, stomatologie, centre de transfuzie și spitale.
-                        </div>
+                        </p>
                       </div>
                     )}
                   </div>
@@ -459,20 +459,44 @@ export default function Home() {
 
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          <h2 className="text-center text-black text-3xl lg:text-4xl font-extrabold font-['Inter'] my-8 lg:my-10">
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] my-6 sm:my-8 lg:my-10">
             {tr.productsSectionTitle}
           </h2>
 
-          {/* Tabs */}
-          <div className="flex justify-center gap-3 mb-10">
+          {/* Battery type selection – mobile: 3 stacked; desktop: all 5 horizontal */}
+          <div
+            className="flex flex-col sm:hidden gap-2 mb-8 max-w-xs mx-auto"
+            role="group"
+            aria-label={tr.productsSectionTitle}
+          >
+            {tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={activeTab === tab.id}
+                aria-label={tab.label}
+                className={`w-full h-12 px-4 rounded-xl text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 ${
+                  activeTab === tab.id
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                    : 'bg-white text-black border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="hidden sm:flex flex-wrap justify-center gap-2 lg:gap-3 mb-8 lg:mb-10" role="group" aria-label={tr.productsSectionTitle}>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] transition-colors ${
+                aria-pressed={activeTab === tab.id}
+                className={`h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] transition-all duration-200 border-2 ${
                   activeTab === tab.id
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-neutral-100 text-black hover:bg-neutral-200'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-black border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 {tab.label}
@@ -499,7 +523,7 @@ export default function Home() {
           <div className="flex justify-center">
             <Link
               to="/produse"
-              className="inline-flex items-center justify-center h-12 px-10 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center justify-center h-11 sm:h-12 px-8 sm:px-10 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-xs sm:text-sm hover:bg-slate-700 transition-colors"
             >
               {tr.productsViewMore}
             </Link>
@@ -512,9 +536,9 @@ export default function Home() {
       <section className="mb-16 lg:mb-24">
 
         {/* Title – centered on mobile, left on desktop */}
-        <div className="my-10 px-5 lg:px-0 text-center lg:text-left lg:pl-[var(--grid-edge)]">
+        <div className="my-8 sm:my-10 px-5 lg:px-0 text-center lg:text-left lg:pl-[var(--grid-edge)]">
           <h2
-            className="text-black text-3xl font-bold font-['Inter'] leading-10 mx-auto lg:mx-0"
+            className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 mx-auto lg:mx-0"
             style={{ width: '676px', maxWidth: '100%' }}
           >
             {tr.featuresSectionTitle}
@@ -547,13 +571,13 @@ export default function Home() {
               {/* Mobile: absolute layout per spec */}
               <div className="lg:hidden absolute inset-0">
                 <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
-                <img src={f.icon} alt="" aria-hidden className="size-16 object-contain absolute left-[40px] top-[40px]" />
-                <div className="absolute left-[47px] top-[115px] w-56 text-black text-2xl font-semibold font-['Inter'] leading-8">
+                <img src={f.icon} alt="" aria-hidden className="size-14 sm:size-16 object-contain absolute left-[32px] sm:left-[40px] top-[32px] sm:top-[40px]" />
+                <h3 className="absolute left-[32px] sm:left-[47px] top-[100px] sm:top-[115px] w-48 sm:w-56 text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-7 sm:leading-8">
                   {f.title}
-                </div>
-                <div className="absolute left-[47px] top-[196px] w-64 text-black text-lg font-normal font-['Inter'] leading-6">
+                </h3>
+                <p className="absolute left-[32px] sm:left-[47px] top-[170px] sm:top-[196px] w-56 sm:w-64 text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6">
                   {f.desc}
-                </div>
+                </p>
               </div>
               {/* Desktop: flow layout with border */}
               <div className="hidden lg:block relative h-full border border-zinc-200 rounded-[10px] px-[35px] pt-[35px] pb-5">
@@ -630,11 +654,11 @@ export default function Home() {
 
       {/* ── REDUCERI – Programe de reduceri ── */}
       <section className="mb-16 lg:mb-24 max-w-content mx-auto px-5 lg:px-3">
-        <div className="flex flex-col gap-4 my-8 text-center sm:text-left items-center sm:items-stretch">
-          <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10">
+        <div className="flex flex-col gap-4 my-6 sm:my-8 text-center sm:text-left items-center sm:items-stretch">
+          <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10">
             {tr.reduceriGridTitle}
           </h2>
-          <p className="text-black text-lg font-normal font-['Inter'] leading-6 max-w-[846px]">
+          <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[846px]">
             {tr.reduceriGridSubtitle}
           </p>
         </div>
@@ -649,15 +673,15 @@ export default function Home() {
                   className="absolute inset-0 w-full h-full object-cover rounded-[10px] transition-transform duration-300 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/40 rounded-[10px] transition-colors duration-300 group-hover:bg-black/55" />
-                <div className="absolute top-3 right-3 px-3 py-1.5 bg-white/95 rounded-[5px] z-10">
-                  <span className="text-slate-900 text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
+                <div className="absolute top-3 right-3 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/95 rounded-[5px] z-10">
+                  <span className="text-slate-900 text-xs sm:text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
                 </div>
-                <div className="absolute left-[26px] right-[26px] bottom-[24px] z-10 flex flex-col gap-3">
-                  <p className="text-white text-base font-medium font-['Nunito_Sans'] leading-6">{tr.reduceriProgramLabel}</p>
-                  <p className="text-white text-2xl font-bold font-['Inter'] leading-8 whitespace-pre-line">
+                <div className="absolute left-[20px] sm:left-[26px] right-[20px] sm:right-[26px] bottom-[20px] sm:bottom-[24px] z-10 flex flex-col gap-2 sm:gap-3">
+                  <p className="text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-5 sm:leading-6">{tr.reduceriProgramLabel}</p>
+                  <h3 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-7 sm:leading-8 whitespace-pre-line">
                     {card.title}
-                  </p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5">
+                  </h3>
+                  <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5">
                     {card.desc}
                   </p>
                 </div>
@@ -670,7 +694,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setReduceriVisibleCount(4)}
-              className="h-12 px-8 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-black text-base font-semibold font-['Inter'] hover:bg-neutral-100 transition-colors"
+              className="h-11 sm:h-12 px-6 sm:px-8 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-black text-sm sm:text-base font-semibold font-['Inter'] hover:bg-neutral-100 transition-colors"
             >
               {tr.reduceriLoadMore}
             </button>
@@ -688,10 +712,10 @@ export default function Home() {
           <div className="flex flex-col lg:grid lg:grid-cols-12 gap-y-8 gap-x-6 lg:gap-x-4 lg:gap-y-10 items-start">
             {/* Left: text – 6 cols (on mobile: centered, gap-4 like reduceri) */}
             <div className="flex flex-col gap-4 order-1 lg:order-1 lg:col-span-6 text-center lg:text-left items-center lg:items-stretch w-full">
-              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 max-w-96 my-8">
+              <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 max-w-96 my-6 sm:my-8">
                 {tr.lithtechTitle}
               </h2>
-              <p className="text-black text-lg font-normal font-['Inter'] leading-6 max-w-[482px] whitespace-pre-line">
+              <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[482px] whitespace-pre-line">
                 {tr.lithtechBody}
               </p>
             </div>
@@ -750,9 +774,9 @@ export default function Home() {
                   alt="LithTech"
                   className="absolute w-36 h-6 left-1/2 -translate-x-1/2 top-[149px] object-contain z-10"
                 />
-                <div className="absolute w-72 left-1/2 -translate-x-1/2 top-[177px] flex justify-center items-center text-white text-2xl font-bold font-['Inter'] leading-10 z-10">
+                <h3 className="absolute w-64 sm:w-72 left-1/2 -translate-x-1/2 top-[165px] sm:top-[177px] flex justify-center items-center text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-8 sm:leading-10 z-10 text-center px-2">
                   PRODUCE TEHNOLOGIE
-                </div>
+                </h3>
               </div>
               {/* Card B – Baterino */}
               <div className="w-full max-w-[24rem] h-60 relative rounded-[10px] overflow-hidden bg-zinc-300 shadow-md mx-auto">
@@ -767,13 +791,13 @@ export default function Home() {
                   alt="Baterino"
                   className="absolute w-28 h-5 left-1/2 -translate-x-1/2 top-[165px] object-contain z-10"
                 />
-                <div className="absolute w-52 left-1/2 -translate-x-1/2 top-[187px] flex justify-center items-center text-white text-2xl font-bold font-['Inter'] leading-10 z-10">
+                <h3 className="absolute w-44 sm:w-52 left-1/2 -translate-x-1/2 top-[175px] sm:top-[187px] flex justify-center items-center text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-8 sm:leading-10 z-10 text-center">
                   IMPLEMENTEAZA
-                </div>
+                </h3>
               </div>
               <Link
                 to="/parteneriat-strategic-lithtech-baterino"
-                className="w-full max-w-[24rem] mx-auto h-14 bg-white rounded-[10px] flex items-center justify-center text-black text-base font-bold font-['Inter'] uppercase outline outline-1 outline-zinc-300 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+                className="w-full max-w-[24rem] mx-auto h-12 sm:h-14 bg-white rounded-[10px] flex items-center justify-center text-black text-sm sm:text-base font-bold font-['Inter'] uppercase outline outline-1 outline-zinc-300 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
               >
                 VEZI PARTNERIAT
               </Link>
@@ -789,21 +813,21 @@ export default function Home() {
 
           {/* ── Mobile: Responsabilitate + map (shown first on mobile) ── */}
           <section className="lg:hidden flex flex-col items-center text-center mb-8">
-            <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-4">
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
               {tr.divisionsSectionTitle}
             </h2>
-            <p className="text-gray-700 text-base font-medium font-['Inter'] leading-7 mb-6">
+            <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
               {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
             </p>
-            <div className="flex items-center gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
-              <img src="/images/home/harta-romania.png" alt="" aria-hidden className="w-40 h-40 shrink-0 object-contain" />
-              <p className="text-black text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</p>
+            <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
+              <img src="/images/home/harta-romania.png" alt="" aria-hidden className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
+              <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
             </div>
             <Link
               to="/companie"
-              className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
+              className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
             >
-              <span className="text-black text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
+              <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
             </Link>
           </section>
 
@@ -858,10 +882,10 @@ export default function Home() {
 
           {/* ── DIVIZIILE BATERINO – desktop: 4 cards grid; mobile: slider ── */}
           <div>
-            <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-4 text-center lg:text-left">
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4 text-center lg:text-left">
               {tr.diviziileNoastreTitle}
             </h2>
-            <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[894px] text-center lg:text-left mx-auto lg:mx-0">
+            <p className="text-gray-700 text-base sm:text-lg font-medium font-['Inter'] leading-6 sm:leading-8 mb-6 sm:mb-8 max-w-[894px] text-center lg:text-left mx-auto lg:mx-0">
               {tr.diviziileNoastreSubtitle}
             </p>
 
@@ -929,10 +953,10 @@ export default function Home() {
                     >
                       <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40" />
-                      <img src={d.logo} alt="" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                      <div className="absolute bottom-6 left-[21px]">
-                        <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{d.title}</p>
-                        <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{d.desc}</p>
+                      <img src={d.logo} alt="" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
+                      <div className="absolute bottom-5 sm:bottom-6 left-[16px] sm:left-[21px]">
+                        <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
+                        <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 max-w-[220px] sm:max-w-[240px]">{d.desc}</p>
                       </div>
                     </Link>
                   ))}

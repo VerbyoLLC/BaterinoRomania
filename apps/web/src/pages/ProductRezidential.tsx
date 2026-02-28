@@ -8,7 +8,7 @@ import SEO from '../components/SEO'
 /* ── Types ──────────────────────────────────────────────────────── */
 type ProductDetail = {
   shortDesc: string
-  specs: { label: string; value: string }[]
+  specs: { label: string; value: string; linkToInverterModal?: boolean }[]
   images: string[]
   discountedPrice: number
   documents: { name: string; type: string; url: string }[]
@@ -23,9 +23,9 @@ const DETAILS: Record<string, ProductDetail> = {
       'Pentru locuințe individuale cu 2–4 camere, optimizat pentru integrare cu invertoare de 10–15 kVA.',
     specs: [
       { label: 'Capacitate',           value: '100Ah' },
-      { label: 'Capacitate nominală',   value: '5.1 kWh' },
+      { label: 'Energie nominală',   value: '5.1 kWh' },
       { label: 'Cicluri de descărcare', value: '5,000 (la 60% DOD)' },
-      { label: 'Compatibilitate',       value: 'Nivel 4 — Siguranță ridicată' },
+      { label: 'Compatibilitate',       value: 'vezi compatibilitate invertor', linkToInverterModal: true },
       { label: 'Dimensiuni',            value: '460 × 400 × 130 mm' },
       { label: 'Greutate',              value: '46 kg' },
       { label: 'Temperatura operare',   value: '-20 ~ 55°C' },
@@ -59,28 +59,29 @@ const DETAILS: Record<string, ProductDetail> = {
       },
     ],
     techData: [
-      ['Tensiune nominală',          '51.2V'],
-      ['Capacitate',                 '100Ah'],
       ['Energie nominală',           '5,120 Wh'],
+      ['Capacitate',                 '100Ah'],
       ['Curent max. descărcare',     '100A'],
       ['Curent max. încărcare',      '50A'],
+      ['Cicluri de descărcare',      '5,000 (la 60% DOD)'],
       ['Adâncime descărcare (DOD)',  '60%'],
-      ['Eficiență ciclu complet',    '≥ 96%'],
-      ['Temperatura funcționare',    '-20 ~ 55°C'],
-      ['Temperatura stocare',        '-10 ~ 50°C'],
-      ['Umiditate',                  '5 ~ 95% (fără condensare)'],
       ['Greutate',                   '46 kg'],
       ['Dimensiuni (L × l × h)',     '460 × 400 × 130 mm'],
       ['Protecție',                  'IP20'],
       ['Certificări',                'CE, IEC 62133, UN38.3'],
       ['Garanție',                   '10 ani'],
+      ['Tensiune nominală',          '51.2V'],
+      ['Eficiență ciclu complet',    '≥ 96%'],
+      ['Temperatura funcționare',    '-20 ~ 55°C'],
+      ['Temperatura stocare',        '-10 ~ 50°C'],
+      ['Umiditate',                  '5 ~ 95% (fără condensare)'],
     ],
   },
   'hp2000': {
     shortDesc: 'Sistem All-in-One cu invertor integrat, ideal pentru case cu consum ridicat și back-up automat.',
     specs: [
       { label: 'Capacitate',           value: '200Ah' },
-      { label: 'Capacitate nominală',   value: '10.24 kWh' },
+      { label: 'Energie nominală',   value: '10.24 kWh' },
       { label: 'Cicluri de descărcare', value: '6,000 (la 80% DOD)' },
       { label: 'Compatibilitate',       value: 'All-in-One — invertor integrat' },
       { label: 'Dimensiuni',            value: '600 × 220 × 700 mm' },
@@ -101,32 +102,117 @@ const DETAILS: Record<string, ProductDetail> = {
       { q: 'Care este garanția produsului?',          a: 'HP2000 beneficiază de 10 ani garanție extinsă Baterino.' },
     ],
     techData: [
-      ['Tensiune nominală',          '51.2V'],
-      ['Capacitate',                 '200Ah'],
       ['Energie nominală',           '10,240 Wh'],
+      ['Capacitate',                 '200Ah'],
       ['Curent max. descărcare',     '200A'],
       ['Curent max. încărcare',      '100A'],
+      ['Cicluri de descărcare',      '6,000 (la 80% DOD)'],
       ['Adâncime descărcare (DOD)',  '80%'],
-      ['Eficiență ciclu complet',    '≥ 97%'],
-      ['Temperatura funcționare',    '-10 ~ 50°C'],
       ['Greutate',                   '82 kg'],
       ['Dimensiuni (L × l × h)',     '600 × 220 × 700 mm'],
       ['Protecție',                  'IP54'],
       ['Certificări',                'CE, IEC 62109, UN38.3'],
       ['Garanție',                   '10 ani'],
+      ['Tensiune nominală',          '51.2V'],
+      ['Eficiență ciclu complet',    '≥ 97%'],
+      ['Temperatura funcționare',    '-10 ~ 50°C'],
     ],
   },
 }
 
-/* ── Trust badges ─────────────────────────────────────────────────── */
+/* ── Compatible inverters list (for modal) ─────────────────────────── */
+const INVERTERS = [
+  'Huawei SUN2000-100KTL-M1', 'Huawei SUN2000-185KTL-H1', 'Huawei SUN2000-215KTL-H1',
+  'Huawei LUNA2000', 'Huawei FusionSolar', 'Huawei SUN2000-3-6KTL-L1', 'Huawei SUN2000-5-10KTL-M1',
+  'SolarEdge StorEdge', 'SolarEdge Energy Hub', 'SolarEdge SE7600H', 'SolarEdge SE11400H',
+  'Fronius Symo GEN24', 'Fronius Primo GEN24', 'Fronius Symo Hybrid', 'Fronius Symo 3.0-3-M',
+  'SMA Sunny Boy Storage', 'SMA Sunny Tripower', 'SMA Sunny Island', 'SMA Home Manager 2.0',
+  'Victron MultiPlus', 'Victron Quattro', 'Victron EasySolar', 'Victron SmartSolar',
+  'GivEnergy', 'GivEnergy All-in-One', 'GivEnergy Gen3',
+  'Sofar Solar', 'Sofar HYD6000', 'Sofar HYD10K',
+  'Deye', 'Deye SUN-5K-SG04LP3', 'Deye SUN-8K-SG01LP3',
+  'Growatt', 'Growatt MIN 2500-6000', 'Growatt SPF 3000',
+  'Solax', 'Solax X1 Hybrid', 'Solax X3 Hybrid',
+  'GoodWe', 'GoodWe GW5000-MS', 'GoodWe GW10K-MS',
+  'Sungrow', 'Sungrow SH5K-20', 'Sungrow SBR096',
+  'Kostal', 'Kostal Piko MP plus', 'Kostal Plenticore',
+  'ABB', 'ABB REACT-2', 'ABB UNO-DM-6.0-TL',
+  'Delta', 'Delta H6', 'Delta M8',
+].sort((a, b) => a.localeCompare(b, 'ro'))
+
+/* ── Trust badges (under product image) ────────────────────────────── */
 const BADGES = [
-  { icon: '/images/shared/swap-icon.svg',          label: 'SWAP+',              sub: 'pentru service'       },
-  { icon: '/images/shared/service-icon.svg',       label: 'Import & Service',   sub: 'în Romania'           },
-  { icon: '/images/shared/delivery-icon.svg',      label: 'Garanție livrată',   sub: '10 ani'               },
-  { icon: '/images/shared/compatibility-icon.svg', label: 'Compatibilitate',    sub: 'cu 99% invertoare'    },
-  { icon: '/images/shared/testing-icon.svg',       label: 'Testat',             sub: '30 zile pre-vânzare'  },
-  { icon: '/images/shared/safety-icon.svg',        label: 'Retur',              sub: '15 zile'              },
+  { icon: '/images/shared/testing-icon.svg',       label: 'Garantie timp de 10 ani' },
+  { icon: '/images/shared/compatibility-icon.svg', label: 'Compatibilitate 99% Invertoare' },
+  { icon: '/images/shared/safety-icon.svg',        label: 'Producatori verificati' },
+  { icon: '/images/shared/delivery-icon.svg',      label: 'Retur in 15 zile' },
+  { icon: '/images/shared/swap-icon.svg',          label: 'SWAP - Baterie la schimb' },
+  { icon: '/images/shared/maintance-icon.svg',     label: 'Suport & Service in Romania' },
 ]
+
+/* ── Inverter compatibility modal ──────────────────────────────────── */
+function InverterModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [search, setSearch] = useState('')
+  const filtered = INVERTERS.filter((inv) =>
+    inv.toLowerCase().includes(search.toLowerCase().trim())
+  )
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="inverter-modal-title"
+    >
+      <div
+        className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 id="inverter-modal-title" className="text-lg font-bold font-['Inter'] text-black">
+            Compatibilitate invertor
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-gray-500 hover:text-black rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Închide"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-4 border-b border-gray-100">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Caută invertorul tău..."
+            className="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm font-['Inter'] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+            autoFocus
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <ul className="space-y-2">
+            {filtered.length > 0 ? (
+              filtered.map((inv, i) => (
+                <li key={i} className="text-sm font-['Inter'] text-gray-800 py-1.5 px-3 rounded-lg hover:bg-gray-50">
+                  {inv}
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-gray-500 font-['Inter'] py-4 text-center">
+                Niciun invertor găsit. Încearcă alt termen de căutare.
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /* ── FAQ item ─────────────────────────────────────────────────────── */
 function FAQItem({ q, a }: { q: string; a: string }) {
@@ -162,6 +248,7 @@ export default function ProductRezidential() {
 
   const [activeImage, setActiveImage] = useState(0)
   const [qty, setQty]                 = useState(2)
+  const [inverterModalOpen, setInverterModalOpen] = useState(false)
 
   if (!product || !details) return <Navigate to="/produse" replace />
 
@@ -176,7 +263,7 @@ export default function ProductRezidential() {
         lang="ro"
       />
 
-      <div className="max-w-content mx-auto px-5 lg:px-3 pt-6 pb-24">
+      <div className="max-w-content mx-auto px-5 lg:px-3 pt-6 pb-24 overflow-visible">
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 font-['Inter'] mb-8">
@@ -187,28 +274,39 @@ export default function ProductRezidential() {
           <Link to="/produse" className="hover:text-black transition-colors">Produse</Link>
         </nav>
 
-        {/* ── Two-column layout: left sticky, right scrolls ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+        {/* ── Two-column layout: left 5 cols sticky, right 6 cols scrolls ── */}
+        <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-start gap-6 lg:gap-6 overflow-visible">
 
-          {/* LEFT: sticky product info */}
-          <div className="lg:col-span-5 flex flex-col lg:sticky lg:top-6 self-start">
+          {/* LEFT column – contents on mobile (image between desc & specs); 5 cols sticky on desktop */}
+          <div className="contents lg:flex lg:flex-col lg:col-span-5 lg:col-start-1 lg:sticky lg:top-24 lg:self-start">
+            {/* LEFT part 1: name + description */}
+            <div className="order-1 lg:order-none flex flex-col">
+              <h1 className="text-black text-2xl lg:text-3xl font-bold font-['Inter'] leading-tight mb-3">
+                {product.name}
+              </h1>
+              <p className="text-gray-600 text-base font-['Inter'] leading-6 mb-4 lg:mb-5">
+                {details.shortDesc}
+              </p>
+            </div>
 
-            {/* Name */}
-            <h1 className="text-black text-2xl lg:text-3xl font-bold font-['Inter'] leading-tight mb-3">
-              {product.name}
-            </h1>
-
-            {/* Short desc */}
-            <p className="text-gray-600 text-base font-['Inter'] leading-6 mb-7">
-              {details.shortDesc}
-            </p>
-
-            {/* Specs */}
-            <div className="flex flex-col gap-2.5 mb-8 border-t border-zinc-100 pt-5">
+            {/* LEFT part 2: specs, qty, price, CTA */}
+            <div className="order-3 lg:order-none flex flex-col">
+              {/* Specs */}
+            <div className="flex flex-col gap-2.5 mb-5 lg:mb-6 border-t border-zinc-100 pt-4 lg:pt-5">
               {details.specs.map((s, i) => (
                 <div key={i} className="flex gap-2 text-sm font-['Inter'] items-baseline">
                   <span className="font-bold text-black w-[180px] flex-shrink-0">{s.label}:</span>
-                  <span className="text-gray-700">{s.value}</span>
+                  {s.linkToInverterModal ? (
+                    <button
+                      type="button"
+                      onClick={() => setInverterModalOpen(true)}
+                      className="text-slate-700 underline underline-offset-2 hover:text-slate-900 font-medium"
+                    >
+                      {s.value}
+                    </button>
+                  ) : (
+                    <span className="text-gray-700">{s.value}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -238,7 +336,7 @@ export default function ProductRezidential() {
             </div>
 
             {/* Discount selector */}
-            <div className="mb-7 py-3">
+            <div className="mb-5 lg:mb-6 py-2 lg:py-3">
               <p className="text-xs font-bold font-['Inter'] text-gray-400 uppercase tracking-widest mb-2">
                 ALEGE PROGRAM REDUCERI
               </p>
@@ -258,7 +356,7 @@ export default function ProductRezidential() {
             </div>
 
             {/* Price */}
-            <div className="mb-7">
+            <div className="mb-5 lg:mb-6">
               <p className="text-xs font-['Inter'] text-gray-400 uppercase tracking-widest mb-1">
                 PREȚ FĂRĂ DISCOUNT TVA
               </p>
@@ -277,23 +375,22 @@ export default function ProductRezidential() {
             </div>
 
             {/* CTA */}
-            <button className="w-full h-14 bg-slate-900 text-white rounded-[10px] text-base font-bold font-['Inter'] uppercase hover:bg-slate-700 active:bg-black transition-colors tracking-wide">
+            <button className="w-[min(280px,100%)] px-10 h-14 bg-slate-900 text-white rounded-[10px] text-base font-bold font-['Inter'] uppercase hover:bg-slate-700 active:bg-black transition-colors tracking-wide">
               COMANDĂ
             </button>
+            </div>
           </div>
 
-          {/* RIGHT: everything that scrolls */}
-          <div className="lg:col-span-6 lg:col-start-7 flex flex-col gap-5">
-
-            {/* Image carousel */}
-            <div className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[460px] cursor-zoom-in">
+          {/* RIGHT column – 6 cols (cols 7–12); contents on mobile; image (order 2) and documents (order 4) */}
+          <div className="contents lg:flex lg:flex-col lg:col-span-6 lg:col-start-7 lg:min-w-0 gap-6 lg:gap-6">
+          {/* Image + badges – mobile order 2 */}
+          <div className="order-2 lg:order-none flex flex-col gap-4">
+            <div className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in">
               <img
                 src={details.images[activeImage]}
                 alt={product.name}
-                className="max-h-[420px] w-auto object-contain"
+                className="max-h-[280px] lg:max-h-[420px] w-auto object-contain"
               />
-
-              {/* Left arrow */}
               <button
                 onClick={() => setActiveImage(i => (i - 1 + details.images.length) % (details.images.length || 1))}
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
@@ -303,8 +400,6 @@ export default function ProductRezidential() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-
-              {/* Right arrow */}
               <button
                 onClick={() => setActiveImage(i => (i + 1) % (details.images.length || 1))}
                 className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
@@ -314,8 +409,6 @@ export default function ProductRezidential() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-
-              {/* Dots */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {(details.images.length > 1 ? details.images : ['', '', '']).map((_, i) => (
                   <button
@@ -328,28 +421,18 @@ export default function ProductRezidential() {
                 ))}
               </div>
             </div>
-
-            {/* Trust badges — row 1 (4 cols) */}
-            <div className="grid grid-cols-4 gap-3">
-              {BADGES.slice(0, 4).map((b, i) => (
+            <div className="grid grid-cols-3 gap-3">
+              {BADGES.map((b, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center">
                   <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
                   <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                  <p className="text-gray-500 text-xs font-['Inter'] leading-tight">{b.sub}</p>
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Trust badges — row 2 (2 items left-aligned) */}
-            <div className="grid grid-cols-4 gap-3">
-              {BADGES.slice(4).map((b, i) => (
-                <div key={i} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center">
-                  <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                  <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                  <p className="text-gray-500 text-xs font-['Inter'] leading-tight">{b.sub}</p>
-                </div>
-              ))}
-            </div>
+          {/* Documents, tech data, FAQ – mobile order 4 */}
+          <div className="order-4 lg:order-none flex flex-col gap-5">
 
             {/* Documents */}
             <div>
@@ -461,10 +544,13 @@ export default function ProductRezidential() {
               </div>
             </section>
 
+          </div>{/* end documents */}
           </div>{/* end right column */}
-        </div>{/* end grid */}
+        </div>{/* end flex container */}
 
       </div>
+
+      <InverterModal open={inverterModalOpen} onClose={() => setInverterModalOpen(false)} />
     </>
   )
 }

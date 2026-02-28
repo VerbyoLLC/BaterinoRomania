@@ -266,6 +266,65 @@ export async function testApiDb(): Promise<{ ok: boolean; partnersCount?: number
   }
 }
 
+export type CreateProductPayload = {
+  title: string
+  sku: string
+  description?: string
+  tipProdus: 'rezidential' | 'industrial'
+  landedPrice: string | number
+  salePrice: string | number
+  vat: string | number
+  energieNominala?: string
+  capacitate?: string
+  curentMaxDescarcare?: string
+  curentMaxIncarcare?: string
+  cicluriDescarcare?: string
+  adancimeDescarcare?: string
+  greutate?: string
+  dimensiuni?: string
+  protectie?: string
+  certificari?: string
+  garantie?: string
+  tensiuneNominala?: string
+  eficientaCiclu?: string
+  temperaturaFunctionare?: string
+  temperaturaStocare?: string
+  umiditate?: string
+  images: string[]
+  documenteTehnice: { descriere: string; url: string }[]
+  faq: { q: string; a: string }[]
+}
+
+export async function uploadAdminFile(file: File): Promise<{ url: string }> {
+  const token = getAuthToken()
+  if (!token) throw new Error('Trebuie să fii autentificat.')
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${API_BASE}/admin/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea fișierului.')
+  return json
+}
+
+export async function createProduct(payload: CreateProductPayload, status: 'draft' | 'published') {
+  const res = await fetch(`${API_BASE}/admin/products`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ ...payload, status }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot crea produse.')
+    throw new Error(json.error || 'Eroare la salvarea produsului.')
+  }
+  return json
+}
+
 export async function getAdminCompanies(): Promise<AdminCompany[]> {
   let res: Response
   try {
