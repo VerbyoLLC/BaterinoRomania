@@ -4,16 +4,7 @@ import AuthLayout from '../components/AuthLayout'
 import PasswordInput from '../components/PasswordInput'
 import SignupVerifyCode from '../components/SignupVerifyCode'
 import type { UserType } from '../components/SignupVerifyCode'
-import { signup } from '../lib/api'
-
-async function checkApiHealth(): Promise<boolean> {
-  try {
-    const r = await fetch('/api/health')
-    return r.ok
-  } catch {
-    return false
-  }
-}
+import { signup, checkApiHealth } from '../lib/api'
 
 function GoogleButton() {
   return (

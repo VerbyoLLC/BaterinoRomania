@@ -1,9 +1,19 @@
-// Dev pe localhost: folosește direct API-ul (evită probleme cu proxy). Prod: /api sau VITE_API_URL.
+// Dev pe localhost: folosește direct API-ul (evită probleme cu proxy). Prod: VITE_API_URL sau /api.
 const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
   (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3001/api'
     : '/api')
+
+/** Verifică dacă API-ul răspunde. Folosește API_BASE (VITE_API_URL în prod). */
+export async function checkApiHealth(): Promise<boolean> {
+  try {
+    const r = await fetch(`${API_BASE}/health`)
+    return r.ok
+  } catch {
+    return false
+  }
+}
 
 export type AuthUser = { id: string; email: string; role: string }
 
