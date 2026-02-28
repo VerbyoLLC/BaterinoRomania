@@ -1,5 +1,7 @@
 # Deploy API pe Railway
 
+> **Checklist complet**: vezi [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) pentru pașii detaliați și sursele valorilor.
+
 ## 1. Creare proiect Railway
 
 1. Mergi la [railway.app](https://railway.app) și conectează-te cu GitHub
@@ -36,7 +38,8 @@
 
 - La fiecare push, Railway construiește imaginea Docker din `Dockerfile`:
   1. **Build**: `prisma generate` (generează clientul)
-  2. **Runtime**: la pornire, rulează `prisma migrate deploy` apoi `node index.js`
+  2. **Pre-deploy**: `prisma migrate deploy` (rulează migrările înainte de start)
+  3. **Runtime**: `node index.js` (pornire rapidă, healthcheck trece mai ușor)
 
 ## 5. Domeniu și URL
 
@@ -50,5 +53,6 @@
 
 ## Troubleshooting
 
-- **"prisma: command not found"** la build: mută `prisma` din `devDependencies` în `dependencies` în `package.json`
-- **Migrări eșuate**: verifică că `DATABASE_URL` este setat corect și că baza de date PostgreSQL este activă
+- **Healthcheck failed**: Verifică **Deployments** → **View Logs** pentru erori la pornire. Asigură-te că `DATABASE_URL` e setat.
+- **Migrări eșuate** (pre-deploy): Verifică logs-urile deploy-ului. `DATABASE_URL` trebuie să fie corect și Postgres activ.
+- **"prisma: command not found"**: `prisma` trebuie în `dependencies` (nu devDependencies).
