@@ -30,4 +30,5 @@ COPY templates ./templates/
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]
+# Migrations run via Railway pre-deploy command
+CMD ["node", "index.js"]
