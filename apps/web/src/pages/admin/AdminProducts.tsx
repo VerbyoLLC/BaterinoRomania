@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { createProduct, uploadAdminFile, getAdminProducts, updateProductStatus, deleteProduct, type AdminProduct } from '../../lib/api'
+import { createProduct, updateProduct, uploadAdminFile, getAdminProducts, updateProductStatus, deleteProduct, type AdminProduct } from '../../lib/api'
 
 const MAX_IMAGES = 5
 
@@ -15,12 +15,14 @@ export default function AdminProducts() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [productsError, setProductsError] = useState<string | null>(null)
+  const [filterCategorie, setFilterCategorie] = useState<'all' | 'rezidential' | 'industrial' | 'medical' | 'maritim'>('all')
   const [brand, setBrand] = useState('')
   const [title, setTitle] = useState('')
   const [sku, setSku] = useState('')
   const [description, setDescription] = useState('')
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
+  const [images, setImages] = useState<{ file: File | null; preview: string; url?: string }[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [tipProdus, setTipProdus] = useState<'rezidential' | 'industrial'>('rezidential')
   const [categorieRezidential, setCategorieRezidential] = useState(false)
@@ -55,7 +57,7 @@ export default function AdminProducts() {
   const [landedPrice, setLandedPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
   const [vat, setVat] = useState('')
-  const [documenteTehnice, setDocumenteTehnice] = useState<{ descriere: string; file: File | null }[]>([
+  const [documenteTehnice, setDocumenteTehnice] = useState<{ descriere: string; file: File | null; url?: string }[]>([
     { descriere: '', file: null },
   ])
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }])
@@ -81,7 +83,90 @@ export default function AdminProducts() {
     fetchProducts()
   }, [])
 
+  const parseUnitValue = (s: string | null | undefined, unit: string): string => {
+    if (!s) return ''
+    const cleaned = s.replace(/\s/g, '')
+    const m = cleaned.match(new RegExp(`^([\\d.,-]+)`, 'i'))
+    return m ? m[1] : cleaned.replace(/\D/g, '')
+  }
+  const parseRange = (s: string | null | undefined): { min: string; max: string } => {
+    if (!s) return { min: '', max: '' }
+    const m = s.match(/([-\d.]+)\s*~\s*([-\d.]+)/)
+    return m ? { min: m[1], max: m[2] } : { min: '', max: '' }
+  }
+  const parseDims = (s: string | null | undefined): { l: string; w: string; h: string } => {
+    if (!s) return { l: '', w: '', h: '' }
+    const parts = s.replace(/\s*mm\s*$/i, '').split(/\s*[×x]\s*/i)
+    return { l: parts[0] || '', w: parts[1] || '', h: parts[2] || '' }
+  }
+
+  const handleEditClick = (p: AdminProduct) => {
+    setEditingProductId(p.id)
+    setSaveError(null)
+    setBrand(p.brand || '')
+    setTitle(p.title || '')
+    setSku(p.sku || '')
+    setDescription(p.description || '')
+    setTipProdus((p.tipProdus === 'industrial' ? 'industrial' : 'rezidential') as 'rezidential' | 'industrial')
+    const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
+    setCategorieRezidential(cat.includes('rezidential'))
+    setCategorieIndustrial(cat.includes('industrial'))
+    setCategorieMedical(cat.includes('medical'))
+    setCategorieMaritim(cat.includes('maritim'))
+    setEnergieNominala(parseUnitValue((p as { energieNominala?: string }).energieNominala, 'Wh'))
+    setCapacitate(parseUnitValue((p as { capacitate?: string }).capacitate, 'Ah'))
+    setCurentMaxDescarcare(parseUnitValue((p as { curentMaxDescarcare?: string }).curentMaxDescarcare, 'A'))
+    setCurentMaxIncarcare(parseUnitValue((p as { curentMaxIncarcare?: string }).curentMaxIncarcare, 'A'))
+    setCicluriDescarcare(parseUnitValue((p as { cicluriDescarcare?: string }).cicluriDescarcare, 'Cicluri'))
+    setAdancimeDescarcare(parseUnitValue((p as { adancimeDescarcare?: string }).adancimeDescarcare, '%'))
+    setGreutate(parseUnitValue((p as { greutate?: string }).greutate, 'Kg'))
+    setCompozitie((p as { compozitie?: string }).compozitie || '')
+    const dims = parseDims((p as { dimensiuni?: string }).dimensiuni)
+    setDimensiuniL(dims.l)
+    setDimensiuniW(dims.w)
+    setDimensiuniH(dims.h)
+    setProtectie((p as { protectie?: string }).protectie || '')
+    setConectivitateWifi(p.conectivitateWifi === true)
+    setConectivitateBluetooth(p.conectivitateBluetooth === true)
+    setProtectieFoc((p as { protectieFoc?: string }).protectieFoc || '')
+    setCertificari((p as { certificari?: string }).certificari || '')
+    setGarantie(parseUnitValue((p as { garantie?: string }).garantie, 'ani'))
+    setTensiuneNominala(parseUnitValue((p as { tensiuneNominala?: string }).tensiuneNominala, 'V'))
+    setEficientaCiclu(parseUnitValue((p as { eficientaCiclu?: string }).eficientaCiclu, '%'))
+    const tempFunc = parseRange((p as { temperaturaFunctionare?: string }).temperaturaFunctionare)
+    setTemperaturaFunctionareMin(tempFunc.min)
+    setTemperaturaFunctionareMax(tempFunc.max)
+    const tempStoc = parseRange((p as { temperaturaStocare?: string }).temperaturaStocare)
+    setTemperaturaStocareMin(tempStoc.min)
+    setTemperaturaStocareMax(tempStoc.max)
+    const umid = parseRange((p as { umiditate?: string }).umiditate)
+    setUmiditateMin(umid.min.replace('%', ''))
+    setUmiditateMax(umid.max.replace('%', ''))
+    const land = (p as { landedPrice?: string | number }).landedPrice
+    const sale = p.salePrice
+    const v = (p as { vat?: string | number }).vat
+    setLandedPrice(land != null ? String(land).replace('.', ',') : '')
+    setSalePrice(sale != null ? String(sale).replace('.', ',') : '')
+    setVat(v != null ? String(v).replace('.', ',') : '')
+    const imgs = Array.isArray(p.images) ? p.images : []
+    setImages(imgs.map((url) => ({ file: null, preview: url, url })))
+    const docs = (p as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice
+    setDocumenteTehnice(
+      Array.isArray(docs) && docs.length > 0
+        ? docs.map((d) => ({ descriere: d.descriere || '', file: null, url: d.url }))
+        : [{ descriere: '', file: null }]
+    )
+    const faqData = (p as { faq?: { q: string; a: string }[] }).faq
+    setFaq(
+      Array.isArray(faqData) && faqData.length > 0
+        ? faqData.map((f) => ({ q: f.q || '', a: f.a || '' }))
+        : [{ q: '', a: '' }]
+    )
+    setPanelOpen(true)
+  }
+
   const handleOpenPanel = () => {
+    setEditingProductId(null)
     setSaveError(null)
     setBrand('')
     setTitle('')
@@ -129,7 +214,7 @@ export default function AdminProducts() {
 
   const addImages = (files: FileList | null) => {
     if (!files?.length) return
-    const newEntries: { file: File; preview: string }[] = []
+    const newEntries: { file: File | null; preview: string; url?: string }[] = []
     for (let i = 0; i < files.length && images.length + newEntries.length < MAX_IMAGES; i++) {
       const f = files[i]
       if (f?.type.startsWith('image/')) {
@@ -142,7 +227,7 @@ export default function AdminProducts() {
   const removeImage = (index: number) => {
     setImages((prev) => {
       const next = [...prev]
-      URL.revokeObjectURL(next[index].preview)
+      if (next[index].preview.startsWith('blob:')) URL.revokeObjectURL(next[index].preview)
       next.splice(index, 1)
       return next
     })
@@ -283,8 +368,9 @@ export default function AdminProducts() {
   const handlePanelTransitionEnd = (e: React.TransitionEvent) => {
     if (e.target !== e.currentTarget) return
     if (isClosingPanel) {
-      images.forEach(({ preview }) => URL.revokeObjectURL(preview))
+      images.forEach(({ preview }) => preview.startsWith('blob:') && URL.revokeObjectURL(preview))
       setImages([])
+      setEditingProductId(null)
       setPanelOpen(false)
       setIsClosingPanel(false)
     }
@@ -294,8 +380,13 @@ export default function AdminProducts() {
     const productFolder = title.trim() || 'Fără titlu'
     const imageUrls: string[] = []
     for (let i = 0; i < images.length; i++) {
-      const { url } = await uploadAdminFile(images[i].file, productFolder, i + 1)
-      imageUrls.push(url)
+      const img = images[i]
+      if (img.url) {
+        imageUrls.push(img.url)
+      } else if (img.file) {
+        const { url } = await uploadAdminFile(img.file, productFolder, i + 1)
+        imageUrls.push(url)
+      }
     }
 
     const docTehnice: { descriere: string; url: string }[] = []
@@ -304,6 +395,8 @@ export default function AdminProducts() {
       if (doc.file) {
         const r = await uploadAdminFile(doc.file, productFolder)
         url = r.url
+      } else if (doc.url) {
+        url = doc.url
       }
       docTehnice.push({ descriere: doc.descriere.trim(), url })
     }
@@ -355,9 +448,15 @@ export default function AdminProducts() {
     setSaveSuccess(false)
     try {
       const payload = await buildPayload()
-      const created = await createProduct(payload, 'published')
-      setSaveSuccess(true)
-      setProducts((prev) => [created as AdminProduct, ...prev])
+      if (editingProductId) {
+        const updated = await updateProduct(editingProductId, payload, 'published')
+        setSaveSuccess(true)
+        setProducts((prev) => prev.map((p) => (p.id === editingProductId ? (updated as AdminProduct) : p)))
+      } else {
+        const created = await createProduct(payload, 'published')
+        setSaveSuccess(true)
+        setProducts((prev) => [created as AdminProduct, ...prev])
+      }
       await fetchProducts()
       handleClosePanel()
       setTimeout(() => setSaveSuccess(false), 4000)
@@ -374,9 +473,15 @@ export default function AdminProducts() {
     setSaveSuccess(false)
     try {
       const payload = await buildPayload()
-      const created = await createProduct(payload, 'draft')
-      setSaveSuccess(true)
-      setProducts((prev) => [created as AdminProduct, ...prev])
+      if (editingProductId) {
+        const updated = await updateProduct(editingProductId, payload, 'draft')
+        setSaveSuccess(true)
+        setProducts((prev) => prev.map((p) => (p.id === editingProductId ? (updated as AdminProduct) : p)))
+      } else {
+        const created = await createProduct(payload, 'draft')
+        setSaveSuccess(true)
+        setProducts((prev) => [created as AdminProduct, ...prev])
+      }
       await fetchProducts()
       handleClosePanel()
       setTimeout(() => setSaveSuccess(false), 4000)
@@ -412,8 +517,8 @@ export default function AdminProducts() {
 
   return (
     <div className={`flex flex-col w-full min-h-0 ${panelVisible ? 'h-[calc(100vh-4rem)] lg:h-screen overflow-hidden' : ''}`}>
-      {/* Tab bar — full width */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white shrink-0">
+      {/* Tab bar — full width, sticky on scroll */}
+      <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white shrink-0 shadow-sm">
         <h1 className="text-xl font-bold font-['Inter'] text-black">Produse</h1>
         {panelVisible ? (
           <div className="flex items-center gap-2">
@@ -493,9 +598,39 @@ export default function AdminProducts() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-3 font-['Inter']">{products.length} produs{products.length === 1 ? '' : 'e'} în baza de date</p>
-              <div className="grid grid-cols-1 gap-4">
-                {products.map((p) => {
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="text-sm font-medium text-gray-600 mr-1">Filtre:</span>
+                {(['all', 'rezidential', 'industrial', 'medical', 'maritim'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFilterCategorie(cat)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      filterCategorie === cat
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat === 'all' ? 'Toate' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const filtered = filterCategorie === 'all'
+                  ? products
+                  : products.filter((p) => {
+                      const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
+                      return cat.includes(filterCategorie)
+                    })
+                return (
+                  <>
+                    <p className="text-sm text-gray-500 mb-3 font-['Inter']">
+                      {filtered.length} produs{filtered.length === 1 ? '' : 'e'}
+                      {filterCategorie !== 'all' && ` (${products.length} total)`}
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {filtered.map((p) => {
                   const imgs = Array.isArray(p.images) ? p.images : []
                   const conectivitate = [
                     p.conectivitateWifi && 'WiFi',
@@ -504,51 +639,88 @@ export default function AdminProducts() {
                   const priceVal = p.salePrice
                   const priceStr = priceVal != null ? String(priceVal) : null
                   return (
-                    <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="flex gap-4 p-4">
-                        <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                          {imgs[0] ? (
-                            <img src={imgs[0]} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">—</div>
-                          )}
+                    <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                      {/* Image on top */}
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                        {imgs[0] ? (
+                          <img src={imgs[0]} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">—</div>
+                        )}
+                        {/* Photo count badge — bottom left */}
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/50 text-white text-xs font-medium">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>{imgs.length}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-semibold text-gray-900 truncate">{p.title || 'Fără titlu'}</h3>
-                            <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${p.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                              {p.status === 'published' ? 'Live' : 'Draft'}
-                            </span>
-                          </div>
-                          {p.brand && <p className="text-xs text-gray-500 mt-0.5">Brand: {p.brand}</p>}
-                          {p.description && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{p.description}</p>}
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                            {p.tensiuneNominala && <span>Tensiune: {p.tensiuneNominala}</span>}
-                            {p.capacitate && <span>Capacitate: {p.capacitate}</span>}
-                            {p.compozitie && <span>Compoziție: {p.compozitie}</span>}
-                            {p.cicluriDescarcare && <span>Cicluri: {p.cicluriDescarcare}</span>}
-                            <span>Conectivitate: {conectivitate}</span>
-                          </div>
-                          {priceStr && !Number.isNaN(Number(priceStr)) && <p className="text-sm font-medium text-gray-800 mt-1">{Number(priceStr).toLocaleString('ro-RO')} lei</p>}
-                        </div>
-                        <div className="flex flex-col gap-1 shrink-0">
-                          <button type="button" onClick={() => {}} title="Editează (în curând)" className="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                          </button>
-                          {p.status === 'draft' && (
-                            <button type="button" onClick={() => handleGoLive(p.id)} title="Go Live" className="p-2 rounded-lg hover:bg-green-50 text-green-600">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                          <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${
+                            p.status === 'published' ? 'bg-green-100 text-green-700' :
+                            p.status === 'suspended' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {p.status === 'published' ? (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Live
+                              </>
+                            ) : p.status === 'suspended' ? (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                                Suspended
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Draft
+                              </>
+                            )}
+                          </span>
+                          <div className="flex gap-1">
+                            <button type="button" onClick={() => handleEditClick(p)} title="Editează" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-600 shadow-sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                             </button>
-                          )}
-                          <button type="button" onClick={() => handleDelete(p.id)} title="Șterge" className="p-2 rounded-lg hover:bg-red-50 text-red-600">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
+                            {p.status === 'draft' && (
+                              <button type="button" onClick={() => handleGoLive(p.id)} title="Go Live" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-green-600 shadow-sm">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              </button>
+                            )}
+                            <button type="button" onClick={() => handleDelete(p.id)} title="Șterge" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-red-600 shadow-sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
                         </div>
+                      </div>
+                      {/* Title, description, details, price */}
+                      <div className="p-4 flex flex-col gap-2 flex-1">
+                        <h3 className="font-semibold text-gray-900 line-clamp-2">{p.title || 'Fără titlu'}</h3>
+                        {p.brand && <p className="text-xs text-gray-500">Brand: {p.brand}</p>}
+                        {p.description && <p className="text-xs text-gray-600 line-clamp-2">{p.description}</p>}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                          {p.tensiuneNominala && <span>Tensiune: {p.tensiuneNominala}</span>}
+                          {p.capacitate && <span>Capacitate: {p.capacitate}</span>}
+                          {p.compozitie && <span>Compoziție: {p.compozitie}</span>}
+                          {p.cicluriDescarcare && <span>Cicluri: {p.cicluriDescarcare}</span>}
+                          <span>Conectivitate: {conectivitate}</span>
+                        </div>
+                        {priceStr && !Number.isNaN(Number(priceStr)) && (
+                          <p className="text-sm font-semibold text-gray-800 mt-auto">{Number(priceStr).toLocaleString('ro-RO')} lei</p>
+                        )}
                       </div>
                     </div>
                   )
                 })}
-              </div>
+                    </div>
+                  </>
+                )
+              })()}
             </>
           )}
         </div>
@@ -569,7 +741,7 @@ export default function AdminProducts() {
               }}
               className="flex flex-col gap-5"
             >
-              <h2 className="text-lg font-bold font-['Inter'] text-black mb-2">Adaugă produs</h2>
+              <h2 className="text-lg font-bold font-['Inter'] text-black mb-2">{editingProductId ? 'Editează produs' : 'Adaugă produs'}</h2>
 
               {/* Tip Produs */}
               <div>

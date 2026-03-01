@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getProduseTranslations, PRODUCTS } from '../i18n/produse'
+import { getProduseTranslations } from '../i18n/produse'
+import { getProducts, type PublicProduct } from '../lib/api'
 import SEO from '../components/SEO'
 
 /* ── Filter dropdown ──────────────────────────────────────────── */
@@ -29,7 +30,6 @@ function FilterSelect({
           </option>
         ))}
       </select>
-      {/* Chevron arrow */}
       <svg
         className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black"
         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
@@ -40,42 +40,46 @@ function FilterSelect({
   )
 }
 
-/* ── Product card — Figma spec ────────────────────────────────── */
+/* ── Product card — same style as before ───────────────────────── */
 function ProductCard({ product, currency }: {
-  product: typeof PRODUCTS[number]
+  product: PublicProduct
   currency: string
 }) {
+  const imgs = Array.isArray(product.images) ? product.images : []
+  const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const conectivitate = [
+    product.conectivitateWifi && 'WiFi',
+    product.conectivitateBluetooth && 'Bluetooth',
+  ].filter(Boolean).join(' • ') || '—'
+  const spec1 = [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' • ') || '—'
+  const spec2 = [product.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
+  const price = product.salePrice != null ? Number(product.salePrice) : 0
+
   return (
     <Link to={`/produse/${product.id}`} className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-8 cursor-pointer transition-shadow duration-300 hover:shadow-md">
 
-      {/* Product image with Figma shadow */}
       <img
-        src={product.image}
-        alt={product.name}
-          className="w-36 h-44 object-contain"
+        src={img}
+        alt={product.title}
+        className="w-36 h-44 object-contain"
       />
 
-      {/* Name */}
       <h3 className="w-64 text-center text-black text-xl font-bold font-['Inter'] leading-6 mt-2 px-2">
-        {product.name}
+        {product.title}
       </h3>
 
-      {/* Spec 1 */}
       <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight mt-1.5">
-        {product.spec1}
+        {spec1}
       </p>
 
-      {/* Spec 2 */}
       <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight">
-        {product.spec2}
+        {spec2}
       </p>
 
-      {/* Price */}
       <p className="text-sky-950 text-2xl font-bold font-['Inter'] tracking-wide mt-10">
-        {product.price.toLocaleString('ro-RO')} {currency}
+        {price.toLocaleString('ro-RO')} {currency}
       </p>
 
-      {/* Include TVA */}
       <p className="text-neutral-800 text-xs font-medium font-['Nunito_Sans'] tracking-wide -mt-1">
         include TVA
       </p>
@@ -91,11 +95,9 @@ export default function Produse() {
   const { language } = useLanguage()
   const tr = getProduseTranslations(language.code)
   const [searchParams] = useSearchParams()
-
-  const [sector, setSector]   = useState('')
-  const [kwh, setKwh]         = useState('0')
-  const [volti, setVolti]     = useState('0')
-  const [invertor, setInvertor] = useState('')
+  const [products, setProducts] = useState<PublicProduct[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sector, setSector] = useState('')
 
   useEffect(() => {
     const sectorParam = searchParams.get('sector')
@@ -104,19 +106,29 @@ export default function Produse() {
     }
   }, [searchParams])
 
-  const filtered = useMemo(() => {
-    return PRODUCTS.filter((p) => {
-      if (sector && !p.sector.includes(sector)) return false
-      if (Number(kwh) > 0) {
-        if (Number(kwh) === 200 ? p.kwh < 200 : p.kwh !== Number(kwh)) return false
-      }
-      if (Number(volti) > 0 && p.volti !== Number(volti)) return false
-      if (invertor && !p.invertor.includes(invertor)) return false
-      return true
-    })
-  }, [sector, kwh, volti, invertor])
+  useEffect(() => {
+    getProducts()
+      .then(setProducts)
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false))
+  }, [])
 
-  const isFiltered = sector !== '' || Number(kwh) > 0 || Number(volti) > 0 || invertor !== ''
+  const filtered = useMemo(() => {
+    if (!sector) return products
+    return products.filter((p) => {
+      const cat = String(p.categorie || '').toLowerCase()
+      if (cat && cat.includes(sector)) return true
+      // Fallback: when categorie is empty, use tipProdus for rezidential/industrial
+      if (!p.categorie?.trim()) {
+        const tip = String(p.tipProdus || '').toLowerCase()
+        if (sector === 'rezidential' && tip === 'rezidential') return true
+        if (sector === 'industrial' && tip === 'industrial') return true
+      }
+      return false
+    })
+  }, [products, sector])
+
+  const isFiltered = sector !== ''
 
   return (
     <>
@@ -147,36 +159,14 @@ export default function Produse() {
             onChange={setSector}
             options={tr.sectorOptions}
           />
-          <FilterSelect
-            label={tr.filterCapacitate}
-            value={kwh}
-            onChange={setKwh}
-            options={tr.kwOptions.map((o) => ({ ...o, value: String(o.value) }))}
-          />
-          <FilterSelect
-            label={tr.filterVolti}
-            value={volti}
-            onChange={setVolti}
-            options={tr.voltiOptions.map((o) => ({ ...o, value: String(o.value) }))}
-          />
-          <FilterSelect
-            label={tr.filterInvertor}
-            value={invertor}
-            onChange={setInvertor}
-            options={tr.invertorOptions}
-          />
-
-          {/* Reset if filtered */}
           {isFiltered && (
             <button
-              onClick={() => { setSector(''); setKwh('0'); setVolti('0'); setInvertor('') }}
+              onClick={() => setSector('')}
               className="h-12 px-5 bg-neutral-100 rounded-[10px] text-black text-base font-semibold font-['Inter'] hover:bg-neutral-200 transition-colors"
             >
               ✕
             </button>
           )}
-
-          {/* How to choose */}
           <div className="ml-auto flex items-center gap-2 text-sm font-medium font-['Inter'] text-gray-700 cursor-pointer hover:text-black transition-colors">
             <span className="w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0" />
             {tr.howToChoose}
@@ -184,7 +174,11 @@ export default function Produse() {
         </div>
 
         {/* ── PRODUCT GRID ── */}
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-24 text-gray-400 font-['Inter']">
+            Se încarcă produsele…
+          </div>
+        ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((product) => (
               <ProductCard

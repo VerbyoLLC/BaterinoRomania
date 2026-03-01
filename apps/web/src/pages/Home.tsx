@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 
 import { getHomeTranslations } from '../i18n/home'
-import { PRODUCTS } from '../i18n/produse'
+import { getProducts, type PublicProduct } from '../lib/api'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 
@@ -32,8 +32,9 @@ const LOCALE_BY_LANG: Record<string, string> = { ro: 'ro-RO', en: 'en-US', zh: '
 
 /* ── Mini product card for featured products ─────────────────── */
 function HomeProductCard({
-  name, image, spec1, spec2, price, includesTVA, locale = 'ro-RO',
+  id, name, image, spec1, spec2, price, includesTVA, locale = 'ro-RO',
 }: {
+  id: string
   name: string
   image: string
   spec1: string
@@ -43,7 +44,10 @@ function HomeProductCard({
   locale?: string
 }) {
   return (
-    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 transition-shadow duration-300 hover:shadow-md">
+    <Link
+      to={`/produse/${id}`}
+      className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 transition-shadow duration-300 hover:shadow-md"
+    >
       <img
         src={image}
         alt={name}
@@ -59,7 +63,7 @@ function HomeProductCard({
         {price.toLocaleString(locale)} RON
       </p>
       <p className="text-neutral-800 text-xs font-medium font-['Nunito_Sans']">{includesTVA}</p>
-    </div>
+    </Link>
   )
 }
 
@@ -79,6 +83,14 @@ export default function Home() {
 
   const [heroMobileActiveIndex, setHeroMobileActiveIndex] = useState(0)
   const heroMobileSliderRef = useRef<HTMLDivElement>(null)
+
+  const [products, setProducts] = useState<PublicProduct[]>([])
+
+  useEffect(() => {
+    getProducts()
+      .then(setProducts)
+      .catch(() => setProducts([]))
+  }, [])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)
@@ -150,9 +162,21 @@ export default function Home() {
   }
 
   const featuredProducts = useMemo(() => {
-    if (activeTab === 'all') return PRODUCTS.slice(0, 3)
-    return PRODUCTS.filter((p) => p.sector.includes(activeTab)).slice(0, 3)
-  }, [activeTab])
+    const filtered =
+      activeTab === 'all'
+        ? products
+        : products.filter((p) => {
+            const cat = String(p.categorie || '').toLowerCase()
+            if (cat && cat.includes(activeTab)) return true
+            if (!p.categorie?.trim()) {
+              const tip = String(p.tipProdus || '').toLowerCase()
+              if (activeTab === 'rezidential' && tip === 'rezidential') return true
+              if (activeTab === 'industrial' && tip === 'industrial') return true
+            }
+            return false
+          })
+    return filtered.slice(0, 3)
+  }, [products, activeTab])
 
   const tabs = [
     { id: 'all',         label: tr.productsTabAll },
@@ -506,18 +530,30 @@ export default function Home() {
 
           {/* Product grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {featuredProducts.map((p) => (
-              <HomeProductCard
-                key={p.id}
-                name={p.name}
-                image={p.image}
-                spec1={p.spec1}
-                spec2={p.spec2}
-                price={p.price}
-                includesTVA={tr.includesTVA}
-                locale={LOCALE_BY_LANG[language.code] ?? 'ro-RO'}
-              />
-            ))}
+            {featuredProducts.map((p) => {
+              const imgs = Array.isArray(p.images) ? p.images : []
+              const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
+              const conectivitate = [
+                p.conectivitateWifi && 'WiFi',
+                p.conectivitateBluetooth && 'Bluetooth',
+              ].filter(Boolean).join(' • ') || '—'
+              const spec1 = [p.tensiuneNominala, p.capacitate, p.compozitie].filter(Boolean).join(' • ') || '—'
+              const spec2 = [p.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
+              const price = p.salePrice != null ? Number(p.salePrice) : 0
+              return (
+                <HomeProductCard
+                  key={p.id}
+                  id={p.id}
+                  name={p.title}
+                  image={img}
+                  spec1={spec1}
+                  spec2={spec2}
+                  price={price}
+                  includesTVA={tr.includesTVA}
+                  locale={LOCALE_BY_LANG[language.code] ?? 'ro-RO'}
+                />
+              )
+            })}
           </div>
 
           <div className="flex justify-center">
