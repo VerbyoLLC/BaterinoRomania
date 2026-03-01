@@ -119,7 +119,8 @@ function slugifyForFilename(title) {
 function generateKey(originalName, prefix = 'uploads', mimetype, productFolder, imageIndex) {
   let ext = originalName?.match(/\.[a-zA-Z0-9]+$/)?.[0] || ''
   if (!ext && mimetype) ext = MIME_TO_EXT[mimetype] || ''
-  const folder = productFolder ? sanitizeFolderName(productFolder) : prefix
+  const productSlug = productFolder ? sanitizeFolderName(productFolder) : null
+  const folder = productSlug ? `${prefix}/${productSlug}` : prefix
 
   if (imageIndex != null && mimetype && mimetype.startsWith('image/')) {
     const slug = productFolder ? slugifyForFilename(productFolder) : 'imagine'
