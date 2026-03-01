@@ -2,7 +2,7 @@
  * Cloudflare R2 (S3-compatible) upload utility.
  * Stores product images and PDF documents.
  */
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3')
 
 let s3Client = null
 
@@ -135,4 +135,29 @@ function generateKey(originalName, prefix = 'uploads', mimetype, productFolder, 
   return `${folder}/${base}${ext}`
 }
 
-module.exports = { uploadToR2, generateKey, sanitizeFolderName, isR2Configured }
+/**
+ * Extract R2 object key from a public URL.
+ * @param {string} url - Full public URL, e.g. "https://media.baterino.ro/products/foo/image.jpg"
+ * @returns {string|null} Object key or null if URL is not from our R2
+ */
+function urlToKey(url) {
+  if (!url || typeof url !== 'string') return null
+  const base = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
+  if (!base || !url.startsWith(base)) return null
+  const key = url.slice(base.length).replace(/^\//, '')
+  return key || null
+}
+
+/**
+ * Delete an object from R2 by key.
+ * @param {string} key - Object key (path in bucket)
+ */
+async function deleteFromR2(key) {
+  if (!key) return
+  const bucket = process.env.R2_BUCKET
+  if (!bucket) throw new Error('R2_BUCKET not set')
+  const client = getR2Client()
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+}
+
+module.exports = { uploadToR2, generateKey, sanitizeFolderName, isR2Configured, urlToKey, deleteFromR2 }

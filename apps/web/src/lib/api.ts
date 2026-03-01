@@ -5,6 +5,41 @@ const API_BASE =
     ? 'http://localhost:3001/api'
     : '/api')
 
+/** Produs public (pagina /produse) */
+export type PublicProduct = {
+  id: string
+  title: string
+  tipProdus: 'rezidential' | 'industrial'
+  categorie?: string | null
+  description?: string | null
+  images: string[]
+  salePrice: string | number
+  tensiuneNominala?: string | null
+  capacitate?: string | null
+  compozitie?: string | null
+  cicluriDescarcare?: string | null
+  conectivitateWifi?: boolean
+  conectivitateBluetooth?: boolean
+  energieNominala?: string | null
+  [key: string]: unknown
+}
+
+/** Lista produselor publicate (fără auth) */
+export async function getProducts(): Promise<PublicProduct[]> {
+  const res = await fetch(`${API_BASE}/products`)
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcare.')
+  return Array.isArray(json) ? json : []
+}
+
+/** Un singur produs publicat (fără auth) */
+export async function getProduct(id: string): Promise<PublicProduct> {
+  const res = await fetch(`${API_BASE}/products/${id}`)
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
+  return json
+}
+
 /** Verifică dacă API-ul răspunde. Folosește API_BASE (VITE_API_URL în prod). */
 export async function checkApiHealth(): Promise<boolean> {
   try {
@@ -400,6 +435,21 @@ export async function createProduct(payload: CreateProductPayload, status: 'draf
     if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
     if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot crea produse.')
     throw new Error(json.error || 'Eroare la salvarea produsului.')
+  }
+  return json
+}
+
+export async function updateProduct(id: string, payload: CreateProductPayload, status: 'draft' | 'published') {
+  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ ...payload, status }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot actualiza produse.')
+    throw new Error(json.error || 'Eroare la actualizare.')
   }
   return json
 }

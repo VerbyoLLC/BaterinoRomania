@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
 const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
-const { uploadToR2, generateKey, isR2Configured } = require('./lib/r2.js')
+const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = require('./lib/r2.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
@@ -621,6 +621,106 @@ const createProductHandler = async (req, res) => {
 app.post('/api/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
 app.post('/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
 
+// ── Admin: update product ───────────────────────────────────────────────
+const updateProductHandler = async (req, res) => {
+  try {
+    const { id } = req.params
+    const body = req.body || {}
+    const status = body.status === 'published' ? 'published' : body.status === 'draft' ? 'draft' : undefined
+    const title = String(body.title || '').trim() || undefined
+    const sku = String(body.sku || '').trim() || undefined
+    const tipProdus = ['rezidential', 'industrial'].includes(body.tipProdus) ? body.tipProdus : undefined
+
+    const data = {}
+    if (status !== undefined) data.status = status
+    if (title) data.title = title
+    if (sku) data.sku = sku
+    if (tipProdus) data.tipProdus = tipProdus
+    if (body.brand !== undefined) data.brand = body.brand?.trim() || null
+    if (body.description !== undefined) data.description = body.description?.trim() || null
+    if (body.categorie !== undefined) data.categorie = body.categorie?.trim() || null
+    if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
+    if (body.salePrice !== undefined) data.salePrice = parseDecimal(body.salePrice, 0)
+    if (body.vat !== undefined) data.vat = parseDecimal(body.vat, 19)
+    if (body.energieNominala !== undefined) data.energieNominala = body.energieNominala?.trim() || null
+    if (body.capacitate !== undefined) data.capacitate = body.capacitate?.trim() || null
+    if (body.curentMaxDescarcare !== undefined) data.curentMaxDescarcare = body.curentMaxDescarcare?.trim() || null
+    if (body.curentMaxIncarcare !== undefined) data.curentMaxIncarcare = body.curentMaxIncarcare?.trim() || null
+    if (body.cicluriDescarcare !== undefined) data.cicluriDescarcare = body.cicluriDescarcare?.trim() || null
+    if (body.adancimeDescarcare !== undefined) data.adancimeDescarcare = body.adancimeDescarcare?.trim() || null
+    if (body.greutate !== undefined) data.greutate = body.greutate?.trim() || null
+    if (body.compozitie !== undefined) data.compozitie = body.compozitie?.trim() || null
+    if (body.dimensiuni !== undefined) data.dimensiuni = body.dimensiuni?.trim() || null
+    if (body.protectie !== undefined) data.protectie = body.protectie?.trim() || null
+    if (body.conectivitateWifi !== undefined) data.conectivitateWifi = body.conectivitateWifi === true
+    if (body.conectivitateBluetooth !== undefined) data.conectivitateBluetooth = body.conectivitateBluetooth === true
+    if (body.protectieFoc !== undefined) data.protectieFoc = body.protectieFoc?.trim() || null
+    if (body.certificari !== undefined) data.certificari = body.certificari?.trim() || null
+    if (body.garantie !== undefined) data.garantie = body.garantie?.trim() || null
+    if (body.tensiuneNominala !== undefined) data.tensiuneNominala = body.tensiuneNominala?.trim() || null
+    if (body.eficientaCiclu !== undefined) data.eficientaCiclu = body.eficientaCiclu?.trim() || null
+    if (body.temperaturaFunctionare !== undefined) data.temperaturaFunctionare = body.temperaturaFunctionare?.trim() || null
+    if (body.temperaturaStocare !== undefined) data.temperaturaStocare = body.temperaturaStocare?.trim() || null
+    if (body.umiditate !== undefined) data.umiditate = body.umiditate?.trim() || null
+    if (Array.isArray(body.images)) data.images = body.images
+    if (Array.isArray(body.documenteTehnice)) data.documenteTehnice = body.documenteTehnice
+    if (Array.isArray(body.faq)) data.faq = body.faq
+
+    const product = await prisma.product.update({
+      where: { id },
+      data,
+    })
+    return res.json(product)
+  } catch (err) {
+    console.error('Update product error:', err)
+    let errorMsg = 'Eroare la actualizare.'
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2025') errorMsg = 'Produs negăsit.'
+      else if (err.code === 'P2002') errorMsg = 'Există deja un produs cu acest SKU.'
+      else if (err.code === 'P2003') errorMsg = 'Date invalide.'
+    } else if (err?.message) errorMsg = err.message
+    res.status(500).json({ error: errorMsg })
+  }
+}
+app.put('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
+app.patch('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
+app.put('/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
+app.patch('/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
+
+// ── Public: list published products (no auth) ───────────────────────────
+const listPublicProductsHandler = async (req, res) => {
+  try {
+    if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
+    const products = await prisma.product.findMany({
+      where: { status: 'published' },
+      orderBy: { createdAt: 'desc' },
+    })
+    return res.json(products)
+  } catch (err) {
+    console.error('List public products error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.get('/api/products', listPublicProductsHandler)
+app.get('/products', listPublicProductsHandler)
+
+// ── Public: get single published product (no auth) ───────────────────────
+const getPublicProductHandler = async (req, res) => {
+  try {
+    const { id } = req.params
+    const product = await prisma.product.findFirst({
+      where: { id, status: 'published' },
+    })
+    if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
+    return res.json(product)
+  } catch (err) {
+    console.error('Get public product error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.get('/api/products/:id', getPublicProductHandler)
+app.get('/products/:id', getPublicProductHandler)
+
 // ── Admin: list products ───────────────────────────────────────────────
 const listProductsHandler = async (req, res) => {
   try {
@@ -663,6 +763,37 @@ app.patch('/admin/products/:id/status', authMiddleware, adminAuthMiddleware, upd
 const deleteProductHandler = async (req, res) => {
   try {
     const { id } = req.params
+    const product = await prisma.product.findUnique({ where: { id } })
+    if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
+
+    // Delete images from R2
+    if (isR2Configured()) {
+      const imgs = Array.isArray(product.images) ? product.images : []
+      for (const url of imgs) {
+        const key = urlToKey(url)
+        if (key) {
+          try {
+            await deleteFromR2(key)
+          } catch (e) {
+            console.warn('R2 delete image:', key, e?.message)
+          }
+        }
+      }
+      // Delete documente tehnice (PDFs) from R2
+      const docs = Array.isArray(product.documenteTehnice) ? product.documenteTehnice : []
+      for (const doc of docs) {
+        const url = doc?.url || doc
+        const key = typeof url === 'string' ? urlToKey(url) : null
+        if (key) {
+          try {
+            await deleteFromR2(key)
+          } catch (e) {
+            console.warn('R2 delete doc:', key, e?.message)
+          }
+        }
+      }
+    }
+
     await prisma.product.delete({ where: { id } })
     return res.status(204).send()
   } catch (err) {
