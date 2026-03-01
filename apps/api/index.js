@@ -529,6 +529,7 @@ const uploadHandler = async (req, res) => {
     const imageIndexRaw = req.get('X-Image-Index') || req.body?.imageIndex || req.query?.imageIndex
     const imageIndex = imageIndexRaw != null ? parseInt(String(imageIndexRaw), 10) : undefined
     const key = generateKey(req.file.originalname, prefix, req.file.mimetype, productFolder || undefined, imageIndex)
+    console.log('[R2 Upload] productFolder:', productFolder || '(none)', 'key:', key)
     const url = await uploadToR2(req.file.buffer, key, req.file.mimetype)
     return res.json({ url })
   } catch (err) {
