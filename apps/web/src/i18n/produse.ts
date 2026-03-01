@@ -32,8 +32,6 @@ export type ProduseTranslations = {
   invertorOptions: { value: string; label: string }[]
 }
 
-const IMG = (f: string) => `/images/shared/${f}`
-
 /** Static products removed – use getProducts() from api.ts for DB products */
 export const PRODUCTS: Product[] = []
 

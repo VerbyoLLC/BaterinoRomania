@@ -83,7 +83,7 @@ export default function AdminProducts() {
     fetchProducts()
   }, [])
 
-  const parseUnitValue = (s: string | null | undefined, unit: string): string => {
+  const parseUnitValue = (s: string | null | undefined, _unit: string): string => {
     if (!s) return ''
     const cleaned = s.replace(/\s/g, '')
     const m = cleaned.match(new RegExp(`^([\\d.,-]+)`, 'i'))

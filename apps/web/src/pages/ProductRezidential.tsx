@@ -8,18 +8,21 @@ import SEO from '../components/SEO'
 /* ── Build specs and techData from DB product ──────────────────── */
 function buildSpecs(p: PublicProduct) {
   const specs: { label: string; value: string }[] = []
-  if (p.capacitate) specs.push({ label: 'Capacitate', value: p.capacitate })
-  if (p.energieNominala) specs.push({ label: 'Energie nominală', value: p.energieNominala })
-  if (p.cicluriDescarcare) specs.push({ label: 'Cicluri de descărcare', value: p.cicluriDescarcare })
-  if (p.dimensiuni) specs.push({ label: 'Dimensiuni', value: p.dimensiuni })
-  if (p.greutate) specs.push({ label: 'Greutate', value: p.greutate })
-  if (p.temperaturaFunctionare) specs.push({ label: 'Temperatura operare', value: p.temperaturaFunctionare })
+  const str = (v: unknown) => (v != null ? String(v) : '')
+  if (p.capacitate) specs.push({ label: 'Capacitate', value: str(p.capacitate) })
+  if (p.energieNominala) specs.push({ label: 'Energie nominală', value: str(p.energieNominala) })
+  if (p.cicluriDescarcare) specs.push({ label: 'Cicluri de descărcare', value: str(p.cicluriDescarcare) })
+  if (p.dimensiuni) specs.push({ label: 'Dimensiuni', value: str(p.dimensiuni) })
+  if (p.greutate) specs.push({ label: 'Greutate', value: str(p.greutate) })
+  if (p.temperaturaFunctionare) specs.push({ label: 'Temperatura operare', value: str(p.temperaturaFunctionare) })
   return specs
 }
 
 function buildTechData(p: PublicProduct): [string, string][] {
   const rows: [string, string][] = []
-  const add = (k: string, v: string | null | undefined) => { if (v) rows.push([k, v]) }
+  const add = (k: string, v: unknown) => {
+    if (v != null && typeof v === 'string') rows.push([k, v])
+  }
   add('Energie nominală', p.energieNominala)
   add('Capacitate', p.capacitate)
   add('Curent max. descărcare', (p as { curentMaxDescarcare?: string }).curentMaxDescarcare)
