@@ -19,7 +19,11 @@ const app = express()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'baterino-dev-secret-change-in-production'
 
-app.use(cors({ origin: true, credentials: true }))
+app.use(cors({
+  origin: true,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
+}))
 app.use(express.json())
 
 // ── Auth middleware (pentru rute protejate) ────────────────────────────
@@ -525,7 +529,7 @@ const uploadHandler = async (req, res) => {
     }
     const isPdf = req.file.mimetype === 'application/pdf'
     const prefix = isPdf ? 'docs' : 'products'
-    const productFolder = (req.get('X-Product-Folder') || req.body?.folder || req.query?.folder || '').trim()
+    const productFolder = (req.query?.folder || req.get('X-Product-Folder') || req.body?.folder || '').trim()
     const imageIndexRaw = req.get('X-Image-Index') || req.body?.imageIndex || req.query?.imageIndex
     const imageIndex = imageIndexRaw != null ? parseInt(String(imageIndexRaw), 10) : undefined
     const key = generateKey(req.file.originalname, prefix, req.file.mimetype, productFolder || undefined, imageIndex)
@@ -579,8 +583,12 @@ const createProductHandler = async (req, res) => {
         cicluriDescarcare: body.cicluriDescarcare?.trim() || null,
         adancimeDescarcare: body.adancimeDescarcare?.trim() || null,
         greutate: body.greutate?.trim() || null,
+        compozitie: body.compozitie?.trim() || null,
         dimensiuni: body.dimensiuni?.trim() || null,
         protectie: body.protectie?.trim() || null,
+        conectivitateWifi: body.conectivitateWifi === true,
+        conectivitateBluetooth: body.conectivitateBluetooth === true,
+        protectieFoc: body.protectieFoc?.trim() || null,
         certificari: body.certificari?.trim() || null,
         garantie: body.garantie?.trim() || null,
         tensiuneNominala: body.tensiuneNominala?.trim() || null,

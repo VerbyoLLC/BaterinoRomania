@@ -292,8 +292,12 @@ export type CreateProductPayload = {
   cicluriDescarcare?: string
   adancimeDescarcare?: string
   greutate?: string
+  compozitie?: string
   dimensiuni?: string
   protectie?: string
+  conectivitateWifi?: boolean
+  conectivitateBluetooth?: boolean
+  protectieFoc?: string
   certificari?: string
   garantie?: string
   tensiuneNominala?: string

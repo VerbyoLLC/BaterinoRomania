@@ -26,10 +26,14 @@ export default function AdminProducts() {
   const [cicluriDescarcare, setCicluriDescarcare] = useState('')
   const [adancimeDescarcare, setAdancimeDescarcare] = useState('')
   const [greutate, setGreutate] = useState('')
+  const [compozitie, setCompozitie] = useState('')
   const [dimensiuniL, setDimensiuniL] = useState('')
   const [dimensiuniW, setDimensiuniW] = useState('')
   const [dimensiuniH, setDimensiuniH] = useState('')
   const [protectie, setProtectie] = useState('')
+  const [conectivitateWifi, setConectivitateWifi] = useState(false)
+  const [conectivitateBluetooth, setConectivitateBluetooth] = useState(false)
+  const [protectieFoc, setProtectieFoc] = useState('')
   const [certificari, setCertificari] = useState('')
   const [garantie, setGarantie] = useState('')
   const [tensiuneNominala, setTensiuneNominala] = useState('')
@@ -62,10 +66,14 @@ export default function AdminProducts() {
     setCicluriDescarcare('')
     setAdancimeDescarcare('')
     setGreutate('')
+    setCompozitie('')
     setDimensiuniL('')
     setDimensiuniW('')
     setDimensiuniH('')
     setProtectie('')
+    setConectivitateWifi(false)
+    setConectivitateBluetooth(false)
+    setProtectieFoc('')
     setCertificari('')
     setGarantie('')
     setTensiuneNominala('')
@@ -203,6 +211,12 @@ export default function AdminProducts() {
     setter(formatWithThousand(filtered))
   }
 
+  /** Digits only, max 5 chars - for dimension fields (mm) */
+  const handleDimensionInput = (value: string, setter: (v: string) => void) => {
+    const filtered = value.replace(/\D/g, '').slice(0, 5)
+    setter(filtered)
+  }
+
   /** Numbers with optional leading minus - for temperature fields (°C) */
   const handleTemperatureInput = (value: string, setter: (v: string) => void) => {
     let s = value.replace(/[^\d-]/g, '')
@@ -282,8 +296,12 @@ export default function AdminProducts() {
       cicluriDescarcare: cicluriDescarcare ? `${parseFormattedNumber(cicluriDescarcare)} Cicluri` : undefined,
       adancimeDescarcare: adancimeDescarcare ? `${parseFormattedNumber(adancimeDescarcare)}%` : undefined,
       greutate: greutate ? `${parseFormattedNumber(greutate)} Kg` : undefined,
+      compozitie: compozitie || undefined,
       dimensiuni: dimensiuniStr,
       protectie: protectie || undefined,
+      conectivitateWifi,
+      conectivitateBluetooth,
+      protectieFoc: protectieFoc || undefined,
       certificari: certificari || undefined,
       garantie: garantie ? `${parseFormattedNumber(garantie)} ani` : undefined,
       tensiuneNominala: tensiuneNominala ? `${String(tensiuneNominala).replace(',', '.')} V` : undefined,
@@ -614,22 +632,29 @@ export default function AdminProducts() {
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">Kg</span>
                     </div>
                   </div>
+                  <div>
+                    <label htmlFor="product-compozitie" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Compoziție</label>
+                    <select id="product-compozitie" value={compozitie} onChange={(e) => setCompozitie(e.target.value)} className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white">
+                      <option value="">Selectează</option>
+                      <option value="LiFePo4">LiFePo4</option>
+                    </select>
+                  </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Dimensiuni (mm)</label>
-                    <div className="flex gap-2 items-center">
-                      <div className="w-24">
+                    <div className="flex gap-2 items-center w-full">
+                      <div className="flex-1 min-w-0">
                         <label htmlFor="product-dims-l" className="block text-xs text-gray-500 mb-1">L (mm)</label>
-                        <input id="product-dims-l" type="text" inputMode="numeric" value={dimensiuniL} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniL)} placeholder="460" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <input id="product-dims-l" type="text" inputMode="numeric" maxLength={5} value={dimensiuniL} onChange={(e) => handleDimensionInput(e.target.value, setDimensiuniL)} placeholder="460" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
                       </div>
-                      <span className="text-gray-400 pt-5">×</span>
-                      <div className="w-24">
+                      <span className="text-gray-400 pt-5 shrink-0">×</span>
+                      <div className="flex-1 min-w-0">
                         <label htmlFor="product-dims-w" className="block text-xs text-gray-500 mb-1">l (mm)</label>
-                        <input id="product-dims-w" type="text" inputMode="numeric" value={dimensiuniW} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniW)} placeholder="400" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <input id="product-dims-w" type="text" inputMode="numeric" maxLength={5} value={dimensiuniW} onChange={(e) => handleDimensionInput(e.target.value, setDimensiuniW)} placeholder="400" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
                       </div>
-                      <span className="text-gray-400 pt-5">×</span>
-                      <div className="w-24">
+                      <span className="text-gray-400 pt-5 shrink-0">×</span>
+                      <div className="flex-1 min-w-0">
                         <label htmlFor="product-dims-h" className="block text-xs text-gray-500 mb-1">h (mm)</label>
-                        <input id="product-dims-h" type="text" inputMode="numeric" value={dimensiuniH} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniH)} placeholder="130" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <input id="product-dims-h" type="text" inputMode="numeric" maxLength={5} value={dimensiuniH} onChange={(e) => handleDimensionInput(e.target.value, setDimensiuniH)} placeholder="130" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
                       </div>
                     </div>
                   </div>
@@ -663,6 +688,32 @@ export default function AdminProducts() {
                       <option value="IP66">IP66 – Exterior (jeturi puternice)</option>
                       <option value="IP67">IP67 – Scufundare temporară</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Conectivitate</label>
+                    <div className="h-11 flex items-center justify-center gap-4 border border-gray-300 rounded-xl px-4 bg-white">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={conectivitateWifi} onChange={(e) => setConectivitateWifi(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                        <span className="text-sm font-['Inter'] text-gray-800">WiFi</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={conectivitateBluetooth} onChange={(e) => setConectivitateBluetooth(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                        <span className="text-sm font-['Inter'] text-gray-800">Bluetooth</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Protecție la foc</label>
+                    <div className="h-11 flex items-center justify-center gap-4 border border-gray-300 rounded-xl px-4 bg-white">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="protectieFoc" checked={protectieFoc === 'protectie'} onChange={() => setProtectieFoc('protectie')} className="w-4 h-4 border-gray-300 text-slate-900 focus:ring-slate-900" />
+                        <span className="text-sm font-['Inter'] text-gray-800">Protecție la foc</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="protectieFoc" checked={protectieFoc === 'fara'} onChange={() => setProtectieFoc('fara')} className="w-4 h-4 border-gray-300 text-slate-900 focus:ring-slate-900" />
+                        <span className="text-sm font-['Inter'] text-gray-800">Fără protecție la foc</span>
+                      </label>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="product-certificari" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Certificări</label>

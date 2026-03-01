@@ -108,8 +108,12 @@ model Product {
   cicluriDescarcare     String?
   adancimeDescarcare    String?
   greutate              String?
+  compozitie            String?  // e.g. "LiFePo4"
   dimensiuni            String?
   protectie             String?
+  conectivitateWifi     Boolean  @default(false)
+  conectivitateBluetooth Boolean @default(false)
+  protectieFoc          String?  // "protectie" | "fara"
   certificari           String?
   garantie              String?
   tensiuneNominala      String?
