@@ -1,10 +1,9 @@
-// Dev: localhost. Prod: VITE_API_URL sau Railway direct (evită proxy Vercel care poate pierde body la POST).
-const RAILWAY_API = 'https://baterinoromania-production.up.railway.app/api'
+// Dev pe localhost: folosește direct API-ul. Prod: VITE_API_URL sau /api (proxy Vercel).
 const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
   (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3001/api'
-    : RAILWAY_API)
+    : '/api')
 
 /** Verifică dacă API-ul răspunde. Folosește API_BASE (VITE_API_URL în prod). */
 export async function checkApiHealth(): Promise<boolean> {
@@ -266,7 +265,7 @@ export async function testApiDb(): Promise<{ ok: boolean; partnersCount?: number
   const base = (import.meta.env.VITE_API_URL as string) ||
     (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
       ? 'http://localhost:3001/api'
-      : RAILWAY_API)
+      : '/api')
   try {
     const res = await fetch(`${base}/debug/db`)
     const json = await res.json().catch(() => ({}))
