@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
-const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured } = require('./lib/mail.js')
+const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
 const { uploadToR2, generateKey, isR2Configured } = require('./lib/r2.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
@@ -207,7 +207,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     await sendPasswordResetEmail(email, resetUrl)
 
-    console.log('[Forgot password] Reset requested for:', user.email, isMailConfigured() ? '(email sent)' : '(SMTP not configured)')
+    console.log('[Forgot password] Reset requested for:', user.email, isMailConfigured() ? `(email sent via ${getMailProvider()})` : '(mail not configured)')
 
     return res.json({ message: 'Dacă există un cont cu acest email, vei primi un link de resetare.' })
   } catch (err) {
@@ -433,6 +433,28 @@ app.get('/api/debug/db', async (req, res) => {
   } catch (err) {
     console.error('Debug DB error:', err)
     return res.status(500).json({ ok: false, error: err?.message || String(err) })
+  }
+})
+
+// ── Debug: mail config + optional test send ───────────────────────────
+app.get('/api/debug/mail', async (req, res) => {
+  try {
+    const provider = getMailProvider()
+    const configured = isMailConfigured()
+    const from = getMailFrom()
+    const out = { configured, provider, from: from ? String(from).replace(/<[^>]+>/, '<***>') : null }
+
+    const testTo = req.query.test || req.query.to
+    if (testTo && configured) {
+      const resetUrl = `${process.env.FRONTEND_URL || 'https://baterino.ro'}/reset-password?token=test123`
+      await sendPasswordResetEmail(String(testTo), resetUrl)
+      out.testSent = true
+      out.testTo = testTo
+    }
+    return res.json(out)
+  } catch (err) {
+    console.error('Debug mail error:', err)
+    return res.status(500).json({ ok: false, configured: isMailConfigured(), error: err?.message || String(err) })
   }
 })
 
