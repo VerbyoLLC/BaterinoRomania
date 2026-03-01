@@ -35,14 +35,23 @@ Când clonezi repo-ul și vrei să deployezi pe Railway, urmează pașii de mai 
 
 ### Opționale (emailuri – cod verificare, reset parolă)
 
+**Railway Free/Hobby blochează SMTP.** Folosește **Resend** (API HTTP):
+
 | Variabilă | Unde o obții |
 |-----------|---------------|
-| `SMTP_HOST` | Furnizorul tău de email (ex. SiteGround, SendGrid) |
-| `SMTP_PORT` | De obicei `587` |
+| `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys → Create |
+| `RESEND_FROM` | `Baterino <onboarding@resend.dev>` (test) sau `Baterino <no-reply@baterino.ro>` (după verificare domeniu) |
+| `SITE_NAME` | Baterino Romania |
+
+**Alternativ:** SMTP (doar Railway Pro sau local):
+
+| Variabilă | Unde o obții |
+|-----------|---------------|
+| `SMTP_HOST` | ex. SiteGround: `mail.baterino.ro` |
+| `SMTP_PORT` | `587` (TLS) sau `465` (SSL) |
 | `SMTP_USER` | Utilizator SMTP |
 | `SMTP_PASS` | Parolă SMTP |
-| `MAIL_FROM` | `Baterino <noreply@tudomeniu.com>` |
-| `SITE_NAME` | `Baterino Romania` |
+| `MAIL_FROM` | `Baterino <noreply@baterino.ro>` |
 
 ---
 
