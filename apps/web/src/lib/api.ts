@@ -277,6 +277,7 @@ export async function testApiDb(): Promise<{ ok: boolean; partnersCount?: number
 }
 
 export type CreateProductPayload = {
+  brand?: string
   title: string
   sku: string
   description?: string
@@ -305,14 +306,23 @@ export type CreateProductPayload = {
   faq: { q: string; a: string }[]
 }
 
-export async function uploadAdminFile(file: File): Promise<{ url: string }> {
+export async function uploadAdminFile(file: File, productFolder?: string, imageIndex?: number): Promise<{ url: string }> {
   const token = getAuthToken()
   if (!token) throw new Error('Trebuie să fii autentificat.')
   const formData = new FormData()
+  const folder = productFolder || 'produs'
+  formData.append('folder', folder)
+  if (imageIndex != null) formData.append('imageIndex', String(imageIndex))
   formData.append('file', file)
-  const res = await fetch(`${API_BASE}/admin/upload`, {
+  const params = new URLSearchParams({ folder })
+  if (imageIndex != null) params.set('imageIndex', String(imageIndex))
+  const uploadUrl = `${API_BASE}/admin/upload?${params}`
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+  headers['X-Product-Folder'] = folder
+  if (imageIndex != null) headers['X-Image-Index'] = String(imageIndex)
+  const res = await fetch(uploadUrl, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
     body: formData,
   })
   const json = await res.json().catch(() => ({}))

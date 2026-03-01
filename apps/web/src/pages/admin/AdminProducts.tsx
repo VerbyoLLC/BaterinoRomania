@@ -5,12 +5,14 @@ const MAX_IMAGES = 5
 
 export default function AdminProducts() {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const replaceIndexRef = useRef<number | null>(null)
   const docFileInputRef = useRef<HTMLInputElement>(null)
   const docUploadIndexRef = useRef(0)
   const [panelOpen, setPanelOpen] = useState(false)
   const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [brand, setBrand] = useState('')
   const [title, setTitle] = useState('')
   const [sku, setSku] = useState('')
   const [description, setDescription] = useState('')
@@ -24,15 +26,20 @@ export default function AdminProducts() {
   const [cicluriDescarcare, setCicluriDescarcare] = useState('')
   const [adancimeDescarcare, setAdancimeDescarcare] = useState('')
   const [greutate, setGreutate] = useState('')
-  const [dimensiuni, setDimensiuni] = useState('')
+  const [dimensiuniL, setDimensiuniL] = useState('')
+  const [dimensiuniW, setDimensiuniW] = useState('')
+  const [dimensiuniH, setDimensiuniH] = useState('')
   const [protectie, setProtectie] = useState('')
   const [certificari, setCertificari] = useState('')
   const [garantie, setGarantie] = useState('')
   const [tensiuneNominala, setTensiuneNominala] = useState('')
   const [eficientaCiclu, setEficientaCiclu] = useState('')
-  const [temperaturaFunctionare, setTemperaturaFunctionare] = useState('')
-  const [temperaturaStocare, setTemperaturaStocare] = useState('')
-  const [umiditate, setUmiditate] = useState('')
+  const [temperaturaFunctionareMin, setTemperaturaFunctionareMin] = useState('')
+  const [temperaturaFunctionareMax, setTemperaturaFunctionareMax] = useState('')
+  const [temperaturaStocareMin, setTemperaturaStocareMin] = useState('')
+  const [temperaturaStocareMax, setTemperaturaStocareMax] = useState('')
+  const [umiditateMin, setUmiditateMin] = useState('')
+  const [umiditateMax, setUmiditateMax] = useState('')
   const [landedPrice, setLandedPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
   const [vat, setVat] = useState('')
@@ -43,6 +50,7 @@ export default function AdminProducts() {
 
   const handleOpenPanel = () => {
     setSaveError(null)
+    setBrand('')
     setTitle('')
     setSku('')
     setDescription('')
@@ -54,15 +62,20 @@ export default function AdminProducts() {
     setCicluriDescarcare('')
     setAdancimeDescarcare('')
     setGreutate('')
-    setDimensiuni('')
+    setDimensiuniL('')
+    setDimensiuniW('')
+    setDimensiuniH('')
     setProtectie('')
     setCertificari('')
     setGarantie('')
     setTensiuneNominala('')
     setEficientaCiclu('')
-    setTemperaturaFunctionare('')
-    setTemperaturaStocare('')
-    setUmiditate('')
+    setTemperaturaFunctionareMin('')
+    setTemperaturaFunctionareMax('')
+    setTemperaturaStocareMin('')
+    setTemperaturaStocareMax('')
+    setUmiditateMin('')
+    setUmiditateMax('')
     setLandedPrice('')
     setSalePrice('')
     setVat('')
@@ -92,6 +105,11 @@ export default function AdminProducts() {
       next.splice(index, 1)
       return next
     })
+  }
+
+  const replaceImage = (index: number) => {
+    replaceIndexRef.current = index
+    fileInputRef.current?.click()
   }
 
   const onDrop = (e: React.DragEvent) => {
@@ -158,8 +176,47 @@ export default function AdminProducts() {
     docFileInputRef.current?.click()
   }
 
+  /** Format number with thousand separator (e.g. 15000 → "15.000") */
+  const formatWithThousand = (v: string): string => {
+    const parts = v.replace(/[^\d.,]/g, '').replace(',', '.').split('.')
+    const int = parts[0]?.replace(/\B(?=(\d{3})+(?!\d))/g, '.') || ''
+    const dec = parts[1] !== undefined ? ',' + parts[1] : ''
+    return int + dec
+  }
+
+  /** Parse formatted number to raw (e.g. "15.000" → "15000") */
+  const parseFormattedNumber = (v: string): string => {
+    const cleaned = v.replace(/\./g, '').replace(',', '.')
+    const match = cleaned.match(/^(\d*)(\.?\d*)/)
+    return match ? match[1] + (match[2] || '') : ''
+  }
+
   const handleNumericInput = (value: string, setter: (v: string) => void) => {
-    const filtered = value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+    const raw = parseFormattedNumber(value)
+    const filtered = raw.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+    setter(formatWithThousand(filtered))
+  }
+
+  /** Numbers only (no decimals) - for Wh, Ah, A fields */
+  const handleIntegerOnly = (value: string, setter: (v: string) => void) => {
+    const filtered = value.replace(/\D/g, '')
+    setter(formatWithThousand(filtered))
+  }
+
+  /** Numbers with optional leading minus - for temperature fields (°C) */
+  const handleTemperatureInput = (value: string, setter: (v: string) => void) => {
+    let s = value.replace(/[^\d-]/g, '')
+    if (s.startsWith('-')) {
+      s = '-' + s.slice(1).replace(/\D/g, '')
+    } else {
+      s = s.replace(/\D/g, '')
+    }
+    setter(s)
+  }
+
+  /** Decimals only, no thousand separator - for voltage (V) */
+  const handleDecimalInput = (value: string, setter: (v: string) => void) => {
+    const filtered = value.replace(/[^\d.,]/g, '').replace(/(\..*)\./g, '$1').replace(',', '.')
     setter(filtered)
   }
 
@@ -186,42 +243,11 @@ export default function AdminProducts() {
     }
   }
 
-  const getRequiredErrors = (): string[] => {
-    const errs: string[] = []
-    if (!title.trim()) errs.push('Titlu')
-    if (!sku.trim()) errs.push('SKU')
-    if (!description.trim()) errs.push('Descriere')
-    if (!landedPrice.trim()) errs.push('Landed Price')
-    if (!salePrice.trim()) errs.push('Sale Price')
-    if (!vat.trim()) errs.push('TVA')
-    if (!energieNominala.trim()) errs.push('Energie nominală')
-    if (!capacitate.trim()) errs.push('Capacitate')
-    if (!curentMaxDescarcare.trim()) errs.push('Curent max. descărcare')
-    if (!curentMaxIncarcare.trim()) errs.push('Curent max. încărcare')
-    if (!cicluriDescarcare.trim()) errs.push('Cicluri de descărcare')
-    if (!adancimeDescarcare.trim()) errs.push('Adâncime descărcare (DOD)')
-    if (!greutate.trim()) errs.push('Greutate')
-    if (!dimensiuni.trim()) errs.push('Dimensiuni')
-    if (!protectie.trim()) errs.push('Protecție')
-    if (!certificari.trim()) errs.push('Certificări')
-    if (!garantie.trim()) errs.push('Garanție')
-    if (!tensiuneNominala.trim()) errs.push('Tensiune nominală')
-    if (!eficientaCiclu.trim()) errs.push('Eficiență ciclu complet')
-    if (!temperaturaFunctionare.trim()) errs.push('Temperatura funcționare')
-    if (!temperaturaStocare.trim()) errs.push('Temperatura stocare')
-    if (!umiditate.trim()) errs.push('Umiditate')
-    if (images.length === 0) errs.push('Cel puțin o imagine')
-    const hasValidDoc = documenteTehnice.some((d) => d.descriere.trim() && d.file)
-    if (!hasValidDoc) errs.push('Cel puțin un document tehnic (descriere + fișier PDF)')
-    const hasValidFaq = faq.some((f) => f.q.trim() && f.a.trim())
-    if (!hasValidFaq) errs.push('Cel puțin o întrebare frecventă (întrebare + răspuns)')
-    return errs
-  }
-
   const buildPayload = async () => {
+    const productFolder = title.trim() || 'Fără titlu'
     const imageUrls: string[] = []
-    for (const { file } of images) {
-      const { url } = await uploadAdminFile(file)
+    for (let i = 0; i < images.length; i++) {
+      const { url } = await uploadAdminFile(images[i].file, productFolder, i + 1)
       imageUrls.push(url)
     }
 
@@ -229,7 +255,7 @@ export default function AdminProducts() {
     for (const doc of documenteTehnice) {
       let url = ''
       if (doc.file) {
-        const r = await uploadAdminFile(doc.file)
+        const r = await uploadAdminFile(doc.file, productFolder)
         url = r.url
       }
       docTehnice.push({ descriere: doc.descriere.trim(), url })
@@ -237,30 +263,34 @@ export default function AdminProducts() {
 
     const faqFiltered = faq.filter((item) => item.q.trim() || item.a.trim()).map((item) => ({ q: item.q.trim(), a: item.a.trim() }))
 
+    const dims = [dimensiuniL, dimensiuniW, dimensiuniH].filter(Boolean).join(' × ')
+    const dimensiuniStr = dims ? `${dims} mm` : undefined
+
     return {
-      title: title.trim(),
-      sku: sku.trim(),
+      brand: brand || undefined,
+      title: title.trim() || 'Fără titlu',
+      sku: sku.trim() || `SKU-${Date.now()}`,
       description: description.trim() || undefined,
       tipProdus,
-      landedPrice: landedPrice || '0',
-      salePrice: salePrice || '0',
-      vat: vat || '19',
-      energieNominala: energieNominala || undefined,
-      capacitate: capacitate || undefined,
-      curentMaxDescarcare: curentMaxDescarcare || undefined,
-      curentMaxIncarcare: curentMaxIncarcare || undefined,
-      cicluriDescarcare: cicluriDescarcare || undefined,
-      adancimeDescarcare: adancimeDescarcare || undefined,
-      greutate: greutate || undefined,
-      dimensiuni: dimensiuni || undefined,
+      landedPrice: parseFormattedNumber(landedPrice) || '0',
+      salePrice: parseFormattedNumber(salePrice) || '0',
+      vat: parseFormattedNumber(vat) || '19',
+      energieNominala: energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
+      capacitate: capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
+      curentMaxDescarcare: curentMaxDescarcare ? `${parseFormattedNumber(curentMaxDescarcare)} A` : undefined,
+      curentMaxIncarcare: curentMaxIncarcare ? `${parseFormattedNumber(curentMaxIncarcare)} A` : undefined,
+      cicluriDescarcare: cicluriDescarcare ? `${parseFormattedNumber(cicluriDescarcare)} Cicluri` : undefined,
+      adancimeDescarcare: adancimeDescarcare ? `${parseFormattedNumber(adancimeDescarcare)}%` : undefined,
+      greutate: greutate ? `${parseFormattedNumber(greutate)} Kg` : undefined,
+      dimensiuni: dimensiuniStr,
       protectie: protectie || undefined,
       certificari: certificari || undefined,
-      garantie: garantie || undefined,
-      tensiuneNominala: tensiuneNominala || undefined,
-      eficientaCiclu: eficientaCiclu || undefined,
-      temperaturaFunctionare: temperaturaFunctionare || undefined,
-      temperaturaStocare: temperaturaStocare || undefined,
-      umiditate: umiditate || undefined,
+      garantie: garantie ? `${parseFormattedNumber(garantie)} ani` : undefined,
+      tensiuneNominala: tensiuneNominala ? `${String(tensiuneNominala).replace(',', '.')} V` : undefined,
+      eficientaCiclu: eficientaCiclu ? `${parseFormattedNumber(eficientaCiclu)}%` : undefined,
+      temperaturaFunctionare: (temperaturaFunctionareMin || temperaturaFunctionareMax) ? `${temperaturaFunctionareMin || '?'} ~ ${temperaturaFunctionareMax || '?'}°C` : undefined,
+      temperaturaStocare: (temperaturaStocareMin || temperaturaStocareMax) ? `${temperaturaStocareMin || '?'} ~ ${temperaturaStocareMax || '?'}°C` : undefined,
+      umiditate: (umiditateMin || umiditateMax) ? `${umiditateMin || '?'} ~ ${umiditateMax || '?'}%` : undefined,
       images: imageUrls,
       documenteTehnice: docTehnice,
       faq: faqFiltered,
@@ -268,11 +298,6 @@ export default function AdminProducts() {
   }
 
   const handleSave = async () => {
-    const errs = getRequiredErrors()
-    if (errs.length > 0) {
-      setSaveError(`Câmpuri obligatorii: ${errs.join(', ')}`)
-      return
-    }
     setIsSaving(true)
     setSaveError(null)
     try {
@@ -287,11 +312,6 @@ export default function AdminProducts() {
   }
 
   const handleSaveDraft = async () => {
-    const errs = getRequiredErrors()
-    if (errs.length > 0) {
-      setSaveError(`Câmpuri obligatorii: ${errs.join(', ')}`)
-      return
-    }
     setIsSaving(true)
     setSaveError(null)
     try {
@@ -419,7 +439,7 @@ export default function AdminProducts() {
               <div className="pt-2 border-t border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
                   <label htmlFor="product-sku" className="block text-sm font-semibold font-['Inter'] text-gray-700">
-                    SKU <span className="text-red-500">*</span>
+                    SKU
                   </label>
                   <div className="relative group">
                     <button
@@ -448,18 +468,24 @@ export default function AdminProducts() {
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
                   placeholder="BAT-LFP-51V-100AH-LT"
-                  required
                   className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                 />
               </div>
 
-              {/* Descriere Produs */}
+              {/* Brand + Descriere Produs */}
               <div className="pt-2 border-t border-gray-200">
+                <div className="mb-4">
+                  <label htmlFor="product-brand" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Brand</label>
+                  <select id="product-brand" value={brand} onChange={(e) => setBrand(e.target.value)} className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white">
+                    <option value="">Selectează brand</option>
+                    <option value="Lithtech">Lithtech</option>
+                  </select>
+                </div>
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere Produs</h3>
                 <div className="flex flex-col gap-4">
                   <div>
                     <label htmlFor="product-title" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Titlu <span className="text-red-500">*</span>
+                      Titlu
                     </label>
                     <input
                       id="product-title"
@@ -467,13 +493,12 @@ export default function AdminProducts() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex: EcoHome 5 kWh"
-                      required
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
                   <div>
                     <label htmlFor="product-description" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Descriere <span className="text-red-500">*</span>
+                      Descriere
                     </label>
                     <textarea
                       id="product-description"
@@ -481,7 +506,6 @@ export default function AdminProducts() {
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Descrierea produsului..."
                       rows={6}
-                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
                     />
                   </div>
@@ -494,7 +518,7 @@ export default function AdminProducts() {
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                   <div>
                     <label htmlFor="product-landed-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Landed Price (RON) <span className="text-red-500">*</span>
+                      Landed Price (RON)
                     </label>
                     <input
                       id="product-landed-price"
@@ -502,8 +526,7 @@ export default function AdminProducts() {
                       inputMode="decimal"
                       value={landedPrice}
                       onChange={(e) => handleNumericInput(e.target.value, setLandedPrice)}
-                      placeholder="Ex: 15000"
-                      required
+                      placeholder="Ex: 15.000"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
@@ -517,13 +540,13 @@ export default function AdminProducts() {
                       inputMode="decimal"
                       value={salePrice}
                       onChange={(e) => handleNumericInput(e.target.value, setSalePrice)}
-                      placeholder="Ex: 15840"
+                      placeholder="Ex: 15.840"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
                   <div>
                     <label htmlFor="product-vat" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      TVA (%) <span className="text-red-500">*</span>
+                      TVA (%)
                     </label>
                     <input
                       id="product-vat"
@@ -532,7 +555,6 @@ export default function AdminProducts() {
                       value={vat}
                       onChange={(e) => handleNumericInput(e.target.value, setVat)}
                       placeholder="Ex: 19"
-                      required
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
@@ -544,80 +566,182 @@ export default function AdminProducts() {
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Detalii tehnice produs</h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                   <div>
-                    <label htmlFor="product-energie-nominala" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Energie nominală <span className="text-red-500">*</span></label>
-                    <input id="product-energie-nominala" type="text" value={energieNominala} onChange={(e) => setEnergieNominala(e.target.value)} placeholder="5,120 Wh" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-energie-nominala" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Energie nominală</label>
+                    <div className="relative">
+                      <input id="product-energie-nominala" type="text" inputMode="numeric" value={energieNominala} onChange={(e) => handleIntegerOnly(e.target.value, setEnergieNominala)} placeholder="5.120" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">Wh</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-capacitate" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Capacitate <span className="text-red-500">*</span></label>
-                    <input id="product-capacitate" type="text" value={capacitate} onChange={(e) => setCapacitate(e.target.value)} placeholder="100Ah" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-capacitate" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Capacitate</label>
+                    <div className="relative">
+                      <input id="product-capacitate" type="text" inputMode="numeric" value={capacitate} onChange={(e) => handleIntegerOnly(e.target.value, setCapacitate)} placeholder="100" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">Ah</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-curent-descarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Curent max. descărcare <span className="text-red-500">*</span></label>
-                    <input id="product-curent-descarcare" type="text" value={curentMaxDescarcare} onChange={(e) => setCurentMaxDescarcare(e.target.value)} placeholder="100A" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-curent-descarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Curent max. descărcare</label>
+                    <div className="relative">
+                      <input id="product-curent-descarcare" type="text" inputMode="numeric" value={curentMaxDescarcare} onChange={(e) => handleIntegerOnly(e.target.value, setCurentMaxDescarcare)} placeholder="100" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">A</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-curent-incarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Curent max. încărcare <span className="text-red-500">*</span></label>
-                    <input id="product-curent-incarcare" type="text" value={curentMaxIncarcare} onChange={(e) => setCurentMaxIncarcare(e.target.value)} placeholder="50A" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-curent-incarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Curent max. încărcare</label>
+                    <div className="relative">
+                      <input id="product-curent-incarcare" type="text" inputMode="numeric" value={curentMaxIncarcare} onChange={(e) => handleIntegerOnly(e.target.value, setCurentMaxIncarcare)} placeholder="50" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">A</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-cicluri" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Cicluri de descărcare <span className="text-red-500">*</span></label>
-                    <input id="product-cicluri" type="text" value={cicluriDescarcare} onChange={(e) => setCicluriDescarcare(e.target.value)} placeholder="5,000 (la 60% DOD)" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-cicluri" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Cicluri</label>
+                    <div className="relative">
+                      <input id="product-cicluri" type="text" inputMode="numeric" value={cicluriDescarcare} onChange={(e) => handleIntegerOnly(e.target.value, setCicluriDescarcare)} placeholder="5.000" className="w-full h-11 pl-4 pr-20 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">Cicluri</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-adancime-descarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Adâncime descărcare (DOD) <span className="text-red-500">*</span></label>
-                    <input id="product-adancime-descarcare" type="text" value={adancimeDescarcare} onChange={(e) => setAdancimeDescarcare(e.target.value)} placeholder="60%" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-adancime-descarcare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Adâncime descărcare (DOD)</label>
+                    <div className="relative">
+                      <input id="product-adancime-descarcare" type="text" inputMode="numeric" value={adancimeDescarcare} onChange={(e) => handleIntegerOnly(e.target.value, setAdancimeDescarcare)} placeholder="60" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">%</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-greutate" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Greutate <span className="text-red-500">*</span></label>
-                    <input id="product-greutate" type="text" value={greutate} onChange={(e) => setGreutate(e.target.value)} placeholder="46 kg" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-greutate" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Greutate</label>
+                    <div className="relative">
+                      <input id="product-greutate" type="text" value={greutate} onChange={(e) => handleNumericInput(e.target.value, setGreutate)} placeholder="46" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">Kg</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Dimensiuni (mm)</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="w-24">
+                        <label htmlFor="product-dims-l" className="block text-xs text-gray-500 mb-1">L (mm)</label>
+                        <input id="product-dims-l" type="text" inputMode="numeric" value={dimensiuniL} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniL)} placeholder="460" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      </div>
+                      <span className="text-gray-400 pt-5">×</span>
+                      <div className="w-24">
+                        <label htmlFor="product-dims-w" className="block text-xs text-gray-500 mb-1">l (mm)</label>
+                        <input id="product-dims-w" type="text" inputMode="numeric" value={dimensiuniW} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniW)} placeholder="400" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      </div>
+                      <span className="text-gray-400 pt-5">×</span>
+                      <div className="w-24">
+                        <label htmlFor="product-dims-h" className="block text-xs text-gray-500 mb-1">h (mm)</label>
+                        <input id="product-dims-h" type="text" inputMode="numeric" value={dimensiuniH} onChange={(e) => handleIntegerOnly(e.target.value, setDimensiuniH)} placeholder="130" className="w-full h-11 px-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      </div>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-dimensiuni" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Dimensiuni (L × l × h) <span className="text-red-500">*</span></label>
-                    <input id="product-dimensiuni" type="text" value={dimensiuni} onChange={(e) => setDimensiuni(e.target.value)} placeholder="460 × 400 × 130 mm" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <div className="flex items-center gap-2 mb-2">
+                      <label htmlFor="product-protectie" className="block text-sm font-semibold font-['Inter'] text-gray-700">Protecție (IP)</label>
+                      <div className="relative group">
+                        <button type="button" className="w-5 h-5 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 flex items-center justify-center" aria-label="Explicație IP">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                        <div className="absolute left-0 top-full mt-1 z-10 hidden group-hover:block w-72 p-3 bg-gray-900 text-white text-xs font-['Inter'] rounded-lg shadow-lg">
+                          <p className="font-semibold mb-2">Clasificare IP (Ingress Protection)</p>
+                          <p className="text-gray-300 mb-2">Prima cifră: obiecte solide (0–6). A doua cifră: apă/umiditate (0–9).</p>
+                          <ul className="space-y-1 text-gray-300">
+                            <li><strong>IP20</strong> – Interior, protecție degete</li>
+                            <li><strong>IP54</strong> – Praf limitat, stropire apă</li>
+                            <li><strong>IP65</strong> – Etanș praf, jeturi apă (exterior)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <select id="product-protectie" value={protectie} onChange={(e) => setProtectie(e.target.value)} className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white">
+                      <option value="">Selectează</option>
+                      <option value="IP20">IP20 – Interior (protecție degete)</option>
+                      <option value="IP21">IP21 – Interior (picături verticale)</option>
+                      <option value="IP54">IP54 – Exterior parțial (praf limitat, stropire)</option>
+                      <option value="IP55">IP55 – Exterior (jeturi apă)</option>
+                      <option value="IP65">IP65 – Exterior (etanș praf, jeturi apă)</option>
+                      <option value="IP66">IP66 – Exterior (jeturi puternice)</option>
+                      <option value="IP67">IP67 – Scufundare temporară</option>
+                    </select>
                   </div>
                   <div>
-                    <label htmlFor="product-protectie" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Protecție <span className="text-red-500">*</span></label>
-                    <input id="product-protectie" type="text" value={protectie} onChange={(e) => setProtectie(e.target.value)} placeholder="IP20" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-certificari" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Certificări</label>
+                    <input id="product-certificari" type="text" value={certificari} onChange={(e) => setCertificari(e.target.value)} placeholder="CE, IEC 62133, UN38.3" className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
                   </div>
                   <div>
-                    <label htmlFor="product-certificari" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Certificări <span className="text-red-500">*</span></label>
-                    <input id="product-certificari" type="text" value={certificari} onChange={(e) => setCertificari(e.target.value)} placeholder="CE, IEC 62133, UN38.3" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-garantie" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Garanție</label>
+                    <div className="relative">
+                      <input id="product-garantie" type="text" inputMode="numeric" value={garantie} onChange={(e) => handleIntegerOnly(e.target.value, setGarantie)} placeholder="10" className="w-full h-11 pl-4 pr-14 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">ani</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-garantie" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Garanție <span className="text-red-500">*</span></label>
-                    <input id="product-garantie" type="text" value={garantie} onChange={(e) => setGarantie(e.target.value)} placeholder="10 ani" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-tensiune-nominala" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Tensiune nominală</label>
+                    <div className="relative">
+                      <input id="product-tensiune-nominala" type="text" inputMode="decimal" value={tensiuneNominala} onChange={(e) => handleDecimalInput(e.target.value, setTensiuneNominala)} placeholder="51.2" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">V</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-tensiune-nominala" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Tensiune nominală <span className="text-red-500">*</span></label>
-                    <input id="product-tensiune-nominala" type="text" value={tensiuneNominala} onChange={(e) => setTensiuneNominala(e.target.value)} placeholder="51.2V" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label htmlFor="product-eficienta-ciclu" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Eficiență ciclu complet</label>
+                    <div className="relative">
+                      <input id="product-eficienta-ciclu" type="text" inputMode="numeric" value={eficientaCiclu} onChange={(e) => handleIntegerOnly(e.target.value, setEficientaCiclu)} placeholder="96" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">%</span>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-eficienta-ciclu" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Eficiență ciclu complet <span className="text-red-500">*</span></label>
-                    <input id="product-eficienta-ciclu" type="text" value={eficientaCiclu} onChange={(e) => setEficientaCiclu(e.target.value)} placeholder="≥ 96%" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Temperatura funcționare</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 relative">
+                        <input id="product-temp-func-min" type="text" inputMode="numeric" value={temperaturaFunctionareMin} onChange={(e) => handleTemperatureInput(e.target.value, setTemperaturaFunctionareMin)} placeholder="-20" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">°C</span>
+                      </div>
+                      <span className="text-gray-400 shrink-0">–</span>
+                      <div className="flex-1 relative">
+                        <input id="product-temp-func-max" type="text" inputMode="numeric" value={temperaturaFunctionareMax} onChange={(e) => handleTemperatureInput(e.target.value, setTemperaturaFunctionareMax)} placeholder="55" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">°C</span>
+                      </div>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-temperatura-functionare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Temperatura funcționare <span className="text-red-500">*</span></label>
-                    <input id="product-temperatura-functionare" type="text" value={temperaturaFunctionare} onChange={(e) => setTemperaturaFunctionare(e.target.value)} placeholder="-20 ~ 55°C" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Temperatura stocare</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 relative">
+                        <input id="product-temp-stoc-min" type="text" inputMode="numeric" value={temperaturaStocareMin} onChange={(e) => handleTemperatureInput(e.target.value, setTemperaturaStocareMin)} placeholder="-10" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">°C</span>
+                      </div>
+                      <span className="text-gray-400 shrink-0">–</span>
+                      <div className="flex-1 relative">
+                        <input id="product-temp-stoc-max" type="text" inputMode="numeric" value={temperaturaStocareMax} onChange={(e) => handleTemperatureInput(e.target.value, setTemperaturaStocareMax)} placeholder="50" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">°C</span>
+                      </div>
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="product-temperatura-stocare" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Temperatura stocare <span className="text-red-500">*</span></label>
-                    <input id="product-temperatura-stocare" type="text" value={temperaturaStocare} onChange={(e) => setTemperaturaStocare(e.target.value)} placeholder="-10 ~ 50°C" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
-                  </div>
-                  <div>
-                    <label htmlFor="product-umiditate" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Umiditate <span className="text-red-500">*</span></label>
-                    <input id="product-umiditate" type="text" value={umiditate} onChange={(e) => setUmiditate(e.target.value)} placeholder="5 ~ 95% (fără condensare)" required className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Umiditate</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 relative">
+                        <input id="product-umiditate-min" type="text" inputMode="numeric" value={umiditateMin} onChange={(e) => handleIntegerOnly(e.target.value, setUmiditateMin)} placeholder="5" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">%</span>
+                      </div>
+                      <span className="text-gray-400 shrink-0">–</span>
+                      <div className="flex-1 relative">
+                        <input id="product-umiditate-max" type="text" inputMode="numeric" value={umiditateMax} onChange={(e) => handleIntegerOnly(e.target.value, setUmiditateMax)} placeholder="95" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Add Images */}
               <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Imagini <span className="text-red-500">*</span></h3>
-                <p className="text-xs text-gray-500 mb-3">Cel puțin o imagine obligatorie (max. 5).</p>
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Imagini</h3>
+                <p className="text-xs text-gray-500 mb-3">Opțional (max. 5). Poți șterge sau înlocui orice imagine.</p>
                 <div
-                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors min-h-[200px] ${
                     isDragging ? 'border-slate-500 bg-slate-50/50' : 'border-gray-300 hover:border-gray-400'
-                  } ${images.length >= MAX_IMAGES ? 'opacity-50 pointer-events-none' : ''}`}
+                  }`}
                   onDrop={onDrop}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
@@ -630,28 +754,38 @@ export default function AdminProducts() {
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                      addImages(e.target.files)
+                      const idx = replaceIndexRef.current
+                      replaceIndexRef.current = null
+                      if (idx !== null && e.target.files?.[0]) {
+                        const f = e.target.files[0]
+                        if (f.type.startsWith('image/')) {
+                          setImages((prev) => {
+                            const next = [...prev]
+                            URL.revokeObjectURL(next[idx].preview)
+                            next[idx] = { file: f, preview: URL.createObjectURL(f) }
+                            return next
+                          })
+                        }
+                      } else if (idx === null) {
+                        addImages(e.target.files)
+                      }
                       e.target.value = ''
                     }}
                   />
                   {images.length > 0 ? (
-                    <div className="flex flex-wrap gap-3 justify-center">
+                    <div className="grid grid-cols-3 gap-4 justify-items-center">
                       {images.map(({ preview }, i) => (
                         <div key={i} className="relative group">
-                          <img src={preview} alt="" className="h-20 w-20 object-cover rounded-lg border border-gray-200" />
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removeImage(i) }}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label="Remove"
-                          >
-                            ×
-                          </button>
+                          <img src={preview} alt="" className="h-28 w-28 object-cover rounded-lg border border-gray-200 cursor-pointer" onClick={(e) => { e.stopPropagation(); replaceImage(i) }} title="Înlocuiește" />
+                          <div className="absolute inset-0 flex gap-1 items-end justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); replaceImage(i) }} className="px-2 py-0.5 bg-white/90 text-gray-800 text-xs rounded hover:bg-white">Înlocuiește</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(i) }} className="px-2 py-0.5 bg-red-500 text-white text-xs rounded hover:bg-red-600">Șterge</button>
+                          </div>
                         </div>
                       ))}
                       {images.length < MAX_IMAGES && (
-                        <div className="h-20 w-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
-                          + {MAX_IMAGES - images.length} left
+                        <div className="h-28 w-28 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
+                          + {MAX_IMAGES - images.length}
                         </div>
                       )}
                     </div>
@@ -665,7 +799,21 @@ export default function AdminProducts() {
 
               {/* Documente tehnice */}
               <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Documente tehnice</h3>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Documente tehnice</h3>
+                  <button
+                    type="button"
+                    onClick={addDocumentItem}
+                    className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1.5 shrink-0"
+                    aria-label="Adaugă document"
+                    title="Adaugă document"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Adaugă
+                  </button>
+                </div>
                 <input
                   ref={docFileInputRef}
                   type="file"
@@ -693,59 +841,46 @@ export default function AdminProducts() {
                         <button
                           type="button"
                           onClick={() => triggerDocUpload(i)}
-                          className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors min-w-[100px] max-w-[160px]"
+                          className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors min-w-[100px] max-w-[160px] flex items-center gap-2"
                           title={doc.file?.name}
                         >
                           <span className="block truncate">{doc.file ? doc.file.name : 'Upload PDF'}</span>
-                        </button>
-                        {doc.file && (
-                          <button
-                            type="button"
-                            onClick={() => removeDocumentFile(i)}
-                            className="h-10 w-10 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
-                            aria-label="Elimină fișier"
-                            title="Elimină fișier"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M5 6V4a2 2 0 012-2h5a2 2 0 012 2v2M9 11v6M15 11v6" />
-                            </svg>
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={addDocumentItem}
-                          className="h-10 w-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 flex items-center justify-center transition-colors"
-                          aria-label="Adaugă document"
-                          title="Adaugă document"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
+                          {doc.file && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => { e.stopPropagation(); removeDocumentFile(i) }}
+                              onKeyDown={(e) => e.key === 'Enter' && removeDocumentFile(i)}
+                              className="text-gray-400 hover:text-red-600 text-lg leading-none"
+                              aria-label="Șterge fișier"
+                              title="Șterge fișier"
+                            >
+                              ×
+                            </span>
+                          )}
                         </button>
                         {documenteTehnice.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeDocumentItem(i)}
-                            className="h-10 w-10 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
-                            aria-label="Elimină rând"
-                            title="Elimină rând"
+                            className="h-10 px-3 rounded-lg border border-gray-300 text-xs font-medium font-['Inter'] text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                            aria-label="Șterge rând"
+                            title="Șterge rând"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M5 6V4a2 2 0 012-2h5a2 2 0 012 2v2M9 11v6M15 11v6" />
-                            </svg>
+                            Șterge rând
                           </button>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Doar fișiere .pdf acceptate.</p>
+                <p className="text-xs text-gray-500 mt-2">Doar fișiere .pdf acceptate. Click pentru înlocuire, × pentru ștergerea fișierului.</p>
               </div>
 
               {/* Întrebări frecvente */}
               <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Întrebări frecvente <span className="text-red-500">*</span></h3>
-                <p className="text-xs text-gray-500 mb-3">Cel puțin o întrebare cu răspuns obligatoriu.</p>
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Întrebări frecvente</h3>
+                <p className="text-xs text-gray-500 mb-3">Opțional.</p>
                 <div className="flex flex-col gap-4">
                   {faq.map((item, i) => (
                     <div key={i} className="flex gap-3 items-start">

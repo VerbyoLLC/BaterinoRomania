@@ -525,7 +525,10 @@ const uploadHandler = async (req, res) => {
     }
     const isPdf = req.file.mimetype === 'application/pdf'
     const prefix = isPdf ? 'docs' : 'products'
-    const key = generateKey(req.file.originalname, prefix, req.file.mimetype)
+    const productFolder = (req.get('X-Product-Folder') || req.body?.folder || req.query?.folder || '').trim()
+    const imageIndexRaw = req.get('X-Image-Index') || req.body?.imageIndex || req.query?.imageIndex
+    const imageIndex = imageIndexRaw != null ? parseInt(String(imageIndexRaw), 10) : undefined
+    const key = generateKey(req.file.originalname, prefix, req.file.mimetype, productFolder || undefined, imageIndex)
     const url = await uploadToR2(req.file.buffer, key, req.file.mimetype)
     return res.json({ url })
   } catch (err) {
@@ -545,13 +548,9 @@ const createProductHandler = async (req, res) => {
     }
     const body = req.body || {}
     const status = body.status === 'published' ? 'published' : 'draft'
-    const title = String(body.title || '').trim()
-    const sku = String(body.sku || '').trim()
+    const title = String(body.title || '').trim() || 'Fără titlu'
+    const sku = String(body.sku || '').trim() || `SKU-${Date.now()}`
     const tipProdus = ['rezidential', 'industrial'].includes(body.tipProdus) ? body.tipProdus : 'rezidential'
-
-    if (!title || !sku) {
-      return res.status(400).json({ error: 'Titlul și SKU sunt obligatorii.' })
-    }
 
     const landedPrice = parseDecimal(body.landedPrice, 0)
     const salePrice = parseDecimal(body.salePrice, 0)
@@ -564,6 +563,7 @@ const createProductHandler = async (req, res) => {
     const product = await prisma.product.create({
       data: {
         status,
+        brand: body.brand?.trim() || null,
         title,
         sku,
         description: body.description?.trim() || null,

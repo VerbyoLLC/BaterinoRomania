@@ -89,6 +89,7 @@ model Product {
   status                String   @default("draft") // "draft" | "published"
 
   // Basic
+  brand                 String?
   title                 String
   sku                   String   @unique
   description           String?
