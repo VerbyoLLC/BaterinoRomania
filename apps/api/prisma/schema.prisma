@@ -94,6 +94,7 @@ model Product {
   sku                   String   @unique
   description           String?
   tipProdus             String   // "rezidential" | "industrial"
+  categorie             String?  // comma-separated: "rezidential,industrial,medical,maritim"
 
   // Price
   landedPrice           Decimal  @db.Decimal(12, 2)
