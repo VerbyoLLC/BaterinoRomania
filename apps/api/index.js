@@ -184,8 +184,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
 
-    console.log('[Forgot password] Request body keys:', Object.keys(body), 'email:', email ? `${email.slice(0, 3)}***` : '(empty)')
-
     if (!email) {
       return res.status(400).json({ error: 'Email este obligatoriu.' })
     }
@@ -193,7 +191,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } })
     // Always return success to prevent email enumeration
     if (!user) {
-      console.log('[Forgot password] User not found – no email sent (security: same response as success)')
       return res.json({ message: 'Dacă există un cont cu acest email, vei primi un link de resetare.' })
     }
 
@@ -208,9 +205,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`
 
-    console.log('[Forgot password] Sending email to:', user.email, 'via', getMailProvider())
     await sendPasswordResetEmail(email, resetUrl)
-    console.log('[Forgot password] Email sent successfully for:', user.email)
+
+    console.log('[Forgot password] Reset requested for:', user.email, isMailConfigured() ? `(email sent via ${getMailProvider()})` : '(mail not configured)')
 
     return res.json({ message: 'Dacă există un cont cu acest email, vei primi un link de resetare.' })
   } catch (err) {
