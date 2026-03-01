@@ -26,7 +26,7 @@ Când clonezi repo-ul și vrei să deployezi pe Railway, urmează pașii de mai 
 
 | Variabilă | Unde o obții | Exemplu |
 |-----------|---------------|---------|
-| `FRONTEND_URL` | URL-ul frontend-ului tău | `https://baterino.ro` |
+| `FRONTEND_URL` | URL-ul unde e deployed frontend-ul (linkuri în emailuri). Dacă site-ul e pe Vercel, folosește URL-ul Vercel (ex. `https://baterino-xxx.vercel.app`) până când baterino.ro e configurat | `https://baterino.vercel.app` sau `https://baterino.ro` |
 | `R2_ENDPOINT` | Cloudflare R2 → bucket → Settings | `https://xxx.eu.r2.cloudflarestorage.com` |
 | `R2_ACCESS_KEY_ID` | R2 → Manage R2 API Tokens → Create | |
 | `R2_SECRET_ACCESS_KEY` | La crearea token-ului R2 | |

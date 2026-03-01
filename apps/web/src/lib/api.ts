@@ -1,7 +1,7 @@
-// Dev pe localhost: folosește direct API-ul. Prod: VITE_API_URL sau /api (proxy Vercel).
+// Dev pe localhost/127.0.0.1: folosește direct API-ul. Prod: VITE_API_URL sau /api (proxy Vercel).
 const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
-  (import.meta.env.DEV && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  (import.meta.env.DEV && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:3001/api'
     : '/api')
 
@@ -282,6 +282,7 @@ export type CreateProductPayload = {
   sku: string
   description?: string
   tipProdus: 'rezidential' | 'industrial'
+  categorie?: string
   landedPrice: string | number
   salePrice: string | number
   vat: string | number
@@ -332,6 +333,60 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea fișierului.')
   return json
+}
+
+export type AdminProduct = {
+  id: string
+  status: string
+  brand?: string | null
+  title: string
+  sku: string
+  description?: string | null
+  images: string[]
+  capacitate?: string | null
+  tensiuneNominala?: string | null
+  compozitie?: string | null
+  cicluriDescarcare?: string | null
+  conectivitateWifi?: boolean
+  conectivitateBluetooth?: boolean
+  salePrice?: string | number
+  [key: string]: unknown
+}
+
+export async function getAdminProducts(): Promise<AdminProduct[]> {
+  const url = `${API_BASE}/admin/products`
+  const res = await fetch(url, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = json.error || 'Eroare la încărcare.'
+    const err = new Error(msg) as Error & { status?: number; path?: string }
+    err.status = res.status
+    err.path = json.path
+    throw err
+  }
+  return Array.isArray(json) ? json : (json.data ?? json.products ?? [])
+}
+
+export async function updateProductStatus(id: string, status: 'draft' | 'published') {
+  const res = await fetch(`${API_BASE}/admin/products/${id}/status`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
+  return json
+}
+
+export async function deleteProduct(id: string) {
+  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json.error || 'Eroare la ștergere.')
+  }
 }
 
 export async function createProduct(payload: CreateProductPayload, status: 'draft' | 'published') {

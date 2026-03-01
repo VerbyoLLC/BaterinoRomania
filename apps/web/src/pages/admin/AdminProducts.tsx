@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { createProduct, uploadAdminFile } from '../../lib/api'
+import { useState, useRef, useEffect } from 'react'
+import { createProduct, uploadAdminFile, getAdminProducts, updateProductStatus, deleteProduct, type AdminProduct } from '../../lib/api'
 
 const MAX_IMAGES = 5
 
@@ -12,6 +12,10 @@ export default function AdminProducts() {
   const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [products, setProducts] = useState<AdminProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [productsError, setProductsError] = useState<string | null>(null)
   const [brand, setBrand] = useState('')
   const [title, setTitle] = useState('')
   const [sku, setSku] = useState('')
@@ -19,6 +23,10 @@ export default function AdminProducts() {
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [tipProdus, setTipProdus] = useState<'rezidential' | 'industrial'>('rezidential')
+  const [categorieRezidential, setCategorieRezidential] = useState(false)
+  const [categorieIndustrial, setCategorieIndustrial] = useState(false)
+  const [categorieMedical, setCategorieMedical] = useState(false)
+  const [categorieMaritim, setCategorieMaritim] = useState(false)
   const [energieNominala, setEnergieNominala] = useState('')
   const [capacitate, setCapacitate] = useState('')
   const [curentMaxDescarcare, setCurentMaxDescarcare] = useState('')
@@ -52,6 +60,27 @@ export default function AdminProducts() {
   ])
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }])
 
+  const fetchProducts = async () => {
+    setProductsLoading(true)
+    setProductsError(null)
+    try {
+      const list = await getAdminProducts()
+      setProducts(list)
+    } catch (err) {
+      const e = err as Error & { status?: number; path?: string }
+      let msg = e?.message || 'Eroare la încărcare.'
+      if (e?.status === 404 && e?.path) msg += ` (${e.path})`
+      setProductsError(msg)
+      // Don't clear on error – keep existing list (e.g. after save)
+    } finally {
+      setProductsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
   const handleOpenPanel = () => {
     setSaveError(null)
     setBrand('')
@@ -59,6 +88,10 @@ export default function AdminProducts() {
     setSku('')
     setDescription('')
     setTipProdus('rezidential')
+    setCategorieRezidential(false)
+    setCategorieIndustrial(false)
+    setCategorieMedical(false)
+    setCategorieMaritim(false)
     setEnergieNominala('')
     setCapacitate('')
     setCurentMaxDescarcare('')
@@ -286,6 +319,7 @@ export default function AdminProducts() {
       sku: sku.trim() || `SKU-${Date.now()}`,
       description: description.trim() || undefined,
       tipProdus,
+      categorie: [categorieRezidential && 'rezidential', categorieIndustrial && 'industrial', categorieMedical && 'medical', categorieMaritim && 'maritim'].filter(Boolean).join(',') || undefined,
       landedPrice: parseFormattedNumber(landedPrice) || '0',
       salePrice: parseFormattedNumber(salePrice) || '0',
       vat: parseFormattedNumber(vat) || '19',
@@ -318,10 +352,15 @@ export default function AdminProducts() {
   const handleSave = async () => {
     setIsSaving(true)
     setSaveError(null)
+    setSaveSuccess(false)
     try {
       const payload = await buildPayload()
-      await createProduct(payload, 'published')
+      const created = await createProduct(payload, 'published')
+      setSaveSuccess(true)
+      setProducts((prev) => [created as AdminProduct, ...prev])
+      await fetchProducts()
       handleClosePanel()
+      setTimeout(() => setSaveSuccess(false), 4000)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Eroare la salvare.')
     } finally {
@@ -332,14 +371,40 @@ export default function AdminProducts() {
   const handleSaveDraft = async () => {
     setIsSaving(true)
     setSaveError(null)
+    setSaveSuccess(false)
     try {
       const payload = await buildPayload()
-      await createProduct(payload, 'draft')
+      const created = await createProduct(payload, 'draft')
+      setSaveSuccess(true)
+      setProducts((prev) => [created as AdminProduct, ...prev])
+      await fetchProducts()
       handleClosePanel()
+      setTimeout(() => setSaveSuccess(false), 4000)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Eroare la salvare.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleGoLive = async (id: string) => {
+    setSaveError(null)
+    try {
+      await updateProductStatus(id, 'published')
+      await fetchProducts()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Eroare la actualizare.')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Sigur ștergi acest produs?')) return
+    setSaveError(null)
+    try {
+      await deleteProduct(id)
+      await fetchProducts()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Eroare la ștergere.')
     }
   }
 
@@ -352,6 +417,9 @@ export default function AdminProducts() {
         <h1 className="text-xl font-bold font-['Inter'] text-black">Produse</h1>
         {panelVisible ? (
           <div className="flex items-center gap-2">
+            {saveSuccess && (
+              <span className="text-sm text-green-600 font-medium mr-2">Produsul a fost salvat.</span>
+            )}
             {saveError && (
               <span className="text-sm text-red-600 font-medium mr-2">{saveError}</span>
             )}
@@ -381,16 +449,21 @@ export default function AdminProducts() {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={handleOpenPanel}
-            className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Product
-          </button>
+          <div className="flex items-center gap-2">
+            {saveSuccess && (
+              <span className="text-sm text-green-600 font-medium">Produsul a fost salvat.</span>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenPanel}
+              className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Product
+            </button>
+          </div>
         )}
       </div>
 
@@ -398,11 +471,86 @@ export default function AdminProducts() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left: product list — half screen */}
         <div className={`w-1/2 min-w-0 shrink-0 p-5 overflow-y-auto ${panelVisible ? 'overflow-hidden' : ''}`}>
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-            <p className="text-gray-500 text-sm font-['Inter']">
-              Lista de produse va fi afișată aici. Funcționalitate în curând.
-            </p>
-          </div>
+          {productsLoading ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex items-center justify-center">
+              <p className="text-gray-500 text-sm">Se încarcă produsele…</p>
+            </div>
+          ) : productsError ? (
+            <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
+              <p className="text-red-600 text-sm mb-2">{productsError}</p>
+              {productsError.includes('Rută negăsită') && (
+                <p className="text-gray-600 text-xs mb-3">
+                  Asigură-te că API-ul rulează local (npm run dev:api) sau că ai făcut deploy pe Railway cu ultimele modificări.
+                </p>
+              )}
+              <button type="button" onClick={fetchProducts} className="text-sm font-medium text-slate-700 hover:underline">Reîncearcă</button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+              <p className="text-gray-500 text-sm font-['Inter']">
+                Nu există produse în baza de date. Adaugă primul produs.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 mb-3 font-['Inter']">{products.length} produs{products.length === 1 ? '' : 'e'} în baza de date</p>
+              <div className="grid grid-cols-1 gap-4">
+                {products.map((p) => {
+                  const imgs = Array.isArray(p.images) ? p.images : []
+                  const conectivitate = [
+                    p.conectivitateWifi && 'WiFi',
+                    p.conectivitateBluetooth && 'Bluetooth',
+                  ].filter(Boolean).join(', ') || '—'
+                  const priceVal = p.salePrice
+                  const priceStr = priceVal != null ? String(priceVal) : null
+                  return (
+                    <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="flex gap-4 p-4">
+                        <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                          {imgs[0] ? (
+                            <img src={imgs[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">—</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-gray-900 truncate">{p.title || 'Fără titlu'}</h3>
+                            <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${p.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {p.status === 'published' ? 'Live' : 'Draft'}
+                            </span>
+                          </div>
+                          {p.brand && <p className="text-xs text-gray-500 mt-0.5">Brand: {p.brand}</p>}
+                          {p.description && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{p.description}</p>}
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                            {p.tensiuneNominala && <span>Tensiune: {p.tensiuneNominala}</span>}
+                            {p.capacitate && <span>Capacitate: {p.capacitate}</span>}
+                            {p.compozitie && <span>Compoziție: {p.compozitie}</span>}
+                            {p.cicluriDescarcare && <span>Cicluri: {p.cicluriDescarcare}</span>}
+                            <span>Conectivitate: {conectivitate}</span>
+                          </div>
+                          {priceStr && !Number.isNaN(Number(priceStr)) && <p className="text-sm font-medium text-gray-800 mt-1">{Number(priceStr).toLocaleString('ro-RO')} lei</p>}
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button type="button" onClick={() => {}} title="Editează (în curând)" className="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                          {p.status === 'draft' && (
+                            <button type="button" onClick={() => handleGoLive(p.id)} title="Go Live" className="p-2 rounded-lg hover:bg-green-50 text-green-600">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </button>
+                          )}
+                          <button type="button" onClick={() => handleDelete(p.id)} title="Șterge" className="p-2 rounded-lg hover:bg-red-50 text-red-600">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right: panel area — panel slides in from left */}
@@ -449,6 +597,29 @@ export default function AdminProducts() {
                       className="w-4 h-4 border-gray-300 text-slate-600 focus:ring-slate-500"
                     />
                     <span className="text-sm font-medium font-['Inter'] text-gray-700">Industrial</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Categorie */}
+              <div>
+                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-3">Categorie</label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieRezidential} onChange={(e) => setCategorieRezidential(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Rezidential</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieIndustrial} onChange={(e) => setCategorieIndustrial(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Industrial</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieMedical} onChange={(e) => setCategorieMedical(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Medical</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieMaritim} onChange={(e) => setCategorieMaritim(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Maritim</span>
                   </label>
                 </div>
               </div>

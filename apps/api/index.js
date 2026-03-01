@@ -23,8 +23,13 @@ app.use(cors({
   origin: true,
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 }))
 app.use(express.json())
+
+// Explicit OPTIONS for admin products (CORS preflight)
+app.options('/api/admin/products', (_, res) => res.status(204).end())
+app.options('/api/admin/products/', (_, res) => res.status(204).end())
 
 // ── Auth middleware (pentru rute protejate) ────────────────────────────
 function authMiddleware(req, res, next) {
@@ -573,6 +578,7 @@ const createProductHandler = async (req, res) => {
         sku,
         description: body.description?.trim() || null,
         tipProdus,
+        categorie: body.categorie?.trim() || null,
         landedPrice,
         salePrice,
         vat,
@@ -614,6 +620,58 @@ const createProductHandler = async (req, res) => {
 }
 app.post('/api/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
 app.post('/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
+
+// ── Admin: list products ───────────────────────────────────────────────
+const listProductsHandler = async (req, res) => {
+  try {
+    if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
+    const products = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
+    return res.json(products)
+  } catch (err) {
+    console.error('List products error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+// List products – match exact path and common variants (trailing slash, proxy quirks)
+app.get('/api/admin/products', authMiddleware, adminAuthMiddleware, listProductsHandler)
+app.get('/api/admin/products/', authMiddleware, adminAuthMiddleware, listProductsHandler)
+app.get('/admin/products', authMiddleware, adminAuthMiddleware, listProductsHandler)
+app.get('/admin/products/', authMiddleware, adminAuthMiddleware, listProductsHandler)
+
+// ── Admin: update product status (go live) ───────────────────────────────
+const updateProductStatusHandler = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    if (!['draft', 'published'].includes(status)) {
+      return res.status(400).json({ error: 'Status invalid. Folosește "draft" sau "published".' })
+    }
+    const product = await prisma.product.update({
+      where: { id },
+      data: { status },
+    })
+    return res.json(product)
+  } catch (err) {
+    console.error('Update product status error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+}
+app.patch('/api/admin/products/:id/status', authMiddleware, adminAuthMiddleware, updateProductStatusHandler)
+app.patch('/admin/products/:id/status', authMiddleware, adminAuthMiddleware, updateProductStatusHandler)
+
+// ── Admin: delete product ───────────────────────────────────────────────
+const deleteProductHandler = async (req, res) => {
+  try {
+    const { id } = req.params
+    await prisma.product.delete({ where: { id } })
+    return res.status(204).send()
+  } catch (err) {
+    console.error('Delete product error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
+  }
+}
+app.delete('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
+app.delete('/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
 
 function parseDecimal(val, fallback) {
   if (val === '' || val === null || val === undefined) return fallback
