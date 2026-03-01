@@ -79,7 +79,7 @@ async function sendPasswordResetEmail(email, resetUrl) {
   const html = getPasswordResetTemplate({ resetUrl, email })
 
   if (resend) {
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: RESEND_FROM,
       to: email,
       subject,
@@ -89,6 +89,7 @@ async function sendPasswordResetEmail(email, resetUrl) {
       console.error('[Mail] Resend error:', error)
       throw new Error('Eroare la trimiterea emailului.')
     }
+    console.log('[Mail] Resend sent successfully, id:', data?.id)
     return
   }
 
