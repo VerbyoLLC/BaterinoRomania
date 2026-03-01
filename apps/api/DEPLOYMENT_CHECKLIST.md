@@ -74,7 +74,7 @@ Dacă frontend-ul e pe Vercel, setează în **Vercel → Project → Settings �
 |-----------|---------|
 | `VITE_API_URL` | URL-ul API-ului Railway, ex. `https://baterinoromania-production.up.railway.app/api` |
 
-Fără această variabilă, frontend-ul va încerca `/api` pe domeniul Vercel (inexistent) și va afișa „API indisponibil”.
+Fără această variabilă, frontend-ul va încerca `/api` pe domeniul Vercel (proxy). **Recomandat:** setează `VITE_API_URL` ca să apeleze API-ul direct – proxy-ul Vercel poate avea probleme cu body-ul la POST (ex. forgot-password).
 
 **Important pentru reset parolă**: Proiectul include `apps/web/vercel.json` cu rewrites SPA – fără el, link-urile directe (ex. `/reset-password?token=...`) ar returna 404 pe Vercel.
 
