@@ -72,20 +72,66 @@ const MIME_TO_EXT = {
 }
 
 /**
+ * Sanitize product title for use as R2 folder name.
+ * @param {string} title - Product title
+ * @returns {string} Safe folder name
+ */
+function sanitizeFolderName(title) {
+  if (!title || typeof title !== 'string') return 'produs'
+  return title
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'produs'
+}
+
+/**
+ * Slugify product title for image filename: lowercase, hyphenated.
+ * e.g. "Acumulator sisteme fotovoltaice" -> "acumulator-sisteme-fotovoltaice"
+ */
+function slugifyForFilename(title) {
+  if (!title || typeof title !== 'string') return 'produs'
+  return title
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'produs'
+}
+
+/**
  * Generate a unique key for an uploaded file.
  * @param {string} originalName - Original filename
  * @param {string} prefix - Folder prefix, e.g. "products" or "docs"
  * @param {string} [mimetype] - MIME type for fallback extension
+ * @param {string} [productFolder] - Product title (sanitized) as folder name
+ * @param {number} [imageIndex] - 1-based index for images (e.g. 1, 2, 3) -> filename slug-#.ext
  * @returns {string}
  */
-function generateKey(originalName, prefix = 'uploads', mimetype) {
+function generateKey(originalName, prefix = 'uploads', mimetype, productFolder, imageIndex) {
   let ext = originalName?.match(/\.[a-zA-Z0-9]+$/)?.[0] || ''
   if (!ext && mimetype) ext = MIME_TO_EXT[mimetype] || ''
+  const folder = productFolder ? sanitizeFolderName(productFolder) : prefix
+
+  if (imageIndex != null && mimetype && mimetype.startsWith('image/')) {
+    const slug = productFolder ? slugifyForFilename(productFolder) : 'imagine'
+    const imgExt = ext || (MIME_TO_EXT[mimetype] || '.jpg')
+    return `${folder}/${slug}-${imageIndex}${imgExt}`
+  }
+
   const safeName = Buffer.from(originalName || 'file', 'latin1')
     .toString('utf8')
     .replace(/[^a-zA-Z0-9.-]/g, '_')
   const base = `${Date.now()}-${safeName}`.replace(/\.[^.]+$/, '')
-  return `${prefix}/${base}${ext}`
+  return `${folder}/${base}${ext}`
 }
 
-module.exports = { uploadToR2, generateKey, isR2Configured }
+module.exports = { uploadToR2, generateKey, sanitizeFolderName, isR2Configured }
