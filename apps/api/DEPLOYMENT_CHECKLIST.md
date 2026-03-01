@@ -57,15 +57,17 @@ Când clonezi repo-ul și vrei să deployezi pe Railway, urmează pașii de mai 
 
 ---
 
-## 4. Vercel (frontend) – variabilă obligatorie
+## 4. Vercel (frontend) – variabile obligatorii
 
 Dacă frontend-ul e pe Vercel, setează în **Vercel → Project → Settings → Environment Variables**:
 
 | Variabilă | Valoare |
 |-----------|---------|
-| `VITE_API_URL` | URL-ul API-ului Railway, ex. `https://baterino-api-production.up.railway.app/api` |
+| `VITE_API_URL` | URL-ul API-ului Railway, ex. `https://baterinoromania-production.up.railway.app/api` |
 
 Fără această variabilă, frontend-ul va încerca `/api` pe domeniul Vercel (inexistent) și va afișa „API indisponibil”.
+
+**Important pentru reset parolă**: Proiectul include `apps/web/vercel.json` cu rewrites SPA – fără el, link-urile directe (ex. `/reset-password?token=...`) ar returna 404 pe Vercel.
 
 ---
 
