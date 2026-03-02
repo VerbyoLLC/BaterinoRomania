@@ -3,6 +3,7 @@ const { Resend } = require('resend')
 const { getClientTemplate, getPartnerTemplate } = require('../templates/verification-email.js')
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
+const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
 
 const MAIL_FROM = process.env.MAIL_FROM || 'Baterino <noreply@baterino.ro>'
 const SITE_NAME = process.env.SITE_NAME || 'Baterino Romania'
@@ -135,4 +136,85 @@ function getMailFrom() {
   return resend ? RESEND_FROM : MAIL_FROM
 }
 
-module.exports = { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured, getMailProvider, getMailFrom }
+const INQUIRY_NOTIFICATION_RECIPIENTS = ['alexander@baterino.ro', 'razvan@baterino.ro']
+const INQUIRY_CONFIRMATION_FROM = process.env.RESEND_FROM || process.env.MAIL_FROM || 'Baterino <no-reply@baterino.ro>'
+
+async function sendInquiryNotification(inquiry) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping inquiry notification.')
+    return
+  }
+
+  const subject = `Contact nou – ${inquiry.registrationNumber || inquiry.id} – ${SITE_NAME}`
+  const html = getInquiryNotificationTemplate(inquiry)
+
+  for (const to of INQUIRY_NOTIFICATION_RECIPIENTS) {
+    try {
+      if (resend) {
+        const { error } = await resend.emails.send({
+          from: RESEND_FROM,
+          to,
+          subject,
+          html,
+        })
+        if (error) {
+          console.error('[Mail] Resend inquiry notification error:', error)
+        }
+      } else {
+        await transporter.sendMail({
+          from: MAIL_FROM,
+          to,
+          subject,
+          html,
+        })
+      }
+    } catch (err) {
+      console.error('[Mail] Inquiry notification to', to, err?.message)
+    }
+  }
+}
+
+async function sendInquiryConfirmation(inquiry) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
+    return
+  }
+
+  const subject = `Confirmare solicitare ${inquiry.registrationNumber || ''} – ${SITE_NAME}`
+  const html = getInquiryConfirmationTemplate(inquiry)
+  const fromAddr = resend ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (resend) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to: inquiry.email,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend inquiry confirmation error:', error)
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to: inquiry.email,
+        subject,
+        html,
+      })
+    }
+  } catch (err) {
+    console.error('[Mail] Inquiry confirmation error:', err?.message)
+  }
+}
+
+module.exports = {
+  sendVerificationCode,
+  sendPasswordResetEmail,
+  sendAccountDeletedEmail,
+  sendInquiryNotification,
+  sendInquiryConfirmation,
+  isMailConfigured,
+  getMailProvider,
+  getMailFrom,
+}

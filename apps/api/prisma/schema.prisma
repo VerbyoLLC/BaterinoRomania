@@ -84,6 +84,19 @@ model ReducereProgram {
   updatedAt       DateTime @updatedAt
 }
 
+model Inquiry {
+  id                 String   @id @default(cuid())
+  registrationNumber String?  @unique
+  name               String
+  company            String
+  email              String
+  domain             String   // "rezidential" | "industrial" | "medical" | "maritim"
+  requestType        String   // "sales" | "technical" | "service" | "partnership"
+  message            String   @db.Text
+  ip                 String?
+  createdAt          DateTime @default(now())
+}
+
 model Product {
   id                    String   @id @default(cuid())
   status                String   @default("draft") // "draft" | "published"

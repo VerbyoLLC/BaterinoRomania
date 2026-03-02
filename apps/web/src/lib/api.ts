@@ -5,6 +5,28 @@ const API_BASE =
     ? 'http://localhost:3001/api'
     : '/api')
 
+/** Payload pentru trimiterea formularului de contact */
+export type InquiryPayload = {
+  name: string
+  company: string
+  email: string
+  domain: 'rezidential' | 'industrial' | 'medical' | 'maritim'
+  requestType: 'sales' | 'technical' | 'service' | 'partnership'
+  message: string
+}
+
+/** Trimite solicitarea de contact și returnează nr. înregistrare */
+export async function submitInquiry(payload: InquiryPayload): Promise<{ message: string; registrationNumber: string }> {
+  const res = await fetch(`${API_BASE}/inquiries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la trimiterea solicitării.')
+  return json
+}
+
 /** Produs public (pagina /produse) */
 export type PublicProduct = {
   id: string
