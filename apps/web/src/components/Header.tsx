@@ -16,7 +16,7 @@ const DIVIZII_PATHS = [
 const COMPANIE_PATHS = [
   { key: 'viziune', path: '/companie/viziune' },
   { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino' },
-  { key: 'contact', path: '/companie' },
+  { key: 'contact', path: '/contact' },
 ]
 
 function NavDropdown({

@@ -64,6 +64,13 @@ function IconDiscounts() {
     </svg>
   )
 }
+function IconMessages() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  )
+}
 function IconLogout() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -75,6 +82,7 @@ function IconLogout() {
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
   { to: '/admin/products', label: 'Produse', icon: <IconProducts />, end: false },
+  { to: '/admin/messages', label: 'Messages', icon: <IconMessages />, end: false },
   { to: '/admin/clients', label: 'Clienți', icon: <IconClients />, end: false },
   { to: '/admin/companies', label: 'Companii', icon: <IconCompanies />, end: false },
   { to: '/admin/articles', label: 'Articole', icon: <IconArticles />, end: false },

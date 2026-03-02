@@ -180,7 +180,7 @@ export default function Rezidential() {
           {/* Baterino logo + Powered by LithTech – bottom center/right */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0">
             <img src="/images/divizii/rezidential/baterino-logo-white.png" alt="Baterino" className="h-9 w-auto" />
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
               <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
               <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
             </div>
@@ -410,7 +410,7 @@ export default function Rezidential() {
         title={tr.ctaTitle}
         desc={tr.ctaDesc}
         btn1Label={tr.ctaButton}
-        btn1To="/companie"
+        btn1To="/companie/viziune"
       />
 
     </article>

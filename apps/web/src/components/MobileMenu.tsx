@@ -21,7 +21,7 @@ const PRODUCTS_SUBMENU_ITEMS = [
 const COMPANIE_SUBMENU_ITEMS = [
   { key: 'viziune', path: '/companie/viziune', subtitleKey: 'compViziuneSubtitle' as const },
   { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino', subtitleKey: 'compLithtechSubtitle' as const },
-  { key: 'contact', path: '/companie', subtitleKey: 'compContactSubtitle' as const },
+  { key: 'contact', path: '/contact', subtitleKey: 'compContactSubtitle' as const },
 ]
 
 const LOGIN_SUBMENU_ITEMS = [
