@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
-const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
+const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, sendInquiryNotification, sendInquiryConfirmation, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
 const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = require('./lib/r2.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
@@ -686,6 +686,67 @@ app.put('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, updatePr
 app.patch('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
 app.put('/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
 app.patch('/admin/products/:id', authMiddleware, adminAuthMiddleware, updateProductHandler)
+
+// ── Public: contact form inquiry (no auth) ───────────────────────────────
+app.post('/api/inquiries', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const name = String(body.name || '').trim()
+    const company = String(body.company || '').trim()
+    const email = String(body.email || '').trim().toLowerCase()
+    const domain = body.domain
+    const requestType = body.requestType
+    const message = String(body.message || '').trim()
+
+    if (!name || !company || !email || !domain || !requestType || !message) {
+      return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii.' })
+    }
+
+    const validDomains = ['rezidential', 'industrial', 'medical', 'maritim']
+    const validRequestTypes = ['sales', 'technical', 'service', 'partnership']
+    if (!validDomains.includes(domain)) {
+      return res.status(400).json({ error: 'Divizie invalidă.' })
+    }
+    if (!validRequestTypes.includes(requestType)) {
+      return res.status(400).json({ error: 'Tip solicitare invalid.' })
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Email invalid.' })
+    }
+
+    const ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.ip || req.socket?.remoteAddress || '')
+      .split(',')[0]
+      .trim() || null
+
+    const inquiry = await prisma.inquiry.create({
+      data: { name, company, email, domain, requestType, message, ip },
+    })
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const shortId = inquiry.id.slice(-8).toUpperCase()
+    const registrationNumber = `BTR-${today}-${shortId}`
+
+    await prisma.inquiry.update({
+      where: { id: inquiry.id },
+      data: { registrationNumber },
+    })
+
+    const inquiryWithReg = { ...inquiry, registrationNumber }
+
+    sendInquiryNotification(inquiryWithReg).catch((e) => console.error('[Inquiry] Notification error:', e?.message))
+    sendInquiryConfirmation(inquiryWithReg).catch((e) => console.error('[Inquiry] Confirmation error:', e?.message))
+
+    return res.status(201).json({
+      message: 'Solicitarea a fost trimisă. Vei primi un email de confirmare.',
+      registrationNumber,
+    })
+  } catch (err) {
+    console.error('Inquiry error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la trimiterea solicitării.' })
+  }
+})
 
 // ── Public: list published products (no auth) ───────────────────────────
 const listPublicProductsHandler = async (req, res) => {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getContactTranslations } from '../i18n/contact'
+import { submitInquiry, type InquiryPayload } from '../lib/api'
 import SEO from '../components/SEO'
 
 const COMPANY_LEGAL_NAME = 'Baterino Energy SRL'
@@ -53,10 +54,39 @@ function EmailIcon() {
 
 type ContactTab = 'whatsapp' | 'phone' | 'mail'
 
+const INITIAL_FORM: InquiryPayload = {
+  name: '',
+  company: '',
+  email: '',
+  domain: 'rezidential',
+  requestType: 'sales',
+  message: '',
+}
+
 export default function Contact() {
   const { language } = useLanguage()
   const tr = getContactTranslations(language.code)
   const [activeTab, setActiveTab] = useState<ContactTab>('whatsapp')
+  const [form, setForm] = useState<InquiryPayload>(INITIAL_FORM)
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    setLoading(true)
+    try {
+      const { registrationNumber } = await submitInquiry(form)
+      setSuccess(tr.formSuccess)
+      setForm(INITIAL_FORM)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tr.formError)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -172,26 +202,35 @@ export default function Contact() {
             )}
 
             {activeTab === 'mail' && (
-              <form className="w-full p-4 sm:p-8 min-h-[8rem] bg-neutral-100 rounded-[10px] space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <form className="w-full p-4 sm:p-8 min-h-[8rem] bg-neutral-100 rounded-[10px] space-y-4" onSubmit={handleSubmit}>
+                {success && (
+                  <div className="p-4 rounded-[10px] bg-green-50 border border-green-200 text-green-800 text-sm font-['Inter']">
+                    {success}
+                  </div>
+                )}
+                {error && (
+                  <div className="p-4 rounded-[10px] bg-red-50 border border-red-200 text-red-800 text-sm font-['Inter']">
+                    {error}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formName}</label>
-                    <input type="text" required className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formName} />
+                    <input type="text" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formName} />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formCompany}</label>
-                    <input type="text" required className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formCompany} />
+                    <input type="text" required value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formCompany} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formEmail}</label>
-                  <input type="email" required className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formEmail} />
+                  <input type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="w-full h-11 px-4 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300" placeholder={tr.formEmail} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formDomain}</label>
-                    <select required className="w-full h-11 pl-4 pr-12 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 appearance-none bg-no-repeat bg-[length:12px] bg-[right_20px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}>
-                      <option value="">{tr.formDomainPlaceholder}</option>
+                    <select required value={form.domain} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value as InquiryPayload['domain'] }))} className="w-full h-11 pl-4 pr-12 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 appearance-none bg-no-repeat bg-[length:12px] bg-[right_20px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}>
                       <option value="rezidential">{tr.domainRezidential}</option>
                       <option value="industrial">{tr.domainIndustrial}</option>
                       <option value="medical">{tr.domainMedical}</option>
@@ -200,8 +239,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formRequestType}</label>
-                    <select required className="w-full h-11 pl-4 pr-12 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 appearance-none bg-no-repeat bg-[length:12px] bg-[right_20px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}>
-                      <option value="">{tr.formRequestType}</option>
+                    <select required value={form.requestType} onChange={(e) => setForm((f) => ({ ...f, requestType: e.target.value as InquiryPayload['requestType'] }))} className="w-full h-11 pl-4 pr-12 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 appearance-none bg-no-repeat bg-[length:12px] bg-[right_20px_center]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}>
                       <option value="sales">{tr.requestSales}</option>
                       <option value="technical">{tr.requestTechnical}</option>
                       <option value="service">{tr.requestService}</option>
@@ -211,10 +249,10 @@ export default function Contact() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-1 font-['Inter']">{tr.formMessage}</label>
-                  <textarea rows={4} required className="w-full min-h-[10rem] sm:min-h-[6rem] px-4 py-3 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 resize-y overflow-hidden sm:overflow-auto" placeholder={tr.formMessage} />
+                  <textarea rows={4} required value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} className="w-full min-h-[10rem] sm:min-h-[6rem] px-4 py-3 rounded-[10px] border border-neutral-200 bg-white text-slate-800 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-300 resize-y overflow-hidden sm:overflow-auto" placeholder={tr.formMessage} />
                 </div>
-                <button type="submit" className="h-12 px-6 bg-slate-900 text-white rounded-[10px] text-sm font-bold font-['Inter'] uppercase hover:bg-slate-800 transition-colors w-full sm:w-auto">
-                  {tr.formSubmit}
+                <button type="submit" disabled={loading} className="h-12 px-6 bg-slate-900 text-white rounded-[10px] text-sm font-bold font-['Inter'] uppercase hover:bg-slate-800 transition-colors w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed">
+                  {loading ? '...' : tr.formSubmit}
                 </button>
               </form>
             )}

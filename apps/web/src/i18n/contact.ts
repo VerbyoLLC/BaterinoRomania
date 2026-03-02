@@ -31,6 +31,8 @@ export type ContactTranslations = {
   requestTechnical: string
   requestService: string
   requestPartnership: string
+  formSuccess: string
+  formError: string
   accessLabel: string
   baterinoGlobalLabel: string
   lithtechLabel: string
@@ -71,6 +73,8 @@ const translations: Record<LangCode, ContactTranslations> = {
     requestTechnical: 'Tehnic',
     requestService: 'Service',
     requestPartnership: 'Parteneriat',
+    formSuccess: 'Solicitarea a fost trimisă. Vei primi un email de confirmare cu nr. înregistrare.',
+    formError: 'A apărut o eroare. Te rugăm să încerci din nou.',
     accessLabel: 'Accesează',
     baterinoGlobalLabel: 'Baterino Global',
     lithtechLabel: 'LithTech',
@@ -109,6 +113,8 @@ const translations: Record<LangCode, ContactTranslations> = {
     requestTechnical: 'Technical',
     requestService: 'Service',
     requestPartnership: 'Partnership',
+    formSuccess: 'Your request has been sent. You will receive a confirmation email with the registration number.',
+    formError: 'An error occurred. Please try again.',
     accessLabel: 'Access',
     baterinoGlobalLabel: 'Baterino Global',
     lithtechLabel: 'LithTech',
@@ -147,6 +153,8 @@ const translations: Record<LangCode, ContactTranslations> = {
     requestTechnical: '技术',
     requestService: '服务',
     requestPartnership: '合作',
+    formSuccess: '您的请求已发送。您将收到确认邮件及登记编号。',
+    formError: '发生错误，请重试。',
     accessLabel: '访问',
     baterinoGlobalLabel: 'Baterino Global',
     lithtechLabel: 'LithTech',
