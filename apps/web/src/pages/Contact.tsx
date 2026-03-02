@@ -78,7 +78,7 @@ export default function Contact() {
     setSuccess(null)
     setLoading(true)
     try {
-      const { registrationNumber } = await submitInquiry(form)
+      await submitInquiry(form)
       setSuccess(tr.formSuccess)
       setForm(INITIAL_FORM)
     } catch (err) {
