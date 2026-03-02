@@ -145,7 +145,7 @@ export default function Instalatori() {
             {/* Buttons — desktop only (mobile buttons rendered below cards) */}
             <div className="hidden lg:flex flex-col gap-[18px]">
               <Link
-                to="/companie"
+                to="/companie/viziune"
                 className="w-full lg:w-96 h-12 px-2.5 bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
               >
                 {tr.btn1}
@@ -169,7 +169,7 @@ export default function Instalatori() {
             {/* Buttons — mobile only */}
             <div className="flex lg:hidden flex-col mt-2">
               <Link
-                to="/companie"
+                to="/companie/viziune"
                 className="w-full h-16 px-2.5 bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-white text-lg font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
               >
                 {tr.btn1}
@@ -220,9 +220,9 @@ export default function Instalatori() {
             title={tr.ctaTitle}
             desc={tr.ctaDesc}
             btn1Label={tr.ctaBtn1}
-            btn1To="/companie"
+            btn1To="/companie/viziune"
             btn2Label={tr.ctaBtn2}
-            btn2To="/companie"
+            btn2To="/companie/viziune"
           />
         </div>
 

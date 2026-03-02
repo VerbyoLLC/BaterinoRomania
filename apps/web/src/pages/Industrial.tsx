@@ -228,7 +228,7 @@ export default function Industrial() {
             <div className="absolute inset-0 bg-black/60 rounded-[10px]" aria-hidden />
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0 min-w-0 z-10">
               <img src="/images/divizii/industrial/baterino-pro-industrial-logo-white.png" alt="Baterino Pro" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
                 <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
                 <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
               </div>
@@ -372,7 +372,7 @@ export default function Industrial() {
           title={tr.ctaTitle}
           desc={tr.ctaDesc}
           btn1Label={tr.ctaButton}
-          btn1To="/companie"
+          btn1To="/companie/viziune"
         />
 
       </article>

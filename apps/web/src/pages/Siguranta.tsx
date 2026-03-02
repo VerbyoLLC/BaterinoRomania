@@ -150,7 +150,7 @@ export default function Siguranta() {
           btn1Label={tr.ctaBtn1}
           btn1To="/produse"
           btn2Label={tr.ctaBtn2}
-          btn2To="/companie"
+          btn2To="/companie/viziune"
         />
 
       </article>

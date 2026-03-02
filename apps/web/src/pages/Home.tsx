@@ -72,7 +72,9 @@ export default function Home() {
   const { language } = useLanguage()
   const tr = getHomeTranslations(language.code)
 
-  const [activeTab,  setActiveTab]  = useState<string>('all')
+  const [activeTab,  setActiveTab]  = useState<string>('rezidential')
+  const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
+  const [voltageExiting, setVoltageExiting] = useState(false)
   const [heroSlide,  setHeroSlide]  = useState(0)
   const [reduceriVisibleCount, setReduceriVisibleCount] = useState(2)
   const [isMobile, setIsMobile] = useState(true)
@@ -162,24 +164,34 @@ export default function Home() {
   }
 
   const featuredProducts = useMemo(() => {
-    const filtered =
-      activeTab === 'all'
-        ? products
-        : products.filter((p) => {
-            const cat = String(p.categorie || '').toLowerCase()
-            if (cat && cat.includes(activeTab)) return true
-            if (!p.categorie?.trim()) {
-              const tip = String(p.tipProdus || '').toLowerCase()
-              if (activeTab === 'rezidential' && tip === 'rezidential') return true
-              if (activeTab === 'industrial' && tip === 'industrial') return true
-            }
-            return false
-          })
+    const filtered = products.filter((p) => {
+      const cat = String(p.categorie || '').toLowerCase()
+      if (cat && cat.includes(activeTab)) {
+        // pass sector filter
+      } else if (!p.categorie?.trim()) {
+        const tip = String(p.tipProdus || '').toLowerCase()
+        if (activeTab === 'rezidential' && tip === 'rezidential') {
+          // pass
+        } else if (activeTab === 'industrial' && tip === 'industrial') {
+          // pass
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+      if (activeTab === 'rezidential' && voltageFilter) {
+        const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
+        if (Number.isNaN(v)) return false
+        if (voltageFilter === 'low' && v >= 100) return false
+        if (voltageFilter === 'high' && v < 100) return false
+      }
+      return true
+    })
     return filtered.slice(0, 3)
-  }, [products, activeTab])
+  }, [products, activeTab, voltageFilter])
 
   const tabs = [
-    { id: 'all',         label: tr.productsTabAll },
     { id: 'rezidential', label: tr.productsTabRez },
     { id: 'industrial',  label: tr.productsTabInd },
     { id: 'medical',     label: tr.productsTabMed },
@@ -219,49 +231,31 @@ export default function Home() {
                   scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
                 }}
               >
-                {HERO_MOBILE_SLIDES.map((slide, i) => (
-                  <div
-                    key={slide.image}
-                    className="relative flex-shrink-0 w-[324px] h-[466px] rounded-[10px] overflow-hidden bg-zinc-300 snap-center"
-                  >
-                    <img
-                      src={slide.image}
-                      alt={`Baterii LiFePO4 – ${slide.label}`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40" />
-                    {i === 0 && (
+                {HERO_MOBILE_SLIDES.map((slide, i) => {
+                  const titles = [tr.heroMobile0Title, tr.heroMobile1Title, tr.heroMobile2Title]
+                  const descs = [tr.heroMobile0Desc, tr.heroMobile1Desc, tr.heroMobile2Desc]
+                  return (
+                    <div
+                      key={slide.image}
+                      className="relative flex-shrink-0 w-[324px] h-[466px] rounded-[10px] overflow-hidden bg-zinc-300 snap-center"
+                    >
+                      <img
+                        src={slide.image}
+                        alt={`${tr.heroImageAlt} – ${slide.label}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40" />
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
                         <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
-                          Sisteme de stocare a energiei cu baterii LiFePO4
+                          {titles[i]}
                         </h1>
-                        <p className="text-white text-base sm:text-lg font-bold font-['Inter'] leading-6 sm:leading-7">
-                          Pentru locuințe individuale și micro-grid-uri.
+                        <p className="text-white text-sm sm:text-lg font-bold font-['Inter'] leading-6 sm:leading-7">
+                          {descs[i]}
                         </p>
                       </div>
-                    )}
-                    {i === 1 && (
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
-                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
-                          Soluții BESS pentru stocare de energie la nivel MW
-                        </h1>
-                        <p className="text-white text-sm sm:text-xl font-bold font-['Inter'] leading-6 sm:leading-7">
-                          Proiecte integrate pentru industrie și parcuri fotovoltaice.
-                        </p>
-                      </div>
-                    )}
-                    {i === 2 && (
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
-                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
-                          Soluții BESS pentru infrastructura medicala critica
-                        </h1>
-                        <p className="text-white text-sm sm:text-lg font-bold font-['Inter'] leading-6">
-                          Pentru clinici de imagistică, stomatologie, centre de transfuzie și spitale.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  )
+                })}
                 <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
               </div>
             </div>
@@ -289,7 +283,7 @@ export default function Home() {
               <img
                 key={slide.image}
                 src={slide.image}
-                alt={`Baterii LiFePO4 – ${slide.label}`}
+                alt={`${tr.heroImageAlt} – ${slide.label}`}
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
                   heroSlide === i ? 'opacity-100' : 'opacity-0'
                 }`}
@@ -394,7 +388,7 @@ export default function Home() {
                   </div>
                   <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
                     <Link
-                      to="/companie"
+                      to="/companie/viziune"
                       className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
                     >
                       {tr.heroSlideIndCta}
@@ -420,10 +414,10 @@ export default function Home() {
                   </div>
                   <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
                     <Link
-                      to="/signup/clienti?tab=partener"
+                      to="/instalatori"
                       className="w-60 h-12 px-2.5 py-[5px] bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] uppercase hover:bg-neutral-100 transition-colors"
                     >
-                      {tr.heroBoxCta}
+                      {tr.heroSlideInstCta}
                     </Link>
                     <div className="flex items-center gap-2 opacity-50 p-[5px]">
                       <span className="text-white text-xs font-normal font-['Inter'] leading-5">
@@ -460,7 +454,7 @@ export default function Home() {
                   {/* Right: CTA + Powered by */}
                   <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
                     <Link
-                      to="/companie"
+                      to="/companie/viziune"
                       className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
                     >
                       {tr.heroSlideMedCta}
@@ -487,45 +481,75 @@ export default function Home() {
             {tr.productsSectionTitle}
           </h2>
 
-          {/* Battery type selection – mobile: 3 stacked; desktop: all 5 horizontal */}
-          <div
-            className="flex flex-col sm:hidden gap-2 mb-8 max-w-xs mx-auto"
-            role="group"
-            aria-label={tr.productsSectionTitle}
-          >
-            {tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                aria-pressed={activeTab === tab.id}
-                aria-label={tab.label}
-                className={`w-full h-12 px-4 rounded-xl text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 ${
-                  activeTab === tab.id
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                    : 'bg-white text-black border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
-                }`}
+          {/* Filters left + Vezi tot right */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 lg:mb-10">
+            <div
+              className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3"
+              role="group"
+              aria-label={tr.productsSectionTitle}
+            >
+              {(isMobile ? tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)) : tabs).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    if (activeTab === 'rezidential' && tab.id !== 'rezidential') {
+                      setVoltageExiting(true)
+                    }
+                    setActiveTab(tab.id)
+                    if (tab.id !== 'rezidential') setVoltageFilter('')
+                  }}
+                  aria-pressed={activeTab === tab.id}
+                  aria-label={tab.label}
+                  className={`h-10 sm:h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 sm:w-auto ${
+                    isMobile ? 'w-full max-w-xs' : ''
+                  } ${
+                    activeTab === tab.id
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              {(activeTab === 'rezidential' || voltageExiting) && (
+                <div
+                  className={`flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
+                  onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
+                >
+                  <span className="flex items-center text-gray-400 px-1" aria-hidden>
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="shrink-0">
+                      <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <select
+                    value={voltageFilter}
+                    onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
+                    aria-label={tr.productsVoltageAll}
+                    className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[160px]"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
+                  >
+                    <option value="">{tr.productsVoltageAll}</option>
+                    <option value="low">{tr.productsVoltageLow}</option>
+                    <option value="high">{tr.productsVoltageHigh}</option>
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
+              <Link
+                to="/produse"
+                className="inline-flex items-center justify-center h-10 px-6 border-2 border-gray-200 rounded-[10px] font-semibold font-['Inter'] text-sm text-black hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="hidden sm:flex flex-wrap justify-center gap-2 lg:gap-3 mb-8 lg:mb-10" role="group" aria-label={tr.productsSectionTitle}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                aria-pressed={activeTab === tab.id}
-                className={`h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] transition-all duration-200 border-2 ${
-                  activeTab === tab.id
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-black border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
+                {tr.productsHowToChoose}
+              </Link>
+              <Link
+                to="/produse"
+                className="inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
               >
-                {tab.label}
-              </button>
-            ))}
+                {tr.productsViewAll}
+              </Link>
+            </div>
           </div>
 
           {/* Product grid */}
@@ -555,15 +579,6 @@ export default function Home() {
               )
             })}
           </div>
-
-          <div className="flex justify-center">
-            <Link
-              to="/produse"
-              className="inline-flex items-center justify-center h-11 sm:h-12 px-8 sm:px-10 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-xs sm:text-sm hover:bg-slate-700 transition-colors"
-            >
-              {tr.productsViewMore}
-            </Link>
-          </div>
         </section>
 
       </div>
@@ -571,14 +586,20 @@ export default function Home() {
       {/* ── FEATURES – De ce să îți cumperi baterie de la noi ── */}
       <section className="mb-16 lg:mb-24">
 
-        {/* Title – centered on mobile, left on desktop */}
-        <div className="my-8 sm:my-10 px-5 lg:px-0 text-center lg:text-left lg:pl-[var(--grid-edge)]">
+        {/* Title – centered on mobile; title + button centered on desktop, vertically aligned */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 my-8 sm:my-10 px-5 lg:px-0 lg:pl-[var(--grid-edge)] lg:pr-[var(--grid-edge)]">
           <h2
-            className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 mx-auto lg:mx-0"
+            className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 text-center lg:text-left mx-auto lg:mx-0"
             style={{ width: '676px', maxWidth: '100%' }}
           >
             {tr.featuresSectionTitle}
           </h2>
+          <Link
+            to="/siguranta"
+            className="hidden lg:inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors shrink-0"
+          >
+            {tr.productsSafetyLink}
+          </Link>
         </div>
 
         {/* Scrollable card track – center snap on mobile */}
@@ -691,9 +712,17 @@ export default function Home() {
       {/* ── REDUCERI – Programe de reduceri ── */}
       <section className="mb-16 lg:mb-24 max-w-content mx-auto px-5 lg:px-3">
         <div className="flex flex-col gap-4 my-6 sm:my-8 text-center sm:text-left items-center sm:items-stretch">
-          <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10">
-            {tr.reduceriGridTitle}
-          </h2>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full">
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10">
+              {tr.reduceriGridTitle}
+            </h2>
+            <Link
+              to="/reduceri"
+              className="hidden lg:inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors shrink-0"
+            >
+              {tr.reduceriViewAll}
+            </Link>
+          </div>
           <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[846px]">
             {tr.reduceriGridSubtitle}
           </p>
@@ -860,7 +889,7 @@ export default function Home() {
               <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
             </div>
             <Link
-              to="/companie"
+              to="/companie/viziune"
               className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
             >
               <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
@@ -881,7 +910,7 @@ export default function Home() {
                 {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
               </p>
               <Link
-                to="/companie"
+                to="/companie/viziune"
                 className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
               >
                 <span className="text-black text-base font-semibold font-['Inter']">

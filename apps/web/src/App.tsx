@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import ScrollToTop from './components/ScrollToTop'
 import { HelmetProvider } from 'react-helmet-async'
 import Layout from './components/Layout'
 import AuthWrapper from './components/AuthWrapper'
@@ -13,7 +14,6 @@ import Maritim from './pages/Maritim'
 import Reduceri from './pages/Reduceri'
 import LithTech from './pages/LithTech'
 import Instalatori from './pages/Instalatori'
-import Companie from './pages/Companie'
 import Viziune from './pages/Viziune'
 import Typography from './pages/Typography'
 import Login from './pages/Login'
@@ -28,11 +28,13 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCompanies from './pages/admin/AdminCompanies'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminDiscounts from './pages/admin/AdminDiscounts'
+import AdminMessages from './pages/admin/AdminMessages'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
 import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
 import Cariere from './pages/Cariere'
+import Contact from './pages/Contact'
 import SliderExamples from './pages/SliderExamples'
 import PartnerLayout from './pages/partner/PartnerLayout'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
@@ -47,12 +49,14 @@ export default function App() {
   return (
     <HelmetProvider>
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* ── Admin (no header / footer) ── */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="products"  element={<AdminProducts />} />
+          <Route path="messages"  element={<AdminMessages />} />
           <Route path="clients"   element={<AdminDashboard />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="articles"  element={<AdminDashboard />} />
@@ -84,8 +88,8 @@ export default function App() {
         {/* ── QR code links (no pages, redirect only) ── */}
         <Route path="/qr/main" element={<Navigate to="/" replace />} />
         <Route path="/qr/instalatori-event-bucharest2026" element={<Navigate to="/instalatori" replace />} />
-        <Route path="/qr/rbc" element={<Navigate to="/companie" replace />} />
-        <Route path="/qr/abc" element={<Navigate to="/companie" replace />} />
+        <Route path="/qr/rbc" element={<Navigate to="/companie/viziune" replace />} />
+        <Route path="/qr/abc" element={<Navigate to="/companie/viziune" replace />} />
         <Route path="/qr/idbc" element={<Navigate to="/instalatori" replace />} />
 
         {/* ── Main site with Layout ── */}
@@ -105,12 +109,12 @@ export default function App() {
           <Route path="divizii/:slug" element={<Divizii />} />
           <Route path="parteneriat-strategic-lithtech-baterino" element={<LithTech />} />
           <Route path="instalatori" element={<Instalatori />} />
-          <Route path="companie" element={<Companie />} />
+          <Route path="companie" element={<Navigate to="/companie/viziune" replace />} />
           <Route path="companie/viziune" element={<Viziune />} />
-          <Route path="companie/contact" element={<Navigate to="/companie" replace />} />
-          <Route path="companie/:slug" element={<Companie />} />
+          <Route path="companie/contact" element={<Navigate to="/companie/viziune" replace />} />
+          <Route path="companie/:slug" element={<Navigate to="/companie/viziune" replace />} />
           <Route path="cariere" element={<Cariere />} />
-          <Route path="contact" element={<Navigate to="/companie" replace />} />
+          <Route path="contact" element={<Contact />} />
           <Route path="blog" element={<Blog />} />
           <Route path="typography" element={<Typography />} />
           <Route path="slider-examples" element={<SliderExamples />} />

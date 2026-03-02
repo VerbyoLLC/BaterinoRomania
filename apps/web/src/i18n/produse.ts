@@ -21,9 +21,15 @@ export type ProduseTranslations = {
   filterVolti: string
   filterInvertor: string
   howToChoose: string
+  viewAll: string
+  clearFilters: string
+  productsVoltageAll: string
+  productsVoltageLow: string
+  productsVoltageHigh: string
   pretLabel: string
   currency: string
   noResults: string
+  loadingProducts: string
   seoTitle: string
   seoDesc: string
   sectorOptions: { value: string; label: string }[]
@@ -44,9 +50,15 @@ const translations: Record<LangCode, ProduseTranslations> = {
     filterVolti: 'Volți',
     filterInvertor: 'Compatibilitate Invertor',
     howToChoose: 'Cum aleg bateria?',
+    viewAll: 'Vezi tot',
+    clearFilters: 'Anulează filtrele',
+    productsVoltageAll: 'Tensiune',
+    productsVoltageLow: 'Tensiune joasă',
+    productsVoltageHigh: 'Tensiune înaltă',
     pretLabel: 'Preț',
     currency: 'RON',
     noResults: 'Niciun produs nu corespunde filtrelor selectate.',
+    loadingProducts: 'Se încarcă produsele…',
     seoTitle: 'Baterii LiFePO4',
     seoDesc: 'Sisteme de stocare a energiei LiFePO4 pentru uz rezidential, industrial, medical și maritim. Importator oficial LithTech în România.',
     sectorOptions: [
@@ -86,9 +98,15 @@ const translations: Record<LangCode, ProduseTranslations> = {
     filterVolti: 'Voltage',
     filterInvertor: 'Inverter Compatibility',
     howToChoose: 'How do I choose?',
+    viewAll: 'See all',
+    clearFilters: 'Clear filters',
+    productsVoltageAll: 'Voltage',
+    productsVoltageLow: 'Low Voltage',
+    productsVoltageHigh: 'High Voltage',
     pretLabel: 'Price',
     currency: 'RON',
     noResults: 'No products match the selected filters.',
+    loadingProducts: 'Loading products…',
     seoTitle: 'LiFePO4 Batteries',
     seoDesc: 'LiFePO4 energy storage systems for residential, industrial, medical and marine use. Official LithTech importer in Romania.',
     sectorOptions: [
@@ -128,9 +146,15 @@ const translations: Record<LangCode, ProduseTranslations> = {
     filterVolti: '电压',
     filterInvertor: '逆变器兼容性',
     howToChoose: '如何选择电池？',
+    viewAll: '查看全部',
+    clearFilters: '清除筛选',
+    productsVoltageAll: '电压',
+    productsVoltageLow: '低压',
+    productsVoltageHigh: '高压',
     pretLabel: '价格',
     currency: 'RON',
     noResults: '没有符合所选过滤条件的产品。',
+    loadingProducts: '正在加载产品…',
     seoTitle: 'LiFePO4电池',
     seoDesc: '用于住宅、工业、医疗和海事的LiFePO4储能系统。罗马尼亚官方LithTech进口商。',
     sectorOptions: [

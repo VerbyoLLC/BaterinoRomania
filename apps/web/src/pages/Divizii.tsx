@@ -113,7 +113,7 @@ export default function Divizii() {
           </ul>
           <div className="flex justify-center">
             <Link
-              to="/companie"
+              to="/companie/viziune"
               className="w-72 h-12 px-2.5 py-[5px] bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center gap-3.5 text-white hover:bg-transparent hover:outline-slate-900 hover:text-black active:bg-zinc-100 active:outline-slate-900 active:text-black transition-colors font-semibold text-base"
             >
               <span className="text-center text-inherit">{tr.ctaButton}</span>

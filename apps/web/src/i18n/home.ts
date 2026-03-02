@@ -15,6 +15,15 @@ export type HomeTranslations = {
   heroSliderMed: string
   heroSliderInst: string
 
+  // Hero – mobile slider (3 slides)
+  heroMobile0Title: string
+  heroMobile0Desc: string
+  heroMobile1Title: string
+  heroMobile1Desc: string
+  heroMobile2Title: string
+  heroMobile2Desc: string
+  heroImageAlt: string
+
   // Hero – slider slide content
   heroSlideRezTitle: string
   heroSlideRezDesc: string
@@ -26,6 +35,7 @@ export type HomeTranslations = {
   heroSlideMedCta: string
   heroSlideInstTitle: string
   heroSlideInstDesc: string   // supports **bold** markers
+  heroSlideInstCta: string
   heroSlideInstImportatori: string
 
   // Hero – big right card
@@ -37,12 +47,18 @@ export type HomeTranslations = {
 
   // Products section
   productsSectionTitle: string
+  productsSafetyLink: string
   productsTabAll: string
   productsTabRez: string
   productsTabInd: string
   productsTabMed: string
   productsTabMar: string
   productsViewMore: string
+  productsViewAll: string
+  productsHowToChoose: string
+  productsVoltageAll: string
+  productsVoltageLow: string
+  productsVoltageHigh: string
   includesTVA: string
 
   // Features section
@@ -66,6 +82,7 @@ export type HomeTranslations = {
   reduceriProgramLabel: string
   reduceriDiscountSuffix: string
   reduceriGridTitle: string
+  reduceriViewAll: string
   reduceriGridSubtitle: string
   reduceriLoadMore: string
   reduceriCard1Title: string
@@ -125,6 +142,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSliderMed: 'MEDICAL',
     heroSliderInst: 'INSTALATORI',
 
+    heroMobile0Title: 'Sisteme de stocare a energiei cu baterii LiFePO4',
+    heroMobile0Desc: 'Pentru locuințe individuale și micro-grid-uri.',
+    heroMobile1Title: 'Soluții BESS pentru stocare de energie la nivel MW',
+    heroMobile1Desc: 'Proiecte integrate pentru industrie și parcuri fotovoltaice.',
+    heroMobile2Title: 'Soluții BESS pentru infrastructura medicală critică',
+    heroMobile2Desc: 'Pentru clinici de imagistică, stomatologie, centre de transfuzie și spitale.',
+    heroImageAlt: 'Baterii LiFePO4',
+
     heroSlideRezTitle: 'Soluții de stocare a energiei,\nrezidențiale și micro-grid-uri\ncu baterii LiFePO4',
     heroSlideRezDesc: 'Soluții dedicate **locuințelor individuale și micro-grid-urilor rezidențiale** — pentru autonomie energetică, siguranță și optimizarea autoconsumului.',
     heroSlideIndTitle: 'Soluții EPC pentru stocare de energie la nivel MW',
@@ -135,6 +160,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSlideMedCta: 'DISCUTA CU ECHIPA',
     heroSlideInstTitle: 'NE MĂRIM REȚEAUA DE\nINSTALATORI ȘI DISTRIBUITORI',
     heroSlideInstDesc: 'Fiind importatori LithTech,** îți oferim prețuri avantajoase, stocuri permanente în România cu livrare rapidă și suport tehnic local**. În plus, **gestionăm relația cu clientul final și îți oferim acces la proiecte industriale de anvergură**.',
+    heroSlideInstCta: 'VEZI AVANTAJE',
     heroSlideInstImportatori: 'Importatori',
 
     heroCardTitle: 'BATERII LIFEPO4 SISTEME FOTOVOLTAICE REZIDENTIAL ȘI INDUSTRIAL',
@@ -144,12 +170,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     poweredBy: 'Powered by',
 
     productsSectionTitle: 'ALEGE BATERIA TA',
+    productsSafetyLink: 'Siguranța achiziției',
     productsTabAll: 'TOATE',
     productsTabRez: 'REZIDENTIAL',
     productsTabInd: 'INDUSTRIAL',
     productsTabMed: 'MEDICAL',
     productsTabMar: 'MARITIM',
     productsViewMore: 'ÎNCARCĂ MAI MULT',
+    productsViewAll: 'Vezi tot',
+    productsHowToChoose: 'Cum aleg bateria?',
+    productsVoltageAll: 'Tensiune',
+    productsVoltageLow: 'Tensiune joasă',
+    productsVoltageHigh: 'Tensiune înaltă',
     includesTVA: 'include TVA',
 
     featuresSectionTitle: 'DE CE SĂ ÎȚI CUMPERI BATERIE DE LA NOI?',
@@ -171,6 +203,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     reduceriProgramLabel: 'PROGRAMUL',
     reduceriDiscountSuffix: 'REDUCERE',
     reduceriGridTitle: 'PROGRAME DE REDUCERI',
+    reduceriViewAll: 'Vezi toate programele',
     reduceriGridSubtitle: 'Dezvoltăm programe de reduceri dedicate tuturor categoriilor de clienți. Suntem o companie cu o puternică componentă socială și ne dorim să facem stocarea energiei accesibilă tuturor.',
     reduceriLoadMore: 'ALTE REDUCERI',
     reduceriCard1Title: 'ENERGIE\nPENTRU PĂRINȚI',
@@ -223,6 +256,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSliderMed: 'MEDICAL',
     heroSliderInst: 'INSTALLERS',
 
+    heroMobile0Title: 'Energy storage systems with LiFePO4 batteries',
+    heroMobile0Desc: 'For individual homes and micro-grids.',
+    heroMobile1Title: 'BESS solutions for MW-scale energy storage',
+    heroMobile1Desc: 'Integrated projects for industry and solar parks.',
+    heroMobile2Title: 'BESS solutions for critical medical infrastructure',
+    heroMobile2Desc: 'For imaging clinics, dental practices, transfusion centres and hospitals.',
+    heroImageAlt: 'LiFePO4 batteries',
+
     heroSlideRezTitle: 'Energy storage solutions,\nresidential and micro-grids\nwith LiFePO4 batteries',
     heroSlideRezDesc: 'Solutions dedicated to **individual homes and residential micro-grids** — for energy autonomy, safety and self-consumption optimisation.',
     heroSlideIndTitle: 'EPC solutions for MW-scale energy storage',
@@ -233,6 +274,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSlideMedCta: 'TALK TO THE TEAM',
     heroSlideInstTitle: 'WE ARE EXPANDING OUR NETWORK OF\nINSTALLERS AND DISTRIBUTORS',
     heroSlideInstDesc: 'As LithTech importers,** we offer you competitive pricing, permanent stock in Romania with fast delivery and local technical support**. In addition, **we manage the end-client relationship and give you access to large-scale industrial projects**.',
+    heroSlideInstCta: 'SEE BENEFITS',
     heroSlideInstImportatori: 'Importers',
 
     heroCardTitle: 'LIFEPO4 BATTERIES SOLAR SYSTEMS RESIDENTIAL AND INDUSTRIAL',
@@ -242,12 +284,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     poweredBy: 'Powered by',
 
     productsSectionTitle: 'CHOOSE YOUR BATTERY',
+    productsSafetyLink: 'Purchase safety',
     productsTabAll: 'ALL',
     productsTabRez: 'RESIDENTIAL',
     productsTabInd: 'INDUSTRIAL',
     productsTabMed: 'MEDICAL',
     productsTabMar: 'MARITIME',
     productsViewMore: 'LOAD MORE',
+    productsViewAll: 'See all',
+    productsHowToChoose: 'How do I choose?',
+    productsVoltageAll: 'Voltage',
+    productsVoltageLow: 'Low Voltage',
+    productsVoltageHigh: 'High Voltage',
     includesTVA: 'includes VAT',
 
     featuresSectionTitle: 'WHY BUY YOUR BATTERY FROM US?',
@@ -269,6 +317,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     reduceriProgramLabel: 'PROGRAMME',
     reduceriDiscountSuffix: 'DISCOUNT',
     reduceriGridTitle: 'DISCOUNT PROGRAMMES',
+    reduceriViewAll: 'See all programmes',
     reduceriGridSubtitle: 'We develop discount programmes dedicated to all client categories. We are a company with a strong social component and we want to make energy storage accessible to everyone.',
     reduceriLoadMore: 'OTHER DISCOUNTS',
     reduceriCard1Title: 'ENERGY\nFOR PARENTS',
@@ -321,6 +370,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSliderMed: '医疗',
     heroSliderInst: '安装商',
 
+    heroMobile0Title: '磷酸铁锂电池储能系统',
+    heroMobile0Desc: '适用于独栋住宅和微电网。',
+    heroMobile1Title: '兆瓦级储能BESS解决方案',
+    heroMobile1Desc: '为工业和光伏电站提供一体化项目。',
+    heroMobile2Title: '关键医疗基础设施BESS解决方案',
+    heroMobile2Desc: '适用于影像中心、牙科诊所、输血中心和医院。',
+    heroImageAlt: '磷酸铁锂电池',
+
     heroSlideRezTitle: '储能解决方案，\n住宅与微电网\n磷酸铁锂电池',
     heroSlideRezDesc: '专为独栋住宅和住宅微电网设计的解决方案——实现能源自主、安全和自用优化。',
     heroSlideIndTitle: '兆瓦级储能EPC解决方案',
@@ -331,6 +388,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroSlideMedCta: '联系团队',
     heroSlideInstTitle: '我们正在扩大\n安装商和分销商网络',
     heroSlideInstDesc: '作为LithTech进口商，**我们为您提供有竞争力的价格、罗马尼亚常备库存、快速配送和本地技术支持**。此外，**我们管理终端客户关系并为您提供大型工业项目机会**。',
+    heroSlideInstCta: '查看优势',
     heroSlideInstImportatori: '进口商',
 
     heroCardTitle: '磷酸铁锂电池 光伏系统 住宅与工业',
@@ -340,12 +398,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     poweredBy: 'Powered by',
 
     productsSectionTitle: '选择您的电池',
+    productsSafetyLink: '购买安全',
     productsTabAll: '全部',
     productsTabRez: '住宅',
     productsTabInd: '工业',
     productsTabMed: '医疗',
     productsTabMar: '航海',
     productsViewMore: '加载更多',
+    productsViewAll: '查看全部',
+    productsHowToChoose: '如何选择电池？',
+    productsVoltageAll: '电压',
+    productsVoltageLow: '低压',
+    productsVoltageHigh: '高压',
     includesTVA: '含增值税',
 
     featuresSectionTitle: '为什么选择我们购买电池？',
@@ -367,6 +431,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     reduceriProgramLabel: '计划',
     reduceriDiscountSuffix: '折扣',
     reduceriGridTitle: '折扣计划',
+    reduceriViewAll: '查看全部计划',
     reduceriGridSubtitle: '我们为各类客户开发专属折扣计划。我们是一家具有强烈社会责任感的企业，希望让每个人都能用上储能产品。',
     reduceriLoadMore: '其他折扣',
     reduceriCard1Title: '父母能源',

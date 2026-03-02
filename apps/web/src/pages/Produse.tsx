@@ -5,37 +5,16 @@ import { getProduseTranslations } from '../i18n/produse'
 import { getProducts, type PublicProduct } from '../lib/api'
 import SEO from '../components/SEO'
 
-/* ── Filter dropdown ──────────────────────────────────────────── */
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  options: { value: string | number; label: string }[]
-}) {
+/* ── Skeleton card for loading state ───────────────────────────── */
+function ProductCardSkeleton() {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none h-12 pl-5 pr-10 bg-neutral-100 rounded-[10px] text-black text-base font-semibold font-['Inter'] cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 transition-colors"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.value === '' || opt.value === 0 ? label : opt.label}
-          </option>
-        ))}
-      </select>
-      <svg
-        className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black"
-        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-      </svg>
+    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-8 animate-pulse">
+      <div className="w-36 h-44 bg-neutral-200 rounded-lg" />
+      <div className="w-48 h-5 bg-neutral-200 rounded mt-4 mx-2" />
+      <div className="w-56 h-4 bg-neutral-200 rounded mt-3 mx-2" />
+      <div className="w-52 h-4 bg-neutral-200 rounded mt-2 mx-2" />
+      <div className="w-24 h-8 bg-neutral-200 rounded mt-10 mx-2" />
+      <div className="w-20 h-3 bg-neutral-200 rounded mt-1 mx-2" />
     </div>
   )
 }
@@ -98,6 +77,8 @@ export default function Produse() {
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [sector, setSector] = useState('')
+  const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
+  const [voltageExiting, setVoltageExiting] = useState(false)
 
   useEffect(() => {
     const sectorParam = searchParams.get('sector')
@@ -114,21 +95,30 @@ export default function Produse() {
   }, [])
 
   const filtered = useMemo(() => {
-    if (!sector) return products
-    return products.filter((p) => {
-      const cat = String(p.categorie || '').toLowerCase()
-      if (cat && cat.includes(sector)) return true
-      // Fallback: when categorie is empty, use tipProdus for rezidential/industrial
-      if (!p.categorie?.trim()) {
-        const tip = String(p.tipProdus || '').toLowerCase()
-        if (sector === 'rezidential' && tip === 'rezidential') return true
-        if (sector === 'industrial' && tip === 'industrial') return true
-      }
-      return false
-    })
-  }, [products, sector])
-
-  const isFiltered = sector !== ''
+    let list = products
+    if (sector) {
+      list = list.filter((p) => {
+        const cat = String(p.categorie || '').toLowerCase()
+        if (cat && cat.includes(sector)) return true
+        if (!p.categorie?.trim()) {
+          const tip = String(p.tipProdus || '').toLowerCase()
+          if (sector === 'rezidential' && tip === 'rezidential') return true
+          if (sector === 'industrial' && tip === 'industrial') return true
+        }
+        return false
+      })
+    }
+    if (sector === 'rezidential' && voltageFilter) {
+      list = list.filter((p) => {
+        const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
+        if (Number.isNaN(v)) return false
+        if (voltageFilter === 'low' && v >= 100) return false
+        if (voltageFilter === 'high' && v < 100) return false
+        return true
+      })
+    }
+    return list
+  }, [products, sector, voltageFilter])
 
   return (
     <>
@@ -151,32 +141,106 @@ export default function Produse() {
           </p>
         </header>
 
-        {/* ── FILTER BAR ── */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <FilterSelect
-            label={tr.filterSector}
-            value={sector}
-            onChange={setSector}
-            options={tr.sectorOptions}
-          />
-          {isFiltered && (
-            <button
-              onClick={() => setSector('')}
-              className="h-12 px-5 bg-neutral-100 rounded-[10px] text-black text-base font-semibold font-['Inter'] hover:bg-neutral-200 transition-colors"
+        {/* ── FILTER BAR (same as Home) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div
+            className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3"
+            role="group"
+            aria-label={tr.filterSector}
+          >
+            {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
+              const val = String(opt.value)
+              const active = sector === val
+              return (
+                <button
+                  key={val || 'all'}
+                  type="button"
+                  onClick={() => {
+                    if (sector === 'rezidential' && val !== 'rezidential') setVoltageExiting(true)
+                    setSector(val)
+                    if (val !== 'rezidential') setVoltageFilter('')
+                  }}
+                  aria-pressed={active}
+                  className={`h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 ${
+                    active
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+            {(sector === 'rezidential' || voltageExiting) && (
+              <div
+                className={`flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
+                onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
+              >
+                <span className="flex items-center text-gray-400 px-1" aria-hidden>
+                  <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="shrink-0">
+                    <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <select
+                  value={voltageFilter}
+                  onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
+                  aria-label={tr.productsVoltageAll}
+                  className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[160px]"
+                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
+                >
+                  <option value="">{tr.productsVoltageAll}</option>
+                  <option value="low">{tr.productsVoltageLow}</option>
+                  <option value="high">{tr.productsVoltageHigh}</option>
+                </select>
+              </div>
+            )}
+            {(sector || voltageFilter) && (
+              <button
+                type="button"
+                onClick={() => { setSector(''); setVoltageFilter('') }}
+                aria-label={tr.clearFilters}
+                className="inline-flex items-center justify-center h-10 w-10 rounded-[10px] border-2 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-800 transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
+            <Link
+              to="/produse"
+              className="inline-flex items-center justify-center h-10 px-6 border-2 border-gray-200 rounded-[10px] font-semibold font-['Inter'] text-sm text-black hover:bg-gray-50 hover:border-gray-300 transition-colors"
             >
-              ✕
+              {tr.howToChoose}
+            </Link>
+            <button
+              type="button"
+              onClick={() => { setSector(''); setVoltageFilter('') }}
+              className="inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
+            >
+              {tr.viewAll}
             </button>
-          )}
-          <div className="ml-auto flex items-center gap-2 text-sm font-medium font-['Inter'] text-gray-700 cursor-pointer hover:text-black transition-colors">
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0" />
-            {tr.howToChoose}
           </div>
         </div>
 
         {/* ── PRODUCT GRID ── */}
         {loading ? (
-          <div className="text-center py-24 text-gray-400 font-['Inter']">
-            Se încarcă produsele…
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 text-gray-500 font-medium font-['Inter'] text-sm">
+                <svg className="animate-spin h-5 w-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>{tr.loadingProducts}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
