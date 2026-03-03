@@ -14,7 +14,7 @@ interface SEOProps {
 
 const SITE_NAME = 'Baterino'
 const BASE_URL = 'https://baterino.ro'
-const DEFAULT_OG_IMAGE = `${BASE_URL}/images/shared/baterino-og-default.jpg`
+const DEFAULT_OG_IMAGE = `${BASE_URL}/images/og-baterino-romania.jpg`
 
 export default function SEO({
   title,
@@ -30,8 +30,13 @@ export default function SEO({
   const fullTitle = `${title} | ${SITE_NAME}`
   const resolvedOgTitle = ogTitle ?? title
   const resolvedOgDesc = ogDescription ?? description
-  const resolvedOgImage = ogImage ?? DEFAULT_OG_IMAGE
+  const resolvedOgImage = ogImage
+    ? ogImage.startsWith('/')
+      ? `${BASE_URL}${ogImage}`
+      : ogImage
+    : DEFAULT_OG_IMAGE
   const resolvedCanonical = canonical ? `${BASE_URL}${canonical}` : undefined
+  const ogLocale = lang === 'ro' ? 'ro_RO' : lang === 'zh' ? 'zh_CN' : 'en_US'
 
   return (
     <Helmet>
@@ -44,6 +49,7 @@ export default function SEO({
       {/* Open Graph */}
       <meta property="og:type" content={ogType} />
       <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content={ogLocale} />
       <meta property="og:title" content={resolvedOgTitle} />
       <meta property="og:description" content={resolvedOgDesc} />
       <meta property="og:image" content={resolvedOgImage} />

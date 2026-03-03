@@ -103,7 +103,7 @@ function WelcomeModal({
 }: {
   onClose: () => void
   onProfesionist: () => void
-  tr: { welcomeModalTitle: string; welcomeModalSubtitle: string; welcomeModalProfesionist: string; welcomeModalClientFinal: string }
+  tr: { welcomeModalWelcomeTo: string; welcomeModalTitle: string; welcomeModalSubtitle: string; welcomeModalProfesionist: string; welcomeModalClientFinal: string }
 }) {
   return (
     <div
@@ -125,7 +125,7 @@ function WelcomeModal({
         <div className="flex flex-col items-center px-6 pt-8 pb-6 gap-6">
           <div className="w-80 max-w-full relative flex flex-col items-center">
             <p className="text-black text-xs font-medium font-['Inter'] leading-5 text-center mb-1">
-              BINE AI VENIT LA
+              {tr.welcomeModalWelcomeTo}
             </p>
             <img
               src="/images/shared/baterino-logo-black.svg"
@@ -133,10 +133,10 @@ function WelcomeModal({
               className="w-36 h-7 object-contain"
             />
             <h2 id="welcome-modal-title" className="text-black text-lg font-bold font-['Inter'] leading-6 text-center mt-5 mb-2 px-1">
-              ESTI INSTALATOR SAU DISTRIBUITOR?
+              {tr.welcomeModalTitle}
             </h2>
             <p className="text-black text-sm font-medium font-['Inter'] leading-5 text-center px-1">
-              În funcție de alegerea ta, îți vom oferi o experiență adaptată nevoilor tale profesionale.
+              {tr.welcomeModalSubtitle}
             </p>
           </div>
           <div className="flex flex-col gap-3 w-full max-w-[320px]">
@@ -349,7 +349,7 @@ export default function Home() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/"
-        ogImage="/images/home/hero-card.jpg"
+        ogImage="/images/og-baterino-romania.jpg"
         lang={language.code}
       />
 
