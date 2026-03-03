@@ -368,7 +368,7 @@ export default function Home() {
                   scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
                 }}
               >
-                {HERO_MOBILE_SLIDES.map((slide, i) => {
+                {HERO_MOBILE_SLIDES.map((slide) => {
                   const titleMap: Record<string, string> = {
                     rezidential: tr.heroMobile0Title,
                     industrial: tr.heroMobile1Title,

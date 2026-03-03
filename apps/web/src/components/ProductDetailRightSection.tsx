@@ -175,7 +175,7 @@ export type ProductDetailRightSectionProps = {
   compact?: boolean
 }
 
-export default function ProductDetailRightSection({ product, tr, langCode, compact = false }: ProductDetailRightSectionProps) {
+export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false }: ProductDetailRightSectionProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [showCompatibilitate99Modal, setShowCompatibilitate99Modal] = useState(false)
   const [showGarantieModal, setShowGarantieModal] = useState(false)

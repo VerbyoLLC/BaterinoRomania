@@ -452,7 +452,16 @@ export default function AdminProducts() {
         if (!s) return undefined
         try {
           const parsed = JSON.parse(s) as { title?: string; intro?: string; sections?: Array<{ label?: string; items?: string[] }> }
-          if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) return parsed
+          if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) {
+            return {
+              title: parsed.title,
+              intro: parsed.intro,
+              sections: parsed.sections.map((sec) => ({
+                label: sec.label ?? '',
+                items: sec.items ?? [],
+              })),
+            }
+          }
         } catch {
           /* invalid JSON – ignore */
         }
