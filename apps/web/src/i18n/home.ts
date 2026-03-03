@@ -63,6 +63,7 @@ export type HomeTranslations = {
   includesTVA: string
   disponibilPentruParteneri: string
   productsComingSoon: string
+  welcomeModalWelcomeTo: string
   welcomeModalTitle: string
   welcomeModalSubtitle: string
   welcomeModalProfesionist: string
@@ -140,8 +141,8 @@ export type HomeTranslations = {
 
 const translations: Record<LangCode, HomeTranslations> = {
   ro: {
-    seoTitle: 'Baterino România – Baterii LiFePO4 și Sisteme Fotovoltaice',
-    seoDesc: 'Importator și distribuitor de baterii LiFePO4 și sisteme fotovoltaice pentru sectorul rezidențial, industrial, medical și maritim. Servicii complete, garanție 10 ani.',
+    seoTitle: 'Baterino - Baterii LiFePO4 pentru sisteme fotovoltaice. Soluții stocare pentru sectorul rezidențial, industrial, medical și maritim.',
+    seoDesc: 'Importator și distribuitor LithTech pentru baterii LiFePO4 și sisteme fotovoltaice pentru sectorul rezidențial, industrial, medical și maritim. Servicii complete, garanție 10 ani.',
 
     heroBoxTitle: 'Instalezi sau distribui sisteme fotovoltaice?',
     heroBoxDesc: 'Îți oferim produse validate înainte de import, marje competitive și prețuri stabile, service și suport, stocuri permanente.',
@@ -196,8 +197,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     includesTVA: 'include TVA',
     disponibilPentruParteneri: 'VEZI DETALII',
     productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
-    welcomeModalTitle: 'Bine ați venit',
-    welcomeModalSubtitle: 'Sunteți un profesionist sau client final?',
+    welcomeModalWelcomeTo: 'BINE AI VENIT LA',
+    welcomeModalTitle: 'ESTI INSTALATOR SAU DISTRIBUITOR?',
+    welcomeModalSubtitle: 'În funcție de alegerea ta, îți vom oferi o experiență adaptată nevoilor tale profesionale.',
     welcomeModalProfesionist: 'DA, SUNT PROFESIONIST',
     welcomeModalClientFinal: 'NU, SUNT CLIENT FINAL',
 
@@ -320,8 +322,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     includesTVA: 'includes VAT',
     disponibilPentruParteneri: 'VIEW DETAILS',
     productsComingSoon: 'The site is being updated. Products will be available soon.',
-    welcomeModalTitle: 'Welcome',
-    welcomeModalSubtitle: 'Are you a professional or end customer?',
+    welcomeModalWelcomeTo: 'WELCOME TO',
+    welcomeModalTitle: 'ARE YOU AN INSTALLER OR DISTRIBUTOR?',
+    welcomeModalSubtitle: 'Depending on your choice, we will offer you an experience tailored to your professional needs.',
     welcomeModalProfesionist: 'YES, I AM A PROFESSIONAL',
     welcomeModalClientFinal: 'NO, I AM AN END CUSTOMER',
 
@@ -444,8 +447,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     includesTVA: '含增值税',
     disponibilPentruParteneri: '查看详情',
     productsComingSoon: '网站正在更新中，产品即将推出。',
-    welcomeModalTitle: '欢迎',
-    welcomeModalSubtitle: '您是专业人士还是终端客户？',
+    welcomeModalWelcomeTo: '欢迎来到',
+    welcomeModalTitle: '您是安装商还是分销商？',
+    welcomeModalSubtitle: '根据您的选择，我们将为您提供适合您专业需求的体验。',
     welcomeModalProfesionist: '我是专业人士',
     welcomeModalClientFinal: '我是终端客户',
 
