@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
 const CONTACT_WHATSAPP = '40770106374'
-const CONTACT_PHONE = '+40770106374'
 
 const WARNING_RISKS = [
   'Supraîncălzire și risc de incendiu',
