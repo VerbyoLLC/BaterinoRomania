@@ -141,14 +141,17 @@ export default function PartnerDashboard() {
             <p className="text-gray-700 text-sm font-['Inter'] mt-1">
               Folosește panoul de comandă pentru a plasa comenzi noi, a urmări starea comenzilor active sau pentru a contacta echipa de suport.
             </p>
+            {profile?.partnerDiscountPercent != null && profile.partnerDiscountPercent > 0 && (
+              <p className="text-green-800 text-sm font-semibold font-['Inter'] mt-2">
+                Beneficiezi de o reducere de {Number(profile.partnerDiscountPercent) % 1 === 0 ? Math.round(profile.partnerDiscountPercent) : profile.partnerDiscountPercent.toFixed(1)}% la toate produsele.
+              </p>
+            )}
           </div>
           <div className="flex-shrink-0 flex flex-col items-center justify-center mt-2.5">
             <p className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] text-slate-900">
               {profile?.partnerDiscountPercent != null && profile.partnerDiscountPercent > 0
                 ? `-${Number(profile.partnerDiscountPercent) % 1 === 0 ? Math.round(profile.partnerDiscountPercent) : profile.partnerDiscountPercent.toFixed(1)}%`
-                : profile?.partnerDiscountPercent === 0
-                  ? '0%'
-                  : '—'}
+                : '0%'}
             </p>
             <p className="text-xs font-medium font-['Inter'] text-slate-900 uppercase tracking-wide">Reducere</p>
           </div>

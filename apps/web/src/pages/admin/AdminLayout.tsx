@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { getAuthToken } from '../../lib/api'
+import { getAuthToken, getAdminInquiriesUnreadCount } from '../../lib/api'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconDashboard() {
@@ -95,12 +95,25 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!getAuthToken() && location.pathname !== '/admin/login') {
       navigate('/admin/login', { replace: true })
     }
   }, [location.pathname, navigate])
+
+  useEffect(() => {
+    if (!getAuthToken() || location.pathname === '/admin/login') return
+    const fetchCount = () => {
+      getAdminInquiriesUnreadCount()
+        .then(setUnreadCount)
+        .catch(() => setUnreadCount(0))
+    }
+    fetchCount()
+    window.addEventListener('admin-inquiries-updated', fetchCount)
+    return () => window.removeEventListener('admin-inquiries-updated', fetchCount)
+  }, [location.pathname])
 
   return (
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
@@ -146,7 +159,14 @@ export default function AdminLayout() {
                   }`
                 }
               >
-                {item.icon}
+                <span className="relative flex-shrink-0">
+                  {item.icon}
+                  {item.to === '/admin/messages' && unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </span>
                 {item.label}
               </NavLink>
             ))}

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
 import { HelmetProvider } from 'react-helmet-async'
+import { LanguageProvider } from './contexts/LanguageContext'
 import Layout from './components/Layout'
 import AuthWrapper from './components/AuthWrapper'
 import Home from './pages/Home'
@@ -74,7 +75,7 @@ export default function App() {
         <Route path="/reset-password" element={<AuthWrapper><ResetPassword /></AuthWrapper>} />
 
         {/* ── Partner area (no header / footer) ── */}
-        <Route path="/partner" element={<PartnerLayout />}>
+        <Route path="/partner" element={<LanguageProvider><PartnerLayout /></LanguageProvider>}>
           <Route index element={<PartnerDashboard />} />
           <Route path="dashboard" element={<PartnerDashboard />} />
           <Route path="profil" element={<PartnerPublicProfile />} />
@@ -96,7 +97,7 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="produse" element={<Produse />} />
-          <Route path="produse/:id" element={<ProductRezidential />} />
+          <Route path="produse/:slug" element={<ProductRezidential />} />
           <Route path="reduceri" element={<Reduceri />} />
           <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
           <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />

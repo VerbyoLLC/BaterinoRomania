@@ -30,6 +30,7 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
 /** Produs public (pagina /produse) */
 export type PublicProduct = {
   id: string
+  slug?: string | null
   title: string
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string | null
@@ -54,9 +55,9 @@ export async function getProducts(): Promise<PublicProduct[]> {
   return Array.isArray(json) ? json : []
 }
 
-/** Un singur produs publicat (fără auth) */
-export async function getProduct(id: string): Promise<PublicProduct> {
-  const res = await fetch(`${API_BASE}/products/${id}`)
+/** Un singur produs publicat (fără auth). Acceptă id sau slug pentru SEO. */
+export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`)
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
   return json
@@ -366,6 +367,7 @@ export type CreateProductPayload = {
   images: string[]
   documenteTehnice: { descriere: string; url: string }[]
   faq: { q: string; a: string }[]
+  alimentaModalContent?: { title: string; intro?: string; sections: Array<{ label: string; items: string[] }> } | null
 }
 
 export async function uploadAdminFile(file: File, productFolder?: string, imageIndex?: number): Promise<{ url: string }> {
@@ -474,6 +476,43 @@ export async function updateProduct(id: string, payload: CreateProductPayload, s
     throw new Error(json.error || 'Eroare la actualizare.')
   }
   return json
+}
+
+export type AdminInquiry = {
+  id: string
+  registrationNumber: string | null
+  name: string
+  company: string
+  email: string
+  domain: string
+  requestType: string
+  message: string
+  ip: string | null
+  isRead: boolean
+  createdAt: string
+}
+
+export async function getAdminInquiries(): Promise<AdminInquiry[]> {
+  const res = await fetch(`${API_BASE}/admin/inquiries`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea mesajelor.')
+  return Array.isArray(json) ? json : []
+}
+
+export async function getAdminInquiriesUnreadCount(): Promise<number> {
+  const res = await fetch(`${API_BASE}/admin/inquiries/unread-count`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) return 0
+  return typeof json.count === 'number' ? json.count : 0
+}
+
+export async function markInquiryRead(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/inquiries/${id}/read`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare.')
 }
 
 export async function getAdminCompanies(): Promise<AdminCompany[]> {

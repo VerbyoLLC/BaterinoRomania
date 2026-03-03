@@ -9,20 +9,21 @@ import SEO from '../components/SEO'
 function ProductCardSkeleton() {
   return (
     <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-8 animate-pulse">
-      <div className="w-36 h-44 bg-neutral-200 rounded-lg" />
+      <div className="w-36 h-44 flex items-center justify-center">
+        <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-28 h-14 object-contain opacity-30" aria-hidden />
+      </div>
       <div className="w-48 h-5 bg-neutral-200 rounded mt-4 mx-2" />
       <div className="w-56 h-4 bg-neutral-200 rounded mt-3 mx-2" />
       <div className="w-52 h-4 bg-neutral-200 rounded mt-2 mx-2" />
-      <div className="w-24 h-8 bg-neutral-200 rounded mt-10 mx-2" />
-      <div className="w-20 h-3 bg-neutral-200 rounded mt-1 mx-2" />
+      <div className="w-40 h-9 bg-neutral-200 rounded mt-8 mx-2" />
     </div>
   )
 }
 
 /* ── Product card — same style as before ───────────────────────── */
-function ProductCard({ product, currency }: {
+function ProductCard({ product, partneriButtonLabel }: {
   product: PublicProduct
-  currency: string
+  partneriButtonLabel: string
 }) {
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
@@ -32,38 +33,36 @@ function ProductCard({ product, currency }: {
   ].filter(Boolean).join(' • ') || '—'
   const spec1 = [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' • ') || '—'
   const spec2 = [product.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
-  const price = product.salePrice != null ? Number(product.salePrice) : 0
 
   return (
-    <Link to={`/produse/${product.id}`} className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-8 cursor-pointer transition-shadow duration-300 hover:shadow-md">
+    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-8 transition-shadow duration-300 hover:shadow-md">
+      <Link to={`/produse/${product.slug || product.id}`} className="flex flex-col items-center w-full">
+        <img
+          src={img}
+          alt={product.title}
+          className="w-36 h-44 object-contain"
+        />
 
-      <img
-        src={img}
-        alt={product.title}
-        className="w-36 h-44 object-contain"
-      />
+        <h3 className="w-64 text-center text-black text-xl font-bold font-['Inter'] leading-6 mt-2 px-2">
+          {product.title}
+        </h3>
 
-      <h3 className="w-64 text-center text-black text-xl font-bold font-['Inter'] leading-6 mt-2 px-2">
-        {product.title}
-      </h3>
+        <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight mt-1.5">
+          {spec1}
+        </p>
 
-      <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight mt-1.5">
-        {spec1}
-      </p>
+        <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight">
+          {spec2}
+        </p>
+      </Link>
 
-      <p className="text-neutral-950 text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight">
-        {spec2}
-      </p>
-
-      <p className="text-sky-950 text-2xl font-bold font-['Inter'] tracking-wide mt-10">
-        {price.toLocaleString('ro-RO')} {currency}
-      </p>
-
-      <p className="text-neutral-800 text-xs font-medium font-['Nunito_Sans'] tracking-wide -mt-1">
-        include TVA
-      </p>
-
-    </Link>
+      <Link
+        to={`/produse/${product.slug || product.id}`}
+        className="mt-8 w-full max-w-[220px] py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide"
+      >
+        {partneriButtonLabel}
+      </Link>
+    </div>
   )
 }
 
@@ -173,7 +172,7 @@ export default function Produse() {
             })}
             {(sector === 'rezidential' || voltageExiting) && (
               <div
-                className={`flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
+                className={`hidden md:flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
                 onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
               >
                 <span className="flex items-center text-gray-400 px-1" aria-hidden>
@@ -226,21 +225,10 @@ export default function Produse() {
 
         {/* ── PRODUCT GRID ── */}
         {loading ? (
-          <div className="space-y-6">
-            <div className="flex justify-center">
-              <div className="flex items-center gap-2 text-gray-500 font-medium font-['Inter'] text-sm">
-                <svg className="animate-spin h-5 w-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>{tr.loadingProducts}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ProductCardSkeleton key={i} />
-              ))}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -248,13 +236,13 @@ export default function Produse() {
               <ProductCard
                 key={product.id}
                 product={product}
-                currency={tr.currency}
+                partneriButtonLabel={tr.disponibilPentruParteneri}
               />
             ))}
           </div>
         ) : (
-          <div className="text-center py-24 text-gray-400 font-['Inter']">
-            {tr.noResults}
+          <div className="text-center py-24 text-gray-600 font-['Inter'] text-base">
+            {(sector === 'medical' || sector === 'industrial') ? tr.productsComingSoon : tr.noResults}
           </div>
         )}
 

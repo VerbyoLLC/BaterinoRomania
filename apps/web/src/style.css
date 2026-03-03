@@ -36,6 +36,36 @@
   animation: voltage-exit 0.3s ease-out forwards;
 }
 
+@keyframes slide-in-from-left {
+  from {
+    opacity: 0.85;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-from-left {
+  animation: slide-in-from-left 0.35s ease-out forwards;
+}
+
+@keyframes slide-up-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-from-bottom {
+  animation: slide-up-from-bottom 0.35s ease-out forwards;
+}
+
 @layer utilities {
   /*
    * Responsive column grid

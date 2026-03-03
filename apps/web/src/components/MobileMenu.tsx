@@ -154,11 +154,12 @@ export default function MobileMenu({
         aria-hidden="true"
       />
 
-      {/* Slide-in panel – full width, constrained to visible viewport */}
+      {/* Slide-in panel – full width, visible on all mobile resolutions */}
       <aside
-        className={`fixed top-0 left-0 w-full max-h-[100dvh] h-[100dvh] bg-white z-50 shadow-xl transition-transform duration-300 ease-out md:hidden flex flex-col ${
+        className={`fixed top-0 left-0 right-0 bottom-0 w-full h-[100dvh] min-h-[100vh] max-h-[100dvh] bg-white z-50 shadow-xl transition-transform duration-300 ease-out md:hidden flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-modal="true"
         aria-label="Menu"
       >
@@ -178,8 +179,11 @@ export default function MobileMenu({
           </button>
         </div>
 
-        {/* Scrollable content – fills remaining space, never exceeds viewport */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto pb-8 px-6 overscroll-contain">
+        {/* Scrollable content – fills remaining space, scrolls on all mobile resolutions */}
+        <div
+          className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-8 px-6 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
           {showLoginPage ? (
             /* ── Login sub-page ── */
             <div className="pt-4">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAdminCompanies, getAuthToken, testApiDb, suspendAdminCompany, approveAdminCompany, updateAdminCompanyDiscount, isPublicProfileComplete, type AdminCompany } from '../../lib/api'
 
@@ -29,6 +29,7 @@ export default function AdminCompanies() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<keyof AdminCompany | 'user' | ''>('')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [editingDiscount, setEditingDiscount] = useState<Record<string, string>>({})
   const actionRef = useRef<HTMLDivElement>(null)
 
   const pendingCompanies = companies.filter((c) => !c.isApproved)
@@ -71,7 +72,10 @@ export default function AdminCompanies() {
 
   const loadCompanies = () => {
     getAdminCompanies()
-      .then(setCompanies)
+      .then((data) => {
+        setCompanies(data)
+        setEditingDiscount({})
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Eroare la încărcare.'))
       .finally(() => setLoading(false))
   }
@@ -138,7 +142,7 @@ export default function AdminCompanies() {
     }
   }
 
-  const handleDiscountChange = async (c: AdminCompany, value: string) => {
+  const handleDiscountChange = useCallback(async (c: AdminCompany, value: string) => {
     const num = value.trim() === '' ? null : parseFloat(value)
     if (num !== null && (Number.isNaN(num) || num < 0.5 || num > 60)) return
     const current = c.partnerDiscountPercent ?? null
@@ -148,12 +152,29 @@ export default function AdminCompanies() {
       const updated = await updateAdminCompanyDiscount(c.id, num)
       setCompanies((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
       if (detailCompany?.id === c.id) setDetailCompany(updated)
+      setEditingDiscount((prev) => {
+        const next = { ...prev }
+        delete next[c.id]
+        return next
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eroare la actualizarea reducerii.')
     } finally {
       setDiscountSavingId(null)
     }
-  }
+  }, [detailCompany?.id])
+
+  const discountDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const handleDiscountInput = useCallback((c: AdminCompany, value: string) => {
+    const prev = discountDebounceRef.current[c.id]
+    if (prev) clearTimeout(prev)
+    const num = value.trim() === '' ? null : parseFloat(value)
+    if (num !== null && (Number.isNaN(num) || num < 0.5 || num > 60)) return
+    discountDebounceRef.current[c.id] = setTimeout(() => {
+      handleDiscountChange(c, value)
+      delete discountDebounceRef.current[c.id]
+    }, 600)
+  }, [handleDiscountChange])
 
   const panelOpen = detailCompany !== null || isClosingPanel
 
@@ -412,14 +433,24 @@ export default function AdminCompanies() {
                         </td>
                         <td className="py-3 px-4">
                           <input
-                            key={`${c.id}-${c.partnerDiscountPercent ?? ''}`}
                             type="number"
                             min={0.5}
                             max={60}
                             step={0.5}
                             placeholder="—"
-                            defaultValue={c.partnerDiscountPercent ?? ''}
-                            onBlur={(e) => handleDiscountChange(c, e.target.value)}
+                            value={editingDiscount[c.id] ?? (c.partnerDiscountPercent != null ? String(c.partnerDiscountPercent) : '')}
+                            onChange={(e) => {
+                              setEditingDiscount((prev) => ({ ...prev, [c.id]: e.target.value }))
+                              handleDiscountInput(c, e.target.value)
+                            }}
+                            onBlur={(e) => {
+                              const id = discountDebounceRef.current[c.id]
+                              if (id) {
+                                clearTimeout(id)
+                                delete discountDebounceRef.current[c.id]
+                              }
+                              handleDiscountChange(c, e.target.value)
+                            }}
                             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                             disabled={discountSavingId === c.id}
                             className="w-16 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50"
@@ -530,8 +561,19 @@ export default function AdminCompanies() {
                               max={60}
                               step={0.5}
                               placeholder="—"
-                              defaultValue={detailCompany.partnerDiscountPercent ?? ''}
-                              onBlur={(e) => handleDiscountChange(detailCompany, e.target.value)}
+                              value={editingDiscount[detailCompany.id] ?? (detailCompany.partnerDiscountPercent != null ? String(detailCompany.partnerDiscountPercent) : '')}
+                              onChange={(e) => {
+                                setEditingDiscount((prev) => ({ ...prev, [detailCompany.id]: e.target.value }))
+                                handleDiscountInput(detailCompany, e.target.value)
+                              }}
+                              onBlur={(e) => {
+                                const id = discountDebounceRef.current[detailCompany.id]
+                                if (id) {
+                                  clearTimeout(id)
+                                  delete discountDebounceRef.current[detailCompany.id]
+                                }
+                                handleDiscountChange(detailCompany, e.target.value)
+                              }}
                               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                               disabled={discountSavingId === detailCompany.id}
                               className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50"

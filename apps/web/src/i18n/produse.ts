@@ -29,7 +29,9 @@ export type ProduseTranslations = {
   pretLabel: string
   currency: string
   noResults: string
+  productsComingSoon: string
   loadingProducts: string
+  disponibilPentruParteneri: string
   seoTitle: string
   seoDesc: string
   sectorOptions: { value: string; label: string }[]
@@ -58,7 +60,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     pretLabel: 'Preț',
     currency: 'RON',
     noResults: 'Niciun produs nu corespunde filtrelor selectate.',
+    productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
     loadingProducts: 'Se încarcă produsele…',
+    disponibilPentruParteneri: 'VEZI DETALII',
     seoTitle: 'Baterii LiFePO4',
     seoDesc: 'Sisteme de stocare a energiei LiFePO4 pentru uz rezidential, industrial, medical și maritim. Importator oficial LithTech în România.',
     sectorOptions: [
@@ -106,7 +110,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     pretLabel: 'Price',
     currency: 'RON',
     noResults: 'No products match the selected filters.',
+    productsComingSoon: 'The site is being updated. Products will be available soon.',
     loadingProducts: 'Loading products…',
+    disponibilPentruParteneri: 'VIEW DETAILS',
     seoTitle: 'LiFePO4 Batteries',
     seoDesc: 'LiFePO4 energy storage systems for residential, industrial, medical and marine use. Official LithTech importer in Romania.',
     sectorOptions: [
@@ -154,7 +160,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     pretLabel: '价格',
     currency: 'RON',
     noResults: '没有符合所选过滤条件的产品。',
+    productsComingSoon: '网站正在更新中，产品即将推出。',
     loadingProducts: '正在加载产品…',
+    disponibilPentruParteneri: '查看详情',
     seoTitle: 'LiFePO4电池',
     seoDesc: '用于住宅、工业、医疗和海事的LiFePO4储能系统。罗马尼亚官方LithTech进口商。',
     sectorOptions: [

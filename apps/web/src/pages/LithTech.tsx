@@ -373,7 +373,7 @@ export default function LithTech() {
           btn1Label={tr.ctaBtn1}
           btn1To="/produse"
           btn2Label={tr.ctaBtn2}
-          btn2To="/companie/viziune"
+          btn2To="/contact"
         />
 
       </article>
