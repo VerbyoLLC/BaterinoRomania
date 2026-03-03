@@ -94,6 +94,7 @@ model Inquiry {
   requestType        String   // "sales" | "technical" | "service" | "partnership"
   message            String   @db.Text
   ip                 String?
+  isRead             Boolean  @default(false)
   createdAt          DateTime @default(now())
 }
 
@@ -104,6 +105,7 @@ model Product {
   // Basic
   brand                 String?
   title                 String
+  slug                  String?  @unique // URL slug for SEO, e.g. "baterie-hp-2000"
   sku                   String   @unique
   description           String?
   tipProdus             String   // "rezidential" | "industrial"
@@ -140,6 +142,7 @@ model Product {
   images                Json     @default("[]") // string[] URLs
   documenteTehnice      Json     @default("[]") // { descriere: string, url: string }[]
   faq                   Json     @default("[]") // { q: string, a: string }[]
+  alimentaModalContent  Json?    // { title, intro?, sections: [{ label, items: string[] }] } — product-specific "Ce se poate alimenta" modal
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

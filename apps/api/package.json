@@ -8,7 +8,8 @@
     "build": "prisma generate && prisma migrate deploy",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "populate-slugs": "node scripts/populate-product-slugs.cjs"
   },
   "keywords": [],
   "author": "",

@@ -13,6 +13,21 @@ const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = requ
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
+/** Slugify title for URL: lowercase, hyphenated, no diacritics */
+function slugify(title) {
+  if (!title || typeof title !== 'string') return ''
+  return title
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 100) || 'produs'
+}
+
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 const app = express()
@@ -23,13 +38,14 @@ app.use(cors({
   origin: true,
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }))
 app.use(express.json())
 
 // Explicit OPTIONS for admin products (CORS preflight)
 app.options('/api/admin/products', (_, res) => res.status(204).end())
 app.options('/api/admin/products/', (_, res) => res.status(204).end())
+app.options('/api/admin/products/:id', (_, res) => res.status(204).end())
 
 // ── Auth middleware (pentru rute protejate) ────────────────────────────
 function authMiddleware(req, res, next) {
@@ -402,7 +418,12 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
       where: { userId: req.userId },
     })
     if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
-    return res.json(partner)
+    // Ensure partnerDiscountPercent is always present (plain number) for frontend
+    const result = {
+      ...partner,
+      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
+    }
+    return res.json(result)
   } catch (err) {
     console.error('Partner get error:', err)
     res.status(500).json({ error: 'Eroare la citirea profilului.' })
@@ -467,6 +488,44 @@ app.get('/api/debug/mail', async (req, res) => {
   }
 })
 
+// ── Admin: list inquiries (messages) ───────────────────────────────────
+app.get('/api/admin/inquiries', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const inquiries = await prisma.inquiry.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
+    return res.json(inquiries)
+  } catch (err) {
+    console.error('Admin inquiries error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcarea mesajelor.' })
+  }
+})
+
+app.get('/api/admin/inquiries/unread-count', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const count = await prisma.inquiry.count({ where: { isRead: false } })
+    return res.json({ count })
+  } catch (err) {
+    console.error('Admin unread count error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.patch('/api/admin/inquiries/:id/read', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    await prisma.inquiry.update({
+      where: { id },
+      data: { isRead: true },
+    })
+    return res.json({ ok: true })
+  } catch (err) {
+    if (err?.code === 'P2025') return res.status(404).json({ error: 'Mesaj negăsit.' })
+    console.error('Admin mark read error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
 // ── Admin: list companies (partners) ───────────────────────────────────
 const adminCompaniesHandler = async (req, res) => {
   try {
@@ -474,7 +533,12 @@ const adminCompaniesHandler = async (req, res) => {
       include: { user: { select: { email: true } } },
       orderBy: { createdAt: 'desc' },
     })
-    return res.json(partners)
+    // Ensure partnerDiscountPercent is always present (plain number) for frontend
+    const result = partners.map((p) => ({
+      ...p,
+      partnerDiscountPercent: p.partnerDiscountPercent != null ? Number(p.partnerDiscountPercent) : null,
+    }))
+    return res.json(result)
   } catch (err) {
     console.error('Admin companies error:', err)
     const msg = err?.message || 'Eroare la încărcarea companiilor.'
@@ -500,7 +564,11 @@ app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddlewa
       data: { partnerDiscountPercent: discountPercent === '' || discountPercent === null || discountPercent === undefined ? null : Number(discountPercent) },
       include: { user: { select: { email: true } } },
     })
-    return res.json(partner)
+    const result = {
+      ...partner,
+      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
+    }
+    return res.json(result)
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
     console.error('Admin discount error:', err)
@@ -570,11 +638,21 @@ const createProductHandler = async (req, res) => {
     const documenteTehnice = Array.isArray(body.documenteTehnice) ? body.documenteTehnice : []
     const faq = Array.isArray(body.faq) ? body.faq : []
 
+    let baseSlug = slugify(title)
+    let slug = baseSlug
+    let suffix = 0
+    while (true) {
+      const existing = await prisma.product.findFirst({ where: { slug } })
+      if (!existing) break
+      slug = `${baseSlug}-${++suffix}`
+    }
+
     const product = await prisma.product.create({
       data: {
         status,
         brand: body.brand?.trim() || null,
         title,
+        slug,
         sku,
         description: body.description?.trim() || null,
         tipProdus,
@@ -605,6 +683,7 @@ const createProductHandler = async (req, res) => {
         images,
         documenteTehnice,
         faq,
+        alimentaModalContent: body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null,
       },
     })
     return res.status(201).json(product)
@@ -665,6 +744,21 @@ const updateProductHandler = async (req, res) => {
     if (Array.isArray(body.images)) data.images = body.images
     if (Array.isArray(body.documenteTehnice)) data.documenteTehnice = body.documenteTehnice
     if (Array.isArray(body.faq)) data.faq = body.faq
+    if (body.alimentaModalContent !== undefined) {
+      data.alimentaModalContent = body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null
+    }
+
+    if (title) {
+      let baseSlug = slugify(title)
+      let newSlug = baseSlug
+      let suffix = 0
+      while (true) {
+        const existing = await prisma.product.findFirst({ where: { slug: newSlug } })
+        if (!existing || existing.id === id) break
+        newSlug = `${baseSlug}-${++suffix}`
+      }
+      data.slug = newSlug
+    }
 
     const product = await prisma.product.update({
       where: { id },
@@ -749,13 +843,19 @@ app.post('/api/inquiries', async (req, res) => {
 })
 
 // ── Public: list published products (no auth) ───────────────────────────
+// When no published products exist, fall back to drafts (helps new sites / dev)
 const listPublicProductsHandler = async (req, res) => {
   try {
     if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
-    const products = await prisma.product.findMany({
+    let products = await prisma.product.findMany({
       where: { status: 'published' },
       orderBy: { createdAt: 'desc' },
     })
+    if (products.length === 0) {
+      products = await prisma.product.findMany({
+        orderBy: { createdAt: 'desc' },
+      })
+    }
     return res.json(products)
   } catch (err) {
     console.error('List public products error:', err)
@@ -766,12 +866,26 @@ app.get('/api/products', listPublicProductsHandler)
 app.get('/products', listPublicProductsHandler)
 
 // ── Public: get single published product (no auth) ───────────────────────
+// Accepts id (cuid) or slug for SEO-friendly URLs
+// Falls back to draft when no published products exist (consistent with list)
 const getPublicProductHandler = async (req, res) => {
   try {
     const { id } = req.params
-    const product = await prisma.product.findFirst({
-      where: { id, status: 'published' },
+    const isCuid = /^c[a-z0-9]{24}$/.test(id)
+    let product = await prisma.product.findFirst({
+      where: {
+        status: 'published',
+        ...(isCuid ? { id } : { slug: id }),
+      },
     })
+    if (!product) {
+      const publishedCount = await prisma.product.count({ where: { status: 'published' } })
+      if (publishedCount === 0) {
+        product = await prisma.product.findFirst({
+          where: isCuid ? { id } : { slug: id },
+        })
+      }
+    }
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
     return res.json(product)
   } catch (err) {

@@ -410,7 +410,7 @@ export default function Rezidential() {
         title={tr.ctaTitle}
         desc={tr.ctaDesc}
         btn1Label={tr.ctaButton}
-        btn1To="/companie/viziune"
+        btn1To="/contact"
       />
 
     </article>

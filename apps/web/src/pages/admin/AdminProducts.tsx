@@ -61,6 +61,7 @@ export default function AdminProducts() {
     { descriere: '', file: null },
   ])
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }])
+  const [alimentaModalContent, setAlimentaModalContent] = useState<string>('')
 
   const fetchProducts = async () => {
     setProductsLoading(true)
@@ -162,6 +163,12 @@ export default function AdminProducts() {
         ? faqData.map((f) => ({ q: f.q || '', a: f.a || '' }))
         : [{ q: '', a: '' }]
     )
+    const alimenta = (p as { alimentaModalContent?: unknown }).alimentaModalContent
+    setAlimentaModalContent(
+      alimenta && typeof alimenta === 'object'
+        ? JSON.stringify(alimenta, null, 2)
+        : ''
+    )
     setPanelOpen(true)
   }
 
@@ -207,6 +214,7 @@ export default function AdminProducts() {
     setVat('')
     setDocumenteTehnice([{ descriere: '', file: null }])
     setFaq([{ q: '', a: '' }])
+    setAlimentaModalContent('')
     images.forEach(({ preview }) => URL.revokeObjectURL(preview))
     setImages([])
     setPanelOpen(true)
@@ -439,6 +447,17 @@ export default function AdminProducts() {
       images: imageUrls,
       documenteTehnice: docTehnice,
       faq: faqFiltered,
+      alimentaModalContent: (() => {
+        const s = alimentaModalContent.trim()
+        if (!s) return undefined
+        try {
+          const parsed = JSON.parse(s) as { title?: string; intro?: string; sections?: Array<{ label?: string; items?: string[] }> }
+          if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) return parsed
+        } catch {
+          /* invalid JSON – ignore */
+        }
+        return undefined
+      })(),
     }
   }
 
@@ -1331,6 +1350,19 @@ export default function AdminProducts() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Ce se poate alimenta – conținut modal personalizat */}
+              <div className="pt-2 border-t border-gray-200">
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Ce se poate alimenta – conținut modal</h3>
+                <p className="text-xs text-gray-500 mb-3">Opțional. JSON: {"{ title, intro?, sections: [{ label, items: string[] }] }"}. Dacă gol, se folosește conținutul implicit (5kWh).</p>
+                <textarea
+                  value={alimentaModalContent}
+                  onChange={(e) => setAlimentaModalContent(e.target.value)}
+                  placeholder='{"title":"Ce se poate alimenta cu o baterie de 10kWh?","intro":"Capacitate ~9–10 kWh.","sections":[{"label":"Autonomie estimativă","items":["300W → ~30h","500W → ~18–20h"]}]}'
+                  rows={8}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                />
               </div>
 
             </form>

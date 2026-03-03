@@ -22,6 +22,7 @@ export type HomeTranslations = {
   heroMobile1Desc: string
   heroMobile2Title: string
   heroMobile2Desc: string
+  heroMobileInstDesc: string
   heroImageAlt: string
 
   // Hero – slider slide content
@@ -60,6 +61,12 @@ export type HomeTranslations = {
   productsVoltageLow: string
   productsVoltageHigh: string
   includesTVA: string
+  disponibilPentruParteneri: string
+  productsComingSoon: string
+  welcomeModalTitle: string
+  welcomeModalSubtitle: string
+  welcomeModalProfesionist: string
+  welcomeModalClientFinal: string
 
   // Features section
   featuresSectionTitle: string
@@ -99,6 +106,9 @@ export type HomeTranslations = {
   lithtechBody: string
   lithtechImgAltBaterino: string
   lithtechImgAltLithTech: string
+  lithtechCardProduces: string
+  lithtechCardImplements: string
+  lithtechPartnershipLink: string
 
   // Divisions section
   divisionsSectionTitle: string
@@ -148,16 +158,17 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroMobile1Desc: 'Proiecte integrate pentru industrie și parcuri fotovoltaice.',
     heroMobile2Title: 'Soluții BESS pentru infrastructura medicală critică',
     heroMobile2Desc: 'Pentru clinici de imagistică, stomatologie, centre de transfuzie și spitale.',
+    heroMobileInstDesc: 'Îți oferim prețuri avantajoase, stocuri permanente în România cu livrare rapidă și suport tehnic local.',
     heroImageAlt: 'Baterii LiFePO4',
 
     heroSlideRezTitle: 'Soluții de stocare a energiei,\nrezidențiale și micro-grid-uri\ncu baterii LiFePO4',
     heroSlideRezDesc: 'Soluții dedicate **locuințelor individuale și micro-grid-urilor rezidențiale** — pentru autonomie energetică, siguranță și optimizarea autoconsumului.',
     heroSlideIndTitle: 'Soluții EPC pentru stocare de energie la nivel MW',
     heroSlideIndDesc: '**De la concept și dimensionare tehnică până la punere în funcțiune și mentenanță** — livrăm proiecte integrate pentru industrie și parcuri fotovoltaice.',
-    heroSlideIndCta: 'CERE EVALUARE TEHNICĂ',
+    heroSlideIndCta: 'AFLA MAI MULTE',
     heroSlideMedTitle: 'Sisteme de stocare a energiei pentru infrastructura medicală critică',
     heroSlideMedDesc: 'Proiectăm și instalăm sisteme de stocare a energiei pentru clinici de imagistică, stomatologie, centre de transfuzie și spitale — cu focus pe siguranță și continuitate, atunci când energia nu are voie să se oprească.',
-    heroSlideMedCta: 'DISCUTA CU ECHIPA',
+    heroSlideMedCta: 'AFLA MAI MULTE',
     heroSlideInstTitle: 'NE MĂRIM REȚEAUA DE\nINSTALATORI ȘI DISTRIBUITORI',
     heroSlideInstDesc: 'Fiind importatori LithTech,** îți oferim prețuri avantajoase, stocuri permanente în România cu livrare rapidă și suport tehnic local**. În plus, **gestionăm relația cu clientul final și îți oferim acces la proiecte industriale de anvergură**.',
     heroSlideInstCta: 'VEZI AVANTAJE',
@@ -183,6 +194,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageLow: 'Tensiune joasă',
     productsVoltageHigh: 'Tensiune înaltă',
     includesTVA: 'include TVA',
+    disponibilPentruParteneri: 'VEZI DETALII',
+    productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
+    welcomeModalTitle: 'Bine ați venit',
+    welcomeModalSubtitle: 'Sunteți un profesionist sau client final?',
+    welcomeModalProfesionist: 'DA, SUNT PROFESIONIST',
+    welcomeModalClientFinal: 'NU, SUNT CLIENT FINAL',
 
     featuresSectionTitle: 'DE CE SĂ ÎȚI CUMPERI BATERIE DE LA NOI?',
     f1Title: 'Garanție extinsă 10 ani',
@@ -219,6 +236,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     lithtechBody: 'Am ales să colaborăm cu un singur producător de sisteme de stocare energetică, atât pentru sectorul rezidențial, cât și pentru cel industrial, pentru a putea oferi produse de calitate, mentenanță și suport tehnic real după vânzare.\n\nRolul nostru este să protejăm clientul final, să contribuim la o piață transparentă și să susținem standardele brandului LithTech în România.',
     lithtechImgAltBaterino: 'Baterino – livrare și sisteme solare',
     lithtechImgAltLithTech: 'LithTech – importator și distribuitor în România',
+    lithtechCardProduces: 'PRODUCE TEHNOLOGIE',
+    lithtechCardImplements: 'IMPLEMENTEAZĂ',
+    lithtechPartnershipLink: 'VEZI PARTENERIAT',
     divisionsSectionTitle: 'RESPONSABILITATE ȘI COMUNITATE',
     divisionsSectionBody: 'Suntem o companie cu capital 100% românesc, parte din grupul Baterino Global, activă pe piața din România din 2025 și în plină expansiune la nivel european și internațional. Misiunea noastră este să oferim produse de calitate, susținute de servicii și suport real, atât în momentul achiziției, cât și pe termen lung, după vânzare.',
     divisionsSectionBtn: 'DESPRE NOI',
@@ -262,16 +282,17 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroMobile1Desc: 'Integrated projects for industry and solar parks.',
     heroMobile2Title: 'BESS solutions for critical medical infrastructure',
     heroMobile2Desc: 'For imaging clinics, dental practices, transfusion centres and hospitals.',
+    heroMobileInstDesc: 'We offer you competitive pricing, permanent stock in Romania with fast delivery and local technical support.',
     heroImageAlt: 'LiFePO4 batteries',
 
     heroSlideRezTitle: 'Energy storage solutions,\nresidential and micro-grids\nwith LiFePO4 batteries',
     heroSlideRezDesc: 'Solutions dedicated to **individual homes and residential micro-grids** — for energy autonomy, safety and self-consumption optimisation.',
     heroSlideIndTitle: 'EPC solutions for MW-scale energy storage',
     heroSlideIndDesc: '**From concept and technical sizing to commissioning and maintenance** — we deliver integrated projects for industry and solar parks.',
-    heroSlideIndCta: 'REQUEST TECHNICAL EVALUATION',
+    heroSlideIndCta: 'LEARN MORE',
     heroSlideMedTitle: 'Energy storage systems for critical medical infrastructure',
     heroSlideMedDesc: 'We design and install energy storage systems for imaging clinics, dental practices, transfusion centres and hospitals — with a focus on safety and continuity, when power cannot afford to stop.',
-    heroSlideMedCta: 'TALK TO THE TEAM',
+    heroSlideMedCta: 'LEARN MORE',
     heroSlideInstTitle: 'WE ARE EXPANDING OUR NETWORK OF\nINSTALLERS AND DISTRIBUTORS',
     heroSlideInstDesc: 'As LithTech importers,** we offer you competitive pricing, permanent stock in Romania with fast delivery and local technical support**. In addition, **we manage the end-client relationship and give you access to large-scale industrial projects**.',
     heroSlideInstCta: 'SEE BENEFITS',
@@ -297,6 +318,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageLow: 'Low Voltage',
     productsVoltageHigh: 'High Voltage',
     includesTVA: 'includes VAT',
+    disponibilPentruParteneri: 'VIEW DETAILS',
+    productsComingSoon: 'The site is being updated. Products will be available soon.',
+    welcomeModalTitle: 'Welcome',
+    welcomeModalSubtitle: 'Are you a professional or end customer?',
+    welcomeModalProfesionist: 'YES, I AM A PROFESSIONAL',
+    welcomeModalClientFinal: 'NO, I AM AN END CUSTOMER',
 
     featuresSectionTitle: 'WHY BUY YOUR BATTERY FROM US?',
     f1Title: 'Extended 10-Year Warranty',
@@ -333,6 +360,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     lithtechBody: 'We chose to work with a single energy storage system manufacturer — for both residential and industrial sectors — in order to offer quality products, maintenance and real post-sale technical support.\n\nOur role is to protect the end client, contribute to a transparent market and uphold LithTech brand standards in Romania.',
     lithtechImgAltBaterino: 'Baterino – delivery and solar systems',
     lithtechImgAltLithTech: 'LithTech – importer and distributor in Romania',
+    lithtechCardProduces: 'PRODUCES TECHNOLOGY',
+    lithtechCardImplements: 'IMPLEMENTS',
+    lithtechPartnershipLink: 'SEE PARTNERSHIP',
     divisionsSectionTitle: 'RESPONSIBILITY AND COMMUNITY',
     divisionsSectionBody: 'We are a company with 100% Romanian capital, part of the Baterino Global group, active on the Romanian market since 2025 and rapidly expanding across Europe and internationally. Our mission is to offer quality products backed by real services and support, both at the point of purchase and long-term, after the sale.',
     divisionsSectionBtn: 'ABOUT US',
@@ -376,16 +406,17 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroMobile1Desc: '为工业和光伏电站提供一体化项目。',
     heroMobile2Title: '关键医疗基础设施BESS解决方案',
     heroMobile2Desc: '适用于影像中心、牙科诊所、输血中心和医院。',
+    heroMobileInstDesc: '我们为您提供有竞争力的价格、罗马尼亚常备库存、快速配送和本地技术支持。',
     heroImageAlt: '磷酸铁锂电池',
 
     heroSlideRezTitle: '储能解决方案，\n住宅与微电网\n磷酸铁锂电池',
     heroSlideRezDesc: '专为独栋住宅和住宅微电网设计的解决方案——实现能源自主、安全和自用优化。',
     heroSlideIndTitle: '兆瓦级储能EPC解决方案',
     heroSlideIndDesc: '从概念和技术选型到调试和维护——我们为工业和光伏电站提供一体化项目。',
-    heroSlideIndCta: '申请技术评估',
+    heroSlideIndCta: '了解更多',
     heroSlideMedTitle: '关键医疗基础设施储能系统',
     heroSlideMedDesc: '我们为影像中心、牙科诊所、输血中心和医院设计和安装储能系统——专注于安全和连续性，在电力不容中断的场合。',
-    heroSlideMedCta: '联系团队',
+    heroSlideMedCta: '了解更多',
     heroSlideInstTitle: '我们正在扩大\n安装商和分销商网络',
     heroSlideInstDesc: '作为LithTech进口商，**我们为您提供有竞争力的价格、罗马尼亚常备库存、快速配送和本地技术支持**。此外，**我们管理终端客户关系并为您提供大型工业项目机会**。',
     heroSlideInstCta: '查看优势',
@@ -411,6 +442,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageLow: '低压',
     productsVoltageHigh: '高压',
     includesTVA: '含增值税',
+    disponibilPentruParteneri: '查看详情',
+    productsComingSoon: '网站正在更新中，产品即将推出。',
+    welcomeModalTitle: '欢迎',
+    welcomeModalSubtitle: '您是专业人士还是终端客户？',
+    welcomeModalProfesionist: '我是专业人士',
+    welcomeModalClientFinal: '我是终端客户',
 
     featuresSectionTitle: '为什么选择我们购买电池？',
     f1Title: '延长10年质保',
@@ -447,6 +484,9 @@ const translations: Record<LangCode, HomeTranslations> = {
     lithtechBody: '我们选择与单一储能系统制造商合作——涵盖住宅和工业领域——以提供优质产品、维护和真实的售后技术支持。\n\n我们的职责是保护终端客户，促进透明市场，并在罗马尼亚维护LithTech品牌标准。',
     lithtechImgAltBaterino: 'Baterino – 配送与光伏系统',
     lithtechImgAltLithTech: 'LithTech – 罗马尼亚进口商与分销商',
+    lithtechCardProduces: '生产技术',
+    lithtechCardImplements: '实施',
+    lithtechPartnershipLink: '查看合作',
     divisionsSectionTitle: '责任与社区',
     divisionsSectionBody: '我们是一家100%罗马尼亚资本的公司，隶属于Baterino Global集团，自2025年起活跃于罗马尼亚市场，并正在欧洲和国际市场快速扩张。我们的使命是提供优质产品，辅以真实的服务和支持，无论是在购买时还是销售后的长期服务。',
     divisionsSectionBtn: '关于我们',

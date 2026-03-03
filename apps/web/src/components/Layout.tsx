@@ -3,6 +3,7 @@ import { LanguageProvider } from '../contexts/LanguageContext'
 import { ViziuneHeaderProvider } from '../contexts/ViziuneHeaderContext'
 import Header from './Header'
 import Footer from './Footer'
+import FloatingStickyButtons from './FloatingStickyButtons'
 
 export default function Layout() {
   return (
@@ -14,6 +15,7 @@ export default function Layout() {
             <Outlet />
           </main>
           <Footer />
+          <FloatingStickyButtons />
         </div>
       </ViziuneHeaderProvider>
     </LanguageProvider>

@@ -28,46 +28,139 @@ function renderBaterinoGlobalLink(text: string) {
   )
 }
 
-const LOCALE_BY_LANG: Record<string, string> = { ro: 'ro-RO', en: 'en-US', zh: 'zh-CN' }
+/* ── Product card skeleton for loading state ─────────────────── */
+function HomeProductCardSkeleton() {
+  return (
+    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 animate-pulse">
+      <div className="w-36 h-44 mb-5 flex items-center justify-center">
+        <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-24 h-12 object-contain opacity-30" aria-hidden />
+      </div>
+      <div className="w-40 h-5 bg-neutral-200 rounded mb-3" />
+      <div className="w-full h-4 bg-neutral-200 rounded mb-1" />
+      <div className="w-full h-4 bg-neutral-200 rounded mb-4" />
+      <div className="w-40 h-9 bg-neutral-200 rounded" />
+    </div>
+  )
+}
 
 /* ── Mini product card for featured products ─────────────────── */
 function HomeProductCard({
-  id, name, image, spec1, spec2, price, includesTVA, locale = 'ro-RO',
+  id, name, image, spec1, spec2, partneriButtonLabel,
 }: {
   id: string
   name: string
   image: string
   spec1: string
   spec2: string
-  price: number
-  includesTVA: string
-  locale?: string
+  partneriButtonLabel: string
 }) {
+  const [imgLoaded, setImgLoaded] = useState(false)
   return (
-    <Link
-      to={`/produse/${id}`}
-      className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 transition-shadow duration-300 hover:shadow-md"
-    >
-      <img
-        src={image}
-        alt={name}
-        className="w-28 h-36 object-contain mb-5"
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-      />
-      <h3 className="text-center text-black text-lg font-bold font-['Inter'] leading-snug mb-3">
-        {name}
-      </h3>
-      <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6">{spec1}</p>
-      <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6 mb-4">{spec2}</p>
-      <p className="text-sky-950 text-xl font-bold font-['Inter']">
-        {price.toLocaleString(locale)} RON
-      </p>
-      <p className="text-neutral-800 text-xs font-medium font-['Nunito_Sans']">{includesTVA}</p>
-    </Link>
+    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 transition-shadow duration-300 hover:shadow-md">
+      <Link to={`/produse/${id}`} className="flex flex-col items-center w-full">
+        <div className="relative w-36 h-44 mb-5 flex items-center justify-center">
+          {!imgLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-24 h-12 object-contain opacity-30 animate-pulse" aria-hidden />
+            </div>
+          )}
+          <img
+            src={image}
+            alt={name}
+            className={`w-36 h-44 object-contain transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImgLoaded(true)}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none'
+              setImgLoaded(true)
+            }}
+          />
+        </div>
+        <h3 className="text-center text-black text-lg font-bold font-['Inter'] leading-snug mb-3">
+          {name}
+        </h3>
+        <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6">{spec1}</p>
+        <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6 mb-4">{spec2}</p>
+      </Link>
+      <Link
+        to={`/produse/${id}`}
+        className="w-full max-w-[200px] py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide"
+      >
+        {partneriButtonLabel}
+      </Link>
+    </div>
   )
 }
 
 /* ── Page ────────────────────────────────────────────────────── */
+const WELCOME_MODAL_STORAGE_KEY = 'baterino-welcome-modal-chosen'
+const USER_TYPE_STORAGE_KEY = 'baterino-user-type'
+
+/* ── Welcome modal (mobile only, slides up from bottom) ───────────────── */
+function WelcomeModal({
+  onClose,
+  onProfesionist,
+  tr,
+}: {
+  onClose: () => void
+  onProfesionist: () => void
+  tr: { welcomeModalTitle: string; welcomeModalSubtitle: string; welcomeModalProfesionist: string; welcomeModalClientFinal: string }
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center sm:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-modal-title"
+    >
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        className="relative w-full max-w-[100vw] bg-white rounded-t-[20px] shadow-2xl animate-slide-up-from-bottom"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col items-center px-6 pt-8 pb-6 gap-6">
+          <div className="w-80 max-w-full relative flex flex-col items-center">
+            <p className="text-black text-xs font-medium font-['Inter'] leading-5 text-center mb-1">
+              BINE AI VENIT LA
+            </p>
+            <img
+              src="/images/shared/baterino-logo-black.svg"
+              alt="Baterino"
+              className="w-36 h-7 object-contain"
+            />
+            <h2 id="welcome-modal-title" className="text-black text-lg font-bold font-['Inter'] leading-6 text-center mt-5 mb-2 px-1">
+              ESTI INSTALATOR SAU DISTRIBUITOR?
+            </h2>
+            <p className="text-black text-sm font-medium font-['Inter'] leading-5 text-center px-1">
+              În funcție de alegerea ta, îți vom oferi o experiență adaptată nevoilor tale profesionale.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 w-full max-w-[320px]">
+            <button
+              type="button"
+              onClick={onProfesionist}
+              className="w-full h-12 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm uppercase tracking-wide hover:bg-slate-700 transition-colors"
+            >
+              {tr.welcomeModalProfesionist}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-12 px-6 border-2 border-gray-200 text-gray-700 rounded-[10px] font-semibold font-['Inter'] text-sm uppercase tracking-wide hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            >
+              {tr.welcomeModalClientFinal}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const { language } = useLanguage()
   const tr = getHomeTranslations(language.code)
@@ -87,11 +180,20 @@ export default function Home() {
   const heroMobileSliderRef = useRef<HTMLDivElement>(null)
 
   const [products, setProducts] = useState<PublicProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [userType, setUserType] = useState<'profesionist' | 'client' | null>(() => {
+    if (typeof sessionStorage === 'undefined') return null
+    const stored = sessionStorage.getItem(USER_TYPE_STORAGE_KEY)
+    return stored === 'profesionist' || stored === 'client' ? stored : null
+  })
 
   useEffect(() => {
+    setProductsLoading(true)
     getProducts()
       .then(setProducts)
       .catch(() => setProducts([]))
+      .finally(() => setProductsLoading(false))
   }, [])
 
   useEffect(() => {
@@ -101,6 +203,30 @@ export default function Home() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  useEffect(() => {
+    if (window.innerWidth >= 640) return
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(WELCOME_MODAL_STORAGE_KEY)) return
+    setShowWelcomeModal(true)
+  }, [])
+
+  const closeWelcomeModal = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(WELCOME_MODAL_STORAGE_KEY, '1')
+      sessionStorage.setItem(USER_TYPE_STORAGE_KEY, 'client')
+    }
+    setUserType('client')
+    setShowWelcomeModal(false)
+  }
+
+  const handleWelcomeProfesionist = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(WELCOME_MODAL_STORAGE_KEY, '1')
+      sessionStorage.setItem(USER_TYPE_STORAGE_KEY, 'profesionist')
+    }
+    setUserType('profesionist')
+    setShowWelcomeModal(false)
+  }
+
   const HERO_SLIDES = [
     { label: tr.heroSliderRez, image: '/images/home/slider-apple/slide1-baterii-rezidential.jpg' },
     { label: tr.heroSliderInd, image: '/images/home/slider-apple/slide2-baterii-industrial.jpg' },
@@ -108,12 +234,16 @@ export default function Home() {
     { label: tr.heroSliderInst, image: '/images/home/slider-apple/slide4-instalatori.jpg' },
   ]
 
-  const HERO_MOBILE_SLIDES = [
-    { label: tr.heroSliderRez, image: '/images/home/slider-1-mobile.jpg' },
-    { label: tr.heroSliderInd, image: '/images/home/slider-2-mobile.jpg' },
-    { label: tr.heroSliderMed, image: '/images/home/slider-3-mobile.jpg' },
+  const HERO_MOBILE_SLIDES_BASE = [
+    { id: 'rezidential' as const, label: tr.heroSliderRez, image: '/images/home/slider-1-mobile.jpg' },
+    { id: 'industrial' as const, label: tr.heroSliderInd, image: '/images/home/slider-2-mobile.jpg' },
+    { id: 'medical' as const, label: tr.heroSliderMed, image: '/images/home/slider-3-mobile.jpg' },
+    { id: 'instalatori' as const, label: tr.heroSliderInst, image: '/images/home/instalatori-mobile.jpg' },
   ]
-  const HERO_MOBILE_COUNT = 3
+  const instSlide = HERO_MOBILE_SLIDES_BASE.find((s) => s.id === 'instalatori')!
+  const restSlides = HERO_MOBILE_SLIDES_BASE.filter((s) => s.id !== 'instalatori')
+  const HERO_MOBILE_SLIDES = userType === 'profesionist' ? [instSlide, ...restSlides] : [...restSlides, instSlide]
+  const HERO_MOBILE_COUNT = 4
   const HERO_MOBILE_CARD_WIDTH = 324
   const featuresSliderRef = useRef<HTMLDivElement>(null)
   const FEATURES_COUNT = 7
@@ -154,6 +284,13 @@ export default function Home() {
     el.addEventListener('scroll', onScroll)
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    const el = heroMobileSliderRef.current
+    if (!el) return
+    el.scrollTo({ left: 0, behavior: 'auto' })
+    setHeroMobileActiveIndex(0)
+  }, [userType])
 
   function slideFeatures(dir: 'left' | 'right') {
     if (!featuresSliderRef.current) return
@@ -232,8 +369,21 @@ export default function Home() {
                 }}
               >
                 {HERO_MOBILE_SLIDES.map((slide, i) => {
-                  const titles = [tr.heroMobile0Title, tr.heroMobile1Title, tr.heroMobile2Title]
-                  const descs = [tr.heroMobile0Desc, tr.heroMobile1Desc, tr.heroMobile2Desc]
+                  const titleMap: Record<string, string> = {
+                    rezidential: tr.heroMobile0Title,
+                    industrial: tr.heroMobile1Title,
+                    medical: tr.heroMobile2Title,
+                    instalatori: tr.heroSlideInstTitle,
+                  }
+                  const descMap: Record<string, string> = {
+                    rezidential: tr.heroMobile0Desc,
+                    industrial: tr.heroMobile1Desc,
+                    medical: tr.heroMobile2Desc,
+                    instalatori: tr.heroMobileInstDesc,
+                  }
+                  const title = titleMap[slide.id]
+                  const desc = descMap[slide.id]
+                  const isInstalatori = slide.id === 'instalatori'
                   return (
                     <div
                       key={slide.image}
@@ -245,13 +395,39 @@ export default function Home() {
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/40" />
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center">
-                        <h1 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] uppercase leading-7 sm:leading-8 mb-2">
-                          {titles[i]}
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center flex flex-col items-center">
+                        <h1 className={`text-white text-2xl sm:text-3xl font-bold font-['Inter'] uppercase leading-8 sm:leading-9 mb-2 ${isInstalatori ? 'whitespace-pre-line' : ''}`}>
+                          {title}
                         </h1>
-                        <p className="text-white text-sm sm:text-lg font-bold font-['Inter'] leading-6 sm:leading-7">
-                          {descs[i]}
+                        <p className="text-white text-base sm:text-xl font-bold font-['Inter'] leading-6 sm:leading-7 mb-3">
+                          {isInstalatori ? renderBold(desc) : desc}
                         </p>
+                        {slide.id === 'industrial' ? (
+                          <Link
+                            to="/divizii/industrial"
+                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
+                          >
+                            {tr.heroSlideIndCta}
+                          </Link>
+                        ) : slide.id === 'medical' ? (
+                          <Link
+                            to="/divizii/medical"
+                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
+                          >
+                            {tr.heroSlideMedCta}
+                          </Link>
+                        ) : slide.id === 'instalatori' ? (
+                          <Link
+                            to="/instalatori"
+                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
+                          >
+                            {tr.heroSlideInstCta}
+                          </Link>
+                        ) : (
+                          <svg className="w-6 h-6 text-white shrink-0 animate-arrow-bounce-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M12 5v14M19 12l-7 7-7-7" />
+                          </svg>
+                        )}
                       </div>
                     </div>
                   )
@@ -388,7 +564,7 @@ export default function Home() {
                   </div>
                   <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
                     <Link
-                      to="/companie/viziune"
+                      to="/divizii/industrial"
                       className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
                     >
                       {tr.heroSlideIndCta}
@@ -454,7 +630,7 @@ export default function Home() {
                   {/* Right: CTA + Powered by */}
                   <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
                     <Link
-                      to="/companie/viziune"
+                      to="/divizii/medical"
                       className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
                     >
                       {tr.heroSlideMedCta}
@@ -501,7 +677,7 @@ export default function Home() {
                   }}
                   aria-pressed={activeTab === tab.id}
                   aria-label={tab.label}
-                  className={`h-10 sm:h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 sm:w-auto ${
+                  className={`h-12 sm:h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 sm:w-auto ${
                     isMobile ? 'w-full max-w-xs' : ''
                   } ${
                     activeTab === tab.id
@@ -514,7 +690,7 @@ export default function Home() {
               ))}
               {(activeTab === 'rezidential' || voltageExiting) && (
                 <div
-                  className={`flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
+                  className={`hidden md:flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
                   onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
                 >
                   <span className="flex items-center text-gray-400 px-1" aria-hidden>
@@ -536,7 +712,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
+            <div className="hidden sm:flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
               <Link
                 to="/produse"
                 className="inline-flex items-center justify-center h-10 px-6 border-2 border-gray-200 rounded-[10px] font-semibold font-['Inter'] text-sm text-black hover:bg-gray-50 hover:border-gray-300 transition-colors"
@@ -553,8 +729,17 @@ export default function Home() {
           </div>
 
           {/* Product grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {featuredProducts.map((p) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 sm:mb-10">
+            {productsLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <HomeProductCardSkeleton key={i} />
+              ))
+            ) : featuredProducts.length === 0 && (activeTab === 'medical' || activeTab === 'industrial') ? (
+              <div className="col-span-full text-center py-16 text-gray-600 font-['Inter'] text-base">
+                {tr.productsComingSoon}
+              </div>
+            ) : (
+            featuredProducts.map((p) => {
               const imgs = Array.isArray(p.images) ? p.images : []
               const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
               const conectivitate = [
@@ -563,21 +748,29 @@ export default function Home() {
               ].filter(Boolean).join(' • ') || '—'
               const spec1 = [p.tensiuneNominala, p.capacitate, p.compozitie].filter(Boolean).join(' • ') || '—'
               const spec2 = [p.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
-              const price = p.salePrice != null ? Number(p.salePrice) : 0
               return (
                 <HomeProductCard
                   key={p.id}
-                  id={p.id}
+                  id={p.slug || p.id}
                   name={p.title}
                   image={img}
                   spec1={spec1}
                   spec2={spec2}
-                  price={price}
-                  includesTVA={tr.includesTVA}
-                  locale={LOCALE_BY_LANG[language.code] ?? 'ro-RO'}
+                  partneriButtonLabel={tr.disponibilPentruParteneri}
                 />
               )
-            })}
+            })
+            )}
+          </div>
+
+          {/* Vezi toate produsele – mobile only, under products */}
+          <div className="flex justify-center sm:hidden mb-10">
+            <Link
+              to="/produse"
+              className="inline-flex items-center justify-center h-12 px-8 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
+            >
+              {tr.productsViewAll}
+            </Link>
           </div>
         </section>
 
@@ -649,7 +842,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => slideFeatures('right')}
-                aria-label="Next"
+                aria-label={tr.ariaNext}
                 className="hidden lg:flex absolute bottom-5 right-5 size-12 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95 z-10 items-center justify-center"
               >
                 <img
@@ -783,6 +976,12 @@ export default function Home() {
               <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[482px] whitespace-pre-line">
                 {tr.lithtechBody}
               </p>
+              <Link
+                to="/parteneriat-strategic-lithtech-baterino"
+                className="hidden lg:inline-flex w-fit h-12 px-6 bg-white rounded-[10px] outline outline-1 outline-zinc-300 justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-50 active:bg-neutral-100 transition-colors mt-2"
+              >
+                {tr.lithtechPartnershipLink}
+              </Link>
             </div>
 
             {/* Cards – each 3 cols, desktop only */}
@@ -801,7 +1000,7 @@ export default function Home() {
                   className="w-28 h-5 left-[60px] top-0 absolute object-contain object-left"
                 />
                 <div className="w-60 h-10 left-0 top-[30px] absolute flex items-center justify-center text-white text-xl font-bold font-['Inter'] leading-10">
-                  PRODUCE TEHNOLOGIE
+                  {tr.lithtechCardProduces}
                 </div>
               </div>
             </div>
@@ -820,7 +1019,7 @@ export default function Home() {
                   className="w-24 h-5 left-1/2 -translate-x-1/2 top-0 absolute object-contain"
                 />
                 <div className="w-48 left-0 right-0 top-[26px] absolute flex items-center justify-center text-center text-white text-xl font-bold font-['Inter'] leading-10">
-                  iMPLEMENTEAZA
+                  {tr.lithtechCardImplements}
                 </div>
               </div>
             </div>
@@ -840,7 +1039,7 @@ export default function Home() {
                   className="absolute w-36 h-6 left-1/2 -translate-x-1/2 top-[149px] object-contain z-10"
                 />
                 <h3 className="absolute w-64 sm:w-72 left-1/2 -translate-x-1/2 top-[165px] sm:top-[177px] flex justify-center items-center text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-8 sm:leading-10 z-10 text-center px-2">
-                  PRODUCE TEHNOLOGIE
+                  {tr.lithtechCardProduces}
                 </h3>
               </div>
               {/* Card B – Baterino */}
@@ -857,14 +1056,14 @@ export default function Home() {
                   className="absolute w-28 h-5 left-1/2 -translate-x-1/2 top-[165px] object-contain z-10"
                 />
                 <h3 className="absolute w-44 sm:w-52 left-1/2 -translate-x-1/2 top-[175px] sm:top-[187px] flex justify-center items-center text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-8 sm:leading-10 z-10 text-center">
-                  IMPLEMENTEAZA
+                  {tr.lithtechCardImplements}
                 </h3>
               </div>
               <Link
                 to="/parteneriat-strategic-lithtech-baterino"
                 className="w-full max-w-[24rem] mx-auto h-12 sm:h-14 bg-white rounded-[10px] flex items-center justify-center text-black text-sm sm:text-base font-bold font-['Inter'] uppercase outline outline-1 outline-zinc-300 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
               >
-                VEZI PARTNERIAT
+                {tr.lithtechPartnershipLink}
               </Link>
             </div>
           </div>
@@ -1061,6 +1260,14 @@ export default function Home() {
         />
 
       </div>
+
+      {showWelcomeModal && (
+        <WelcomeModal
+          onClose={closeWelcomeModal}
+          onProfesionist={handleWelcomeProfesionist}
+          tr={tr}
+        />
+      )}
     </>
   )
 }
