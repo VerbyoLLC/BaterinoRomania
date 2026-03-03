@@ -349,7 +349,7 @@ export default function Home() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/"
-        ogImage="/images/og-baterino-romania.jpg"
+        ogImage="/images/home/og-baterino-romania.jpg"
         lang={language.code}
       />
 

@@ -62,8 +62,11 @@
   }
 }
 
-.animate-slide-up-from-bottom {
-  animation: slide-up-from-bottom 0.35s ease-out forwards;
+/* Only on mobile: slide up from bottom; desktop shows modal with no animation */
+@media (max-width: 639px) {
+  .animate-slide-up-from-bottom {
+    animation: slide-up-from-bottom 0.35s ease-out forwards;
+  }
 }
 
 @layer utilities {

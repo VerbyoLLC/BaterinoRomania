@@ -14,7 +14,7 @@ interface SEOProps {
 
 const SITE_NAME = 'Baterino'
 const BASE_URL = 'https://baterino.ro'
-const DEFAULT_OG_IMAGE = `${BASE_URL}/images/og-baterino-romania.jpg`
+const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.jpg`
 
 export default function SEO({
   title,
