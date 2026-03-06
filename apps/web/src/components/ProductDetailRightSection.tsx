@@ -184,7 +184,6 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
   const showManuale = partnerTab === 'manuale'
   /** Documente tehnice: in partner panel only in Manuale tab; on main product page show with rest of content */
   const showDocumenteTehnice = showManuale || !partnerTab
-  const showVideos = partnerTab === 'videos'
 
   if (partnerTab === 'videos') {
     return (
