@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getFooterTranslations } from '../i18n/footer'
+import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 /* 16px on mobile for readability, 14px on desktop */
 const linkClass =
@@ -12,6 +13,24 @@ const headingClass =
 function Footer() {
   const { language } = useLanguage()
   const t = getFooterTranslations(language.code)
+
+  if (INSTALATORI_ONLY) {
+    return (
+      <footer className="border-t border-gray-200 bg-gray-50">
+        <div className="max-w-content mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+            <Link to="/instalatori" className="flex items-center gap-2">
+              <img src="/images/shared/baterino-logo-black.svg" alt="Baterino" className="w-28 h-5 object-contain opacity-90" />
+            </Link>
+            <nav className="flex items-center gap-6">
+              <Link to="/instalatori" className={linkClass}>{t.instalatori}</Link>
+              <Link to="/login" className={linkClass}>{t.clienti}</Link>
+            </nav>
+          </div>
+        </div>
+      </footer>
+    )
+  }
 
   return (
     <footer className="border-t border-gray-200 bg-gray-50">

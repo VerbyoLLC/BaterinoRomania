@@ -45,6 +45,7 @@ import PartnerProducts from './pages/partner/PartnerProducts'
 import PartnerOrders from './pages/partner/PartnerOrders'
 import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
+import { INSTALATORI_ONLY } from './lib/siteMode'
 
 export default function App() {
   return (
@@ -66,13 +67,13 @@ export default function App() {
           <Route path="discounts" element={<AdminDiscounts />} />
         </Route>
 
-        {/* ── Auth pages (no header / footer) ── */}
+        {/* ── Auth: in instalatori-only mode, no register — redirect to login ── */}
         <Route path="/login" element={<AuthWrapper><Login /></AuthWrapper>} />
-        <Route path="/signup/clienti" element={<AuthWrapper><SignupClienti /></AuthWrapper>} />
-        <Route path="/signup/parteneri" element={<Navigate to="/signup/clienti?tab=partener" replace />} />
-        <Route path="/signup/parteneri/profil" element={<AuthWrapper><SignupParteneriProfil /></AuthWrapper>} />
-        <Route path="/signup/parteneri/profil-public" element={<AuthWrapper><SignupParteneriProfilPublic /></AuthWrapper>} />
-        <Route path="/reset-password" element={<AuthWrapper><ResetPassword /></AuthWrapper>} />
+        <Route path="/signup/clienti" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupClienti /></AuthWrapper>} />
+        <Route path="/signup/parteneri" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <Navigate to="/signup/clienti?tab=partener" replace />} />
+        <Route path="/signup/parteneri/profil" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupParteneriProfil /></AuthWrapper>} />
+        <Route path="/signup/parteneri/profil-public" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupParteneriProfilPublic /></AuthWrapper>} />
+        <Route path="/reset-password" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><ResetPassword /></AuthWrapper>} />
 
         {/* ── Partner area (no header / footer) ── */}
         <Route path="/partner" element={<LanguageProvider><PartnerLayout /></LanguageProvider>}>
@@ -86,39 +87,49 @@ export default function App() {
           <Route path="suport" element={<PartnerSupport />} />
         </Route>
 
-        {/* ── QR code links (no pages, redirect only) ── */}
-        <Route path="/qr/main" element={<Navigate to="/" replace />} />
+        {/* ── QR code links ── */}
+        <Route path="/qr/main" element={<Navigate to={INSTALATORI_ONLY ? '/instalatori' : '/'} replace />} />
         <Route path="/qr/instalatori-event-bucharest2026" element={<Navigate to="/instalatori" replace />} />
-        <Route path="/qr/rbc" element={<Navigate to="/companie/viziune" replace />} />
-        <Route path="/qr/abc" element={<Navigate to="/companie/viziune" replace />} />
+        <Route path="/qr/rbc" element={<Navigate to={INSTALATORI_ONLY ? '/instalatori' : '/companie/viziune'} replace />} />
+        <Route path="/qr/abc" element={<Navigate to={INSTALATORI_ONLY ? '/instalatori' : '/companie/viziune'} replace />} />
         <Route path="/qr/idbc" element={<Navigate to="/instalatori" replace />} />
 
-        {/* ── Main site with Layout ── */}
+        {/* ── Main site: when instalatori-only, only / and /instalatori; rest redirect ── */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="produse" element={<Produse />} />
-          <Route path="produse/:slug" element={<ProductRezidential />} />
-          <Route path="reduceri" element={<Reduceri />} />
-          <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
-          <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
-          <Route path="politica-confidentialitate" element={<PoliticaConfidentialitate />} />
-          <Route path="siguranta" element={<Siguranta />} />
-          <Route path="divizii/rezidential" element={<Rezidential />} />
-          <Route path="divizii/industrial" element={<Industrial />} />
-          <Route path="divizii/medical" element={<Medical />} />
-          <Route path="divizii/maritim" element={<Maritim />} />
-          <Route path="divizii/:slug" element={<Divizii />} />
-          <Route path="parteneriat-strategic-lithtech-baterino" element={<LithTech />} />
-          <Route path="instalatori" element={<Instalatori />} />
-          <Route path="companie" element={<Navigate to="/companie/viziune" replace />} />
-          <Route path="companie/viziune" element={<Viziune />} />
-          <Route path="companie/contact" element={<Navigate to="/companie/viziune" replace />} />
-          <Route path="companie/:slug" element={<Navigate to="/companie/viziune" replace />} />
-          <Route path="cariere" element={<Cariere />} />
-          <Route path="contact" element={<Contact />} />
-          <Route path="blog" element={<Blog />} />
-          <Route path="typography" element={<Typography />} />
-          <Route path="slider-examples" element={<SliderExamples />} />
+          {INSTALATORI_ONLY ? (
+            <>
+              <Route index element={<Navigate to="/instalatori" replace />} />
+              <Route path="instalatori" element={<Instalatori />} />
+              <Route path="*" element={<Navigate to="/instalatori" replace />} />
+            </>
+          ) : (
+            <>
+              <Route index element={<Home />} />
+              <Route path="produse" element={<Produse />} />
+              <Route path="produse/:slug" element={<ProductRezidential />} />
+              <Route path="reduceri" element={<Reduceri />} />
+              <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
+              <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
+              <Route path="politica-confidentialitate" element={<PoliticaConfidentialitate />} />
+              <Route path="siguranta" element={<Siguranta />} />
+              <Route path="divizii/rezidential" element={<Rezidential />} />
+              <Route path="divizii/industrial" element={<Industrial />} />
+              <Route path="divizii/medical" element={<Medical />} />
+              <Route path="divizii/maritim" element={<Maritim />} />
+              <Route path="divizii/:slug" element={<Divizii />} />
+              <Route path="parteneriat-strategic-lithtech-baterino" element={<LithTech />} />
+              <Route path="instalatori" element={<Instalatori />} />
+              <Route path="companie" element={<Navigate to="/companie/viziune" replace />} />
+              <Route path="companie/viziune" element={<Viziune />} />
+              <Route path="companie/contact" element={<Navigate to="/companie/viziune" replace />} />
+              <Route path="companie/:slug" element={<Navigate to="/companie/viziune" replace />} />
+              <Route path="cariere" element={<Cariere />} />
+              <Route path="contact" element={<Contact />} />
+              <Route path="blog" element={<Blog />} />
+              <Route path="typography" element={<Typography />} />
+              <Route path="slider-examples" element={<SliderExamples />} />
+            </>
+          )}
         </Route>
       </Routes>
     </BrowserRouter>

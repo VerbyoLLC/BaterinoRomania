@@ -5,6 +5,7 @@ import { useViziuneHeader } from '../contexts/ViziuneHeaderContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LanguageDropdown } from './LanguageDropdown'
 import MobileMenu from './MobileMenu'
+import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 const DIVIZII_PATHS = [
   { key: 'rezidential', path: '/divizii/rezidential' },
@@ -100,12 +101,20 @@ export default function Header() {
             <img src="/images/shared/baterino-logo-black.svg" alt="Baterino Romania" className="h-8 w-auto" />
           </Link>
           <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
-            <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.produse}</Link>
-            <Link to="/reduceri" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.reduceri}</Link>
-            <Link to="/siguranta" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.siguranta}</Link>
-            <NavDropdown label={t.divizii} items={diviziiItems} isOpen={diviziiOpen} onToggle={() => { setDiviziiOpen(!diviziiOpen); setCompanieOpen(false); setLangOpen(false); }} />
-            <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.instalatori}</Link>
-            <NavDropdown label={t.companie} items={companieItems} isOpen={companieOpen} onToggle={() => { setCompanieOpen(!companieOpen); setDiviziiOpen(false); setLangOpen(false); }} />
+            {INSTALATORI_ONLY ? (
+              <>
+                <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.instalatori}</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.produse}</Link>
+                <Link to="/reduceri" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.reduceri}</Link>
+                <Link to="/siguranta" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.siguranta}</Link>
+                <NavDropdown label={t.divizii} items={diviziiItems} isOpen={diviziiOpen} onToggle={() => { setDiviziiOpen(!diviziiOpen); setCompanieOpen(false); setLangOpen(false); }} />
+                <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.instalatori}</Link>
+                <NavDropdown label={t.companie} items={companieItems} isOpen={companieOpen} onToggle={() => { setCompanieOpen(!companieOpen); setDiviziiOpen(false); setLangOpen(false); }} />
+              </>
+            )}
           </nav>
           <div className="hidden md:flex items-center justify-end gap-2 flex-shrink-0 min-w-[120px]">
             <Link to="/login" className="text-gray-700 hover:text-gray-900 font-medium" onClick={closeDropdowns}>{t.login}</Link>
