@@ -449,23 +449,23 @@ export default function AdminProducts() {
       faq: faqFiltered,
       alimentaModalContent: (() => {
         const s = alimentaModalContent.trim()
-        if (!s) return undefined
+        if (!s) return null
         try {
           const parsed = JSON.parse(s) as { title?: string; intro?: string; sections?: Array<{ label?: string; items?: string[] }> }
           if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) {
             return {
               title: parsed.title,
-              intro: parsed.intro,
+              intro: parsed.intro ?? undefined,
               sections: parsed.sections.map((sec) => ({
-                label: sec.label ?? '',
-                items: sec.items ?? [],
+                label: String(sec?.label ?? ''),
+                items: Array.isArray(sec?.items) ? sec.items : [],
               })),
             }
           }
         } catch {
           /* invalid JSON – ignore */
         }
-        return undefined
+        return null
       })(),
     }
   }

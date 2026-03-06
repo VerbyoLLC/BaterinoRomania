@@ -154,22 +154,6 @@ function getBadges(tr: ProductDetailTranslations) {
   ]
 }
 
-/* ── FAQ item ──────────────────────────────────────────────────── */
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="border-b border-zinc-200 last:border-0">
-      <button className="w-full flex items-center justify-between py-4 text-left gap-4" onClick={() => setOpen((o) => !o)}>
-        <span className="text-black text-base font-medium font-['Inter']">{q}</span>
-        <svg className={`w-5 h-5 text-black flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && <p className="text-gray-600 text-sm font-['Inter'] leading-6 pb-4 pr-8">{a}</p>}
-    </div>
-  )
-}
-
 /* ── Product image lightbox modal ────────────────────────────────── */
 function ProductImageModal({
   images,
@@ -428,12 +412,26 @@ function CeSePoateAlimentaModal({
   onClose,
   tr,
   customContent,
+  energieNominala,
 }: {
   onClose: () => void
   tr: ProductDetailTranslations
   customContent?: AlimentaModalContent | null
+  energieNominala?: string | null
 }) {
   const useCustom = customContent && customContent.title && Array.isArray(customContent.sections) && customContent.sections.length > 0
+
+  const energieDisplay = whToKwhDisplay(energieNominala)
+  const kwhNum = (() => {
+    if (!energieNominala) return null
+    const numStr = String(energieNominala).replace(/\s*Wh$/i, '').replace(',', '.').replace(/\s/g, '')
+    const num = parseFloat(numStr)
+    return Number.isNaN(num) ? null : num / 1000
+  })()
+  const usableRangeStr =
+    kwhNum != null
+      ? `${(0.8 * kwhNum).toFixed(1)} – ${(0.9 * kwhNum).toFixed(1)}`
+      : null
 
   if (useCustom && customContent) {
     return (
@@ -449,8 +447,11 @@ function CeSePoateAlimentaModal({
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-            <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">
+          <div className="flex-shrink-0 flex items-center gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
+            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
+              <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
+            </div>
+            <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
               {customContent.title}
             </h1>
             <button
@@ -466,14 +467,9 @@ function CeSePoateAlimentaModal({
           </div>
           <div className="flex-1 overflow-y-auto p-6 sm:p-8">
             {customContent.intro && (
-              <div className="flex items-start gap-4 mb-6">
-                <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
-                  <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
-                </div>
-                <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed min-w-0 flex-1">
-                  {customContent.intro}
-                </p>
-              </div>
+              <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed mb-6">
+                {customContent.intro}
+              </p>
             )}
             {customContent.sections.map((sec, si) => (
               <div key={si} className="mb-6">
@@ -511,9 +507,14 @@ function CeSePoateAlimentaModal({
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">
-            {tr.alimentaModalTitle}
+        <div className="flex-shrink-0 flex items-center gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
+          <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
+            <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
+          </div>
+          <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
+            {energieDisplay
+              ? tr.alimentaModalTitle.replace(/5\s*kWh/i, energieDisplay)
+              : tr.alimentaModalTitle}
           </h1>
           <button
             type="button"
@@ -527,14 +528,11 @@ function CeSePoateAlimentaModal({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
-            </div>
-            <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed min-w-0 flex-1">
-              {tr.alimentaModalIntro}
-            </p>
-          </div>
+          <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed mb-6">
+            {usableRangeStr
+              ? tr.alimentaModalIntro.replace(/\d+(\.\d+)?\s*[–-]\s*\d+(\.\d+)?\s*kWh?/gi, `${usableRangeStr} kWh`)
+              : tr.alimentaModalIntro}
+          </p>
           <p className="text-black text-sm font-bold font-['Inter'] uppercase tracking-wider mb-3">
             {tr.alimentaModalExemple}
           </p>
@@ -666,7 +664,6 @@ export default function ProductRezidential() {
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
-  const faq = (product as { faq?: { q: string; a: string }[] }).faq || []
   const divisionLabel = product.tipProdus === 'industrial' ? tr.sectorIndustrial : tr.sectorRezidential
 
   return (
@@ -890,13 +887,6 @@ export default function ProductRezidential() {
                 </section>
               )}
 
-              {faq.length > 0 && (
-                <section>
-                  <h2 className="text-black text-2xl font-bold font-['Inter'] mb-2">{tr.intrebariFrecvente}</h2>
-                  {faq.map((item, i) => <FAQItem key={i} q={item.q} a={item.a} />)}
-                </section>
-              )}
-
               <section className="flex flex-col gap-4">
                 <div className="w-full max-w-[592px] h-64 relative rounded-[10px] overflow-hidden">
                   <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/baterino-swap.jpg" alt="" />
@@ -942,6 +932,7 @@ export default function ProductRezidential() {
           onClose={() => setShowCeSePoateAlimentaModal(false)}
           tr={tr}
           customContent={(product as { alimentaModalContent?: AlimentaModalContent | null }).alimentaModalContent ?? undefined}
+          energieNominala={product?.energieNominala ?? undefined}
         />
       )}
 
