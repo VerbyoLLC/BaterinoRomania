@@ -5,16 +5,34 @@ import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
 import ProductDetailRightSection from '../../components/ProductDetailRightSection'
 
+function whToKwhDisplay(wh: string | null | undefined): string | null {
+  if (!wh) return null
+  const numStr = String(wh).replace(/\s*Wh$/i, '').replace(',', '.').replace(/\s/g, '')
+  const num = parseFloat(numStr)
+  if (Number.isNaN(num)) return wh
+  const kwh = num / 1000
+  return `${kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2)} kWh`
+}
+
 /* ── Skeleton card ─────────────────────────────────────────────── */
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-6 animate-pulse">
-      <div className="w-36 h-36 flex items-center justify-center">
+    <div className="flex flex-col bg-white rounded-xl border border-neutral-200 overflow-hidden min-h-[340px] animate-pulse">
+      <div className="flex items-center justify-center bg-neutral-50 h-44 p-4">
         <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-28 h-14 object-contain opacity-30" aria-hidden />
       </div>
-      <div className="w-48 h-5 bg-neutral-200 rounded mt-4 mx-2" />
-      <div className="w-56 h-4 bg-neutral-200 rounded mt-3 mx-2" />
-      <div className="w-24 h-8 bg-neutral-200 rounded mt-6 mx-2" />
+      <div className="flex flex-col flex-1 p-4">
+        <div className="w-full h-5 bg-neutral-200 rounded mb-3" />
+        <div className="w-3/4 h-4 bg-neutral-100 rounded mb-4" />
+        <div className="mt-auto pt-4 border-t border-neutral-100 space-y-3">
+          <div className="flex justify-center gap-2">
+            <div className="w-8 h-8 bg-neutral-200 rounded-lg" />
+            <div className="w-6 h-8 bg-neutral-100 rounded" />
+            <div className="w-8 h-8 bg-neutral-200 rounded-lg" />
+          </div>
+          <div className="w-full h-10 bg-neutral-200 rounded-lg" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -40,58 +58,92 @@ function ProductCard({
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
   const price = product.salePrice != null ? Number(product.salePrice) : 0
+  const p = product as PublicProduct & { greutate?: string }
+  const energieDisplay = whToKwhDisplay(p.energieNominala)
+  const cardSpecs = [
+    energieDisplay,
+    p.capacitate ?? null,
+    p.cicluriDescarcare ?? null,
+    p.greutate ?? null,
+  ].filter(Boolean) as string[]
 
   return (
     <div
-      className={`w-full flex flex-col items-center bg-neutral-100 rounded-[10px] pt-[10px] pb-4 overflow-hidden ${
-        selected ? 'ring-2 ring-slate-900 shadow-md bg-neutral-50' : ''
+      className={`w-full flex flex-col bg-[#f7f7f7] rounded-xl border overflow-hidden min-h-[340px] transition-all duration-200 ${
+        selected
+          ? 'border-slate-900 border-2 shadow-md'
+          : 'border-neutral-200 hover:border-neutral-300 hover:shadow-md'
       }`}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="w-full flex flex-col items-center cursor-pointer transition-opacity hover:opacity-90 text-left"
+        className="w-full flex flex-col items-center cursor-pointer text-left flex-1 min-h-0 group"
       >
-        <img src={img} alt={product.title} className="w-36 h-36 object-contain" />
-        <h3 className="w-full text-center text-black text-base font-bold font-['Inter'] leading-5 mt-2 px-2 line-clamp-2">
-          {product.title}
-        </h3>
-        <p className="text-sky-950 text-lg font-bold font-['Inter'] tracking-wide mt-4">
-          {price.toLocaleString('ro-RO')} lei
-        </p>
+        <div className="w-full flex items-center justify-center bg-[#f7f7f7] h-44 p-4">
+          <img
+            src={img}
+            alt={product.title}
+            className="max-w-full max-h-full w-auto h-36 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
+        </div>
+        <div className="flex flex-col flex-1 w-full p-4 text-center">
+          <h3 className="text-black text-base font-bold font-['Inter'] leading-snug line-clamp-2">
+            {product.title}
+          </h3>
+          {cardSpecs.length > 0 && (
+            <p className="text-gray-500 text-sm font-['Inter'] mt-2 leading-snug">
+              {cardSpecs.join(' • ')}
+            </p>
+          )}
+          <p className="text-slate-900 text-lg font-bold font-['Inter'] mt-3 tracking-tight">
+            {price.toLocaleString('ro-RO')} lei
+          </p>
+        </div>
       </button>
 
-      <div className="w-full px-3 mt-4 pt-3 border-t border-neutral-200" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-center gap-2 mb-2">
+      <div className="w-full px-4 pb-4 pt-0" onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-3">
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => onQuantityChange(-1)}
+              className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+              aria-label="Scade cantitatea"
+            >
+              −
+            </button>
+            <span className="text-black text-sm font-bold font-['Inter'] min-w-[1.5rem] text-center tabular-nums">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => onQuantityChange(1)}
+              className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+              aria-label="Crește cantitatea"
+            >
+              +
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => onQuantityChange(-1)}
-            className="w-8 h-8 rounded-lg bg-neutral-200 flex items-center justify-center text-base font-bold hover:bg-neutral-300 transition-colors"
-            aria-label="Scade cantitatea"
+            onClick={onOrder}
+            className="w-full py-3 bg-slate-900 text-white rounded-lg text-sm font-bold font-['Inter'] uppercase tracking-wide hover:bg-slate-800 active:bg-slate-950 transition-colors"
           >
-            −
-          </button>
-          <span className="text-black text-sm font-semibold font-['Inter'] w-6 text-center">{quantity}</span>
-          <button
-            type="button"
-            onClick={() => onQuantityChange(1)}
-            className="w-8 h-8 rounded-lg bg-neutral-200 flex items-center justify-center text-base font-bold hover:bg-neutral-300 transition-colors"
-            aria-label="Crește cantitatea"
-          >
-            +
+            {orderLabel}
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onOrder}
-          className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold font-['Inter'] uppercase hover:bg-slate-700 transition-colors"
-        >
-          {orderLabel}
-        </button>
       </div>
     </div>
   )
 }
+
+const PARTNER_DETAIL_TABS = [
+  { id: 'detalii' as const, label: 'Detalii' },
+  { id: 'tehnice' as const, label: 'Detalii tehnice' },
+  { id: 'manuale' as const, label: 'Manuale' },
+  { id: 'videos' as const, label: 'Ghid Video de Instalare' },
+]
 
 /* ── Product detail panel (uses right section from product page) ─── */
 function ProductDetailPanel({
@@ -99,11 +151,13 @@ function ProductDetailPanel({
   loading,
   tr,
   langCode,
+  activeTab,
 }: {
   product: PublicProduct | null
   loading: boolean
   tr: ReturnType<typeof getProductDetailTranslations>
   langCode: string
+  activeTab: 'detalii' | 'tehnice' | 'manuale' | 'videos'
 }) {
   if (loading) {
     return (
@@ -135,10 +189,47 @@ function ProductDetailPanel({
     )
   }
 
+  const energieDisplay = whToKwhDisplay(product.energieNominala)
+  const p = product as PublicProduct & {
+    capacitate?: string
+    cicluriDescarcare?: string
+    dimensiuni?: string
+    greutate?: string
+    temperaturaFunctionare?: string
+  }
+  const specRows: [string, string][] = []
+  if (energieDisplay) specRows.push([tr.specEnergieNominala, energieDisplay])
+  if (p.capacitate) specRows.push([tr.specCapacitate, p.capacitate])
+  if (p.cicluriDescarcare) specRows.push([tr.specCicluriDescarcare, p.cicluriDescarcare])
+  if (p.dimensiuni) specRows.push([tr.specDimensiuni, p.dimensiuni])
+  if (p.greutate) specRows.push([tr.specGreutate, p.greutate])
+  if (p.temperaturaFunctionare) specRows.push([tr.specTemperaturaOperare, p.temperaturaFunctionare])
+
   return (
-    <div>
-      <h2 className="text-xl font-bold font-['Inter'] text-slate-900 mb-4">{product.title}</h2>
-      <ProductDetailRightSection product={product} tr={tr} langCode={langCode} compact />
+    <div className="flex flex-col gap-4">
+      {activeTab === 'detalii' && (
+        <>
+          {specRows.length > 0 && (
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+              <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                {specRows.map(([label, value], i) => (
+                  <div key={i} className="flex flex-col gap-0.5 text-sm font-['Inter']">
+                    <span className="font-bold text-black">{label}</span>
+                    <span className="text-gray-700">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      <ProductDetailRightSection
+        product={product}
+        tr={tr}
+        langCode={langCode}
+        compact
+        partnerTab={activeTab}
+      />
     </div>
   )
 }
@@ -156,6 +247,7 @@ export default function PartnerProducts() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailPanelTab, setDetailPanelTab] = useState<'detalii' | 'tehnice' | 'manuale' | 'videos'>('detalii')
   const [animateDetail, setAnimateDetail] = useState(false)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
 
@@ -204,6 +296,7 @@ export default function PartnerProducts() {
       setDetailLoading(false)
       return
     }
+    setDetailPanelTab('detalii')
     setDetailLoading(true)
     getProduct(selectedId)
       .then(setSelectedProduct)
@@ -218,9 +311,9 @@ export default function PartnerProducts() {
         <h1 className="text-xl font-bold font-['Inter'] text-slate-900">Produse</h1>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 px-6 sm:px-8 lg:px-10 pb-6 sm:pb-8 lg:pb-10 overflow-hidden">
-        {/* Left: product cards + filters */}
-        <div className="lg:flex-1 lg:min-w-0 flex flex-col min-h-0 pt-4 sm:pt-6">
+      <div className="flex flex-col flex-1 min-h-0 px-6 sm:px-8 lg:px-10 pb-6 sm:pb-8 lg:pb-10 overflow-hidden">
+        {/* Product cards + filters */}
+        <div className="flex flex-col min-h-0 pt-4 sm:pt-6 w-full">
           {/* Filters — same style as Home page */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3 mb-4 shrink-0" role="group" aria-label={trProduse.filterSector}>
             {trProduse.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
@@ -282,13 +375,13 @@ export default function PartnerProducts() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 gap-4 overflow-y-auto">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-[20px] overflow-y-auto">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
           ) : filtered.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4 overflow-y-auto max-h-[calc(100vh-22rem)] lg:max-h-[calc(100vh-18rem)]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-[20px] overflow-y-auto max-h-[calc(100vh-22rem)] lg:max-h-[calc(100vh-18rem)]">
               {filtered.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -320,15 +413,72 @@ export default function PartnerProducts() {
             </div>
           )}
         </div>
-
-        {/* Right: product detail — no card, slides in from left only when card is clicked */}
-        <div className="lg:flex-1 lg:min-w-0 min-w-0 flex flex-col min-h-0 overflow-y-auto pl-0 lg:pl-4">
-          <div key={selectedId ?? 'empty'} className={animateDetail ? 'animate-slide-in-from-left min-h-0' : 'min-h-0'}>
-            <div className="h-10 text-sm font-semibold font-['Inter'] text-slate-700 mb-4">Detalii produs</div>
-            <ProductDetailPanel product={selectedProduct} loading={detailLoading} tr={tr} langCode={language.code} />
-          </div>
-        </div>
       </div>
+
+      {/* Product detail panel — slides in from the right when a card is clicked */}
+      {selectedId != null && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/40"
+            aria-hidden
+            onClick={() => setSelectedId(null)}
+          />
+          <aside
+            key={selectedId}
+            className={`fixed top-0 right-0 bottom-0 z-40 w-full max-w-4xl bg-white shadow-2xl flex flex-col overflow-hidden ${animateDetail ? 'animate-slide-in-from-right' : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="partner-detail-title"
+          >
+            <div className="shrink-0 border-b border-neutral-200 bg-white">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+                <h2 id="partner-detail-title" className="text-lg font-bold font-['Inter'] text-slate-900 min-w-0 truncate pr-2">
+                  {detailLoading ? 'Se încarcă…' : selectedProduct?.title ?? 'Detalii produs'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-100 hover:text-slate-900 transition-colors"
+                  aria-label="Închide"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex border-b-0 border-neutral-200 gap-0 px-4 sm:px-6" role="tablist" aria-label="Detalii produs">
+                {PARTNER_DETAIL_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={detailPanelTab === tab.id}
+                    onClick={() => setDetailPanelTab(tab.id)}
+                    className={`px-4 py-3 text-sm font-semibold font-['Inter'] border-b-2 transition-colors -mb-px ${
+                      detailPanelTab === tab.id
+                        ? 'border-slate-900 text-slate-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-neutral-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
+              <div className="max-w-xl mx-auto">
+                <ProductDetailPanel
+                  product={selectedProduct}
+                  loading={detailLoading}
+                  tr={tr}
+                  langCode={language.code}
+                  activeTab={detailPanelTab}
+                />
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   )
 }

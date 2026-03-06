@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import type { PublicProduct } from '../lib/api'
 import type { ProductDetailTranslations } from '../i18n/product-detail'
@@ -84,21 +85,6 @@ function ProductImageWithLoader({ src, alt }: { src: string; alt: string }) {
   )
 }
 
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="border-b border-zinc-200 last:border-0">
-      <button className="w-full flex items-center justify-between py-4 text-left gap-4" onClick={() => setOpen((o) => !o)}>
-        <span className="text-black text-base font-medium font-['Inter']">{q}</span>
-        <svg className={`w-5 h-5 text-black flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && <p className="text-gray-600 text-sm font-['Inter'] leading-6 pb-4 pr-8">{a}</p>}
-    </div>
-  )
-}
-
 function ProductImageModal({ images, activeIndex, onSelect, onClose, productTitle, closeLabel, prevLabel, nextLabel }: {
   images: string[]
   activeIndex: number
@@ -173,9 +159,11 @@ export type ProductDetailRightSectionProps = {
   langCode: string
   /** Hide SWAP/Reduceri banners and contact CTA (for partner panel) */
   compact?: boolean
+  /** When set (partner panel tabs), only render the corresponding section */
+  partnerTab?: 'detalii' | 'tehnice' | 'manuale' | 'videos'
 }
 
-export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false }: ProductDetailRightSectionProps) {
+export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false, partnerTab }: ProductDetailRightSectionProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [showCompatibilitate99Modal, setShowCompatibilitate99Modal] = useState(false)
   const [showGarantieModal, setShowGarantieModal] = useState(false)
@@ -190,11 +178,30 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
-  const faq = (product as { faq?: { q: string; a: string }[] }).faq || []
+
+  const showDetalii = !partnerTab || partnerTab === 'detalii'
+  const showTehnice = !partnerTab || partnerTab === 'tehnice'
+  const showManuale = partnerTab === 'manuale'
+  /** Documente tehnice: in partner panel only in Manuale tab; on main product page show with rest of content */
+  const showDocumenteTehnice = showManuale || !partnerTab
+  const showVideos = partnerTab === 'videos'
+
+  if (partnerTab === 'videos') {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+        <svg className="w-14 h-14 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <p className="text-base font-['Inter']">Videoclipuri de instalare vor fi disponibile în curând.</p>
+      </div>
+    )
+  }
 
   return (
     <>
       <div className="flex flex-col gap-6">
+        {showDetalii && (
+        <>
         <div
           className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in"
           onClick={() => setShowImageModal(true)}
@@ -270,8 +277,10 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
             )
           ))}
         </div>
+        </>
+        )}
 
-        {docs.length > 0 && (
+        {showDocumenteTehnice && docs.length > 0 && (
           <div>
             <h3 className="text-black text-base font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -303,7 +312,7 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
           </div>
         )}
 
-        {techData.length > 0 && (
+        {showTehnice && techData.length > 0 && (
           <section>
             <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
             <div className="bg-neutral-100 rounded-[10px] overflow-hidden">
@@ -316,13 +325,6 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
                 ))}
               </div>
             </div>
-          </section>
-        )}
-
-        {faq.length > 0 && (
-          <section>
-            <h2 className="text-black text-2xl font-bold font-['Inter'] mb-2">{tr.intrebariFrecvente}</h2>
-            {faq.map((item, i) => <FAQItem key={i} q={item.q} a={item.a} />)}
           </section>
         )}
 
@@ -367,18 +369,20 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
       {showReturModal && <BadgeModal onClose={() => setShowReturModal(false)} title={tr.returModalTitle} desc={tr.returModalDesc} icon="/images/shared/delivery-icon.svg" />}
       {showSwapModal && <BadgeModal onClose={() => setShowSwapModal(false)} title={tr.swapModalTitle} desc={tr.swapModalDesc} icon="/images/shared/swap-icon.svg" />}
       {showSuportModal && <BadgeModal onClose={() => setShowSuportModal(false)} title={tr.suportModalTitle} desc={tr.suportModalDesc} icon="/images/shared/maintance-icon.svg" />}
-      {showImageModal && (
-        <ProductImageModal
-          images={imgs.length > 0 ? imgs : [img]}
-          activeIndex={activeImage}
-          onSelect={setActiveImage}
-          onClose={() => setShowImageModal(false)}
-          productTitle={product.title}
-          closeLabel={tr.compatibilitateClose}
-          prevLabel={tr.ariaPrev}
-          nextLabel={tr.ariaNext}
-        />
-      )}
+      {showImageModal &&
+        createPortal(
+          <ProductImageModal
+            images={imgs.length > 0 ? imgs : [img]}
+            activeIndex={activeImage}
+            onSelect={setActiveImage}
+            onClose={() => setShowImageModal(false)}
+            productTitle={product.title}
+            closeLabel={tr.compatibilitateClose}
+            prevLabel={tr.ariaPrev}
+            nextLabel={tr.ariaNext}
+          />,
+          document.body
+        )}
     </>
   )
 }
