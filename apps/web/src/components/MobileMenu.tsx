@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LANGUAGES } from '../i18n/menu'
+import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 const DIVIZII_SUBMENU_ITEMS = [
   { key: 'rezidential', path: '/divizii/rezidential', subtitleKey: 'divRezSubtitle' as const },
@@ -197,7 +198,7 @@ export default function MobileMenu({
               </button>
 
               <div className="space-y-6">
-                {LOGIN_SUBMENU_ITEMS.map((item) => (
+                {(INSTALATORI_ONLY ? LOGIN_SUBMENU_ITEMS.filter((item) => item.path === '/login') : LOGIN_SUBMENU_ITEMS).map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
@@ -357,117 +358,143 @@ export default function MobileMenu({
           ) : (
             /* ── Main menu ── */
             <div className="flex flex-col pt-2">
-              {/* Produse – opens products sub-page */}
-              <button
-                type="button"
-                onClick={handleProductsClick}
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainProduse}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainProduseSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </button>
-
-              {/* Reduceri */}
-              <Link
-                to="/reduceri"
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                onClick={handleLinkClick}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.reduceri}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainReduceriSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </Link>
-
-              {/* Siguranta */}
-              <Link
-                to="/siguranta"
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                onClick={handleLinkClick}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.siguranta}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainSigurantaSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </Link>
-
-              {/* Divizii – opens sub-page */}
-              <button
-                type="button"
-                onClick={handleDiviziiClick}
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.divizii}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainDiviziiSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </button>
-
-              {/* Instalatori */}
-              <Link
-                to="/instalatori"
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                onClick={handleLinkClick}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </Link>
-
-              {/* Companie – opens sub-page */}
-              <button
-                type="button"
-                onClick={handleCompanieClick}
-                className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.companie}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainCompanieSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </button>
-
-              {/* Spacer */}
-              <div className="flex-1" />
-
-              {/* Gap between Companie and Language */}
-              <div className="mt-6" />
-
-              {/* Language – opens sub-page */}
-              <button
-                type="button"
-                onClick={handleLangClick}
-                className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
-              >
-                <img src="/images/menu/language.svg" alt="" className="size-7 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{language.menuLabel}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLangSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </button>
-
-              {/* Login – opens sub-page */}
-              <button
-                type="button"
-                onClick={handleLoginClick}
-                className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
-              >
-                <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainLogin}</p>
-                  <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLoginSubtitle}</p>
-                </div>
-                <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-              </button>
+              {INSTALATORI_ONLY ? (
+                <>
+                  {/* Instalatori */}
+                  <Link
+                    to="/instalatori"
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                    onClick={handleLinkClick}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </Link>
+                  <div className="flex-1" />
+                  <div className="mt-6" />
+                  <button
+                    type="button"
+                    onClick={handleLangClick}
+                    className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <img src="/images/menu/language.svg" alt="" className="size-7 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{language.menuLabel}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLangSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLoginClick}
+                    className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainLogin}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLoginSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleProductsClick}
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainProduse}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainProduseSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                  <Link
+                    to="/reduceri"
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                    onClick={handleLinkClick}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.reduceri}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainReduceriSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </Link>
+                  <Link
+                    to="/siguranta"
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                    onClick={handleLinkClick}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.siguranta}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainSigurantaSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleDiviziiClick}
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.divizii}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainDiviziiSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                  <Link
+                    to="/instalatori"
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                    onClick={handleLinkClick}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleCompanieClick}
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.companie}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainCompanieSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                  <div className="flex-1" />
+                  <div className="mt-6" />
+                  <button
+                    type="button"
+                    onClick={handleLangClick}
+                    className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <img src="/images/menu/language.svg" alt="" className="size-7 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{language.menuLabel}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLangSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLoginClick}
+                    className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                  >
+                    <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainLogin}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLoginSubtitle}</p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

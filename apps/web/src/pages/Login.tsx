@@ -3,6 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
 import PasswordInput from '../components/PasswordInput'
 import { login as apiLogin, setAuthToken } from '../lib/api'
+import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 function GoogleButton({ label }: { label: string }) {
   return (
@@ -25,7 +26,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const initialTab = tabParam === 'partener' ? 'partener' : 'client'
+  const initialTab = INSTALATORI_ONLY ? 'partener' : (tabParam === 'partener' ? 'partener' : 'client')
   const [tab, setTab] = useState<'client' | 'partener'>(initialTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,7 +35,8 @@ export default function Login() {
   const submitRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (tabParam === 'partener') setTab('partener')
+    if (INSTALATORI_ONLY) setTab('partener')
+    else if (tabParam === 'partener') setTab('partener')
     else if (tabParam === 'client') setTab('client')
   }, [tabParam])
 
@@ -180,15 +182,17 @@ export default function Login() {
 
       <GoogleButton label="Conectează-te cu Google" />
 
-      <p className="text-center text-sm font-['Inter'] text-gray-500 mt-4 sm:mt-6">
-        Nu ai cont?{' '}
-        <Link
-          to={tab === 'client' ? '/signup/clienti' : '/signup/clienti?tab=partener'}
-          className="text-black font-semibold hover:underline"
-        >
-          {tab === 'client' ? 'Creează cont client' : 'Creează cont partener'}
-        </Link>
-      </p>
+      {!INSTALATORI_ONLY && (
+        <p className="text-center text-sm font-['Inter'] text-gray-500 mt-4 sm:mt-6">
+          Nu ai cont?{' '}
+          <Link
+            to={tab === 'client' ? '/signup/clienti' : '/signup/clienti?tab=partener'}
+            className="text-black font-semibold hover:underline"
+          >
+            {tab === 'client' ? 'Creează cont client' : 'Creează cont partener'}
+          </Link>
+        </p>
+      )}
     </AuthLayout>
   )
 }
