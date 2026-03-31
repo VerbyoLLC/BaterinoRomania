@@ -89,9 +89,10 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const faqItems = Array.isArray(product.faq) ? product.faq.filter((f) => f.q?.trim() || f.a?.trim()) : []
   const docs = product.documenteTehnice || []
   const brochureUrl = docs.find((d) => d.url)?.url || ''
-  const technicalSpecs = normalizeIndustrialTechnicalSpecs(
-    (product as { technicalSpecsModels?: unknown }).technicalSpecsModels
-  )
+  const technicalSpecsRaw =
+    (product as { technicalSpecsModels?: unknown }).technicalSpecsModels ??
+    (product as { technical_specs_models?: unknown }).technical_specs_models
+  const technicalSpecs = normalizeIndustrialTechnicalSpecs(technicalSpecsRaw) ?? { entries: [] }
 
   const subtitle = String(product.subtitle || '').trim()
   const overview = String(product.overview || '').trim()
@@ -295,12 +296,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             )}
             {activeTab === 'spec' && (
               <div className="flex flex-col gap-6 font-['Inter']">
-                {technicalSpecs && technicalSpecs.entries.length > 0 ? (
+                {technicalSpecs.entries.length > 0 ? (
                   <IndustrialTechnicalSpecTable data={technicalSpecs} />
                 ) : null}
                 <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-6 text-gray-700">
                   <p className="m-0 mb-4 text-base leading-relaxed">
-                    {technicalSpecs && technicalSpecs.entries.length > 0
+                    {technicalSpecs.entries.length > 0
                       ? 'Additional details and drawings are available in the technical brochure.'
                       : 'Full technical specifications for this product are provided in the technical brochure.'}
                   </p>

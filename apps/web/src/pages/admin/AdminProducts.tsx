@@ -5,6 +5,7 @@ import {
   updateProduct,
   uploadAdminFile,
   getAdminProducts,
+  getAdminProduct,
   updateProductStatus,
   deleteProduct,
   type AdminProduct,
@@ -140,16 +141,23 @@ export default function AdminProducts() {
     return { l: parts[0] || '', w: parts[1] || '', h: parts[2] || '' }
   }
 
-  const handleEditClick = (p: AdminProduct) => {
+  const handleEditClick = async (p: AdminProduct) => {
     setEditingProductId(p.id)
     setSaveError(null)
-    setBrand(p.brand || '')
-    setTitle(p.title || '')
-    setSku(p.sku || '')
-    setSubtitle(String((p as { subtitle?: string }).subtitle || ''))
-    setOverview(String((p as { overview?: string }).overview || ''))
-    setDescription(p.description || '')
-    const kaRaw = (p as { keyAdvantages?: { title: string; image: string }[] }).keyAdvantages
+    let row: AdminProduct = p
+    try {
+      row = await getAdminProduct(p.id)
+    } catch {
+      /* fallback: grid row (may omit nested JSON if response was ever truncated) */
+    }
+
+    setBrand(row.brand || '')
+    setTitle(row.title || '')
+    setSku(row.sku || '')
+    setSubtitle(String((row as { subtitle?: string }).subtitle || ''))
+    setOverview(String((row as { overview?: string }).overview || ''))
+    setDescription(row.description || '')
+    const kaRaw = (row as { keyAdvantages?: { title: string; image: string }[] }).keyAdvantages
     setKeyAdvantages(
       Array.isArray(kaRaw) && kaRaw.length > 0
         ? kaRaw.map((x) => ({
@@ -160,70 +168,76 @@ export default function AdminProducts() {
           }))
         : []
     )
-    setTipProdus((p.tipProdus === 'industrial' ? 'industrial' : 'rezidential') as 'rezidential' | 'industrial')
-    const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
+    setTipProdus(
+      (String(row.tipProdus || '').toLowerCase().trim() === 'industrial' ? 'industrial' : 'rezidential') as
+        | 'rezidential'
+        | 'industrial'
+    )
+    const cat = String((row as { categorie?: string }).categorie || '').toLowerCase()
     setCategorieRezidential(cat.includes('rezidential'))
     setCategorieIndustrial(cat.includes('industrial'))
     setCategorieMedical(cat.includes('medical'))
     setCategorieMaritim(cat.includes('maritim'))
-    setEnergieNominala(parseUnitValue((p as { energieNominala?: string }).energieNominala, 'Wh'))
-    setCapacitate(parseUnitValue((p as { capacitate?: string }).capacitate, 'Ah'))
-    setCurentMaxDescarcare(parseUnitValue((p as { curentMaxDescarcare?: string }).curentMaxDescarcare, 'A'))
-    setCurentMaxIncarcare(parseUnitValue((p as { curentMaxIncarcare?: string }).curentMaxIncarcare, 'A'))
-    setCicluriDescarcare(parseUnitValue((p as { cicluriDescarcare?: string }).cicluriDescarcare, 'Cicluri'))
-    setAdancimeDescarcare(parseUnitValue((p as { adancimeDescarcare?: string }).adancimeDescarcare, '%'))
-    setGreutate(parseUnitValue((p as { greutate?: string }).greutate, 'Kg'))
-    setCompozitie((p as { compozitie?: string }).compozitie || '')
-    const dims = parseDims((p as { dimensiuni?: string }).dimensiuni)
+    setEnergieNominala(parseUnitValue((row as { energieNominala?: string }).energieNominala, 'Wh'))
+    setCapacitate(parseUnitValue((row as { capacitate?: string }).capacitate, 'Ah'))
+    setCurentMaxDescarcare(parseUnitValue((row as { curentMaxDescarcare?: string }).curentMaxDescarcare, 'A'))
+    setCurentMaxIncarcare(parseUnitValue((row as { curentMaxIncarcare?: string }).curentMaxIncarcare, 'A'))
+    setCicluriDescarcare(parseUnitValue((row as { cicluriDescarcare?: string }).cicluriDescarcare, 'Cicluri'))
+    setAdancimeDescarcare(parseUnitValue((row as { adancimeDescarcare?: string }).adancimeDescarcare, '%'))
+    setGreutate(parseUnitValue((row as { greutate?: string }).greutate, 'Kg'))
+    setCompozitie((row as { compozitie?: string }).compozitie || '')
+    const dims = parseDims((row as { dimensiuni?: string }).dimensiuni)
     setDimensiuniL(dims.l)
     setDimensiuniW(dims.w)
     setDimensiuniH(dims.h)
-    setProtectie((p as { protectie?: string }).protectie || '')
-    setConectivitateWifi(p.conectivitateWifi === true)
-    setConectivitateBluetooth(p.conectivitateBluetooth === true)
-    setProtectieFoc((p as { protectieFoc?: string }).protectieFoc || '')
-    setCertificari((p as { certificari?: string }).certificari || '')
-    setGarantie(parseUnitValue((p as { garantie?: string }).garantie, 'ani'))
-    setTensiuneNominala(parseUnitValue((p as { tensiuneNominala?: string }).tensiuneNominala, 'V'))
-    setEficientaCiclu(parseUnitValue((p as { eficientaCiclu?: string }).eficientaCiclu, '%'))
-    const tempFunc = parseRange((p as { temperaturaFunctionare?: string }).temperaturaFunctionare)
+    setProtectie((row as { protectie?: string }).protectie || '')
+    setConectivitateWifi(row.conectivitateWifi === true)
+    setConectivitateBluetooth(row.conectivitateBluetooth === true)
+    setProtectieFoc((row as { protectieFoc?: string }).protectieFoc || '')
+    setCertificari((row as { certificari?: string }).certificari || '')
+    setGarantie(parseUnitValue((row as { garantie?: string }).garantie, 'ani'))
+    setTensiuneNominala(parseUnitValue((row as { tensiuneNominala?: string }).tensiuneNominala, 'V'))
+    setEficientaCiclu(parseUnitValue((row as { eficientaCiclu?: string }).eficientaCiclu, '%'))
+    const tempFunc = parseRange((row as { temperaturaFunctionare?: string }).temperaturaFunctionare)
     setTemperaturaFunctionareMin(tempFunc.min)
     setTemperaturaFunctionareMax(tempFunc.max)
-    const tempStoc = parseRange((p as { temperaturaStocare?: string }).temperaturaStocare)
+    const tempStoc = parseRange((row as { temperaturaStocare?: string }).temperaturaStocare)
     setTemperaturaStocareMin(tempStoc.min)
     setTemperaturaStocareMax(tempStoc.max)
-    const umid = parseRange((p as { umiditate?: string }).umiditate)
+    const umid = parseRange((row as { umiditate?: string }).umiditate)
     setUmiditateMin(umid.min.replace('%', ''))
     setUmiditateMax(umid.max.replace('%', ''))
-    const land = (p as { landedPrice?: string | number }).landedPrice
-    const sale = p.salePrice
-    const v = (p as { vat?: string | number }).vat
+    const land = (row as { landedPrice?: string | number }).landedPrice
+    const sale = row.salePrice
+    const v = (row as { vat?: string | number }).vat
     setLandedPrice(land != null ? String(land).replace('.', ',') : '')
     setSalePrice(sale != null ? String(sale).replace('.', ',') : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
-    const imgs = Array.isArray(p.images) ? p.images : []
+    const imgs = Array.isArray(row.images) ? row.images : []
     setImages(imgs.map((url) => ({ file: null, preview: url, url })))
-    const docs = (p as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice
+    const docs = (row as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice
     setDocumenteTehnice(
       Array.isArray(docs) && docs.length > 0
         ? docs.map((d) => ({ descriere: d.descriere || '', file: null, url: d.url }))
         : [{ descriere: '', file: null }]
     )
-    const faqData = (p as { faq?: { q: string; a: string }[] }).faq
+    const faqData = (row as { faq?: { q: string; a: string }[] }).faq
     setFaq(
       Array.isArray(faqData) && faqData.length > 0
         ? faqData.map((f) => ({ q: f.q || '', a: f.a || '' }))
         : [{ q: '', a: '' }]
     )
-    const alimenta = (p as { alimentaModalContent?: unknown }).alimentaModalContent
+    const alimenta = (row as { alimentaModalContent?: unknown }).alimentaModalContent
     setAlimentaModalContent(
       alimenta && typeof alimenta === 'object'
         ? JSON.stringify(alimenta, null, 2)
         : ''
     )
-    const cardImg = String((p as { cardImage?: string }).cardImage || '').trim()
+    const cardImg = String((row as { cardImage?: string }).cardImage || '').trim()
     setCardPhoto({ file: null, url: cardImg || undefined, preview: cardImg })
-    const rawTs = (p as { technicalSpecsModels?: unknown }).technicalSpecsModels
+    const rawTs =
+      (row as { technicalSpecsModels?: unknown }).technicalSpecsModels ??
+      (row as { technical_specs_models?: unknown }).technical_specs_models
     const tsLoaded = normalizeIndustrialTechnicalSpecs(rawTs) ?? createEmptyIndustrialTechnicalSpecs()
     setTechnicalSpecs(tsLoaded)
     setTechnicalSpecModelExpanded(tsLoaded.entries.map(() => true))
@@ -640,7 +654,7 @@ export default function AdminProducts() {
     }
 
     let technicalSpecsModelsOut: CreateProductPayload['technicalSpecsModels'] = null
-    if (carouselTemplate && technicalSpecs.entries.length > 0) {
+    if (carouselTemplate) {
       technicalSpecsModelsOut = {
         entries: technicalSpecs.entries.map((e) => ({
           modelName: e.modelName.trim(),
@@ -693,13 +707,13 @@ export default function AdminProducts() {
       documenteTehnice: docTehniceFinal,
       faq: faqFiltered,
       alimentaModalContent: alimentaParsed,
-      technicalSpecsModels: carouselTemplate ? technicalSpecsModelsOut : null,
     }
 
     if (carouselTemplate) {
       payload.subtitle = subtitle.trim() || undefined
       payload.overview = overview.trim() || undefined
       payload.keyAdvantages = keyAdvPayload
+      payload.technicalSpecsModels = technicalSpecsModelsOut
     }
 
     return payload

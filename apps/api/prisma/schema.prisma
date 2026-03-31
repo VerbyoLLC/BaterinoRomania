@@ -147,7 +147,7 @@ model Product {
   documenteTehnice      Json     @default("[]") // { descriere: string, url: string }[]
   faq                   Json     @default("[]") // { q: string, a: string }[]
   alimentaModalContent  Json?    // { title, intro?, sections: [{ label, items: string[] }] } — product-specific "Ce se poate alimenta" modal
-  /** Șablon industrial: { models: string[], rows: [{ label, merged?, values? }] } — tabel Specificații tehnice (tab) */
+  /** Industrial: { entries: [{ modelName, specs: Record<string,string> }] }; legacy { models, rows } also supported when reading */
   technicalSpecsModels  Json?
 
   createdAt             DateTime @default(now())

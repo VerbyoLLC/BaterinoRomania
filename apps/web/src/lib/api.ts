@@ -439,7 +439,7 @@ export type AdminProduct = {
 
 export async function getAdminProducts(): Promise<AdminProduct[]> {
   const url = `${API_BASE}/admin/products`
-  const res = await fetch(url, { headers: authHeaders() })
+  const res = await fetch(url, { headers: authHeaders(), cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = json.error || 'Eroare la încărcare.'
@@ -449,6 +449,17 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
     throw err
   }
   return Array.isArray(json) ? json : (json.data ?? json.products ?? [])
+}
+
+/** One product for admin editor — includes nested JSON (e.g. technicalSpecsModels). */
+export async function getAdminProduct(id: string): Promise<AdminProduct> {
+  const res = await fetch(`${API_BASE}/admin/products/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcare.')
+  return json as AdminProduct
 }
 
 export async function updateProductStatus(id: string, status: 'draft' | 'published') {
@@ -477,6 +488,7 @@ export async function createProduct(payload: CreateProductPayload, status: 'draf
   const res = await fetch(`${API_BASE}/admin/products`, {
     method: 'POST',
     headers: authHeaders(),
+    cache: 'no-store',
     body: JSON.stringify({ ...payload, status }),
   })
   const json = await res.json().catch(() => ({}))
@@ -492,6 +504,7 @@ export async function updateProduct(id: string, payload: CreateProductPayload, s
   const res = await fetch(`${API_BASE}/admin/products/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
+    cache: 'no-store',
     body: JSON.stringify({ ...payload, status }),
   })
   const json = await res.json().catch(() => ({}))

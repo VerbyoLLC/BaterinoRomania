@@ -82,8 +82,19 @@ function normalizeFromLegacy(o: { models: unknown[]; rows: LegacyRow[] }): Indus
 }
 
 export function normalizeIndustrialTechnicalSpecs(raw: unknown): IndustrialTechnicalSpecsData | null {
-  if (!raw || typeof raw !== 'object') return null
-  const o = raw as Record<string, unknown>
+  if (raw == null) return null
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (!t) return null
+    try {
+      parsed = JSON.parse(t) as unknown
+    } catch {
+      return null
+    }
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null
+  const o = parsed as Record<string, unknown>
 
   if (Array.isArray(o.entries)) {
     const entries: IndustrialModelSpecEntry[] = []
@@ -98,7 +109,7 @@ export function normalizeIndustrialTechnicalSpecs(raw: unknown): IndustrialTechn
       }
       entries.push({ modelName, specs })
     }
-    return entries.length > 0 ? { entries } : null
+    return { entries }
   }
 
   if (Array.isArray(o.models) && Array.isArray(o.rows)) {
