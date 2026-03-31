@@ -108,7 +108,9 @@ model Product {
   slug                  String?  @unique // URL slug for SEO, e.g. "baterie-hp-2000"
   sku                   String   @unique
   description           String?
-  tipProdus             String   // "rezidential" | "industrial"
+  subtitle              String?  // short line under hero title (rezidential / industrial layout)
+  overview              String?  @db.Text // overview section body (rezidential industrial-style page)
+  tipProdus             String   // "rezidential" = pagină clasică (specificații, preț) | "industrial" = șablon carousel (overview, avantaje)
   categorie             String?  // comma-separated: "rezidential,industrial,medical,maritim"
 
   // Price
@@ -138,11 +140,15 @@ model Product {
   temperaturaStocare    String?
   umiditate             String?
 
+  cardImage             String?  // URL pentru card (listă, acasă); altfel prima din `images`
   // Arrays stored as JSON
   images                Json     @default("[]") // string[] URLs
+  keyAdvantages         Json     @default("[]") // { title: string, image: string }[] — carousel cards on industrial-style residential page
   documenteTehnice      Json     @default("[]") // { descriere: string, url: string }[]
   faq                   Json     @default("[]") // { q: string, a: string }[]
   alimentaModalContent  Json?    // { title, intro?, sections: [{ label, items: string[] }] } — product-specific "Ce se poate alimenta" modal
+  /** Șablon industrial: { models: string[], rows: [{ label, merged?, values? }] } — tabel Specificații tehnice (tab) */
+  technicalSpecsModels  Json?
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

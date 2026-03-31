@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getProduct, type PublicProduct } from '../lib/api'
 import { getProductDetailTranslations, type ProductDetailTranslations } from '../i18n/product-detail'
 import SEO from '../components/SEO'
+import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 
 /* ── Product page skeleton for loading state ────────────────────── */
 function ProductPageSkeleton() {
@@ -658,13 +659,31 @@ export default function ProductRezidential() {
   }
   if (error || !product) return <Navigate to="/produse" replace />
 
+  if (product.tipProdus === 'industrial') {
+    return (
+      <ResidentialIndustrialProductPage
+        product={product}
+        breadcrumbHome={tr.breadcrumbHome}
+        breadcrumbProducts={tr.breadcrumbProducts}
+        lang={language.code}
+      />
+    )
+  }
+
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
   const specs = buildSpecs(product, tr)
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
-  const divisionLabel = product.tipProdus === 'industrial' ? tr.sectorIndustrial : tr.sectorRezidential
+  const divisionLabel = (() => {
+    const cat = String((product as { categorie?: string }).categorie || '').toLowerCase()
+    if (cat.includes('industrial')) return tr.sectorIndustrial
+    if (cat.includes('medical')) return 'Medical'
+    if (cat.includes('maritim')) return 'Maritim'
+    if (cat.includes('rezidential')) return tr.sectorRezidential
+    return tr.sectorRezidential
+  })()
 
   return (
     <>

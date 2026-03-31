@@ -180,7 +180,7 @@ export default function AdminLayout() {
               </div>
               <div className="min-w-0">
                 <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Admin</p>
-                <p className="text-slate-400 text-xs font-['Inter'] truncate">admin@baterino.ro</p>
+                <p className="text-slate-400 text-xs font-['Inter'] truncate">AdminTest</p>
               </div>
             </div>
             <button
