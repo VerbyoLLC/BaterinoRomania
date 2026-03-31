@@ -655,6 +655,8 @@ const createProductHandler = async (req, res) => {
         slug,
         sku,
         description: body.description?.trim() || null,
+        subtitle: body.subtitle?.trim() || null,
+        overview: body.overview?.trim() || null,
         tipProdus,
         categorie: body.categorie?.trim() || null,
         landedPrice,
@@ -680,10 +682,16 @@ const createProductHandler = async (req, res) => {
         temperaturaFunctionare: body.temperaturaFunctionare?.trim() || null,
         temperaturaStocare: body.temperaturaStocare?.trim() || null,
         umiditate: body.umiditate?.trim() || null,
+        cardImage: typeof body.cardImage === 'string' && body.cardImage.trim() ? body.cardImage.trim() : null,
         images,
+        keyAdvantages: Array.isArray(body.keyAdvantages) ? body.keyAdvantages : [],
         documenteTehnice,
         faq,
         alimentaModalContent: body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null,
+        technicalSpecsModels:
+          body.technicalSpecsModels && typeof body.technicalSpecsModels === 'object'
+            ? body.technicalSpecsModels
+            : null,
       },
     })
     return res.status(201).json(product)
@@ -717,6 +725,8 @@ const updateProductHandler = async (req, res) => {
     if (tipProdus) data.tipProdus = tipProdus
     if (body.brand !== undefined) data.brand = body.brand?.trim() || null
     if (body.description !== undefined) data.description = body.description?.trim() || null
+    if (body.subtitle !== undefined) data.subtitle = body.subtitle?.trim() || null
+    if (body.overview !== undefined) data.overview = body.overview?.trim() || null
     if (body.categorie !== undefined) data.categorie = body.categorie?.trim() || null
     if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
     if (body.salePrice !== undefined) data.salePrice = parseDecimal(body.salePrice, 0)
@@ -741,11 +751,19 @@ const updateProductHandler = async (req, res) => {
     if (body.temperaturaFunctionare !== undefined) data.temperaturaFunctionare = body.temperaturaFunctionare?.trim() || null
     if (body.temperaturaStocare !== undefined) data.temperaturaStocare = body.temperaturaStocare?.trim() || null
     if (body.umiditate !== undefined) data.umiditate = body.umiditate?.trim() || null
+    if (body.cardImage !== undefined) data.cardImage = typeof body.cardImage === 'string' && body.cardImage.trim() ? body.cardImage.trim() : null
     if (Array.isArray(body.images)) data.images = body.images
+    if (Array.isArray(body.keyAdvantages)) data.keyAdvantages = body.keyAdvantages
     if (Array.isArray(body.documenteTehnice)) data.documenteTehnice = body.documenteTehnice
     if (Array.isArray(body.faq)) data.faq = body.faq
     if (body.alimentaModalContent !== undefined) {
       data.alimentaModalContent = body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null
+    }
+    if (body.technicalSpecsModels !== undefined) {
+      data.technicalSpecsModels =
+        body.technicalSpecsModels && typeof body.technicalSpecsModels === 'object'
+          ? body.technicalSpecsModels
+          : null
     }
 
     if (title) {
@@ -943,6 +961,16 @@ const deleteProductHandler = async (req, res) => {
 
     // Delete images from R2
     if (isR2Configured()) {
+      if (product.cardImage) {
+        const key = urlToKey(product.cardImage)
+        if (key) {
+          try {
+            await deleteFromR2(key)
+          } catch (e) {
+            console.warn('R2 delete cardImage:', key, e?.message)
+          }
+        }
+      }
       const imgs = Array.isArray(product.images) ? product.images : []
       for (const url of imgs) {
         const key = urlToKey(url)

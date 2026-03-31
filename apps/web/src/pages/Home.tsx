@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 
 import { getHomeTranslations } from '../i18n/home'
-import { getProducts, type PublicProduct } from '../lib/api'
+import { getProducts, getProductCardImageUrl, type PublicProduct } from '../lib/api'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 
@@ -307,10 +307,10 @@ export default function Home() {
         // pass sector filter
       } else if (!p.categorie?.trim()) {
         const tip = String(p.tipProdus || '').toLowerCase()
-        if (activeTab === 'rezidential' && tip === 'rezidential') {
-          // pass
-        } else if (activeTab === 'industrial' && tip === 'industrial') {
-          // pass
+        if (activeTab === 'rezidential' && tip === 'industrial') {
+          // pass — carousel-template products skew residential sector
+        } else if (activeTab === 'industrial' && tip === 'rezidential') {
+          // pass — classic-page products skew industrial sector
         } else {
           return false
         }
@@ -740,8 +740,7 @@ export default function Home() {
               </div>
             ) : (
             featuredProducts.map((p) => {
-              const imgs = Array.isArray(p.images) ? p.images : []
-              const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
+              const img = getProductCardImageUrl(p)
               const conectivitate = [
                 p.conectivitateWifi && 'WiFi',
                 p.conectivitateBluetooth && 'Bluetooth',

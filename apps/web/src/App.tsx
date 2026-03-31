@@ -10,6 +10,7 @@ import Siguranta from './pages/Siguranta'
 import Divizii from './pages/Divizii'
 import Rezidential from './pages/Rezidential'
 import Industrial from './pages/Industrial'
+import IndustrialProductTemplate from './pages/IndustrialProductTemplate'
 import Medical from './pages/Medical'
 import Maritim from './pages/Maritim'
 import Reduceri from './pages/Reduceri'
@@ -114,6 +115,7 @@ export default function App() {
               <Route path="siguranta" element={<Siguranta />} />
               <Route path="divizii/rezidential" element={<Rezidential />} />
               <Route path="divizii/industrial" element={<Industrial />} />
+              <Route path="industrial-product-template" element={<IndustrialProductTemplate />} />
               <Route path="divizii/medical" element={<Medical />} />
               <Route path="divizii/maritim" element={<Maritim />} />
               <Route path="divizii/:slug" element={<Divizii />} />

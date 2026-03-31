@@ -27,6 +27,16 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
+/** Imagine afișată pe carduri (listă produse, acasă, panou parteneri) */
+export function getProductCardImageUrl(
+  product: Pick<PublicProduct, 'images'> & { cardImage?: string | null }
+): string {
+  const card = String(product.cardImage ?? '').trim()
+  if (card) return card
+  const imgs = Array.isArray(product.images) ? product.images : []
+  return imgs[0] || '/images/shared/HP2000-all-in-one.png'
+}
+
 /** Produs public (pagina /produse) */
 export type PublicProduct = {
   id: string
@@ -35,6 +45,13 @@ export type PublicProduct = {
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string | null
   description?: string | null
+  subtitle?: string | null
+  overview?: string | null
+  cardImage?: string | null
+  keyAdvantages?: { title: string; image: string }[]
+  faq?: { q: string; a: string }[]
+  documenteTehnice?: { descriere: string; url: string }[]
+  technicalSpecsModels?: CreateProductPayload['technicalSpecsModels']
   images: string[]
   salePrice: string | number
   tensiuneNominala?: string | null
@@ -339,6 +356,9 @@ export type CreateProductPayload = {
   title: string
   sku: string
   description?: string
+  subtitle?: string
+  overview?: string
+  keyAdvantages?: { title: string; image: string }[]
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string
   landedPrice: string | number
@@ -364,10 +384,16 @@ export type CreateProductPayload = {
   temperaturaFunctionare?: string
   temperaturaStocare?: string
   umiditate?: string
+  /** URL imagine card listă; opțional */
+  cardImage?: string | null
   images: string[]
   documenteTehnice: { descriere: string; url: string }[]
   faq: { q: string; a: string }[]
   alimentaModalContent?: { title: string; intro?: string; sections: Array<{ label: string; items: string[] }> } | null
+  /** Specificații tehnice șablon industrial: fiecare intrare = un model + toate câmpurile */
+  technicalSpecsModels?: {
+    entries: Array<{ modelName: string; specs: Record<string, string> }>
+  } | null
 }
 
 export async function uploadAdminFile(file: File, productFolder?: string, imageIndex?: number): Promise<{ url: string }> {
@@ -381,12 +407,11 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   const params = new URLSearchParams({ folder })
   if (imageIndex != null) params.set('imageIndex', String(imageIndex))
   const uploadUrl = `${API_BASE}/admin/upload?${params}`
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
-  headers['X-Product-Folder'] = folder
-  if (imageIndex != null) headers['X-Image-Index'] = String(imageIndex)
+  // Only Authorization here: header values must be ISO-8859-1; product titles may contain UTF-8 (e.g. Romanian).
+  // Folder and imageIndex are already in the query string and FormData; the API reads those.
   const res = await fetch(uploadUrl, {
     method: 'POST',
-    headers,
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })
   const json = await res.json().catch(() => ({}))

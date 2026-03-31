@@ -1,5 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
-import { createProduct, updateProduct, uploadAdminFile, getAdminProducts, updateProductStatus, deleteProduct, type AdminProduct } from '../../lib/api'
+import { ChevronDown } from 'lucide-react'
+import {
+  createProduct,
+  updateProduct,
+  uploadAdminFile,
+  getAdminProducts,
+  updateProductStatus,
+  deleteProduct,
+  type AdminProduct,
+  type CreateProductPayload,
+} from '../../lib/api'
+import {
+  INDUSTRIAL_SPEC_FIELDS,
+  createEmptyIndustrialModelEntry,
+  createEmptyIndustrialTechnicalSpecs,
+  normalizeIndustrialTechnicalSpecs,
+  type IndustrialTechnicalSpecsData,
+} from '../../lib/industrialTechnicalSpec'
 
 const MAX_IMAGES = 5
 
@@ -8,6 +25,7 @@ export default function AdminProducts() {
   const replaceIndexRef = useRef<number | null>(null)
   const docFileInputRef = useRef<HTMLInputElement>(null)
   const docUploadIndexRef = useRef(0)
+  const cardPhotoInputRef = useRef<HTMLInputElement>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -21,7 +39,14 @@ export default function AdminProducts() {
   const [brand, setBrand] = useState('')
   const [title, setTitle] = useState('')
   const [sku, setSku] = useState('')
+  const [subtitle, setSubtitle] = useState('')
+  const [overview, setOverview] = useState('')
   const [description, setDescription] = useState('')
+  const [keyAdvantages, setKeyAdvantages] = useState<
+    { title: string; file: File | null; url?: string; preview?: string }[]
+  >([])
+  const advantageFileInputRef = useRef<HTMLInputElement>(null)
+  const advantageUploadIndexRef = useRef(0)
   const [images, setImages] = useState<{ file: File | null; preview: string; url?: string }[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [tipProdus, setTipProdus] = useState<'rezidential' | 'industrial'>('rezidential')
@@ -62,6 +87,15 @@ export default function AdminProducts() {
   ])
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }])
   const [alimentaModalContent, setAlimentaModalContent] = useState<string>('')
+  const [cardPhoto, setCardPhoto] = useState<{
+    file: File | null
+    url?: string
+    preview: string
+  }>({ file: null, preview: '' })
+  const [technicalSpecs, setTechnicalSpecs] = useState<IndustrialTechnicalSpecsData>(() =>
+    createEmptyIndustrialTechnicalSpecs()
+  )
+  const [technicalSpecModelExpanded, setTechnicalSpecModelExpanded] = useState<boolean[]>([])
 
   const fetchProducts = async () => {
     setProductsLoading(true)
@@ -83,6 +117,11 @@ export default function AdminProducts() {
   useEffect(() => {
     fetchProducts()
   }, [])
+
+  useEffect(() => {
+    if (tipProdus !== 'industrial' || !panelOpen) return
+    setDocumenteTehnice((prev) => (prev.length === 0 ? [{ descriere: '', file: null }] : prev))
+  }, [tipProdus, panelOpen])
 
   const parseUnitValue = (s: string | null | undefined, _unit: string): string => {
     if (!s) return ''
@@ -107,7 +146,20 @@ export default function AdminProducts() {
     setBrand(p.brand || '')
     setTitle(p.title || '')
     setSku(p.sku || '')
+    setSubtitle(String((p as { subtitle?: string }).subtitle || ''))
+    setOverview(String((p as { overview?: string }).overview || ''))
     setDescription(p.description || '')
+    const kaRaw = (p as { keyAdvantages?: { title: string; image: string }[] }).keyAdvantages
+    setKeyAdvantages(
+      Array.isArray(kaRaw) && kaRaw.length > 0
+        ? kaRaw.map((x) => ({
+            title: x.title || '',
+            file: null,
+            url: x.image,
+            preview: x.image || '',
+          }))
+        : []
+    )
     setTipProdus((p.tipProdus === 'industrial' ? 'industrial' : 'rezidential') as 'rezidential' | 'industrial')
     const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
     setCategorieRezidential(cat.includes('rezidential'))
@@ -169,6 +221,12 @@ export default function AdminProducts() {
         ? JSON.stringify(alimenta, null, 2)
         : ''
     )
+    const cardImg = String((p as { cardImage?: string }).cardImage || '').trim()
+    setCardPhoto({ file: null, url: cardImg || undefined, preview: cardImg })
+    const rawTs = (p as { technicalSpecsModels?: unknown }).technicalSpecsModels
+    const tsLoaded = normalizeIndustrialTechnicalSpecs(rawTs) ?? createEmptyIndustrialTechnicalSpecs()
+    setTechnicalSpecs(tsLoaded)
+    setTechnicalSpecModelExpanded(tsLoaded.entries.map(() => true))
     setPanelOpen(true)
   }
 
@@ -178,7 +236,10 @@ export default function AdminProducts() {
     setBrand('')
     setTitle('')
     setSku('')
+    setSubtitle('')
+    setOverview('')
     setDescription('')
+    setKeyAdvantages([])
     setTipProdus('rezidential')
     setCategorieRezidential(false)
     setCategorieIndustrial(false)
@@ -215,6 +276,12 @@ export default function AdminProducts() {
     setDocumenteTehnice([{ descriere: '', file: null }])
     setFaq([{ q: '', a: '' }])
     setAlimentaModalContent('')
+    setCardPhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file: null, preview: '' }
+    })
+    setTechnicalSpecs(createEmptyIndustrialTechnicalSpecs())
+    setTechnicalSpecModelExpanded([])
     images.forEach(({ preview }) => URL.revokeObjectURL(preview))
     setImages([])
     setPanelOpen(true)
@@ -305,6 +372,52 @@ export default function AdminProducts() {
     setFaq((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const addKeyAdvantage = () => {
+    setKeyAdvantages((prev) => [...prev, { title: '', file: null }])
+  }
+
+  const removeKeyAdvantage = (index: number) => {
+    setKeyAdvantages((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      const removed = prev[index]
+      if (removed?.preview?.startsWith('blob:')) URL.revokeObjectURL(removed.preview)
+      return next
+    })
+  }
+
+  const setKeyAdvantageTitle = (index: number, value: string) => {
+    setKeyAdvantages((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], title: value }
+      return next
+    })
+  }
+
+  const triggerAdvantageUpload = (index: number) => {
+    advantageUploadIndexRef.current = index
+    advantageFileInputRef.current?.click()
+  }
+
+  const onAdvantageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const index = advantageUploadIndexRef.current
+    const file = e.target.files?.[0]
+    if (file?.type.startsWith('image/')) {
+      setKeyAdvantages((prev) => {
+        const next = [...prev]
+        const prevRow = next[index]
+        if (prevRow?.preview?.startsWith('blob:')) URL.revokeObjectURL(prevRow.preview)
+        next[index] = {
+          ...next[index],
+          file,
+          preview: URL.createObjectURL(file),
+          url: undefined,
+        }
+        return next
+      })
+    }
+    e.target.value = ''
+  }
+
   const triggerDocUpload = (index: number) => {
     docUploadIndexRef.current = index
     docFileInputRef.current?.click()
@@ -369,6 +482,56 @@ export default function AdminProducts() {
     e.target.value = ''
   }
 
+  const onCardPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file?.type.startsWith('image/')) return
+    setCardPhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file, url: undefined, preview: URL.createObjectURL(file) }
+    })
+  }
+
+  const clearCardPhoto = () => {
+    setCardPhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file: null, url: undefined, preview: '' }
+    })
+  }
+
+  const addTechnicalSpecModel = () => {
+    setTechnicalSpecs((prev) => ({
+      entries: [...prev.entries, createEmptyIndustrialModelEntry()],
+    }))
+    setTechnicalSpecModelExpanded((prev) => [...prev, true])
+  }
+
+  const removeTechnicalSpecModel = (index: number) => {
+    setTechnicalSpecs((prev) => ({
+      entries: prev.entries.filter((_, i) => i !== index),
+    }))
+    setTechnicalSpecModelExpanded((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const toggleTechnicalSpecModelExpanded = (index: number) => {
+    setTechnicalSpecModelExpanded((prev) => prev.map((v, i) => (i === index ? !v : v)))
+  }
+
+  const setTechnicalSpecModelName = (index: number, value: string) => {
+    setTechnicalSpecs((prev) => ({
+      entries: prev.entries.map((e, i) => (i === index ? { ...e, modelName: value } : e)),
+    }))
+  }
+
+  const setTechnicalSpecField = (entryIndex: number, fieldKey: string, value: string) => {
+    setTechnicalSpecs((prev) => ({
+      entries: prev.entries.map((e, i) => {
+        if (i !== entryIndex) return e
+        return { ...e, specs: { ...e.specs, [fieldKey]: value } }
+      }),
+    }))
+  }
+
   const handleClosePanel = () => {
     setIsClosingPanel(true)
   }
@@ -377,7 +540,13 @@ export default function AdminProducts() {
     if (e.target !== e.currentTarget) return
     if (isClosingPanel) {
       images.forEach(({ preview }) => preview.startsWith('blob:') && URL.revokeObjectURL(preview))
+      keyAdvantages.forEach((ka) => ka.preview?.startsWith('blob:') && URL.revokeObjectURL(ka.preview))
+      if (cardPhoto.preview.startsWith('blob:')) URL.revokeObjectURL(cardPhoto.preview)
       setImages([])
+      setKeyAdvantages([])
+      setCardPhoto({ file: null, preview: '' })
+      setTechnicalSpecs(createEmptyIndustrialTechnicalSpecs())
+      setTechnicalSpecModelExpanded([])
       setEditingProductId(null)
       setPanelOpen(false)
       setIsClosingPanel(false)
@@ -408,66 +577,132 @@ export default function AdminProducts() {
       }
       docTehnice.push({ descriere: doc.descriere.trim(), url })
     }
+    const docTehniceFinal =
+      tipProdus === 'industrial'
+        ? docTehnice.filter((d) => d.url || d.descriere).slice(0, 1)
+        : docTehnice
+
+    const keyAdvPayload: { title: string; image: string }[] = []
+    if (tipProdus === 'industrial') {
+      let ki = 0
+      for (const row of keyAdvantages) {
+        if (!row.title.trim() && !row.file && !row.url) continue
+        let imageUrl = row.url || ''
+        if (row.file) {
+          const { url } = await uploadAdminFile(row.file, productFolder, 100 + ki)
+          imageUrl = url
+          ki++
+        }
+        keyAdvPayload.push({ title: row.title.trim(), image: imageUrl })
+      }
+    }
 
     const faqFiltered = faq.filter((item) => item.q.trim() || item.a.trim()).map((item) => ({ q: item.q.trim(), a: item.a.trim() }))
 
     const dims = [dimensiuniL, dimensiuniW, dimensiuniH].filter(Boolean).join(' × ')
     const dimensiuniStr = dims ? `${dims} mm` : undefined
 
-    return {
+    const carouselTemplate = tipProdus === 'industrial'
+    const descriptionOut = carouselTemplate
+      ? overview.trim() || subtitle.trim() || undefined
+      : description.trim() || undefined
+
+    const alimentaParsed = (() => {
+      if (carouselTemplate) return null
+      const s = alimentaModalContent.trim()
+      if (!s) return null
+      try {
+        const parsed = JSON.parse(s) as { title?: string; intro?: string; sections?: Array<{ label?: string; items?: string[] }> }
+        if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) {
+          return {
+            title: parsed.title,
+            intro: parsed.intro ?? undefined,
+            sections: parsed.sections.map((sec) => ({
+              label: String(sec?.label ?? ''),
+              items: Array.isArray(sec?.items) ? sec.items : [],
+            })),
+          }
+        }
+      } catch {
+        /* invalid JSON */
+      }
+      return null
+    })()
+
+    let cardImageOut: string | null = null
+    if (cardPhoto.file) {
+      const { url } = await uploadAdminFile(cardPhoto.file, productFolder, 99)
+      cardImageOut = url
+    } else if (cardPhoto.url) {
+      cardImageOut = cardPhoto.url
+    } else {
+      cardImageOut = null
+    }
+
+    let technicalSpecsModelsOut: CreateProductPayload['technicalSpecsModels'] = null
+    if (carouselTemplate && technicalSpecs.entries.length > 0) {
+      technicalSpecsModelsOut = {
+        entries: technicalSpecs.entries.map((e) => ({
+          modelName: e.modelName.trim(),
+          specs: Object.fromEntries(
+            INDUSTRIAL_SPEC_FIELDS.map((f) => [f.key, String(e.specs[f.key] ?? '').trim()])
+          ),
+        })),
+      }
+    }
+
+    const payload: CreateProductPayload = {
       brand: brand || undefined,
       title: title.trim() || 'Fără titlu',
       sku: sku.trim() || `SKU-${Date.now()}`,
-      description: description.trim() || undefined,
+      description: descriptionOut,
       tipProdus,
       categorie: [categorieRezidential && 'rezidential', categorieIndustrial && 'industrial', categorieMedical && 'medical', categorieMaritim && 'maritim'].filter(Boolean).join(',') || undefined,
-      landedPrice: parseFormattedNumber(landedPrice) || '0',
-      salePrice: parseFormattedNumber(salePrice) || '0',
-      vat: parseFormattedNumber(vat) || '19',
-      energieNominala: energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
-      capacitate: capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
-      curentMaxDescarcare: curentMaxDescarcare ? `${parseFormattedNumber(curentMaxDescarcare)} A` : undefined,
-      curentMaxIncarcare: curentMaxIncarcare ? `${parseFormattedNumber(curentMaxIncarcare)} A` : undefined,
-      cicluriDescarcare: cicluriDescarcare ? `${parseFormattedNumber(cicluriDescarcare)} Cicluri` : undefined,
-      adancimeDescarcare: adancimeDescarcare ? `${parseFormattedNumber(adancimeDescarcare)}%` : undefined,
-      greutate: greutate ? `${parseFormattedNumber(greutate)} Kg` : undefined,
-      compozitie: compozitie || undefined,
-      dimensiuni: dimensiuniStr,
-      protectie: protectie || undefined,
-      conectivitateWifi,
-      conectivitateBluetooth,
-      protectieFoc: protectieFoc || undefined,
-      certificari: certificari || undefined,
-      garantie: garantie ? `${parseFormattedNumber(garantie)} ani` : undefined,
-      tensiuneNominala: tensiuneNominala ? `${String(tensiuneNominala).replace(',', '.')} V` : undefined,
-      eficientaCiclu: eficientaCiclu ? `${parseFormattedNumber(eficientaCiclu)}%` : undefined,
-      temperaturaFunctionare: (temperaturaFunctionareMin || temperaturaFunctionareMax) ? `${temperaturaFunctionareMin || '?'} ~ ${temperaturaFunctionareMax || '?'}°C` : undefined,
-      temperaturaStocare: (temperaturaStocareMin || temperaturaStocareMax) ? `${temperaturaStocareMin || '?'} ~ ${temperaturaStocareMax || '?'}°C` : undefined,
-      umiditate: (umiditateMin || umiditateMax) ? `${umiditateMin || '?'} ~ ${umiditateMax || '?'}%` : undefined,
+      landedPrice: carouselTemplate ? '0' : parseFormattedNumber(landedPrice) || '0',
+      salePrice: carouselTemplate ? '0' : parseFormattedNumber(salePrice) || '0',
+      vat: carouselTemplate ? '19' : parseFormattedNumber(vat) || '19',
+      energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
+      capacitate: carouselTemplate ? undefined : capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
+      curentMaxDescarcare: carouselTemplate ? undefined : curentMaxDescarcare ? `${parseFormattedNumber(curentMaxDescarcare)} A` : undefined,
+      curentMaxIncarcare: carouselTemplate ? undefined : curentMaxIncarcare ? `${parseFormattedNumber(curentMaxIncarcare)} A` : undefined,
+      cicluriDescarcare: carouselTemplate ? undefined : cicluriDescarcare ? `${parseFormattedNumber(cicluriDescarcare)} Cicluri` : undefined,
+      adancimeDescarcare: carouselTemplate ? undefined : adancimeDescarcare ? `${parseFormattedNumber(adancimeDescarcare)}%` : undefined,
+      greutate: carouselTemplate ? undefined : greutate ? `${parseFormattedNumber(greutate)} Kg` : undefined,
+      compozitie: carouselTemplate ? undefined : compozitie || undefined,
+      dimensiuni: carouselTemplate ? undefined : dimensiuniStr,
+      protectie: carouselTemplate ? undefined : protectie || undefined,
+      conectivitateWifi: carouselTemplate ? false : conectivitateWifi,
+      conectivitateBluetooth: carouselTemplate ? false : conectivitateBluetooth,
+      protectieFoc: carouselTemplate ? undefined : protectieFoc || undefined,
+      certificari: carouselTemplate ? undefined : certificari || undefined,
+      garantie: carouselTemplate ? undefined : garantie ? `${parseFormattedNumber(garantie)} ani` : undefined,
+      tensiuneNominala: carouselTemplate ? undefined : tensiuneNominala ? `${String(tensiuneNominala).replace(',', '.')} V` : undefined,
+      eficientaCiclu: carouselTemplate ? undefined : eficientaCiclu ? `${parseFormattedNumber(eficientaCiclu)}%` : undefined,
+      temperaturaFunctionare:
+        carouselTemplate ? undefined : (temperaturaFunctionareMin || temperaturaFunctionareMax)
+          ? `${temperaturaFunctionareMin || '?'} ~ ${temperaturaFunctionareMax || '?'}°C`
+          : undefined,
+      temperaturaStocare:
+        carouselTemplate ? undefined : (temperaturaStocareMin || temperaturaStocareMax)
+          ? `${temperaturaStocareMin || '?'} ~ ${temperaturaStocareMax || '?'}°C`
+          : undefined,
+      umiditate:
+        carouselTemplate ? undefined : (umiditateMin || umiditateMax) ? `${umiditateMin || '?'} ~ ${umiditateMax || '?'}%` : undefined,
       images: imageUrls,
-      documenteTehnice: docTehnice,
+      cardImage: cardImageOut,
+      documenteTehnice: docTehniceFinal,
       faq: faqFiltered,
-      alimentaModalContent: (() => {
-        const s = alimentaModalContent.trim()
-        if (!s) return null
-        try {
-          const parsed = JSON.parse(s) as { title?: string; intro?: string; sections?: Array<{ label?: string; items?: string[] }> }
-          if (parsed && typeof parsed.title === 'string' && Array.isArray(parsed.sections)) {
-            return {
-              title: parsed.title,
-              intro: parsed.intro ?? undefined,
-              sections: parsed.sections.map((sec) => ({
-                label: String(sec?.label ?? ''),
-                items: Array.isArray(sec?.items) ? sec.items : [],
-              })),
-            }
-          }
-        } catch {
-          /* invalid JSON – ignore */
-        }
-        return null
-      })(),
+      alimentaModalContent: alimentaParsed,
+      technicalSpecsModels: carouselTemplate ? technicalSpecsModelsOut : null,
     }
+
+    if (carouselTemplate) {
+      payload.subtitle = subtitle.trim() || undefined
+      payload.overview = overview.trim() || undefined
+      payload.keyAdvantages = keyAdvPayload
+    }
+
+    return payload
   }
 
   const handleSave = async () => {
@@ -660,6 +895,8 @@ export default function AdminProducts() {
                     <div className="grid grid-cols-2 gap-4">
                       {filtered.map((p) => {
                   const imgs = Array.isArray(p.images) ? p.images : []
+                  const thumb =
+                    String((p as { cardImage?: string }).cardImage || '').trim() || imgs[0] || ''
                   const conectivitate = [
                     p.conectivitateWifi && 'WiFi',
                     p.conectivitateBluetooth && 'Bluetooth',
@@ -670,8 +907,8 @@ export default function AdminProducts() {
                     <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                       {/* Image on top */}
                       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
-                        {imgs[0] ? (
-                          <img src={imgs[0]} alt="" className="w-full h-full object-cover" />
+                        {thumb ? (
+                          <img src={thumb} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">—</div>
                         )}
@@ -799,6 +1036,16 @@ export default function AdminProducts() {
                     <span className="text-sm font-medium font-['Inter'] text-gray-700">Industrial</span>
                   </label>
                 </div>
+                {tipProdus === 'industrial' && (
+                  <p className="mt-2 text-xs text-slate-600 font-['Inter'] rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
+                    <strong>Industrial</strong> — șablon cu carousel, Overview, avantaje cheie și broșură PDF. Folosește câmpurile de mai jos (subtitlu, overview, imagini, avantaje).
+                  </p>
+                )}
+                {tipProdus === 'rezidential' && (
+                  <p className="mt-2 text-xs text-slate-600 font-['Inter'] rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
+                    <strong>Rezidențial</strong> — șablon clasic: descriere, preț, specificații tehnice complete, documente multiple, FAQ, opțional „Ce se poate alimenta”.
+                  </p>
+                )}
               </div>
 
               {/* Categorie */}
@@ -870,7 +1117,7 @@ export default function AdminProducts() {
                     <option value="Lithtech">Lithtech</option>
                   </select>
                 </div>
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere Produs</h3>
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere produs</h3>
                 <div className="flex flex-col gap-4">
                   <div>
                     <label htmlFor="product-title" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
@@ -881,27 +1128,86 @@ export default function AdminProducts() {
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Ex: EcoHome 5 kWh"
+                      placeholder={tipProdus === 'industrial' ? 'Titlu principal (hero)' : 'Ex: EcoHome 5 kWh'}
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
+                  {tipProdus === 'industrial' ? (
+                    <div>
+                      <label htmlFor="product-subtitle" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                        Subtitlu
+                      </label>
+                      <input
+                        id="product-subtitle"
+                        type="text"
+                        value={subtitle}
+                        onChange={(e) => setSubtitle(e.target.value)}
+                        placeholder="Subtitlu sub titlu (ex: tagline scurt)"
+                        className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label htmlFor="product-description" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                        Descriere
+                      </label>
+                      <textarea
+                        id="product-description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Descrierea produsului..."
+                        rows={6}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                      />
+                    </div>
+                  )}
                   <div>
-                    <label htmlFor="product-description" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Descriere
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Upload Product Photo
                     </label>
-                    <textarea
-                      id="product-description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Descrierea produsului..."
-                      rows={6}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                    <p className="text-xs text-gray-500 mb-3">
+                      Afișată pe cardurile de produs (listă, acasă, parteneri). Dacă nu încarci nimic aici, se folosește prima imagine din galerie.
+                    </p>
+                    <input
+                      ref={cardPhotoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onCardPhotoChange}
                     />
+                    <div className="flex flex-wrap items-center gap-4">
+                      {cardPhoto.preview ? (
+                        <img
+                          src={cardPhoto.preview}
+                          alt=""
+                          className="h-28 w-28 object-cover rounded-xl border border-gray-200 bg-neutral-50"
+                        />
+                      ) : null}
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => cardPhotoInputRef.current?.click()}
+                          className="h-10 px-4 rounded-xl border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 bg-white w-fit"
+                        >
+                          Alege fișier
+                        </button>
+                        {cardPhoto.preview ? (
+                          <button
+                            type="button"
+                            onClick={clearCardPhoto}
+                            className="text-sm text-red-600 hover:underline text-left w-fit font-['Inter']"
+                          >
+                            Elimină fotografia
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Price Section */}
+              {tipProdus === 'rezidential' && (
               <div className="pt-2 border-t border-gray-200">
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Preț</h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4">
@@ -949,8 +1255,10 @@ export default function AdminProducts() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Detalii tehnice produs */}
+              {tipProdus === 'rezidential' && (
               <div className="pt-2 border-t border-gray-200">
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Detalii tehnice produs</h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4">
@@ -1155,11 +1463,18 @@ export default function AdminProducts() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Add Images */}
               <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Imagini</h3>
-                <p className="text-xs text-gray-500 mb-3">Opțional (max. 5). Poți șterge sau înlocui orice imagine.</p>
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">
+                  {tipProdus === 'industrial' ? 'Imagini carousel' : 'Imagini'}
+                </h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  {tipProdus === 'industrial'
+                    ? 'Încarcă imaginile pentru caruselul din pagina produsului (max. 5).'
+                    : 'Opțional (max. 5). Poți șterge sau înlocui orice imagine.'}
+                </p>
                 <div
                   className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors min-h-[200px] ${
                     isDragging ? 'border-slate-500 bg-slate-50/50' : 'border-gray-300 hover:border-gray-400'
@@ -1219,84 +1534,312 @@ export default function AdminProducts() {
                 </div>
               </div>
 
+              {tipProdus === 'industrial' && (
+                <>
+                  <div className="pt-2 border-t border-gray-200">
+                    <label htmlFor="product-overview" className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">
+                      Overview
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">Text pentru secțiunea Overview de pe pagina produsului.</p>
+                    <textarea
+                      id="product-overview"
+                      value={overview}
+                      onChange={(e) => setOverview(e.target.value)}
+                      placeholder="Introdu textul overview…"
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Avantaje cheie</h3>
+                      <button
+                        type="button"
+                        onClick={addKeyAdvantage}
+                        className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        + Adaugă casetă
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Pentru fiecare casetă: titlu și imagine. Afișate în pagina publică în secțiunea cu file Key Advantages.
+                    </p>
+                    <input
+                      ref={advantageFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onAdvantageFileChange}
+                    />
+                    <div className="flex flex-col gap-4">
+                      {keyAdvantages.map((row, i) => (
+                        <div key={i} className="rounded-xl border border-gray-200 p-4 space-y-3 bg-neutral-50/80">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-semibold text-gray-600">Casetă {i + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeKeyAdvantage(i)}
+                              className="text-xs text-red-600 hover:underline"
+                            >
+                              Elimină
+                            </button>
+                          </div>
+                          <div>
+                            <label htmlFor={`ka-title-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                              Titlu
+                            </label>
+                            <input
+                              id={`ka-title-${i}`}
+                              type="text"
+                              value={row.title}
+                              onChange={(e) => setKeyAdvantageTitle(i, e.target.value)}
+                              placeholder="Titlu avantaj"
+                              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">Imagine</span>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {(row.preview || row.url) && (
+                                <img
+                                  src={row.preview || row.url}
+                                  alt=""
+                                  className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                                />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => triggerAdvantageUpload(i)}
+                                className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-white bg-white"
+                              >
+                                {row.file || row.url ? 'Înlocuiește imaginea' : 'Încarcă imagine'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Specificații tehnice</h3>
+                      <button
+                        type="button"
+                        onClick={addTechnicalSpecModel}
+                        className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
+                      >
+                        + Adaugă model
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-4">
+                      La fiecare model completezi <strong>toate</strong> câmpurile (același set ca în tabelul din șablonul industrial). Pe site, fiecare model devine o <strong>coloană</strong> în tabelul din fila Technical specification.
+                    </p>
+
+                    {technicalSpecs.entries.length === 0 ? (
+                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                        Apasă „Adaugă model” pentru a adăuga un bloc cu nume model și câmpuri tehnice.
+                      </p>
+                    ) : null}
+
+                    <div className="flex flex-col gap-4">
+                      {technicalSpecs.entries.map((entry, ei) => {
+                        const specModelOpen = technicalSpecModelExpanded[ei] ?? true
+                        return (
+                          <div
+                            key={ei}
+                            className="rounded-xl border border-gray-200 bg-neutral-50/80 p-4 space-y-3"
+                          >
+                            <div
+                              className={`flex flex-wrap items-center justify-between gap-2 pb-3 ${specModelOpen ? 'border-b border-gray-200' : ''}`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleTechnicalSpecModelExpanded(ei)}
+                                className="flex items-center gap-2 min-w-0 text-left rounded-lg -ml-1 pl-1 pr-2 py-1 hover:bg-gray-100/80 transition-colors"
+                                aria-expanded={specModelOpen}
+                              >
+                                <ChevronDown
+                                  className={`h-4 w-4 shrink-0 text-gray-600 transition-transform ${specModelOpen ? '' : '-rotate-90'}`}
+                                  aria-hidden
+                                />
+                                <span className="text-sm font-bold font-['Inter'] text-gray-900 truncate">
+                                  Model {ei + 1}
+                                  {entry.modelName.trim() ? ` — ${entry.modelName.trim()}` : ''}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeTechnicalSpecModel(ei)}
+                                className="text-sm text-red-600 hover:underline font-['Inter'] shrink-0"
+                              >
+                                Elimină modelul
+                              </button>
+                            </div>
+                            {specModelOpen ? (
+                              <>
+                                <div>
+                                  <label htmlFor={`spec-model-name-${ei}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                                    Nume / cod model
+                                  </label>
+                                  <input
+                                    id={`spec-model-name-${ei}`}
+                                    type="text"
+                                    value={entry.modelName}
+                                    onChange={(e) => setTechnicalSpecModelName(ei, e.target.value)}
+                                    placeholder="ex. LTS1331314L-01"
+                                    className="w-full max-w-md h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
+                                  {INDUSTRIAL_SPEC_FIELDS.map((field) => (
+                                    <div key={field.key}>
+                                      <label
+                                        htmlFor={`spec-${ei}-${field.key}`}
+                                        className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1"
+                                      >
+                                        {field.label}
+                                      </label>
+                                      <input
+                                        id={`spec-${ei}-${field.key}`}
+                                        type="text"
+                                        value={entry.specs[field.key] ?? ''}
+                                        onChange={(e) => setTechnicalSpecField(ei, field.key, e.target.value)}
+                                        className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Documente tehnice */}
               <div className="pt-2 border-t border-gray-200">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Documente tehnice</h3>
-                  <button
-                    type="button"
-                    onClick={addDocumentItem}
-                    className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1.5 shrink-0"
-                    aria-label="Adaugă document"
-                    title="Adaugă document"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Adaugă
-                  </button>
-                </div>
-                <input
-                  ref={docFileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={handleDocFileChange}
-                />
-                <div className="flex flex-col gap-4">
-                  {documenteTehnice.map((doc, i) => (
-                    <div key={i} className="flex gap-3 items-center">
-                      <div className="flex-1 min-w-0">
-                        <label htmlFor={`doc-desc-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
-                          Descriere document
-                        </label>
-                        <input
-                          id={`doc-desc-${i}`}
-                          type="text"
-                          value={doc.descriere}
-                          onChange={(e) => setDocumentDescriere(i, e.target.value)}
-                          placeholder="Ex: Fișă tehnică"
-                          className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
-                        />
-                      </div>
-                      <div className="shrink-0 pt-5 flex items-center gap-2">
+                {tipProdus === 'rezidential' ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Documente tehnice</h3>
+                      <button
+                        type="button"
+                        onClick={addDocumentItem}
+                        className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1.5 shrink-0"
+                        aria-label="Adaugă document"
+                        title="Adaugă document"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Adaugă
+                      </button>
+                    </div>
+                    <input
+                      ref={docFileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={handleDocFileChange}
+                    />
+                    <div className="flex flex-col gap-4">
+                      {documenteTehnice.map((doc, i) => (
+                        <div key={i} className="flex gap-3 items-center">
+                          <div className="flex-1 min-w-0">
+                            <label htmlFor={`doc-desc-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                              Descriere document
+                            </label>
+                            <input
+                              id={`doc-desc-${i}`}
+                              type="text"
+                              value={doc.descriere}
+                              onChange={(e) => setDocumentDescriere(i, e.target.value)}
+                              placeholder="Ex: Fișă tehnică"
+                              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                            />
+                          </div>
+                          <div className="shrink-0 pt-5 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => triggerDocUpload(i)}
+                              className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors min-w-[100px] max-w-[160px] flex items-center gap-2"
+                              title={doc.file?.name}
+                            >
+                              <span className="block truncate">{doc.file ? doc.file.name : 'Upload PDF'}</span>
+                              {doc.file && (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => { e.stopPropagation(); removeDocumentFile(i) }}
+                                  onKeyDown={(e) => e.key === 'Enter' && removeDocumentFile(i)}
+                                  className="text-gray-400 hover:text-red-600 text-lg leading-none"
+                                  aria-label="Șterge fișier"
+                                  title="Șterge fișier"
+                                >
+                                  ×
+                                </span>
+                              )}
+                            </button>
+                            {documenteTehnice.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeDocumentItem(i)}
+                                className="h-10 px-3 rounded-lg border border-gray-300 text-xs font-medium font-['Inter'] text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                                aria-label="Șterge rând"
+                                title="Șterge rând"
+                              >
+                                Șterge rând
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Doar fișiere .pdf acceptate. Click pentru înlocuire, × pentru ștergerea fișierului.</p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-2">Broșură tehnică</h3>
+                    <p className="text-xs text-gray-500 mb-3">Un singur fișier PDF.</p>
+                    <input
+                      ref={docFileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={handleDocFileChange}
+                    />
+                    {documenteTehnice[0] && (
+                      <div className="flex gap-3 items-center flex-wrap">
                         <button
                           type="button"
-                          onClick={() => triggerDocUpload(i)}
-                          className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors min-w-[100px] max-w-[160px] flex items-center gap-2"
-                          title={doc.file?.name}
+                          onClick={() => { docUploadIndexRef.current = 0; triggerDocUpload(0) }}
+                          className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50"
                         >
-                          <span className="block truncate">{doc.file ? doc.file.name : 'Upload PDF'}</span>
-                          {doc.file && (
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => { e.stopPropagation(); removeDocumentFile(i) }}
-                              onKeyDown={(e) => e.key === 'Enter' && removeDocumentFile(i)}
-                              className="text-gray-400 hover:text-red-600 text-lg leading-none"
-                              aria-label="Șterge fișier"
-                              title="Șterge fișier"
-                            >
-                              ×
-                            </span>
-                          )}
+                          {documenteTehnice[0].file
+                            ? documenteTehnice[0].file.name
+                            : documenteTehnice[0].url
+                              ? 'PDF încărcat (înlocuiește)'
+                              : 'Încarcă PDF'}
                         </button>
-                        {documenteTehnice.length > 1 && (
+                        {(documenteTehnice[0].file || documenteTehnice[0].url) && (
                           <button
                             type="button"
-                            onClick={() => removeDocumentItem(i)}
-                            className="h-10 px-3 rounded-lg border border-gray-300 text-xs font-medium font-['Inter'] text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                            aria-label="Șterge rând"
-                            title="Șterge rând"
+                            onClick={() => setDocumenteTehnice([{ descriere: '', file: null }])}
+                            className="text-sm text-red-600 hover:underline"
                           >
-                            Șterge rând
+                            Elimină fișier
                           </button>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Doar fișiere .pdf acceptate. Click pentru înlocuire, × pentru ștergerea fișierului.</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">Doar PDF este acceptat.</p>
+                  </>
+                )}
               </div>
 
               {/* Întrebări frecvente */}
@@ -1361,18 +1904,20 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Ce se poate alimenta – conținut modal personalizat */}
-              <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Ce se poate alimenta – conținut modal</h3>
-                <p className="text-xs text-gray-500 mb-3">Opțional. JSON: {"{ title, intro?, sections: [{ label, items: string[] }] }"}. Dacă gol, se folosește conținutul implicit (5kWh).</p>
-                <textarea
-                  value={alimentaModalContent}
-                  onChange={(e) => setAlimentaModalContent(e.target.value)}
-                  placeholder='{"title":"Ce se poate alimenta cu o baterie de 10kWh?","intro":"Capacitate ~9–10 kWh.","sections":[{"label":"Autonomie estimativă","items":["300W → ~30h","500W → ~18–20h"]}]}'
-                  rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
-                />
-              </div>
+              {/* Ce se poate alimenta – conținut modal personalizat (șablon clasic / rezidențial) */}
+              {tipProdus === 'rezidential' && (
+                <div className="pt-2 border-t border-gray-200">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Ce se poate alimenta – conținut modal</h3>
+                  <p className="text-xs text-gray-500 mb-3">Opțional. JSON: {"{ title, intro?, sections: [{ label, items: string[] }] }"}. Dacă gol, se folosește conținutul implicit (5kWh).</p>
+                  <textarea
+                    value={alimentaModalContent}
+                    onChange={(e) => setAlimentaModalContent(e.target.value)}
+                    placeholder='{"title":"Ce se poate alimenta cu o baterie de 10kWh?","intro":"Capacitate ~9–10 kWh.","sections":[{"label":"Autonomie estimativă","items":["300W → ~30h","500W → ~18–20h"]}]}'
+                    rows={8}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                  />
+                </div>
+              )}
 
             </form>
           </div>

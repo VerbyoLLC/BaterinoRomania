@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getProducts, getProduct, type PublicProduct } from '../../lib/api'
+import { getProducts, getProduct, getProductCardImageUrl, type PublicProduct } from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
@@ -55,8 +55,7 @@ function ProductCard({
   onOrder: () => void
   orderLabel: string
 }) {
-  const imgs = Array.isArray(product.images) ? product.images : []
-  const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const img = getProductCardImageUrl(product)
   const price = product.salePrice != null ? Number(product.salePrice) : 0
   const p = product as PublicProduct & { greutate?: string }
   const energieDisplay = whToKwhDisplay(p.energieNominala)
@@ -259,8 +258,8 @@ export default function PartnerProducts() {
         if (cat && cat.includes(sector)) return true
         if (!p.categorie?.trim()) {
           const tip = String(p.tipProdus || '').toLowerCase()
-          if (sector === 'rezidential' && tip === 'rezidential') return true
-          if (sector === 'industrial' && tip === 'industrial') return true
+          if (sector === 'rezidential' && tip === 'industrial') return true
+          if (sector === 'industrial' && tip === 'rezidential') return true
         }
         return false
       })

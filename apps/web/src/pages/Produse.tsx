@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getProduseTranslations } from '../i18n/produse'
-import { getProducts, type PublicProduct } from '../lib/api'
+import { getProducts, getProductCardImageUrl, type PublicProduct } from '../lib/api'
 import SEO from '../components/SEO'
 
 /* ── Skeleton card for loading state ───────────────────────────── */
@@ -25,8 +25,7 @@ function ProductCard({ product, partneriButtonLabel }: {
   product: PublicProduct
   partneriButtonLabel: string
 }) {
-  const imgs = Array.isArray(product.images) ? product.images : []
-  const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const img = getProductCardImageUrl(product)
   const conectivitate = [
     product.conectivitateWifi && 'WiFi',
     product.conectivitateBluetooth && 'Bluetooth',
@@ -101,8 +100,9 @@ export default function Produse() {
         if (cat && cat.includes(sector)) return true
         if (!p.categorie?.trim()) {
           const tip = String(p.tipProdus || '').toLowerCase()
-          if (sector === 'rezidential' && tip === 'rezidential') return true
-          if (sector === 'industrial' && tip === 'industrial') return true
+          // tipProdus = page template: industrial → carousel, rezidential → classic; empty categorie fallback mirrors that mapping
+          if (sector === 'rezidential' && tip === 'industrial') return true
+          if (sector === 'industrial' && tip === 'rezidential') return true
         }
         return false
       })
