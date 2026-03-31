@@ -14,6 +14,46 @@ const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = requ
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
 /** Slugify title for URL: lowercase, hyphenated, no diacritics */
+/** Accept only { entries: [...] } for JSON column; reject arrays / wrong shape (typeof [] === 'object'). */
+function parseTechnicalSpecsModelsBody(v) {
+  if (v === undefined) return undefined
+  if (v === null) return null
+  let x = v
+  if (typeof v === 'string') {
+    try {
+      x = JSON.parse(v)
+    } catch {
+      return undefined
+    }
+  }
+  if (x === null || typeof x !== 'object' || Array.isArray(x)) return undefined
+  if (!Array.isArray(x.entries)) return undefined
+  try {
+    return JSON.parse(JSON.stringify(x))
+  } catch {
+    return undefined
+  }
+}
+
+/** Plain JSON for API responses (Decimal / odd prototypes can drop or break nested Json like technicalSpecsModels). */
+function productToJson(record) {
+  if (record == null) return record
+  try {
+    return JSON.parse(
+      JSON.stringify(record, (_, v) => {
+        if (typeof v === 'bigint') return v.toString()
+        if (v != null && typeof v === 'object' && v.constructor?.name === 'Decimal' && typeof v.toString === 'function') {
+          return v.toString()
+        }
+        return v
+      })
+    )
+  } catch (err) {
+    console.error('productToJson:', err?.message || err)
+    return record
+  }
+}
+
 function slugify(title) {
   if (!title || typeof title !== 'string') return ''
   return title
@@ -688,13 +728,13 @@ const createProductHandler = async (req, res) => {
         documenteTehnice,
         faq,
         alimentaModalContent: body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null,
-        technicalSpecsModels:
-          body.technicalSpecsModels && typeof body.technicalSpecsModels === 'object'
-            ? body.technicalSpecsModels
-            : null,
+        technicalSpecsModels: (() => {
+          const n = parseTechnicalSpecsModelsBody(body.technicalSpecsModels)
+          return n === undefined ? null : n
+        })(),
       },
     })
-    return res.status(201).json(product)
+    return res.status(201).json(productToJson(product))
   } catch (err) {
     console.error('Create product error:', err)
     let errorMsg = 'Eroare la salvarea produsului.'
@@ -760,10 +800,12 @@ const updateProductHandler = async (req, res) => {
       data.alimentaModalContent = body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null
     }
     if (body.technicalSpecsModels !== undefined) {
-      data.technicalSpecsModels =
-        body.technicalSpecsModels && typeof body.technicalSpecsModels === 'object'
-          ? body.technicalSpecsModels
-          : null
+      if (body.technicalSpecsModels === null) {
+        data.technicalSpecsModels = null
+      } else {
+        const n = parseTechnicalSpecsModelsBody(body.technicalSpecsModels)
+        if (n !== undefined) data.technicalSpecsModels = n
+      }
     }
 
     if (title) {
@@ -782,7 +824,7 @@ const updateProductHandler = async (req, res) => {
       where: { id },
       data,
     })
-    return res.json(product)
+    return res.json(productToJson(product))
   } catch (err) {
     console.error('Update product error:', err)
     let errorMsg = 'Eroare la actualizare.'
@@ -874,7 +916,7 @@ const listPublicProductsHandler = async (req, res) => {
         orderBy: { createdAt: 'desc' },
       })
     }
-    return res.json(products)
+    return res.json(products.map(productToJson))
   } catch (err) {
     console.error('List public products error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
@@ -905,7 +947,7 @@ const getPublicProductHandler = async (req, res) => {
       }
     }
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
-    return res.json(product)
+    return res.json(productToJson(product))
   } catch (err) {
     console.error('Get public product error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
@@ -919,7 +961,8 @@ const listProductsHandler = async (req, res) => {
   try {
     if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
     const products = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
-    return res.json(products)
+    res.set('Cache-Control', 'no-store')
+    return res.json(products.map(productToJson))
   } catch (err) {
     console.error('List products error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
@@ -930,6 +973,23 @@ app.get('/api/admin/products', authMiddleware, adminAuthMiddleware, listProducts
 app.get('/api/admin/products/', authMiddleware, adminAuthMiddleware, listProductsHandler)
 app.get('/admin/products', authMiddleware, adminAuthMiddleware, listProductsHandler)
 app.get('/admin/products/', authMiddleware, adminAuthMiddleware, listProductsHandler)
+
+// ── Admin: one product by id (full row from DB — nested JSON e.g. technicalSpecsModels) ──
+const getAdminProductByIdHandler = async (req, res) => {
+  try {
+    if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
+    const { id } = req.params
+    const product = await prisma.product.findUnique({ where: { id } })
+    if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
+    res.set('Cache-Control', 'no-store')
+    return res.json(productToJson(product))
+  } catch (err) {
+    console.error('Get admin product error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.get('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, getAdminProductByIdHandler)
+app.get('/admin/products/:id', authMiddleware, adminAuthMiddleware, getAdminProductByIdHandler)
 
 // ── Admin: update product status (go live) ───────────────────────────────
 const updateProductStatusHandler = async (req, res) => {
