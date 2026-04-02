@@ -56,7 +56,9 @@ function ProductCard({
   orderLabel: string
 }) {
   const img = getProductCardImageUrl(product)
-  const price = product.salePrice != null ? Number(product.salePrice) : 0
+  const price =
+    product.salePrice != null && product.salePrice !== '' ? Number(product.salePrice) : NaN
+  const priceOk = Number.isFinite(price) && price > 0
   const p = product as PublicProduct & { greutate?: string }
   const energieDisplay = whToKwhDisplay(p.energieNominala)
   const cardSpecs = [
@@ -96,7 +98,7 @@ function ProductCard({
             </p>
           )}
           <p className="text-slate-900 text-lg font-bold font-['Inter'] mt-3 tracking-tight">
-            {price.toLocaleString('ro-RO')} lei
+            {priceOk ? `${price.toLocaleString('ro-RO')} lei` : '—'}
           </p>
         </div>
       </button>
@@ -398,9 +400,14 @@ export default function PartnerProducts() {
                   }}
                   onOrder={() => {
                     const qty = quantities[product.id] ?? 1
-                    const price = product.salePrice != null ? Number(product.salePrice) : 0
-                    const total = price * qty
-                    alert(`Comandă: ${product.title}\nCantitate: ${qty}\nTotal: ${total.toLocaleString('ro-RO')} lei\n\nFuncționalitate comandă în curând.`)
+                    const p =
+                      product.salePrice != null && product.salePrice !== ''
+                        ? Number(product.salePrice)
+                        : NaN
+                    const line = Number.isFinite(p) && p > 0
+                      ? `Total: ${(p * qty).toLocaleString('ro-RO')} lei`
+                      : 'Total: —'
+                    alert(`Comandă: ${product.title}\nCantitate: ${qty}\n${line}\n\nFuncționalitate comandă în curând.`)
                   }}
                   orderLabel={tr.comandaBtn}
                 />

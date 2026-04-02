@@ -17,6 +17,7 @@ export const INDUSTRIAL_SPEC_FIELDS: readonly { key: string; label: string }[] =
   { key: 'ratedOutputVoltage', label: 'Rated Output Voltage' },
   { key: 'acAccessMethod', label: 'AC Access Method' },
   { key: 'ratedGridFrequency', label: 'Rated Grid Frequency' },
+  { key: 'pcsCabinetCount', label: 'Number of PCS cabinets' },
   { key: 'conversionEfficiency', label: 'Conversion Efficiency' },
   { key: 'coolingMethod', label: 'Cooling Method' },
   { key: 'communication', label: 'Communication' },

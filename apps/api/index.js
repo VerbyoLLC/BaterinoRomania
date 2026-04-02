@@ -54,6 +54,44 @@ function productToJson(record) {
   }
 }
 
+function parsePriceVisibility(v) {
+  const s = String(v || '').trim()
+  if (['hidden', 'public', 'partner_only'].includes(s)) return s
+  return 'public'
+}
+
+function parsePricePresentation(v) {
+  const s = String(v || '').trim()
+  if (['simple', 'detailed'].includes(s)) return s
+  return 'simple'
+}
+
+/** Optional JWT for public product routes (partners see prices when allowed). */
+function readOptionalAuthPayload(req) {
+  const auth = req.headers.authorization
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
+  if (!token) return null
+  try {
+    return jwt.verify(token, JWT_SECRET)
+  } catch {
+    return null
+  }
+}
+
+/** Strip money fields for anonymous users when visibility is not public. */
+function applyPublicPricePolicy(apiProduct, authPayload) {
+  const vis = apiProduct.priceVisibility || 'public'
+  if (vis === 'public') return apiProduct
+  const role = authPayload?.role
+  if (role === 'partener') return apiProduct
+  return {
+    ...apiProduct,
+    landedPrice: null,
+    salePrice: null,
+    vat: null,
+  }
+}
+
 function slugify(title) {
   if (!title || typeof title !== 'string') return ''
   return title
@@ -697,8 +735,17 @@ const createProductHandler = async (req, res) => {
         description: body.description?.trim() || null,
         subtitle: body.subtitle?.trim() || null,
         overview: body.overview?.trim() || null,
+        seoTitle: body.seoTitle != null && String(body.seoTitle).trim() ? String(body.seoTitle).trim() : null,
+        seoDescription:
+          body.seoDescription != null && String(body.seoDescription).trim()
+            ? String(body.seoDescription).trim()
+            : null,
+        seoOgImage:
+          body.seoOgImage != null && String(body.seoOgImage).trim() ? String(body.seoOgImage).trim() : null,
         tipProdus,
         categorie: body.categorie?.trim() || null,
+        priceVisibility: parsePriceVisibility(body.priceVisibility),
+        pricePresentation: parsePricePresentation(body.pricePresentation),
         landedPrice,
         salePrice,
         vat,
@@ -767,7 +814,17 @@ const updateProductHandler = async (req, res) => {
     if (body.description !== undefined) data.description = body.description?.trim() || null
     if (body.subtitle !== undefined) data.subtitle = body.subtitle?.trim() || null
     if (body.overview !== undefined) data.overview = body.overview?.trim() || null
+    if (body.seoTitle !== undefined) data.seoTitle = body.seoTitle != null && String(body.seoTitle).trim() ? String(body.seoTitle).trim() : null
+    if (body.seoDescription !== undefined)
+      data.seoDescription =
+        body.seoDescription != null && String(body.seoDescription).trim()
+          ? String(body.seoDescription).trim()
+          : null
+    if (body.seoOgImage !== undefined)
+      data.seoOgImage = body.seoOgImage != null && String(body.seoOgImage).trim() ? String(body.seoOgImage).trim() : null
     if (body.categorie !== undefined) data.categorie = body.categorie?.trim() || null
+    if (body.priceVisibility !== undefined) data.priceVisibility = parsePriceVisibility(body.priceVisibility)
+    if (body.pricePresentation !== undefined) data.pricePresentation = parsePricePresentation(body.pricePresentation)
     if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
     if (body.salePrice !== undefined) data.salePrice = parseDecimal(body.salePrice, 0)
     if (body.vat !== undefined) data.vat = parseDecimal(body.vat, 19)
@@ -916,7 +973,10 @@ const listPublicProductsHandler = async (req, res) => {
         orderBy: { createdAt: 'desc' },
       })
     }
-    return res.json(products.map(productToJson))
+    const authPayload = readOptionalAuthPayload(req)
+    return res.json(
+      products.map((p) => applyPublicPricePolicy(productToJson(p), authPayload))
+    )
   } catch (err) {
     console.error('List public products error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
@@ -947,7 +1007,8 @@ const getPublicProductHandler = async (req, res) => {
       }
     }
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
-    return res.json(productToJson(product))
+    const authPayload = readOptionalAuthPayload(req)
+    return res.json(applyPublicPricePolicy(productToJson(product), authPayload))
   } catch (err) {
     console.error('Get public product error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })

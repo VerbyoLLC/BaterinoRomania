@@ -2,9 +2,10 @@
   "name": "baterino-romania",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev-web.mjs",
+    "dev": "concurrently \"npm run dev:api\" \"node scripts/dev-web.mjs\"",
+    "dev:web": "node scripts/dev-web.mjs",
     "dev:api": "npm run start --prefix apps/api",
-    "dev:all": "concurrently \"cd apps/api && node index.js\" \"npm run dev\"",
+    "dev:all": "concurrently \"cd apps/api && node index.js\" \"npm run dev:web\"",
     "build": "npm install --prefix apps/web && npm run build --prefix apps/web",
     "preview": "npm run preview --prefix apps/web",
     "vercel:link": "vercel link --yes --project prj_FXUyvmhxQrhUSVfhpn6kYdQmRj8P",
