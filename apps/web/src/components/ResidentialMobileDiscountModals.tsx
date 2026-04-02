@@ -37,13 +37,17 @@ type Props = {
   lang: LangCode
   tr: ProductDetailTranslations
   discountOptions: MobileDiscountOption[]
-  discountProgramId: string
+  /** Draft selection while picker/detail flow is open (program id or 'none'). */
+  pickDraftId: string
   formatOptionLabel: (opt: MobileDiscountOption) => string
   pickOpen: boolean
   onClosePick: () => void
   detailOptionId: string | null
+  /** Dismiss details without committing (backdrop / Escape). */
   onCloseDetail: () => void
-  /** Called when user selects a radio (program id or 'none'). */
+  /** Commit programme from details sheet and close. */
+  onApplyDetail: () => void
+  /** Picker radio: 'none' commits immediately; programme id opens details only. */
   onSelectProgram: (id: string) => void
 }
 
@@ -51,12 +55,13 @@ export default function ResidentialMobileDiscountModals({
   lang,
   tr,
   discountOptions,
-  discountProgramId,
+  pickDraftId,
   formatOptionLabel,
   pickOpen,
   onClosePick,
   detailOptionId,
   onCloseDetail,
+  onApplyDetail,
   onSelectProgram,
 }: Props) {
   const reduceriTr = getReduceriTranslations(lang)
@@ -115,7 +120,7 @@ export default function ResidentialMobileDiscountModals({
                   type="radio"
                   name="mobile-residential-discount"
                   className="h-5 w-5 shrink-0 accent-slate-900"
-                  checked={discountProgramId === 'none'}
+                  checked={pickDraftId === 'none'}
                   onChange={() => onSelectProgram('none')}
                 />
                 <span className="text-sm font-medium text-gray-900">{tr.faraReducere}</span>
@@ -126,7 +131,7 @@ export default function ResidentialMobileDiscountModals({
                     type="radio"
                     name="mobile-residential-discount"
                     className="h-5 w-5 shrink-0 accent-slate-900"
-                    checked={discountProgramId === opt.id}
+                    checked={pickDraftId === opt.id}
                     onChange={() => onSelectProgram(opt.id)}
                   />
                   <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-gray-900">
@@ -185,10 +190,10 @@ export default function ResidentialMobileDiscountModals({
           <div className="border-t border-neutral-100 p-4">
             <button
               type="button"
-              onClick={onCloseDetail}
-              className="w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white"
+              onClick={onApplyDetail}
+              className="w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white uppercase tracking-wide"
             >
-              {tr.compatibilitateClose}
+              {tr.reduceriHoverApplyBtn}
             </button>
           </div>
         </div>
@@ -210,10 +215,10 @@ export default function ResidentialMobileDiscountModals({
               <p className="m-0 text-gray-700">{opt ? formatOptionLabel(opt) : detailOptionId}</p>
               <button
                 type="button"
-                onClick={onCloseDetail}
-                className="mt-4 w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white"
+                onClick={onApplyDetail}
+                className="mt-4 w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white uppercase tracking-wide"
               >
-                {tr.compatibilitateClose}
+                {tr.reduceriHoverApplyBtn}
               </button>
             </div>
           </div>
