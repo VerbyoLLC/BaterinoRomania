@@ -36,3 +36,4 @@ apps/api/generated
 
 # Uploads (user-uploaded files)
 apps/api/uploads
+.vercel

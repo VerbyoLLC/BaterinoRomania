@@ -27,6 +27,16 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
+/** Imagine afișată pe carduri (listă produse, acasă, panou parteneri) */
+export function getProductCardImageUrl(
+  product: Pick<PublicProduct, 'images'> & { cardImage?: string | null }
+): string {
+  const card = String(product.cardImage ?? '').trim()
+  if (card) return card
+  const imgs = Array.isArray(product.images) ? product.images : []
+  return imgs[0] || '/images/shared/HP2000-all-in-one.png'
+}
+
 /** Produs public (pagina /produse) */
 export type PublicProduct = {
   id: string
@@ -35,8 +45,24 @@ export type PublicProduct = {
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string | null
   description?: string | null
+  subtitle?: string | null
+  overview?: string | null
+  seoTitle?: string | null
+  seoDescription?: string | null
+  seoOgImage?: string | null
+  cardImage?: string | null
+  keyAdvantages?: { title: string; image: string }[]
+  faq?: { q: string; a: string }[]
+  documenteTehnice?: { descriere: string; url: string }[]
+  technicalSpecsModels?: CreateProductPayload['technicalSpecsModels']
   images: string[]
-  salePrice: string | number
+  salePrice?: string | number | null
+  landedPrice?: string | number | null
+  vat?: string | number | null
+  /** hidden | public | partner_only */
+  priceVisibility?: 'hidden' | 'public' | 'partner_only'
+  /** simple | detailed (UI only) */
+  pricePresentation?: 'simple' | 'detailed'
   tensiuneNominala?: string | null
   capacitate?: string | null
   compozitie?: string | null
@@ -49,7 +75,7 @@ export type PublicProduct = {
 
 /** Lista produselor publicate (fără auth) */
 export async function getProducts(): Promise<PublicProduct[]> {
-  const res = await fetch(`${API_BASE}/products`)
+  const res = await fetch(`${API_BASE}/products`, { headers: publicFetchHeaders() })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la încărcare.')
   return Array.isArray(json) ? json : []
@@ -57,7 +83,9 @@ export async function getProducts(): Promise<PublicProduct[]> {
 
 /** Un singur produs publicat (fără auth). Acceptă id sau slug pentru SEO. */
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
-  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`)
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
+    headers: publicFetchHeaders(),
+  })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
   return json
@@ -161,6 +189,26 @@ export function setAuthToken(token: string) {
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
+}
+
+export function getAuthRole(): 'admin' | 'client' | 'partener' | null {
+  const token = getAuthToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1])) as { role?: string }
+    const r = payload.role
+    if (r === 'admin' || r === 'client' || r === 'partener') return r
+    return null
+  } catch {
+    return null
+  }
+}
+
+function publicFetchHeaders(): HeadersInit {
+  const h: Record<string, string> = {}
+  const token = getAuthToken()
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
 /** Extrage email-ul din token (pentru afișare). Returnează null dacă token invalid/lipsă. */
@@ -339,8 +387,16 @@ export type CreateProductPayload = {
   title: string
   sku: string
   description?: string
+  subtitle?: string
+  overview?: string
+  seoTitle?: string | null
+  seoDescription?: string | null
+  seoOgImage?: string | null
+  keyAdvantages?: { title: string; image: string }[]
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string
+  priceVisibility?: 'hidden' | 'public' | 'partner_only'
+  pricePresentation?: 'simple' | 'detailed'
   landedPrice: string | number
   salePrice: string | number
   vat: string | number
@@ -364,10 +420,16 @@ export type CreateProductPayload = {
   temperaturaFunctionare?: string
   temperaturaStocare?: string
   umiditate?: string
+  /** URL imagine card listă; opțional */
+  cardImage?: string | null
   images: string[]
   documenteTehnice: { descriere: string; url: string }[]
   faq: { q: string; a: string }[]
   alimentaModalContent?: { title: string; intro?: string; sections: Array<{ label: string; items: string[] }> } | null
+  /** Specificații tehnice șablon industrial: fiecare intrare = un model + toate câmpurile */
+  technicalSpecsModels?: {
+    entries: Array<{ modelName: string; specs: Record<string, string> }>
+  } | null
 }
 
 export async function uploadAdminFile(file: File, productFolder?: string, imageIndex?: number): Promise<{ url: string }> {
@@ -381,12 +443,11 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   const params = new URLSearchParams({ folder })
   if (imageIndex != null) params.set('imageIndex', String(imageIndex))
   const uploadUrl = `${API_BASE}/admin/upload?${params}`
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
-  headers['X-Product-Folder'] = folder
-  if (imageIndex != null) headers['X-Image-Index'] = String(imageIndex)
+  // Only Authorization here: header values must be ISO-8859-1; product titles may contain UTF-8 (e.g. Romanian).
+  // Folder and imageIndex are already in the query string and FormData; the API reads those.
   const res = await fetch(uploadUrl, {
     method: 'POST',
-    headers,
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })
   const json = await res.json().catch(() => ({}))
@@ -414,7 +475,7 @@ export type AdminProduct = {
 
 export async function getAdminProducts(): Promise<AdminProduct[]> {
   const url = `${API_BASE}/admin/products`
-  const res = await fetch(url, { headers: authHeaders() })
+  const res = await fetch(url, { headers: authHeaders(), cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = json.error || 'Eroare la încărcare.'
@@ -424,6 +485,17 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
     throw err
   }
   return Array.isArray(json) ? json : (json.data ?? json.products ?? [])
+}
+
+/** One product for admin editor — includes nested JSON (e.g. technicalSpecsModels). */
+export async function getAdminProduct(id: string): Promise<AdminProduct> {
+  const res = await fetch(`${API_BASE}/admin/products/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcare.')
+  return json as AdminProduct
 }
 
 export async function updateProductStatus(id: string, status: 'draft' | 'published') {
@@ -452,6 +524,7 @@ export async function createProduct(payload: CreateProductPayload, status: 'draf
   const res = await fetch(`${API_BASE}/admin/products`, {
     method: 'POST',
     headers: authHeaders(),
+    cache: 'no-store',
     body: JSON.stringify({ ...payload, status }),
   })
   const json = await res.json().catch(() => ({}))
@@ -467,6 +540,7 @@ export async function updateProduct(id: string, payload: CreateProductPayload, s
   const res = await fetch(`${API_BASE}/admin/products/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
+    cache: 'no-store',
     body: JSON.stringify({ ...payload, status }),
   })
   const json = await res.json().catch(() => ({}))

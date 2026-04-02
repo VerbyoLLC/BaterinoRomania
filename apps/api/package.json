@@ -9,7 +9,9 @@
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
     "seed": "node prisma/seed.js",
-    "populate-slugs": "node scripts/populate-product-slugs.cjs"
+    "populate-slugs": "node scripts/populate-product-slugs.cjs",
+    "populate:bess-cabinet-215-261": "node scripts/populate-bess-cabinet-215-261-specs.cjs",
+    "populate:bess-20ft-656-1446": "node scripts/populate-bess-20ft-container-656-1446-specs.cjs"
   },
   "keywords": [],
   "author": "",

@@ -1,49 +1,31 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Link, useParams, Navigate } from 'react-router-dom'
+import { Link, useParams, Navigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getProduct, type PublicProduct } from '../lib/api'
 import { getProductDetailTranslations, type ProductDetailTranslations } from '../i18n/product-detail'
 import SEO from '../components/SEO'
+import ProductPriceBlock from '../components/ProductPriceBlock'
+import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
+import { getProductTemplateSeo } from '../lib/productTemplateSeo'
+import type { LangCode } from '../i18n/menu'
+import {
+  IndustrialProductPageSkeleton,
+  ResidentialProductPageSkeleton,
+} from '../components/product/ProductPageLoaders'
+import { cacheProductTip, readCachedProductTip } from '../lib/productTipCache'
+import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 
-/* ── Product page skeleton for loading state ────────────────────── */
-function ProductPageSkeleton() {
-  return (
-    <div className="max-w-content mx-auto px-5 lg:px-3 pt-6 pb-24">
-      <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8 animate-pulse">
-        <div className="h-4 w-16 bg-neutral-200 rounded" />
-        <span>/</span>
-        <div className="h-4 w-20 bg-neutral-200 rounded" />
-        <span>/</span>
-        <div className="h-4 w-24 bg-neutral-200 rounded" />
-      </nav>
-      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 flex flex-col gap-5">
-          <div className="h-8 w-3/4 bg-neutral-200 rounded animate-pulse" />
-          <div className="h-4 w-full bg-neutral-200 rounded animate-pulse" />
-          <div className="h-4 w-full bg-neutral-200 rounded animate-pulse" />
-          <div className="border-t border-zinc-100 pt-5 space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex gap-2">
-                <div className="h-4 w-32 bg-neutral-200 rounded animate-pulse" />
-                <div className="h-4 w-24 bg-neutral-200 rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
-          <div className="h-12 w-48 bg-neutral-200 rounded animate-pulse" />
-        </div>
-        <div className="lg:col-span-6 lg:col-start-7 flex flex-col gap-4">
-          <div className="bg-neutral-100 rounded-[10px] h-[320px] lg:h-[460px] flex items-center justify-center">
-            <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-24 h-12 object-contain opacity-30 animate-pulse" aria-hidden />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-neutral-100 rounded-[10px] animate-pulse" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+export type ProductPageLocationState = {
+  tipProdus?: 'rezidential' | 'industrial'
+}
+
+function pickIndustrialLoadingSkeleton(
+  navTip: 'rezidential' | 'industrial' | undefined,
+  cachedTip: 'rezidential' | 'industrial' | undefined,
+): boolean {
+  if (navTip === 'industrial') return true
+  if (navTip === 'rezidential') return false
+  return cachedTip === 'industrial'
 }
 
 /* ── Product image with loader (Baterino logo while loading) ─────── */
@@ -620,6 +602,10 @@ function CompatibilitateInvertorModal({ onClose, tr }: { onClose: () => void; tr
 /* ── Page ───────────────────────────────────────────────────────── */
 export default function ProductRezidential() {
   const { slug } = useParams<{ slug: string }>()
+  const location = useLocation()
+  const navTip = (location.state as ProductPageLocationState | null)?.tipProdus
+  const cachedTip = slug ? readCachedProductTip(slug) : undefined
+  const showIndustrialLoader = pickIndustrialLoadingSkeleton(navTip, cachedTip)
   const { language } = useLanguage()
   const tr = getProductDetailTranslations(language.code)
   const [product, setProduct] = useState<PublicProduct | null>(null)
@@ -635,6 +621,7 @@ export default function ProductRezidential() {
   const [showSwapModal, setShowSwapModal] = useState(false)
   const [showSuportModal, setShowSuportModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   useEffect(() => {
     if (!slug) {
@@ -648,15 +635,34 @@ export default function ProductRezidential() {
       .finally(() => setLoading(false))
   }, [slug])
 
+  useEffect(() => {
+    if (!product) return
+    cacheProductTip({ slug: product.slug, id: product.id, tipProdus: product.tipProdus })
+  }, [product])
+
+  useEffect(() => {
+    setDescExpanded(false)
+  }, [product?.id])
+
   if (loading) {
     return (
       <>
         <SEO title={tr.loading} description="" canonical={`/produse/${slug}`} lang={language.code} />
-        <ProductPageSkeleton />
+        {showIndustrialLoader ? <IndustrialProductPageSkeleton /> : <ResidentialProductPageSkeleton />}
       </>
     )
   }
   if (error || !product) return <Navigate to="/produse" replace />
+
+  if (product.tipProdus === 'industrial') {
+    return (
+      <ResidentialIndustrialProductPage
+        product={product}
+        breadcrumbHome={tr.breadcrumbHome}
+        breadcrumbProducts={tr.breadcrumbProducts}
+      />
+    )
+  }
 
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
@@ -664,14 +670,30 @@ export default function ProductRezidential() {
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
-  const divisionLabel = product.tipProdus === 'industrial' ? tr.sectorIndustrial : tr.sectorRezidential
+  const divisionLabel = (() => {
+    const cat = String((product as { categorie?: string }).categorie || '').toLowerCase()
+    if (cat.includes('industrial')) return tr.sectorIndustrial
+    if (cat.includes('medical')) return 'Medical'
+    if (cat.includes('maritim')) return 'Maritim'
+    if (cat.includes('rezidential')) return tr.sectorRezidential
+    return tr.sectorRezidential
+  })()
+  const templateSeo = getProductTemplateSeo(product, language.code as LangCode)
+  const rawDesc = product.description?.trim() ?? ''
+  const descNeedsToggle = rawDesc.length > 140
 
   return (
     <>
-      <SEO title={product.title} description={product.description || ''} canonical={`/produse/${product.slug || product.id}`} lang={language.code} />
+      <SEO
+        title={templateSeo.title}
+        description={templateSeo.description}
+        canonical={`/produse/${product.slug || product.id}`}
+        lang={language.code}
+        ogImage={templateSeo.ogImage}
+      />
 
-      <div className="max-w-content mx-auto px-5 lg:px-3 pt-6 pb-24 overflow-visible">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 font-['Inter'] mb-8">
+      <div className="max-w-content mx-auto px-5 lg:px-3 pt-4 pb-24 overflow-visible">
+        <nav className="flex w-full items-center justify-end gap-2 text-xs sm:text-sm text-gray-500 font-['Inter'] mb-3 lg:mb-4">
           <Link to="/" className="hover:text-black transition-colors">{tr.breadcrumbHome}</Link>
           <span>/</span>
           <Link to="/produse" className="hover:text-black transition-colors">{tr.breadcrumbProducts}</Link>
@@ -679,59 +701,61 @@ export default function ProductRezidential() {
           <span className="text-black">{divisionLabel}</span>
         </nav>
 
-        <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-start gap-6 overflow-visible">
-          <div className="contents lg:flex lg:flex-col lg:col-span-5 lg:col-start-1 lg:sticky lg:top-24 lg:self-start">
-            <div className="order-1 lg:order-none flex flex-col">
-              <h1 className="text-black text-2xl lg:text-3xl font-bold font-['Inter'] leading-tight mb-3">{product.title}</h1>
-              <p className="text-gray-600 text-base font-['Inter'] leading-6 mb-4 lg:mb-5">{product.description || ''}</p>
-            </div>
-
-            <div className="order-3 lg:order-none flex flex-col">
-              <div className="flex flex-col gap-2.5 mb-5 lg:mb-6 border-t border-zinc-100 pt-4 lg:pt-5">
-                {specs.map((s, i) => (
-                  <div key={i} className="flex gap-2 text-sm font-['Inter'] items-baseline">
-                    <span className="font-bold text-black w-[180px] flex-shrink-0">{s.label}:</span>
-                    <span className="text-gray-700">{s.value}</span>
+        <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-start gap-8 lg:gap-5 overflow-visible">
+          <div className="contents lg:flex lg:flex-col lg:col-span-5 lg:col-start-1 lg:sticky lg:top-20 lg:self-start">
+            <div className="order-1 lg:order-none flex flex-col max-w-lg w-full lg:col-span-5 lg:col-start-1 gap-8">
+              <header className="space-y-0">
+                <h1 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-tight tracking-tight m-0">
+                  {product.title}
+                </h1>
+                {rawDesc ? (
+                  <div className="mt-3 sm:mt-4 max-w-prose">
+                    <p
+                      className={`text-neutral-700 text-base font-['Inter'] leading-relaxed m-0 ${
+                        descNeedsToggle && !descExpanded ? 'line-clamp-4' : ''
+                      }`}
+                    >
+                      {rawDesc}
+                      {descNeedsToggle ? (
+                        <>
+                          {'\u00A0'}
+                          <button
+                            type="button"
+                            onClick={() => setDescExpanded((e) => !e)}
+                            className="inline p-0 border-0 bg-transparent text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700 font-['Inter'] align-baseline whitespace-nowrap"
+                          >
+                            {descExpanded ? tr.descriptionReadLess : tr.descriptionReadMore}
+                          </button>
+                        </>
+                      ) : null}
+                    </p>
                   </div>
-                ))}
-              </div>
+                ) : null}
+              </header>
 
-              <div className="mb-5 lg:mb-6 mt-6 md:mt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCompatibilitateModal(true)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-[10px] bg-neutral-100 hover:bg-neutral-200 transition-colors text-left"
-                >
-                  <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain flex-shrink-0" />
-                  <span className="text-black text-sm font-semibold font-['Inter']">{tr.verificareCompatibilitate}</span>
-                  <svg className="w-4 h-4 text-gray-500 ml-auto flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCeSePoateAlimentaModal(true)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-[10px] bg-neutral-100 hover:bg-neutral-200 transition-colors text-left"
-                >
-                  <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain flex-shrink-0" />
-                  <span className="text-black text-sm font-semibold font-['Inter']">{tr.ceSePoateAlimenta}</span>
-                  <svg className="w-4 h-4 text-gray-500 ml-auto flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
+              <section className="m-0" aria-label={tr.dateTehnice}>
+                <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_minmax(0,1.4fr)] gap-x-8 gap-y-5">
+                  {specs.map((s, i) => (
+                    <li key={i} className="min-w-0">
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
+                      <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
 
-              <Link
-                to="/instalatori"
-                className="mt-6 md:mt-0 w-full max-w-[320px] px-10 py-4 bg-slate-900 text-white rounded-[10px] text-base font-bold font-['Inter'] uppercase hover:bg-slate-700 active:bg-black transition-colors tracking-wide text-center inline-block"
-              >
-                {tr.disponibilPentruPartneri}
-              </Link>
+              <section className="m-0">
+                {showResidentialClientPurchaseUI(product) ? (
+                  <ResidentialClientPriceBlock product={product} tr={tr} lang={language.code as LangCode} />
+                ) : (
+                  <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+                )}
+              </section>
             </div>
           </div>
 
-          <div className="contents lg:flex lg:flex-col lg:col-span-6 lg:col-start-7 lg:min-w-0 gap-6">
-            <div className="order-2 lg:order-none flex flex-col gap-4">
+          <div className="contents lg:flex lg:flex-col lg:col-span-6 lg:col-start-7 lg:min-w-0 gap-8">
+            <div className="order-2 lg:order-none flex flex-col gap-8">
               <div
                 className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in"
                 onClick={() => setShowImageModal(true)}
@@ -766,7 +790,52 @@ export default function ProductRezidential() {
                   <ProductImageWithLoader src={img} alt={product.title} />
                 )}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+              <section className="flex flex-col" aria-labelledby="compat-util-heading">
+                <h3
+                  id="compat-util-heading"
+                  className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+                >
+                  {tr.compatibilitateSiUtilizare}
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCompatibilitateModal(true)}
+                    className="group flex flex-1 items-center gap-3 min-h-[52px] rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
+                      <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.verificareCompatibilitate}</span>
+                    <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCeSePoateAlimentaModal(true)}
+                    className="group flex flex-1 items-center gap-3 min-h-[52px] rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
+                      <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.ceSePoateAlimenta}</span>
+                    <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </section>
+
+              <section className="flex flex-col" aria-labelledby="siguranta-baterino-heading">
+                <h3
+                  id="siguranta-baterino-heading"
+                  className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+                >
+                  {tr.sigurantaBaterino}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {badges.map((b, i) => (
                   b.id === 'compatibilitate' ? (
                     <button
@@ -835,10 +904,11 @@ export default function ProductRezidential() {
                     </div>
                   )
                 ))}
-              </div>
+                </div>
+              </section>
             </div>
 
-            <div className="order-4 lg:order-none flex flex-col gap-5">
+            <div className="order-4 lg:order-none flex flex-col gap-8">
               {docs.length > 0 && (
                 <div>
                   <h3 className="text-black text-base font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
@@ -874,16 +944,18 @@ export default function ProductRezidential() {
               {techData.length > 0 && (
                 <section>
                   <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
-                  <div className="bg-neutral-100 rounded-[10px] overflow-hidden">
-                    <div className="grid grid-cols-1">
-                      {techData.map(([key, val], i) => (
-                        <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-zinc-200 last:border-0">
-                          <span className="text-gray-500 text-sm font-['Inter'] w-[200px] flex-shrink-0">{key}</span>
-                          <span className="text-black text-sm font-semibold font-['Inter']">{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                    {techData.map(([key, val], i) => (
+                      <li key={i} className="min-w-0">
+                        <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">
+                          {key}
+                        </span>
+                        <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">
+                          {val}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               )}
 
