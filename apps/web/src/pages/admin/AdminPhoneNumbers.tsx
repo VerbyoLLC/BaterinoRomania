@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getAdminDepartmentPhones,
@@ -24,16 +24,26 @@ export default function AdminPhoneNumbers() {
   const [error, setError] = useState('')
   const [savedOk, setSavedOk] = useState(false)
 
+  const load = useCallback(() => {
+    if (!getAuthToken()) return
+    setLoading(true)
+    setError('')
+    getAdminDepartmentPhones()
+      .then(setRows)
+      .catch((err) => {
+        setRows(null)
+        setError(err instanceof Error ? err.message : 'Eroare la încărcare.')
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
   useEffect(() => {
     if (!getAuthToken()) {
       navigate('/admin/login', { replace: true })
       return
     }
-    getAdminDepartmentPhones()
-      .then(setRows)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Eroare la încărcare.'))
-      .finally(() => setLoading(false))
-  }, [navigate])
+    load()
+  }, [navigate, load])
 
   const updateField = (department: DepartmentPhoneKey, field: 'phone' | 'whatsapp', value: string) => {
     setRows((prev) =>
@@ -68,8 +78,16 @@ export default function AdminPhoneNumbers() {
       </p>
 
       {error && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
-          {error}
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter'] space-y-3">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-900 hover:bg-red-50 disabled:opacity-50"
+          >
+            Reîncearcă
+          </button>
         </div>
       )}
       {savedOk && (
@@ -81,6 +99,10 @@ export default function AdminPhoneNumbers() {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <p className="p-8 text-gray-500 text-sm font-['Inter']">Se încarcă…</p>
+        ) : error ? (
+          <p className="p-8 text-gray-500 text-sm font-['Inter']">
+            Remediază eroarea de mai sus (de obicei redeploy API + migrare DB), apoi apasă Reîncearcă.
+          </p>
         ) : rows && rows.length > 0 ? (
           <>
             <div className="overflow-x-auto">
