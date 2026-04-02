@@ -703,6 +703,20 @@ app.get('/admin/department-phones', authMiddleware, adminAuthMiddleware, listDep
 app.put('/api/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
 app.put('/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
 
+// ── Public: telefoane pe departament (fără auth — pentru site) ─────────
+const publicDepartmentPhonesHandler = async (req, res) => {
+  try {
+    await ensureDepartmentPhoneRows()
+    const rows = await prisma.departmentPhone.findMany()
+    res.json(orderDepartmentPhones(rows))
+  } catch (err) {
+    console.error('Public department phones:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.get('/api/department-phones', publicDepartmentPhonesHandler)
+app.get('/department-phones', publicDepartmentPhonesHandler)
+
 // ── Admin: update company discount ──────────────────────────────────────
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
