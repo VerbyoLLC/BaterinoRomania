@@ -43,13 +43,37 @@ export type ProductDetailTranslations = {
   compatibilitateLabel: string
   verificareCompatibilitate: string
   ceSePoateAlimenta: string
+  /** Right column: section above inverter / usage shortcuts */
+  compatibilitateSiUtilizare: string
+  /** Right column: warranty / trust badge grid */
+  sigurantaBaterino: string
   cantitateLabel: string
   pretLabel: string
+  /** Strikethrough list price line, e.g. "PREȚ VECHI" next to old amount */
+  pretVechiLabel: string
   includesTVA: string
+  /** Replace {pct} with formatted rate, e.g. "Includes VAT 21%" */
+  includesVatWithPct: string
   alegeProgramReduceri: string
   faraReducere: string
+  /** Discount programme labels (residential compact pricing) */
+  reduceriProgram5: string
+  reduceriProgram10: string
+  reduceriProgram15: string
+  /** Line before saved amount, e.g. "Economisești" / "You save" */
+  economisestiLabel: string
+  /** Discount headline next to savings — replace {pct} with whole number, e.g. "5% REDUCERE" */
+  discountPctHighlight: string
+  /** Open modal with discount programme cards (residential pricing) */
+  veziProgrameReduceri: string
+  /** CTA in modal footer → full /reduceri page */
+  reduceriModalSeeFullPage: string
   comandaBtn: string
-  disponibilPentruPartneri: string
+  /** Residential public pricing: order button follow-up (checkout not live) */
+  clientOrderNotice: string
+  totalEstimated: string
+  ariaQtyDecrease: string
+  ariaQtyIncrease: string
   documenteTehnice: string
   document: string
   dateTehnice: string
@@ -61,6 +85,9 @@ export type ProductDetailTranslations = {
   reduceriTitle: string
   reduceriDesc: string
   intraInCont: string
+  /** Product hero description expand */
+  descriptionReadMore: string
+  descriptionReadLess: string
   // Contact CTA
   contactTitle: string
   contactDesc: string
@@ -141,13 +168,28 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     compatibilitateLabel: 'COMPATIBILITATE',
     verificareCompatibilitate: 'Verifică compatibilitate invertor',
     ceSePoateAlimenta: 'Ce se poate alimenta?',
+    compatibilitateSiUtilizare: 'Compatibilitate și utilizare',
+    sigurantaBaterino: 'Siguranța Baterino',
     cantitateLabel: 'CANTITATE',
     pretLabel: 'PREȚ',
+    pretVechiLabel: 'PREȚ VECHI',
     includesTVA: 'include TVA',
+    includesVatWithPct: 'Include TVA {pct}%',
     alegeProgramReduceri: 'ALEGE PROGRAM REDUCERI',
     faraReducere: 'Fără reducere',
+    reduceriProgram5: 'Program Reduceri 5%',
+    reduceriProgram10: 'Program Reduceri 10%',
+    reduceriProgram15: 'Program Reduceri 15%',
+    economisestiLabel: 'Economisești',
+    discountPctHighlight: '{pct}% REDUCERE',
+    veziProgrameReduceri: 'Vezi programe reduceri',
+    reduceriModalSeeFullPage: 'Deschide pagina Programe reducere',
     comandaBtn: 'COMANDĂ',
-    disponibilPentruPartneri: 'DISPONIBIL PENTRU PARTNERI',
+    clientOrderNotice:
+      'Comanda online nu este încă activă. Te rugăm să ne contactezi pentru ofertă sau să îți creezi cont pentru programele de reduceri.',
+    totalEstimated: 'Total estimativ',
+    ariaQtyDecrease: 'Scade cantitatea',
+    ariaQtyIncrease: 'Crește cantitatea',
     documenteTehnice: 'Documente Tehnice',
     document: 'Document',
     dateTehnice: 'Date tehnice despre produs',
@@ -157,6 +199,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriTitle: 'UTILIZEAZĂ PROGRAMELE NOASTRE DE REDUCERI',
     reduceriDesc: 'Creează un cont pe platforma Baterino și alege programul de reducere care ți se potrivește.',
     intraInCont: 'intră în cont',
+    descriptionReadMore: 'Citește mai mult',
+    descriptionReadLess: 'Mai puțin',
     contactTitle: 'Nu ești sigur ce ți se potrivește?',
     contactDesc: 'Discută cu echipa noastră și află care este cea mai bună soluție pentru tine.',
     contacteazaNe: 'CONTACTEAZĂ-NE',
@@ -227,13 +271,28 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     compatibilitateLabel: 'COMPATIBILITY',
     verificareCompatibilitate: 'Check inverter compatibility',
     ceSePoateAlimenta: 'What can it power?',
+    compatibilitateSiUtilizare: 'Compatibility and usage',
+    sigurantaBaterino: 'Baterino assurance',
     cantitateLabel: 'QUANTITY',
     pretLabel: 'PRICE',
+    pretVechiLabel: 'OLD PRICE',
     includesTVA: 'includes VAT',
+    includesVatWithPct: 'Includes VAT {pct}%',
     alegeProgramReduceri: 'CHOOSE DISCOUNT PROGRAMME',
     faraReducere: 'No discount',
+    reduceriProgram5: 'Discount programme 5%',
+    reduceriProgram10: 'Discount programme 10%',
+    reduceriProgram15: 'Discount programme 15%',
+    economisestiLabel: 'You save',
+    discountPctHighlight: '{pct}% OFF',
+    veziProgrameReduceri: 'View discount programmes',
+    reduceriModalSeeFullPage: 'Open discount programmes page',
     comandaBtn: 'ORDER',
-    disponibilPentruPartneri: 'AVAILABLE FOR PARTNERS',
+    clientOrderNotice:
+      'Online checkout is not active yet. Please contact us for a quote or create an account to use our discount programmes.',
+    totalEstimated: 'Estimated total',
+    ariaQtyDecrease: 'Decrease quantity',
+    ariaQtyIncrease: 'Increase quantity',
     documenteTehnice: 'Technical Documents',
     document: 'Document',
     dateTehnice: 'Technical product data',
@@ -243,6 +302,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriTitle: 'USE OUR DISCOUNT PROGRAMMES',
     reduceriDesc: 'Create an account on the Baterino platform and choose the discount programme that suits you.',
     intraInCont: 'log in',
+    descriptionReadMore: 'Read more',
+    descriptionReadLess: 'Show less',
     contactTitle: 'Not sure what suits you?',
     contactDesc: 'Talk to our team and find out which is the best solution for you.',
     contacteazaNe: 'CONTACT US',
@@ -313,13 +374,27 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     compatibilitateLabel: '兼容性',
     verificareCompatibilitate: '检查逆变器兼容性',
     ceSePoateAlimenta: '可以供电什么？',
+    compatibilitateSiUtilizare: '兼容性与用途',
+    sigurantaBaterino: 'Baterino保障与承诺',
     cantitateLabel: '数量',
     pretLabel: '价格',
+    pretVechiLabel: '原价',
     includesTVA: '含增值税',
+    includesVatWithPct: '含增值税 {pct}%',
     alegeProgramReduceri: '选择折扣计划',
     faraReducere: '无折扣',
+    reduceriProgram5: '折扣计划 5%',
+    reduceriProgram10: '折扣计划 10%',
+    reduceriProgram15: '折扣计划 15%',
+    economisestiLabel: '您节省',
+    discountPctHighlight: '{pct}% 折扣',
+    veziProgrameReduceri: '查看折扣计划',
+    reduceriModalSeeFullPage: '打开折扣计划专页',
     comandaBtn: '订购',
-    disponibilPentruPartneri: '面向合作伙伴',
+    clientOrderNotice: '在线结账尚未开通。请联系我们以获取报价，或注册账户使用折扣计划。',
+    totalEstimated: '预估合计',
+    ariaQtyDecrease: '减少数量',
+    ariaQtyIncrease: '增加数量',
     documenteTehnice: '技术文档',
     document: '文档',
     dateTehnice: '产品技术数据',
@@ -329,6 +404,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriTitle: '使用我们的折扣计划',
     reduceriDesc: '在Baterino平台创建账户并选择适合您的折扣计划。',
     intraInCont: '登录',
+    descriptionReadMore: '展开全文',
+    descriptionReadLess: '收起',
     contactTitle: '不确定什么适合您？',
     contactDesc: '与我们的团队讨论，了解最适合您的解决方案。',
     contacteazaNe: '联系我们',

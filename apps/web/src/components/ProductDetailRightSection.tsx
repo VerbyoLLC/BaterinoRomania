@@ -314,16 +314,18 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
         {showTehnice && techData.length > 0 && (
           <section>
             <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
-            <div className="bg-neutral-100 rounded-[10px] overflow-hidden">
-              <div className="grid grid-cols-1">
-                {techData.map(([key, val], i) => (
-                  <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-zinc-200 last:border-0">
-                    <span className="text-gray-500 text-sm font-['Inter'] w-[200px] flex-shrink-0">{key}</span>
-                    <span className="text-black text-sm font-semibold font-['Inter']">{val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+              {techData.map(([key, val], i) => (
+                <li key={i} className="min-w-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">
+                    {key}
+                  </span>
+                  <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">
+                    {val}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

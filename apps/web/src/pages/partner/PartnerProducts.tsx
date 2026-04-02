@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getProducts, getProduct, type PublicProduct } from '../../lib/api'
+import { getProducts, getProduct, getProductCardImageUrl, type PublicProduct } from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
@@ -55,9 +55,10 @@ function ProductCard({
   onOrder: () => void
   orderLabel: string
 }) {
-  const imgs = Array.isArray(product.images) ? product.images : []
-  const img = imgs[0] || '/images/shared/HP2000-all-in-one.png'
-  const price = product.salePrice != null ? Number(product.salePrice) : 0
+  const img = getProductCardImageUrl(product)
+  const price =
+    product.salePrice != null && product.salePrice !== '' ? Number(product.salePrice) : NaN
+  const priceOk = Number.isFinite(price) && price > 0
   const p = product as PublicProduct & { greutate?: string }
   const energieDisplay = whToKwhDisplay(p.energieNominala)
   const cardSpecs = [
@@ -97,7 +98,7 @@ function ProductCard({
             </p>
           )}
           <p className="text-slate-900 text-lg font-bold font-['Inter'] mt-3 tracking-tight">
-            {price.toLocaleString('ro-RO')} lei
+            {priceOk ? `${price.toLocaleString('ro-RO')} lei` : '—'}
           </p>
         </div>
       </button>
@@ -259,8 +260,8 @@ export default function PartnerProducts() {
         if (cat && cat.includes(sector)) return true
         if (!p.categorie?.trim()) {
           const tip = String(p.tipProdus || '').toLowerCase()
-          if (sector === 'rezidential' && tip === 'rezidential') return true
-          if (sector === 'industrial' && tip === 'industrial') return true
+          if (sector === 'rezidential' && tip === 'industrial') return true
+          if (sector === 'industrial' && tip === 'rezidential') return true
         }
         return false
       })
@@ -399,9 +400,14 @@ export default function PartnerProducts() {
                   }}
                   onOrder={() => {
                     const qty = quantities[product.id] ?? 1
-                    const price = product.salePrice != null ? Number(product.salePrice) : 0
-                    const total = price * qty
-                    alert(`Comandă: ${product.title}\nCantitate: ${qty}\nTotal: ${total.toLocaleString('ro-RO')} lei\n\nFuncționalitate comandă în curând.`)
+                    const p =
+                      product.salePrice != null && product.salePrice !== ''
+                        ? Number(product.salePrice)
+                        : NaN
+                    const line = Number.isFinite(p) && p > 0
+                      ? `Total: ${(p * qty).toLocaleString('ro-RO')} lei`
+                      : 'Total: —'
+                    alert(`Comandă: ${product.title}\nCantitate: ${qty}\n${line}\n\nFuncționalitate comandă în curând.`)
                   }}
                   orderLabel={tr.comandaBtn}
                 />
