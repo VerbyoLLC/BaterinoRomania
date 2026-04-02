@@ -62,6 +62,14 @@ export type HomeTranslations = {
   productsVoltageHigh: string
   includesTVA: string
   disponibilPentruParteneri: string
+  /** Residential card: replaces price when visibility is partner-only / hidden */
+  catalogDisponibilParteneriPrice: string
+  /** Residential catalog: label above public price */
+  pretLabel: string
+  catalogIncludesVatWithPct: string
+  catalogStockInStock: string
+  catalogStockOutOfStock: string
+  catalogStockComingSoon: string
   productsComingSoon: string
   welcomeModalWelcomeTo: string
   welcomeModalTitle: string
@@ -196,6 +204,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageHigh: 'Tensiune înaltă',
     includesTVA: 'include TVA',
     disponibilPentruParteneri: 'VEZI DETALII',
+    catalogDisponibilParteneriPrice: 'Disponibil Partneri',
+    pretLabel: 'Preț',
+    catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogStockInStock: 'Stoc suficient',
+    catalogStockOutOfStock: 'Stoc epuizat',
+    catalogStockComingSoon: 'În curând',
     productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
     welcomeModalWelcomeTo: 'BINE AI VENIT LA',
     welcomeModalTitle: 'ESTI INSTALATOR SAU DISTRIBUITOR?',
@@ -321,6 +335,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageHigh: 'High Voltage',
     includesTVA: 'includes VAT',
     disponibilPentruParteneri: 'VIEW DETAILS',
+    catalogDisponibilParteneriPrice: 'Available to partners',
+    pretLabel: 'Price',
+    catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogStockInStock: 'In stock',
+    catalogStockOutOfStock: 'Out of stock',
+    catalogStockComingSoon: 'Coming soon',
     productsComingSoon: 'The site is being updated. Products will be available soon.',
     welcomeModalWelcomeTo: 'WELCOME TO',
     welcomeModalTitle: 'ARE YOU AN INSTALLER OR DISTRIBUTOR?',
@@ -446,6 +466,12 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageHigh: '高压',
     includesTVA: '含增值税',
     disponibilPentruParteneri: '查看详情',
+    catalogDisponibilParteneriPrice: '合作伙伴专享',
+    pretLabel: '价格',
+    catalogIncludesVatWithPct: '含增值税 {pct}%',
+    catalogStockInStock: '库存充足',
+    catalogStockOutOfStock: '售罄',
+    catalogStockComingSoon: '即将到货',
     productsComingSoon: '网站正在更新中，产品即将推出。',
     welcomeModalWelcomeTo: '欢迎来到',
     welcomeModalTitle: '您是安装商还是分销商？',

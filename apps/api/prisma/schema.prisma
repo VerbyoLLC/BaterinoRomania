@@ -125,6 +125,10 @@ model Product {
   priceVisibility       String   @default("public")
   /** simple | detailed — UI only; does not affect SEO */
   pricePresentation     String   @default("simple")
+  /** Rezidențial: etichetă colț imagine card — in_stock | out_of_stock | coming_soon */
+  catalogStockStatus    String?
+  /** Rezidențial: id-uri ReducereProgram (API) pentru dropdown „programe reducere”; [] = toate (compat). */
+  reducereProgramIds    Json     @default("[]")
 
   // Technical details
   energieNominala       String?
@@ -168,4 +172,11 @@ model DepartmentPhone {
   phone      String   @default("")
   whatsapp   String   @default("")
   updatedAt  DateTime @updatedAt
+}
+
+/** Setări site cheie–valoare (ex. catalog_currency = EUR | RON | …) */
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

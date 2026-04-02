@@ -1,12 +1,18 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 
 import { getHomeTranslations } from '../i18n/home'
 import {
   getProducts,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
+  formatResidentialCatalogPriceDisplay,
+  getResidentialCatalogStockBadge,
+  getResidentialCatalogStockListingCta,
+  getResidentialCatalogVatPercentLabel,
+  residentialCatalogUsesPartnerPriceCta,
   type PublicProduct,
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
@@ -111,6 +117,7 @@ function WelcomeModal({
 
 export default function Home() {
   const { language } = useLanguage()
+  const { currency } = useCatalogCurrency()
   const tr = getHomeTranslations(language.code)
 
   const [activeTab,  setActiveTab]  = useState<string>('rezidential')
@@ -697,23 +704,63 @@ export default function Home() {
             featuredProducts.map((p) => {
               const img = getProductCardImageUrl(p)
               const { specLine1, specLine2 } = getCatalogProductSpecLines(p)
-              const props = {
+              const stockListingCta = getResidentialCatalogStockListingCta(p, {
+                outOfStock: tr.catalogStockOutOfStock,
+                comingSoon: tr.catalogStockComingSoon,
+              })
+              const priceDisplay =
+                p.tipProdus === 'industrial'
+                  ? undefined
+                  : stockListingCta
+                    ? undefined
+                    : formatResidentialCatalogPriceDisplay(p, language.code, currency)
+              const residentialPartnerPriceCta =
+                p.tipProdus !== 'industrial' && !stockListingCta && residentialCatalogUsesPartnerPriceCta(p)
+                  ? tr.catalogDisponibilParteneriPrice
+                  : null
+              const to = `/produse/${p.slug || p.id}`
+              const linkState = { tipProdus: p.tipProdus }
+              const common = {
                 density: 'home' as const,
                 imageSrc: img,
                 imageAlt: p.title,
                 title: p.title,
                 specLine1,
                 specLine2,
-                to: `/produse/${p.slug || p.id}`,
-                linkState: { tipProdus: p.tipProdus },
-                ctaLabel: tr.disponibilPentruParteneri,
+                to,
+                linkState,
                 imageLoadingPlaceholder: true,
+                priceDisplay,
+                residentialPartnerPriceCta,
               }
               const industrialSubtitle = String(p.subtitle || '').trim() || undefined
+              const showResPriceExtras =
+                priceDisplay != null &&
+                priceDisplay !== '' &&
+                (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
+              const imageCornerBadge = getResidentialCatalogStockBadge(p, {
+                inStock: tr.catalogStockInStock,
+              })
               return p.tipProdus === 'industrial' ? (
-                <IndustrialCatalogProductCard key={p.id} {...props} subtitle={industrialSubtitle} />
+                <IndustrialCatalogProductCard
+                  key={p.id}
+                  {...common}
+                  subtitle={industrialSubtitle}
+                  ctaLabel={tr.disponibilPentruParteneri}
+                />
               ) : (
-                <ResidentialCatalogProductCard key={p.id} {...props} />
+                <ResidentialCatalogProductCard
+                  key={p.id}
+                  {...common}
+                  imageCornerBadge={imageCornerBadge}
+                  residentialStockListingCta={stockListingCta}
+                  residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
+                  residentialPriceVatNote={
+                    showResPriceExtras
+                      ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p))
+                      : null
+                  }
+                />
               )
             })
             )}

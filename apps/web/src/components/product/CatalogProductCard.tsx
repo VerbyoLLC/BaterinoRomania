@@ -15,7 +15,7 @@ export type CatalogProductCardBaseProps = {
   specLine2: string
   linkState?: { tipProdus?: 'rezidential' | 'industrial' }
   /**
-   * Default catalog CTA — required unless `footer` + `onMainClick` (partner mode).
+   * Default catalog CTA — required for industrial public cards; residential public cards omit the bottom button (whole card links to product).
    */
   to?: string
   ctaLabel?: string
@@ -33,8 +33,23 @@ export type CatalogProductCardBaseProps = {
   onMainClick?: () => void
   /** Partner: price line under specs (inside main interactive area). */
   priceDisplay?: string | null
+  /**
+   * Public + partner listing residential: when set, shows this as a button-styled label
+   * instead of `priceDisplay` (partner_only / hidden visibility).
+   */
+  residentialPartnerPriceCta?: string | null
+  /**
+   * Residential: „stoc epuizat” / „în curând” — același chip ca la parteneri; ascunde prețul; fără badge pe imagine.
+   */
+  residentialStockListingCta?: string | null
+  /** Above residential public price (e.g. PREȚ). */
+  residentialPriceHeading?: string | null
+  /** Below residential public price (e.g. Include TVA 21%). */
+  residentialPriceVatNote?: string | null
   /** Merged onto outer shell (e.g. partner selected border). */
   shellClassName?: string
+  /** Rezidențial: etichetă colț stânga sus pe imagine (ex. stoc). */
+  imageCornerBadge?: { text: string; className: string } | null
 }
 
 type CatalogProductCardProps = CatalogProductCardBaseProps & {
@@ -57,21 +72,32 @@ function CatalogProductCard({
   footer,
   onMainClick,
   priceDisplay,
+  residentialPartnerPriceCta = null,
+  residentialStockListingCta = null,
+  residentialPriceHeading = null,
+  residentialPriceVatNote = null,
   shellClassName = '',
+  imageCornerBadge = null,
 }: CatalogProductCardProps) {
-  const partnerMode = footer != null && typeof onMainClick === 'function'
-  if (!partnerMode && (!to || !ctaLabel)) {
-    throw new Error('CatalogProductCard: `to` and `ctaLabel` are required unless using partner mode (`footer` + `onMainClick`).')
-  }
-
   const isProduseDensity = density === 'produse'
   const isPartnerDensity = density === 'partner'
   const isIndustrial = variant === 'industrial'
+  const partnerMode = footer != null && typeof onMainClick === 'function'
+  if (!partnerMode && !to) {
+    throw new Error('CatalogProductCard: `to` is required unless using partner mode (`footer` + `onMainClick`).')
+  }
+  if (!partnerMode && isIndustrial && (!ctaLabel || !String(ctaLabel).trim())) {
+    throw new Error('CatalogProductCard: industrial cards require `ctaLabel` for the bottom CTA.')
+  }
   const subtitleLine = isIndustrial ? String(subtitle ?? '').trim() : ''
   const showSubtitle = Boolean(subtitleLine)
   const [imgLoaded, setImgLoaded] = useState(!imageLoadingPlaceholder)
 
-  const shellPb = partnerMode ? 'pb-0' : isProduseDensity ? 'pb-8' : 'pb-6'
+  const shellPb = partnerMode
+    ? 'pb-0'
+    : isIndustrial
+      ? (isProduseDensity ? 'pb-8' : 'pb-6')
+      : (isProduseDensity ? 'pb-5' : 'pb-4')
   const imageFrameH = isPartnerDensity ? 'h-44' : 'h-56'
 
   let titleClass: string
@@ -123,6 +149,9 @@ function CatalogProductCard({
           isIndustrial ? 'flex items-center justify-center' : ''
         }`}
       >
+        {imageCornerBadge ? (
+          <span className={imageCornerBadge.className}>{imageCornerBadge.text}</span>
+        ) : null}
         {imageLoadingPlaceholder && !imgLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <img
@@ -157,6 +186,22 @@ function CatalogProductCard({
   const specLine1Margin = showSubtitle ? 'mt-2' : firstSpecMargin
   const priceMarginTop = isIndustrial && !showSubtitle ? 'mt-4' : 'mt-3'
 
+  const stockListingTrim =
+    !isIndustrial &&
+    residentialStockListingCta != null &&
+    String(residentialStockListingCta).trim() !== ''
+  const partnerListingCta =
+    !partnerMode &&
+    residentialPartnerPriceCta != null &&
+    String(residentialPartnerPriceCta).trim() !== ''
+  const darkListingLabel = stockListingTrim
+    ? String(residentialStockListingCta).trim()
+    : partnerListingCta
+      ? String(residentialPartnerPriceCta).trim()
+      : ''
+  const showDarkListingChip =
+    !isIndustrial && (stockListingTrim || partnerListingCta) && darkListingLabel !== ''
+
   const metaBlock = (
     <>
       {!isIndustrial ? (
@@ -165,12 +210,51 @@ function CatalogProductCard({
           <p className={`${specClass} ${secondSpecMargin}`.trim()}>{specLine2}</p>
         </>
       ) : null}
-      {priceDisplay != null && priceDisplay !== '' ? (
-        <p
-          className={`${priceMarginTop} text-center text-lg font-bold font-['Inter'] tracking-tight text-slate-900 tabular-nums`}
-        >
-          {priceDisplay}
-        </p>
+      {showDarkListingChip ? (
+        <div className={`${priceMarginTop} flex w-full max-w-full flex-col items-center px-2`}>
+          <span
+            className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600 font-['Inter'] sm:text-[13px] invisible select-none pointer-events-none"
+            aria-hidden
+          >
+            {String(residentialPriceHeading ?? '').trim() || 'PREȚ'}
+          </span>
+          <span
+            className="mt-1 mx-auto inline-flex max-w-[min(100%,18rem)] items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm"
+          >
+            {darkListingLabel}
+          </span>
+          <span
+            className="m-0 mt-1 text-center text-xs font-medium text-neutral-500 font-['Inter'] sm:text-sm invisible select-none pointer-events-none"
+            aria-hidden
+          >
+            &nbsp;
+          </span>
+        </div>
+      ) : priceDisplay != null && priceDisplay !== '' ? (
+        residentialPriceHeading != null || residentialPriceVatNote != null ? (
+          <div className={`${priceMarginTop} flex w-full max-w-full flex-col items-center px-2`}>
+            <span
+              className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600 font-['Inter'] sm:text-[13px] invisible select-none pointer-events-none"
+              aria-hidden
+            >
+              {String(residentialPriceHeading ?? '').trim() || 'PREȚ'}
+            </span>
+            <p className="m-0 mt-1 text-center text-2xl font-extrabold tabular-nums tracking-tight text-slate-900 font-['Inter'] sm:text-3xl">
+              {priceDisplay}
+            </p>
+            {residentialPriceVatNote ? (
+              <span className="m-0 mt-1 text-center text-xs font-medium text-neutral-500 font-['Inter'] sm:text-sm">
+                {residentialPriceVatNote}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <p
+            className={`${priceMarginTop} text-center text-lg font-bold font-['Inter'] tracking-tight text-slate-900 tabular-nums`}
+          >
+            {priceDisplay}
+          </p>
+        )
       ) : null}
     </>
   )
@@ -212,7 +296,7 @@ function CatalogProductCard({
         >
           {footer}
         </div>
-      ) : (
+      ) : isIndustrial && ctaLabel ? (
         <Link
           to={to!}
           state={linkState}
@@ -220,7 +304,7 @@ function CatalogProductCard({
         >
           {ctaLabel}
         </Link>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -257,8 +341,10 @@ export function CatalogProductCardSkeleton({
         </div>
         <div className="w-40 h-5 bg-neutral-200 rounded mb-3" />
         <div className="w-full h-4 bg-neutral-200 rounded mb-1" />
-        <div className="w-full h-4 bg-neutral-200 rounded mb-4" />
-        <div className="w-40 h-9 bg-neutral-200 rounded" />
+        <div className="w-full h-4 bg-neutral-200 rounded mb-2" />
+        <div className="h-3 w-16 rounded bg-neutral-300 mb-1" />
+        <div className="w-36 h-8 bg-neutral-200 rounded mb-1" />
+        <div className="h-3 w-28 rounded bg-neutral-300" />
       </div>
     )
   }
@@ -311,7 +397,11 @@ export function CatalogProductCardSkeleton({
       <div className="mx-auto mt-4 h-5 w-48 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
       <div className="mx-auto mt-3 h-4 w-56 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
       <div className="mx-auto mt-2 h-4 w-52 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
-      <div className="mx-auto mt-8 h-9 w-40 max-w-[220px] rounded bg-neutral-200" />
+      <div className="mx-auto mt-5 flex flex-col items-center gap-1">
+        <div className="h-3 w-14 rounded bg-neutral-300" />
+        <div className="h-8 w-36 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
+        <div className="h-3 w-32 rounded bg-neutral-300" />
+      </div>
     </div>
   )
 }

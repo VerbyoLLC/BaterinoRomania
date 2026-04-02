@@ -10,7 +10,12 @@ function WhatsappGlyph({ className }: { className?: string }) {
 }
 
 export type IndustrialDesktopWhatsappSlideProps = {
+  /** Ignored when `reveal` is `group-hover` (use parent `group` + hover / focus-within). */
   open: boolean
+  /**
+   * `toggle`: controlled by `open` (click). `group-hover`: visible when parent has `group` and is hovered or focus-within.
+   */
+  reveal?: 'toggle' | 'group-hover'
   productTitle: string
   modelName: string
   tr: IndustrialBessTemplateTranslations
@@ -19,6 +24,7 @@ export type IndustrialDesktopWhatsappSlideProps = {
 /** Absolute slide-down CTA below an industrial model card (desktop). */
 export function IndustrialDesktopWhatsappSlide({
   open,
+  reveal = 'toggle',
   productTitle,
   modelName,
   tr,
@@ -28,19 +34,27 @@ export function IndustrialDesktopWhatsappSlide({
     .replace(/\{model\}/g, modelName.trim() || '—')
   const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(prefill)}`
 
+  const byHover =
+    reveal === 'group-hover'
+      ? 'pointer-events-none max-h-0 -translate-y-1 opacity-0 group-hover:pointer-events-auto group-hover:max-h-32 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:max-h-32 group-focus-within:translate-y-0 group-focus-within:opacity-100'
+      : ''
+
+  const byOpen =
+    reveal === 'toggle'
+      ? open
+        ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
+        : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
+      : ''
+
   return (
     <div
-      className={`absolute left-0 right-0 top-full z-50 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
-        open
-          ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
-          : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
-      }`}
+      className={`absolute left-0 right-0 top-full z-20 mt-0 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${byHover} ${byOpen}`}
     >
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative z-10 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
+        className="relative z-10 mt-2 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
       >
         <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
         {tr.modelDesktopDetailsCta}

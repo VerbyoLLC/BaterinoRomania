@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useId, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useRef, useId, useCallback, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { Link, useParams, Navigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getProduct, type PublicProduct } from '../lib/api'
@@ -6,14 +7,19 @@ import { getProductDetailTranslations, type ProductDetailTranslations } from '..
 import SEO from '../components/SEO'
 import ProductPriceBlock from '../components/ProductPriceBlock'
 import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
+import ResidentialReducereProgramBadge from '../components/ResidentialReducereProgramBadge'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
 import {
   IndustrialProductPageSkeleton,
   ResidentialProductPageSkeleton,
 } from '../components/product/ProductPageLoaders'
-import { ResidentialProductSpecCard } from '../components/product/ResidentialProductSpecCard'
+import {
+  ResidentialProductSpecCard,
+  ResidentialTechSpecTable,
+} from '../components/product/ResidentialProductSpecCard'
 import { cacheProductTip, readCachedProductTip } from '../lib/productTipCache'
+import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
 import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 
 export type ProductPageLocationState = {
@@ -156,76 +162,48 @@ function ResidentialBadgesGrid({
   onSwap: () => void
   onSuport: () => void
 }) {
+  const handlerById: Partial<Record<ResidentialBadge['id'], () => void>> = {
+    compatibilitate: onCompatibilitate99,
+    garantie: onGarantie,
+    producatori: onProducatori,
+    retur: onRetur,
+    swap: onSwap,
+    suport: onSuport,
+  }
+
+  const tileClass =
+    'flex min-h-0 w-full min-w-0 flex-col items-center justify-center gap-2 bg-neutral-100 rounded-[10px] px-2 py-4 text-center lg:aspect-[3/2] lg:gap-1.5 lg:p-2.5 lg:py-3'
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {badges.map((b, i) =>
-        b.id === 'compatibilitate' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onCompatibilitate99}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : b.id === 'garantie' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onGarantie}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : b.id === 'producatori' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onProducatori}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : b.id === 'retur' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onRetur}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : b.id === 'swap' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onSwap}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : b.id === 'suport' ? (
-          <button
-            key={i}
-            type="button"
-            onClick={onSuport}
-            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-          >
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-          </button>
-        ) : (
-          <div key={i} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center">
-            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:items-stretch lg:gap-3">
+      {badges.map((b, i) => {
+        const onClick = handlerById[b.id]
+        const inner = (
+          <>
+            <img src={b.icon} alt="" aria-hidden className="h-8 w-8 shrink-0 object-contain" />
+            <p className="text-center text-sm font-bold leading-tight text-black font-['Inter'] break-words">
+              {b.label}
+            </p>
+          </>
+        )
+        if (onClick) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={onClick}
+              className={`${tileClass} cursor-pointer transition-colors hover:bg-neutral-200`}
+            >
+              {inner}
+            </button>
+          )
+        }
+        return (
+          <div key={i} className={tileClass}>
+            {inner}
           </div>
-        ),
-      )}
+        )
+      })}
     </div>
   )
 }
@@ -314,7 +292,7 @@ function ResidentialFullTechDetailsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-100 bg-white p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
-          <h1 id="res-full-tech-modal-title" className="min-w-0 text-xl font-semibold leading-tight text-black font-['Inter'] sm:text-2xl">
+          <h1 id="res-full-tech-modal-title" className="min-w-0 text-xl font-semibold leading-tight text-black font-['Inter']">
             {productTitle}
           </h1>
           <button
@@ -336,15 +314,16 @@ function ResidentialFullTechDetailsModal({
               className="max-h-[200px] w-auto max-w-full object-contain"
             />
           </div>
-          <h2 className="m-0 px-4 pt-4 text-base font-bold text-black font-['Inter'] sm:px-6">
+          <h2 className="m-0 px-4 pt-4 text-lg font-bold text-black font-['Inter'] sm:px-6">
             {tr.detaliiTehnice}
           </h2>
           {techData.length > 0 ? (
-            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-4 pb-8 sm:px-6" aria-label={tr.dateTehnice}>
-              {techData.map(([key, val], i) => (
-                <ResidentialProductSpecCard key={i} label={key} value={val} variant="tile" />
-              ))}
-            </ul>
+            <div className="px-4 pb-8 pt-2 sm:px-6">
+              <ResidentialTechSpecTable
+                ariaLabel={tr.dateTehnice}
+                rows={techData.map(([label, value]) => ({ label, value }))}
+              />
+            </div>
           ) : null}
         </div>
       </div>
@@ -427,12 +406,7 @@ function ProductImageModal({
           <img
             src={images[activeIndex]}
             alt={productTitle}
-            className="max-w-[70vw] max-h-[85vh] w-auto h-auto object-contain"
-          />
-          <img
-            src="/images/shared/baterino-logo-black.svg"
-            alt="Baterino"
-            className="absolute bottom-5 left-1/2 -translate-x-1/2 h-10 w-auto object-contain opacity-80 pointer-events-none"
+            className="relative z-[1] max-w-[70vw] max-h-[85vh] w-auto h-auto object-contain"
           />
         </div>
         <div className="flex flex-row gap-2 justify-center py-3 px-2 overflow-x-auto flex-shrink-0">
@@ -469,19 +443,17 @@ function GarantieModal({ onClose, tr }: { onClose: () => void; tr: ProductDetail
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="garantie-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.garantieModalTitle}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex items-center gap-5">
-            <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <img src="/images/shared/testing-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
-            </div>
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/testing-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.garantieModalDesc}</p>
+          <h1 id="garantie-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.garantieModalTitle}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.garantieModalDesc}</p>
         </div>
       </div>
     </div>
@@ -493,17 +465,17 @@ function SuportModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTr
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="suport-modal-title">
       <div className="relative w-full max-w-[650px] max-h-[85vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up-from-bottom" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="suport-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.suportModalTitle}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-            <img src="/images/shared/maintance-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/maintance-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.suportModalDesc}</p>
+          <h1 id="suport-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.suportModalTitle}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.suportModalDesc}</p>
         </div>
       </div>
     </div>
@@ -515,17 +487,17 @@ function SwapModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTran
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="swap-modal-title">
       <div className="relative w-full max-w-[650px] max-h-[85vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up-from-bottom" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="swap-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.swapModalTitle}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-            <img src="/images/shared/swap-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/swap-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.swapModalDesc}</p>
+          <h1 id="swap-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.swapModalTitle}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.swapModalDesc}</p>
         </div>
       </div>
     </div>
@@ -537,17 +509,17 @@ function ReturModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTra
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="retur-modal-title">
       <div className="relative w-full max-w-[650px] max-h-[85vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up-from-bottom" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="retur-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.returModalTitle}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-            <img src="/images/shared/delivery-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/delivery-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.returModalDesc}</p>
+          <h1 id="retur-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.returModalTitle}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.returModalDesc}</p>
         </div>
       </div>
     </div>
@@ -559,17 +531,17 @@ function ProducatoriModal({ onClose, tr }: { onClose: () => void; tr: ProductDet
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="producatori-modal-title">
       <div className="relative w-full max-w-[650px] max-h-[85vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up-from-bottom" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="producatori-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.producatoriModalTitle}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-            <img src="/images/shared/safety-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/safety-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.producatoriModalDesc}</p>
+          <h1 id="producatori-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.producatoriModalTitle}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.producatoriModalDesc}</p>
         </div>
       </div>
     </div>
@@ -581,17 +553,17 @@ function Compatibilitate99Modal({ onClose, tr }: { onClose: () => void; tr: Prod
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="compatibilitate99-title">
       <div className="relative w-full max-w-[650px] max-h-[85vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up-from-bottom" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 border-b border-neutral-100 bg-white">
-          <h1 id="compatibilitate99-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0">{tr.compatibilitate99Title}</h1>
-          <button type="button" onClick={onClose} className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
+        <div className="flex shrink-0 justify-end border-b border-neutral-100 bg-white px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-2.5 sm:pt-4">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2" aria-label={tr.compatibilitateClose}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 p-6 sm:p-10">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-            <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="w-10 h-10 object-contain" />
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 pt-4 sm:px-10 sm:pb-10 sm:pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{tr.compatibilitate99Desc}</p>
+          <h1 id="compatibilitate99-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.compatibilitate99Title}</h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.compatibilitate99Desc}</p>
         </div>
       </div>
     </div>
@@ -649,7 +621,7 @@ function CeSePoateAlimentaModal({
             <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
               <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
             </div>
-            <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
+            <h1 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
               {customContent.title}
             </h1>
             <button
@@ -709,7 +681,7 @@ function CeSePoateAlimentaModal({
           <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
             <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
           </div>
-          <h1 id="alimenta-modal-title" className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
+          <h1 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
             {energieDisplay
               ? tr.alimentaModalTitle.replace(/5\s*kWh/i, energieDisplay)
               : tr.alimentaModalTitle}
@@ -764,32 +736,57 @@ function CeSePoateAlimentaModal({
 /* ── Compatibilitate invertor modal ─────────────────────────────── */
 function CompatibilitateInvertorModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTranslations }) {
   const [search, setSearch] = useState('')
+  const query = search.trim().toLowerCase()
+  const searching = query.length > 0
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return INVERTER_BRANDS
-    return INVERTER_BRANDS.filter((b) => b.toLowerCase().includes(q))
-  }, [search])
+    if (!query) return INVERTER_BRANDS
+    return INVERTER_BRANDS.filter((b) => b.toLowerCase().includes(query))
+  }, [query])
+  const whatsappAssistanceHref = useMemo(() => {
+    const q = search.trim()
+    const text = tr.compatibilitateInvertorWhatsappPrefill.replace(/\{search\}/g, q || '—')
+    return `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(text)}`
+  }, [search, tr.compatibilitateInvertorWhatsappPrefill])
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compatibilitate-invertor-hero"
+    >
       <div
-        className="bg-white w-full sm:max-w-md max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden rounded-t-[20px] sm:rounded-[10px] shadow-xl animate-slide-up-from-bottom"
+        className="flex h-[min(85dvh,34rem)] w-full max-h-[85vh] flex-col overflow-hidden rounded-t-[20px] bg-white shadow-2xl animate-slide-up-from-bottom sm:h-[min(80dvh,32rem)] sm:max-h-[80vh] sm:max-w-md sm:rounded-2xl"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-4 border-b border-zinc-200">
-          <h3 className="text-black text-lg font-bold font-['Inter']">{tr.compatibilitateTitle}</h3>
+        <div className="flex shrink-0 items-center gap-4 border-b border-neutral-100 bg-white p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:p-6 sm:pt-6">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img
+              src="/images/shared/compatibility-icon.svg"
+              alt=""
+              aria-hidden
+              className="h-8 w-8 object-contain"
+            />
+          </div>
+          <h1
+            id="compatibilitate-invertor-hero"
+            className="min-w-0 flex-1 text-xl font-semibold leading-tight text-black font-['Inter']"
+          >
+            {tr.compatibilitateInvertorHeroTitle}
+          </h1>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-100 transition-colors"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
             aria-label={tr.compatibilitateClose}
           >
-            <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="px-4 py-3 border-b border-zinc-100">
+        <div className="border-b border-zinc-100 px-4 py-3 sm:px-6">
           <input
             type="text"
             placeholder={tr.compatibilitateSearch}
@@ -798,16 +795,44 @@ function CompatibilitateInvertorModal({ onClose, tr }: { onClose: () => void; tr
             className="w-full h-11 pl-4 pr-4 rounded-[10px] bg-neutral-100 text-black text-base font-['Inter'] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          <ul className="space-y-1">
-            {filtered.map((brand) => (
-              <li key={brand} className="py-2.5 px-3 rounded-[10px] hover:bg-neutral-100 text-black text-base font-medium font-['Inter']">
-                {brand}
-              </li>
-            ))}
-          </ul>
-          {filtered.length === 0 && (
-            <p className="text-gray-500 text-sm font-['Inter'] py-4 text-center">{tr.compatibilitateNoResults}</p>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {filtered.length > 0 ? (
+            <ul className="space-y-1">
+              {filtered.map((brand) => {
+                const isHighlighted = searching && brand.toLowerCase().includes(query)
+                return (
+                  <li
+                    key={brand}
+                    className={`rounded-[10px] px-3 py-2.5 text-base font-medium font-['Inter'] ${
+                      isHighlighted
+                        ? 'bg-green-50 text-green-900 ring-1 ring-inset ring-green-200'
+                        : 'text-black hover:bg-neutral-100'
+                    }`}
+                  >
+                    {brand}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : searching ? (
+            <div className="flex flex-col items-center gap-4 py-1">
+              <p className="m-0 max-w-[18.5rem] text-center text-base leading-relaxed text-neutral-700 font-['Inter'] sm:max-w-[22rem]">
+                {tr.compatibilitateInvertorNotFoundMessage}
+              </p>
+              <a
+                href={whatsappAssistanceHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full min-h-[3.25rem] items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3.5 text-center text-base font-bold uppercase tracking-wide text-white font-['Inter'] transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 sm:min-h-[3.5rem] sm:py-4"
+              >
+                <svg className="h-5 w-5 shrink-0 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+                {tr.compatibilitateInvertorAskAssistanceBtn}
+              </a>
+            </div>
+          ) : (
+            <p className="py-4 text-center text-sm text-gray-500 font-['Inter']">{tr.compatibilitateNoResults}</p>
           )}
         </div>
       </div>
@@ -837,10 +862,66 @@ export default function ProductRezidential() {
   const [showSwapModal, setShowSwapModal] = useState(false)
   const [showSuportModal, setShowSuportModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
-  const [descExpanded, setDescExpanded] = useState(false)
   const [mobileTechOpen, setMobileTechOpen] = useState(false)
   const [mobileSafetyOpen, setMobileSafetyOpen] = useState(false)
   const [showFullTechDetailsModal, setShowFullTechDetailsModal] = useState(false)
+
+  const galleryScrollerRef = useRef<HTMLDivElement>(null)
+  const galleryScrollRaf = useRef(0)
+
+  const [galleryZoomEnabled, setGalleryZoomEnabled] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false,
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setGalleryZoomEnabled(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const galleryImageCount = product && Array.isArray(product.images) ? product.images.length : 0
+
+  useEffect(() => {
+    setActiveImage(0)
+    requestAnimationFrame(() => {
+      galleryScrollerRef.current?.scrollTo({ left: 0, behavior: 'auto' })
+    })
+  }, [product?.id])
+
+  const handleGalleryScrollerScroll = useCallback(() => {
+    cancelAnimationFrame(galleryScrollRaf.current)
+    galleryScrollRaf.current = requestAnimationFrame(() => {
+      const el = galleryScrollerRef.current
+      if (!el || galleryImageCount <= 1) return
+      const w = el.clientWidth
+      if (w <= 0) return
+      // Nearest slide (avoids off-by-one while snap / momentum is between pages)
+      const idx = Math.max(
+        0,
+        Math.min(galleryImageCount - 1, Math.floor((el.scrollLeft + w * 0.5) / w)),
+      )
+      setActiveImage((prev) => (prev !== idx ? idx : prev))
+    })
+  }, [galleryImageCount])
+
+  useEffect(() => () => cancelAnimationFrame(galleryScrollRaf.current), [])
+
+  const galleryScrollToIndex = (index: number) => {
+    const el = galleryScrollerRef.current
+    if (!el || galleryImageCount <= 1) return
+    const w = el.clientWidth
+    if (w <= 0) return
+    const i = Math.max(0, Math.min(galleryImageCount - 1, index))
+    el.scrollTo({ left: i * w, behavior: 'smooth' })
+  }
+
+  const galleryScrollByDelta = (delta: number) => {
+    const el = galleryScrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: delta * el.clientWidth, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     if (!slug) {
@@ -858,10 +939,6 @@ export default function ProductRezidential() {
     if (!product) return
     cacheProductTip({ slug: product.slug, id: product.id, tipProdus: product.tipProdus })
   }, [product])
-
-  useEffect(() => {
-    setDescExpanded(false)
-  }, [product?.id])
 
   if (loading) {
     return (
@@ -889,6 +966,9 @@ export default function ProductRezidential() {
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
+  const faqItems = Array.isArray(product.faq)
+    ? product.faq.filter((f) => (f.q?.trim() || f.a?.trim()))
+    : []
   const divisionLabel = (() => {
     const cat = String((product as { categorie?: string }).categorie || '').toLowerCase()
     if (cat.includes('industrial')) return tr.sectorIndustrial
@@ -899,7 +979,6 @@ export default function ProductRezidential() {
   })()
   const templateSeo = getProductTemplateSeo(product, language.code as LangCode)
   const rawDesc = product.description?.trim() ?? ''
-  const descNeedsToggle = rawDesc.length > 140
 
   return (
     <>
@@ -912,7 +991,7 @@ export default function ProductRezidential() {
       />
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pt-4 pb-24 overflow-visible">
-        <nav className="flex w-full items-center justify-end gap-2 text-xs sm:text-sm text-gray-500 font-['Inter'] mb-3 lg:mb-4">
+        <nav className="mb-3 hidden w-full items-center justify-end gap-2 text-sm text-gray-500 font-['Inter'] lg:mb-4 lg:flex">
           <Link to="/" className="hover:text-black transition-colors">{tr.breadcrumbHome}</Link>
           <span>/</span>
           <Link to="/produse" className="hover:text-black transition-colors">{tr.breadcrumbProducts}</Link>
@@ -924,29 +1003,14 @@ export default function ProductRezidential() {
           {/* Mobile: title → description → images → specs (boxed 2/col) → purchase via flex order; lg: sticky left column */}
           <div className="max-lg:contents lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:row-span-full lg:sticky lg:top-20 lg:z-10 lg:flex lg:h-min lg:flex-col lg:gap-8 lg:self-start">
             <header className="order-1 w-full max-w-lg space-y-0 lg:order-none">
-              <h1 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-tight tracking-tight m-0">
+              <h1 className="text-black text-2xl font-bold font-['Inter'] leading-tight tracking-tight m-0 sm:text-3xl">
                 {product.title}
               </h1>
+              <ResidentialReducereProgramBadge product={product} label={tr.programReducereBadge} className="mt-2" />
               {rawDesc ? (
                 <div className="mt-3 sm:mt-4 max-w-prose">
-                  <p
-                    className={`text-neutral-700 text-base font-['Inter'] leading-relaxed m-0 ${
-                      descNeedsToggle && !descExpanded ? 'line-clamp-4' : ''
-                    }`}
-                  >
+                  <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed m-0">
                     {rawDesc}
-                    {descNeedsToggle ? (
-                      <>
-                        {'\u00A0'}
-                        <button
-                          type="button"
-                          onClick={() => setDescExpanded((e) => !e)}
-                          className="inline p-0 border-0 bg-transparent text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700 font-['Inter'] align-baseline whitespace-nowrap"
-                        >
-                          {descExpanded ? tr.descriptionReadLess : tr.descriptionReadMore}
-                        </button>
-                      </>
-                    ) : null}
                   </p>
                 </div>
               ) : null}
@@ -961,7 +1025,7 @@ export default function ProductRezidential() {
             </section>
 
             <div className="order-5 flex w-full max-w-lg flex-col gap-6 lg:order-none">
-              <hr className="m-0 w-full border-0 border-t border-neutral-200" />
+              <hr className="m-0 w-full border-0 border-t border-neutral-200 lg:hidden" />
               <section className="m-0">
                 {showResidentialClientPurchaseUI(product) ? (
                   <ResidentialClientPriceBlock product={product} tr={tr} lang={language.code as LangCode} />
@@ -973,48 +1037,112 @@ export default function ProductRezidential() {
           </div>
 
           <div className="max-lg:contents lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:flex lg:flex-col lg:gap-3 lg:min-w-0 lg:self-start">
-            <div className="order-2 w-full lg:order-none">
+            <div className="order-2 w-full max-lg:-mx-5 max-lg:w-[calc(100%+2.5rem)] lg:mx-0 lg:w-full lg:max-w-none lg:order-none">
               <div
-                className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in"
-                onClick={() => setShowImageModal(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && setShowImageModal(true)}
-                aria-label="Mărire imagine"
+                className={`relative flex h-[320px] items-center justify-center overflow-hidden bg-neutral-100 lg:h-[460px] max-lg:rounded-none lg:rounded-[10px] ${
+                  galleryZoomEnabled ? 'cursor-zoom-in' : 'cursor-default'
+                }`}
+                onClick={() => galleryZoomEnabled && setShowImageModal(true)}
+                role={galleryZoomEnabled ? 'button' : undefined}
+                tabIndex={galleryZoomEnabled ? 0 : -1}
+                onKeyDown={(e) => galleryZoomEnabled && e.key === 'Enter' && setShowImageModal(true)}
+                aria-label={galleryZoomEnabled ? 'Mărire imagine' : undefined}
               >
+                <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center" aria-hidden>
+                  <img
+                    src="/images/shared/baterino-logo-black.svg"
+                    alt=""
+                    className="h-20 w-40 max-w-[55%] object-contain opacity-[0.14]"
+                  />
+                </div>
                 {imgs.length > 1 ? (
                   <>
-                    <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/80 shadow-sm pointer-events-none">
-                      <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="pointer-events-none absolute top-4 right-4 z-20 hidden items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1.5 shadow-sm lg:flex">
+                      <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-black text-sm font-semibold font-['Inter']">{activeImage + 1}/{imgs.length}</span>
+                      <span className="font-['Inter'] text-sm font-semibold text-black">
+                        {activeImage + 1}/{imgs.length}
+                      </span>
                     </div>
-                    <div className="flex w-full h-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${activeImage * 100}%)` }}>
+                    <div
+                      ref={galleryScrollerRef}
+                      onScroll={handleGalleryScrollerScroll}
+                      className="relative z-10 flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    >
                       {imgs.map((src, i) => (
-                        <div key={i} className="flex-shrink-0 w-full h-full flex items-center justify-center">
+                        <div
+                          key={i}
+                          className="flex h-full w-full min-w-full shrink-0 snap-center items-center justify-center"
+                        >
                           <ProductImageWithLoader src={src} alt={product.title} />
                         </div>
                       ))}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setActiveImage((i) => (i - 1 + imgs.length) % imgs.length) }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center z-10 cursor-pointer" aria-label={tr.ariaPrev}>
-                      <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        galleryScrollByDelta(-1)
+                      }}
+                      className="absolute left-4 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 shadow-sm hover:bg-white lg:flex"
+                      aria-label={tr.ariaPrev}
+                    >
+                      <svg className="h-5 w-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); setActiveImage((i) => (i + 1) % imgs.length) }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center z-10 cursor-pointer" aria-label={tr.ariaNext}>
-                      <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        galleryScrollByDelta(1)
+                      }}
+                      className="absolute right-4 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 shadow-sm hover:bg-white lg:flex"
+                      aria-label={tr.ariaNext}
+                    >
+                      <svg className="h-5 w-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </>
                 ) : (
-                  <ProductImageWithLoader src={img} alt={product.title} />
+                  <div className="relative z-10 flex h-full w-full items-center justify-center">
+                    <ProductImageWithLoader src={img} alt={product.title} />
+                  </div>
                 )}
               </div>
+              {imgs.length > 1 ? (
+                <div className="mt-3 flex justify-center gap-2 px-1" role="tablist" aria-label="Imagini produs">
+                  {imgs.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      role="tab"
+                      aria-selected={i === activeImage}
+                      aria-label={`${i + 1} / ${imgs.length}`}
+                      onClick={() => {
+                        setActiveImage(i)
+                        galleryScrollToIndex(i)
+                      }}
+                      className="flex min-h-11 min-w-11 items-center justify-center p-2"
+                    >
+                      <span
+                        className={`block h-2 w-2 rounded-full transition-colors ${
+                          i === activeImage ? 'bg-neutral-800' : 'bg-neutral-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="order-3 w-full flex flex-col lg:order-none lg:min-w-0">
             <section className="flex flex-col lg:pt-6" aria-labelledby="compat-util-heading">
               <h3
                 id="compat-util-heading"
-                className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+                className="text-black text-lg font-bold font-['Inter'] mb-3 m-0"
               >
                 {tr.compatibilitateSiUtilizare}
               </h3>
@@ -1071,16 +1199,12 @@ export default function ProductRezidential() {
                     }}
                     triggerId="res-mobile-tech-trigger"
                   >
-                    <ul className="m-0 grid list-none gap-3 p-0 grid-cols-2" aria-label={tr.dateTehnice}>
-                      {specs.map((s, i) => (
-                        <ResidentialProductSpecCard key={i} label={s.label} value={s.value} variant="tile" />
-                      ))}
-                    </ul>
+                    <ResidentialTechSpecTable ariaLabel={tr.dateTehnice} rows={specs} />
                     {techData.length > 0 ? (
                       <button
                         type="button"
                         onClick={() => setShowFullTechDetailsModal(true)}
-                        className="mt-3 flex w-full min-h-[3.25rem] items-center justify-center rounded-xl bg-gray-900 py-3.5 text-center text-base font-bold uppercase tracking-wide text-white font-['Inter'] transition-colors hover:bg-gray-800 sm:min-h-[3.5rem] sm:py-4 sm:text-lg"
+                        className="mt-3 flex w-full min-h-[3.25rem] items-center justify-center rounded-xl border border-blue-600 bg-white py-3.5 text-center text-base font-bold uppercase tracking-wide text-black font-['Inter'] transition-colors hover:bg-neutral-50 sm:min-h-[3.5rem] sm:py-4"
                       >
                         {tr.toateDetaliileBtn}
                       </button>
@@ -1108,7 +1232,7 @@ export default function ProductRezidential() {
               <section className="flex flex-col lg:pt-6" aria-labelledby="siguranta-baterino-heading">
                 <h3
                   id="siguranta-baterino-heading"
-                  className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+                  className="text-black text-lg font-bold font-['Inter'] mb-3 m-0"
                 >
                   {tr.sigurantaBaterino}
                 </h3>
@@ -1128,7 +1252,7 @@ export default function ProductRezidential() {
             <div className="order-7 flex flex-col gap-8 lg:col-span-6 lg:col-start-7 lg:min-w-0">
               {docs.length > 0 && (
                 <div>
-                  <h3 className="text-black text-base font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
+                  <h3 className="text-black text-lg font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {docs.map((doc, i) => (
                       <button
@@ -1160,40 +1284,95 @@ export default function ProductRezidential() {
 
               {techData.length > 0 && (
                 <section className="hidden lg:block">
-                  <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
-                  <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-                    {techData.map(([key, val], i) => (
-                      <ResidentialProductSpecCard key={i} label={key} value={val} variant="plain" />
-                    ))}
-                  </ul>
+                  <h2 className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6">{tr.dateTehnice}</h2>
+                  <ResidentialTechSpecTable
+                    ariaLabel={tr.dateTehnice}
+                    rows={techData.map(([label, value]) => ({ label, value }))}
+                  />
                 </section>
               )}
 
+              {faqItems.length > 0 ? (
+                <section aria-labelledby="res-product-faq-heading">
+                  <h2
+                    id="res-product-faq-heading"
+                    className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6"
+                  >
+                    {tr.intrebariFrecvente}
+                  </h2>
+                  <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
+                    {faqItems.map((item, i) => (
+                      <details key={`faq-${i}-${item.q}`} className="group bg-white open:bg-neutral-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+                          <span className="min-w-0 flex-1 text-sm leading-snug sm:text-base">{item.q}</span>
+                          <ChevronDown
+                            size={22}
+                            strokeWidth={2}
+                            className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+                          <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{item.a}</p>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               <section className="flex flex-col gap-4">
-                <div className="w-full max-w-[592px] h-64 relative rounded-[10px] overflow-hidden">
-                  <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/baterino-swap.jpg" alt="" />
-                  <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                  <div className="absolute left-[32px] top-[66px] z-10 text-white text-3xl font-bold font-['Inter']">{tr.stiaiCa}</div>
-                  <div className="absolute left-[32px] top-[121px] w-80 z-10 text-white text-lg font-semibold font-['Inter'] leading-6">
-                    {tr.swapDesc}
+                <div className="relative h-64 w-full max-w-[592px] overflow-hidden rounded-[10px]">
+                  <img className="absolute inset-0 h-full w-full rounded-[10px] object-cover" src="/images/product/baterino-swap.jpg" alt="" />
+                  <div className="absolute inset-0 rounded-[10px] bg-black/50" />
+                  <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
+                    <p className="m-0 w-full shrink-0 text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
+                      {tr.stiaiCa}
+                    </p>
+                    <p className="m-0 w-full text-pretty text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
+                      {tr.swapDesc}
+                    </p>
+                    <div className="shrink-0 pt-0.5">
+                      <Link
+                        to="/siguranta"
+                        className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
+                      >
+                        <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
+                          {tr.swapBannerCta}
+                        </span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div className="w-full max-w-[589px] h-64 relative overflow-hidden rounded-[10px]">
-                  <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/reduceri-banner.jpg" alt="" />
-                  <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                  <div className="absolute left-[28px] top-[61px] w-80 z-10 text-white text-xl font-bold font-['Inter']">{tr.reduceriTitle}</div>
-                  <div className="absolute left-[27px] top-[144px] w-96 z-10 text-white text-lg font-medium font-['Inter']">{tr.reduceriDesc}</div>
-                  <Link to="/reduceri" className="absolute right-[28px] top-[166px] w-40 h-9 px-4 bg-white rounded-[5px] inline-flex justify-center items-center gap-2 hover:bg-neutral-100 transition-colors z-10">
-                    <span className="text-black text-sm font-bold font-['Nunito_Sans'] uppercase">{tr.intraInCont}</span>
-                  </Link>
+                <div className="relative h-64 w-full max-w-[589px] overflow-hidden rounded-[10px]">
+                  <img className="absolute inset-0 h-full w-full rounded-[10px] object-cover" src="/images/product/reduceri-banner.jpg" alt="" />
+                  <div className="absolute inset-0 rounded-[10px] bg-black/50" />
+                  <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
+                    <p className="m-0 max-w-[calc(100%-0.5rem)] text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
+                      {tr.reduceriTitle}
+                    </p>
+                    <p className="m-0 max-w-lg shrink-0 text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
+                      {tr.reduceriDesc}
+                    </p>
+                    <div className="shrink-0 pt-0.5">
+                      <Link
+                        to="/reduceri"
+                        className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
+                      >
+                        <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
+                          {tr.intraInCont}
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </section>
 
               <section>
                 <div className="bg-neutral-100 rounded-[10px] flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7">
                   <div>
-                    <h3 className="text-black text-xl font-bold font-['Inter'] mb-1">{tr.contactTitle}</h3>
-                    <p className="text-gray-600 text-sm font-['Inter'] leading-5">{tr.contactDesc}</p>
+                    <h3 className="text-black text-lg font-bold font-['Inter'] mb-1">{tr.contactTitle}</h3>
+                    <p className="text-gray-600 text-base font-['Inter'] leading-relaxed">{tr.contactDesc}</p>
                   </div>
                   <Link to="/companie/viziune" className="flex-shrink-0 h-12 px-8 bg-slate-900 text-white rounded-[10px] inline-flex items-center justify-center text-sm font-bold font-['Inter'] uppercase hover:bg-slate-700 transition-colors whitespace-nowrap">
                     {tr.contacteazaNe}

@@ -9,7 +9,7 @@ import {
  * Keep these visually distinct — do not reuse residential placeholders for industrial routes.
  */
 
-/** Main slide image for industrial carousel — neutral shimmer until load (not the residential Baterino logo). */
+/** Main slide image for industrial carousel — Baterino logo while loading (same idea as catalog card skeletons). */
 export function IndustrialCarouselSlideImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -26,7 +26,12 @@ export function IndustrialCarouselSlideImage({ src, alt }: { src: string; alt: s
     <div className="relative flex h-full w-full items-center justify-center">
       {!loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-neutral-100">
-          <div className="h-14 w-24 animate-pulse rounded-md bg-neutral-200/90 sm:h-16 sm:w-32" />
+          <img
+            src="/images/shared/baterino-logo-black.svg"
+            alt=""
+            className="h-14 w-28 object-contain opacity-30 animate-pulse sm:h-16 sm:w-32"
+            aria-hidden
+          />
         </div>
       )}
       <img
@@ -100,7 +105,14 @@ export function IndustrialProductPageSkeleton() {
         <div className="mx-auto mt-4 h-5 w-2/3 max-w-lg rounded bg-neutral-200" />
       </header>
       <div className="mb-4 flex w-[calc(100%+2.5rem)] max-w-none flex-col -mx-5 sm:mx-auto sm:mb-5 sm:w-full sm:max-w-[1200px]">
-        <div className="aspect-[4/3] w-full overflow-hidden border-y border-neutral-200 bg-neutral-200 sm:aspect-[1200/520] sm:rounded-[10px] sm:border sm:border-neutral-200" />
+        <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-y border-neutral-200 bg-neutral-100 sm:aspect-[1200/520] sm:rounded-[10px] sm:border sm:border-neutral-200">
+          <img
+            src="/images/shared/baterino-logo-black.svg"
+            alt=""
+            className="h-16 w-32 max-w-[45%] object-contain opacity-[0.14] sm:h-20 sm:w-40"
+            aria-hidden
+          />
+        </div>
         <div className="mt-3 flex justify-center gap-2 sm:hidden" aria-hidden>
           <div className="h-2 w-8 rounded-full bg-neutral-300" />
           <div className="h-2 w-2 rounded-full bg-neutral-200" />
@@ -162,8 +174,13 @@ export function ResidentialProductPageSkeleton() {
           <div className="h-12 w-48 animate-pulse rounded bg-neutral-200" />
         </div>
         <div className="flex flex-col gap-4 lg:col-span-6 lg:col-start-7">
-          <div className="flex h-[320px] items-center justify-center rounded-[10px] bg-neutral-100 lg:h-[460px]">
-            <div className="h-24 w-24 animate-pulse rounded-full bg-neutral-200/80" />
+          <div className="relative flex h-[320px] items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100 lg:h-[460px]">
+            <img
+              src="/images/shared/baterino-logo-black.svg"
+              alt=""
+              className="h-20 w-40 max-w-[55%] animate-pulse object-contain opacity-30"
+              aria-hidden
+            />
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (

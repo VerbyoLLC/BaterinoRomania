@@ -111,8 +111,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const [modelConfigPage, setModelConfigPage] = useState(0)
   const [mobileModelsVisible, setMobileModelsVisible] = useState(MOBILE_MODELS_INITIAL)
   const [mobileSpecModalEntry, setMobileSpecModalEntry] = useState<IndustrialModelSpecEntry | null>(null)
-  const [desktopWhatsappModel, setDesktopWhatsappModel] = useState<string | null>(null)
-
   const heroTouchStartX = useRef<number | null>(null)
   const heroDragPxRef = useRef(0)
   const [heroDragPx, setHeroDragPx] = useState(0)
@@ -121,10 +119,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   useEffect(() => {
     setModelConfigPage(0)
   }, [product.id, modelEntries.length])
-
-  useEffect(() => {
-    setDesktopWhatsappModel(null)
-  }, [product.id, modelConfigPage])
 
   useEffect(() => {
     setMobileModelsVisible(Math.min(MOBILE_MODELS_INITIAL, modelEntries.length))
@@ -240,10 +234,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   }
 
   const canonical = `/produse/${product.slug || product.id}`
-
-  const toggleDesktopModelWhatsapp = (modelName: string) => {
-    setDesktopWhatsappModel((prev) => (prev === modelName ? null : modelName))
-  }
 
   const tabLabel = (id: TabId) => {
     switch (id) {
@@ -408,7 +398,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
         {modelEntries.length > 0 ? (
           <div
-            className="mx-auto w-full min-w-0 max-w-[1200px] mb-10 sm:mb-12"
+            className="mx-auto w-full min-w-0 max-w-[1200px] mb-6 sm:mb-8"
             aria-label={tr.overviewModelsHeading}
           >
             <p className="m-0 mb-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter']">
@@ -479,9 +469,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                       <ChevronRight size={22} strokeWidth={2} aria-hidden />
                     </button>
                   </div>
-                  <div
-                    className={`min-w-0 overflow-x-hidden ${desktopWhatsappModel ? 'pb-28' : 'pb-3'}`}
-                  >
+                  <div className="min-w-0 overflow-x-hidden">
                     <div
                       className="flex w-full min-w-0 transition-transform duration-300 ease-out will-change-transform"
                       style={{ transform: `translate3d(-${modelConfigPage * 100}%, 0, 0)` }}
@@ -500,27 +488,25 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                             {page.map((entry, i) => (
                               <div
                                 key={`${entry.modelName}-${pageIdx * MODEL_DESKTOP_SLIDE_SIZE + i}`}
-                                className={`relative flex h-full min-h-0 min-w-0 flex-col ${
-                                  desktopWhatsappModel === entry.modelName ? 'z-30' : 'z-10'
-                                }`}
+                                className="group relative z-10 flex h-full min-h-0 min-w-0 flex-col pb-24 outline-none hover:z-20 focus-within:z-20"
+                                tabIndex={0}
                               >
-                                <div className="flex min-h-0 flex-1 flex-col">
+                                <div className="relative flex min-h-0 flex-1 flex-col">
                                   <IndustrialModelConfigurationCard
                                     entry={entry}
                                     tr={tr}
                                     specLabel={specLabel}
                                     manyModels={false}
                                     stretchHeight
-                                    onCardClick={() => toggleDesktopModelWhatsapp(entry.modelName)}
-                                    isCardExpanded={desktopWhatsappModel === entry.modelName}
+                                  />
+                                  <IndustrialDesktopWhatsappSlide
+                                    reveal="group-hover"
+                                    open={false}
+                                    productTitle={product.title}
+                                    modelName={entry.modelName}
+                                    tr={tr}
                                   />
                                 </div>
-                                <IndustrialDesktopWhatsappSlide
-                                  open={desktopWhatsappModel === entry.modelName}
-                                  productTitle={product.title}
-                                  modelName={entry.modelName}
-                                  tr={tr}
-                                />
                               </div>
                             ))}
                           </div>
@@ -540,27 +526,25 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                 {modelEntries.map((entry, i) => (
                   <div
                     key={`${entry.modelName}-${i}`}
-                    className={`relative flex h-full min-h-0 min-w-0 flex-col ${
-                      desktopWhatsappModel === entry.modelName ? 'z-30' : 'z-10'
-                    }`}
+                    className="group relative z-10 flex h-full min-h-0 min-w-0 flex-col pb-24 outline-none hover:z-20 focus-within:z-20"
+                    tabIndex={0}
                   >
-                    <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="relative flex min-h-0 flex-1 flex-col">
                       <IndustrialModelConfigurationCard
                         entry={entry}
                         tr={tr}
                         specLabel={specLabel}
                         manyModels={false}
                         stretchHeight
-                        onCardClick={() => toggleDesktopModelWhatsapp(entry.modelName)}
-                        isCardExpanded={desktopWhatsappModel === entry.modelName}
+                      />
+                      <IndustrialDesktopWhatsappSlide
+                        reveal="group-hover"
+                        open={false}
+                        productTitle={product.title}
+                        modelName={entry.modelName}
+                        tr={tr}
                       />
                     </div>
-                    <IndustrialDesktopWhatsappSlide
-                      open={desktopWhatsappModel === entry.modelName}
-                      productTitle={product.title}
-                      modelName={entry.modelName}
-                      tr={tr}
-                    />
                   </div>
                 ))}
               </div>
@@ -568,7 +552,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           </div>
         ) : null}
 
-        <section className="border-t border-gray-100 pt-10 sm:pt-12">
+        <section className="border-t border-gray-100 pt-6 sm:pt-8">
           <h2 className="text-gray-700 text-xl lg:text-3xl font-bold font-['Inter'] leading-7 lg:leading-10 m-0 mb-6 sm:mb-7 lg:mb-8">
             {tr.overviewTitle}
           </h2>

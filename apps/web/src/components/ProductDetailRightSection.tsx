@@ -117,8 +117,11 @@ function ProductImageModal({ images, activeIndex, onSelect, onClose, productTitl
               </button>
             </>
           )}
-          <img src={images[activeIndex]} alt={productTitle} className="max-w-[70vw] max-h-[85vh] w-auto h-auto object-contain" />
-          <img src="/images/shared/baterino-logo-black.svg" alt="Baterino" className="absolute bottom-5 left-1/2 -translate-x-1/2 h-10 w-auto object-contain opacity-80 pointer-events-none" />
+          <img
+            src={images[activeIndex]}
+            alt={productTitle}
+            className="relative z-[1] max-w-[70vw] max-h-[85vh] w-auto h-auto object-contain"
+          />
         </div>
         <div className="flex flex-row gap-2 justify-center py-3 px-2 overflow-x-auto flex-shrink-0">
           {images.map((src, i) => (
@@ -134,19 +137,25 @@ function ProductImageModal({ images, activeIndex, onSelect, onClose, productTitl
 
 function BadgeModal({ onClose, title, desc, icon }: { onClose: () => void; title: string; desc: string; icon: string }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="badge-modal-title"
+    >
       <div className="relative w-full max-w-[650px] bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors" aria-label="Închide">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
-        <div className="flex flex-col gap-6 p-8 sm:p-10">
-          <div className="flex items-center gap-5">
-            <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-neutral-100 flex items-center justify-center">
-              <img src={icon} alt="" aria-hidden className="w-10 h-10 object-contain" />
-            </div>
-            <h1 className="text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-tight">{title}</h1>
+        <div className="flex flex-col gap-6 px-8 pb-8 pt-5 sm:px-10 sm:pb-10 sm:pt-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+            <img src={icon} alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <p className="text-neutral-700 text-base sm:text-lg font-['Inter'] leading-relaxed">{desc}</p>
+          <h1 id="badge-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter'] sm:text-2xl">
+            {title}
+          </h1>
+          <p className="text-base leading-relaxed text-neutral-700 font-['Inter'] sm:text-lg">{desc}</p>
         </div>
       </div>
     </div>
@@ -335,25 +344,54 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
               <div className="w-full max-w-[592px] h-64 relative rounded-[10px] overflow-hidden">
                 <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/baterino-swap.jpg" alt="" />
                 <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                <div className="absolute left-[32px] top-[66px] z-10 text-white text-3xl font-bold font-['Inter']">{tr.stiaiCa}</div>
-                <div className="absolute left-[32px] top-[121px] w-80 z-10 text-white text-lg font-semibold font-['Inter'] leading-6">{tr.swapDesc}</div>
+                <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
+                  <p className="m-0 w-full max-w-md shrink-0 text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
+                    {tr.stiaiCa}
+                  </p>
+                  <p className="m-0 w-full max-w-md text-pretty text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
+                    {tr.swapDesc}
+                  </p>
+                  <div className="shrink-0 pt-0.5">
+                    <Link
+                      to="/siguranta"
+                      className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
+                    >
+                      <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
+                        {tr.swapBannerCta}
+                      </span>
+                    </Link>
+                  </div>
+                </div>
               </div>
               <div className="w-full max-w-[589px] h-64 relative overflow-hidden rounded-[10px]">
                 <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/reduceri-banner.jpg" alt="" />
                 <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                <div className="absolute left-[28px] top-[61px] w-80 z-10 text-white text-xl font-bold font-['Inter']">{tr.reduceriTitle}</div>
-                <div className="absolute left-[27px] top-[144px] w-96 z-10 text-white text-lg font-medium font-['Inter']">{tr.reduceriDesc}</div>
-                <Link to="/reduceri" className="absolute right-[28px] top-[166px] w-40 h-9 px-4 bg-white rounded-[5px] inline-flex justify-center items-center gap-2 hover:bg-neutral-100 transition-colors z-10">
-                  <span className="text-black text-sm font-bold font-['Nunito_Sans'] uppercase">{tr.intraInCont}</span>
-                </Link>
+                <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
+                  <p className="m-0 max-w-[calc(100%-0.5rem)] text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
+                    {tr.reduceriTitle}
+                  </p>
+                  <p className="m-0 max-w-lg shrink-0 text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
+                    {tr.reduceriDesc}
+                  </p>
+                  <div className="shrink-0 pt-0.5">
+                    <Link
+                      to="/reduceri"
+                      className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
+                    >
+                      <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
+                        {tr.intraInCont}
+                      </span>
+                    </Link>
+                  </div>
+                </div>
               </div>
             </section>
 
             <section>
               <div className="bg-neutral-100 rounded-[10px] flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7">
                 <div>
-                  <h3 className="text-black text-xl font-bold font-['Inter'] mb-1">{tr.contactTitle}</h3>
-                  <p className="text-gray-600 text-sm font-['Inter'] leading-5">{tr.contactDesc}</p>
+                  <h3 className="text-black text-lg font-bold font-['Inter'] mb-1">{tr.contactTitle}</h3>
+                  <p className="text-gray-600 text-base font-['Inter'] leading-relaxed">{tr.contactDesc}</p>
                 </div>
                 <Link to="/companie/viziune" className="flex-shrink-0 h-12 px-8 bg-slate-900 text-white rounded-[10px] inline-flex items-center justify-center text-sm font-bold font-['Inter'] uppercase hover:bg-slate-700 transition-colors whitespace-nowrap">
                   {tr.contacteazaNe}

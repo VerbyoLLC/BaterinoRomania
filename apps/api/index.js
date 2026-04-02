@@ -66,6 +66,22 @@ function parsePricePresentation(v) {
   return 'simple'
 }
 
+/** Rezidențial: in_stock | out_of_stock | coming_soon — null clears badge */
+function parseCatalogStockStatus(v) {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (['in_stock', 'out_of_stock', 'coming_soon'].includes(s)) return s
+  return null
+}
+
+/** string[] of ReducereProgram ids; invalid input → [] */
+function parseReducereProgramIds(v) {
+  if (v == null) return []
+  if (!Array.isArray(v)) return []
+  const ids = [...new Set(v.filter((x) => typeof x === 'string' && String(x).trim()).map((s) => String(s).trim()))]
+  return ids
+}
+
 /** Optional JWT for public product routes (partners see prices when allowed). */
 function readOptionalAuthPayload(req) {
   const auth = req.headers.authorization
@@ -78,11 +94,23 @@ function readOptionalAuthPayload(req) {
   }
 }
 
-/** Strip money fields for anonymous users when visibility is not public. */
+/** Strip money fields for anonymous users when visibility is not public. Rezidențial epuizat/în curând: și partenerii nu primesc preț. */
 function applyPublicPricePolicy(apiProduct, authPayload) {
   const vis = apiProduct.priceVisibility || 'public'
-  if (vis === 'public') return apiProduct
+  const tip = String(apiProduct.tipProdus || '').toLowerCase()
+  const stock = apiProduct.catalogStockStatus
+  const residentialUnavailable =
+    tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')
   const role = authPayload?.role
+  if (residentialUnavailable && role === 'partener') {
+    return {
+      ...apiProduct,
+      landedPrice: null,
+      salePrice: null,
+      vat: null,
+    }
+  }
+  if (vis === 'public') return apiProduct
   if (role === 'partener') return apiProduct
   return {
     ...apiProduct,
@@ -717,6 +745,63 @@ const publicDepartmentPhonesHandler = async (req, res) => {
 app.get('/api/department-phones', publicDepartmentPhonesHandler)
 app.get('/department-phones', publicDepartmentPhonesHandler)
 
+// ── Monedă catalog produse (public + admin) ─────────────────────────────
+const CATALOG_CURRENCY_KEY = 'catalog_currency'
+const ALLOWED_CATALOG_CURRENCIES = ['EUR', 'RON', 'IDR', 'MYR', 'PHP', 'USD']
+
+function normalizeCatalogCurrency(value) {
+  const code = String(value ?? '').trim().toUpperCase()
+  return ALLOWED_CATALOG_CURRENCIES.includes(code) ? code : 'RON'
+}
+
+async function readCatalogCurrencyFromDb() {
+  try {
+    const row = await prisma.siteSetting.findUnique({ where: { key: CATALOG_CURRENCY_KEY } })
+    return normalizeCatalogCurrency(row?.value)
+  } catch (err) {
+    console.error('readCatalogCurrencyFromDb:', err)
+    return 'RON'
+  }
+}
+
+const getCatalogCurrencyHandler = async (req, res) => {
+  try {
+    const currency = await readCatalogCurrencyFromDb()
+    res.json({ currency })
+  } catch (err) {
+    console.error('catalog-currency get:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const putAdminCatalogCurrencyHandler = async (req, res) => {
+  try {
+    const raw = String(req.body?.currency ?? req.body?.code ?? '').trim().toUpperCase()
+    if (!ALLOWED_CATALOG_CURRENCIES.includes(raw)) {
+      return res.status(400).json({
+        error: `Monedă invalidă. Valori permise: ${ALLOWED_CATALOG_CURRENCIES.join(', ')}.`,
+      })
+    }
+    const currency = raw
+    await prisma.siteSetting.upsert({
+      where: { key: CATALOG_CURRENCY_KEY },
+      create: { key: CATALOG_CURRENCY_KEY, value: currency },
+      update: { value: currency },
+    })
+    res.json({ currency })
+  } catch (err) {
+    console.error('admin catalog-currency put:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/catalog-currency', getCatalogCurrencyHandler)
+app.get('/catalog-currency', getCatalogCurrencyHandler)
+app.get('/api/admin/catalog-currency', authMiddleware, adminAuthMiddleware, getCatalogCurrencyHandler)
+app.get('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, getCatalogCurrencyHandler)
+app.put('/api/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
+app.put('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
+
 // ── Admin: update company discount ──────────────────────────────────────
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
@@ -784,6 +869,7 @@ function reducereProgramToApi(row) {
     durataProgram: row.durataProgram ?? undefined,
     discountPercent: row.discountPercent != null ? Number(row.discountPercent) : undefined,
     sortOrder: row.sortOrder,
+    isActive: row.isActive !== false,
   }
 }
 
@@ -1005,6 +1091,9 @@ const createProductHandler = async (req, res) => {
         categorie: body.categorie?.trim() || null,
         priceVisibility: parsePriceVisibility(body.priceVisibility),
         pricePresentation: parsePricePresentation(body.pricePresentation),
+        catalogStockStatus:
+          tipProdus === 'rezidential' ? parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock' : null,
+        reducereProgramIds: tipProdus === 'rezidential' ? parseReducereProgramIds(body.reducereProgramIds) : [],
         landedPrice,
         salePrice,
         vat,
@@ -1121,6 +1210,31 @@ const updateProductHandler = async (req, res) => {
       } else {
         const n = parseTechnicalSpecsModelsBody(body.technicalSpecsModels)
         if (n !== undefined) data.technicalSpecsModels = n
+      }
+    }
+
+    if (tipProdus === 'industrial') {
+      data.catalogStockStatus = null
+      data.reducereProgramIds = []
+    } else if (body.catalogStockStatus !== undefined) {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential') {
+        data.catalogStockStatus = parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock'
+      }
+    }
+
+    if (body.reducereProgramIds !== undefined && tipProdus !== 'industrial') {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential') {
+        data.reducereProgramIds = parseReducereProgramIds(body.reducereProgramIds)
       }
     }
 
