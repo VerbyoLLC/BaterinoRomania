@@ -1,9 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getProducts, getProduct, getProductCardImageUrl, type PublicProduct } from '../../lib/api'
+import {
+  getProducts,
+  getProduct,
+  getProductCardImageUrl,
+  getCatalogProductSpecLines,
+  type PublicProduct,
+} from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
 import ProductDetailRightSection from '../../components/ProductDetailRightSection'
+import {
+  CatalogProductCardSkeleton,
+  IndustrialCatalogProductCard,
+  ResidentialCatalogProductCard,
+} from '../../components/product/CatalogProductCard'
 
 function whToKwhDisplay(wh: string | null | undefined): string | null {
   if (!wh) return null
@@ -12,29 +23,6 @@ function whToKwhDisplay(wh: string | null | undefined): string | null {
   if (Number.isNaN(num)) return wh
   const kwh = num / 1000
   return `${kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2)} kWh`
-}
-
-/* ── Skeleton card ─────────────────────────────────────────────── */
-function ProductCardSkeleton() {
-  return (
-    <div className="flex flex-col bg-white rounded-xl border border-neutral-200 overflow-hidden min-h-[340px] animate-pulse">
-      <div className="flex items-center justify-center bg-neutral-50 h-44 p-4">
-        <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-28 h-14 object-contain opacity-30" aria-hidden />
-      </div>
-      <div className="flex flex-col flex-1 p-4">
-        <div className="w-full h-5 bg-neutral-200 rounded mb-3" />
-        <div className="w-3/4 h-4 bg-neutral-100 rounded mb-4" />
-        <div className="mt-auto pt-4 border-t border-neutral-100 space-y-3">
-          <div className="flex justify-center gap-2">
-            <div className="w-8 h-8 bg-neutral-200 rounded-lg" />
-            <div className="w-6 h-8 bg-neutral-100 rounded" />
-            <div className="w-8 h-8 bg-neutral-200 rounded-lg" />
-          </div>
-          <div className="w-full h-10 bg-neutral-200 rounded-lg" />
-        </div>
-      </div>
-    </div>
-  )
 }
 
 /* ── Product card (clickable for details + quantity + order) ───────── */
@@ -56,86 +44,66 @@ function ProductCard({
   orderLabel: string
 }) {
   const img = getProductCardImageUrl(product)
+  const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
   const price =
     product.salePrice != null && product.salePrice !== '' ? Number(product.salePrice) : NaN
   const priceOk = Number.isFinite(price) && price > 0
-  const p = product as PublicProduct & { greutate?: string }
-  const energieDisplay = whToKwhDisplay(p.energieNominala)
-  const cardSpecs = [
-    energieDisplay,
-    p.capacitate ?? null,
-    p.cicluriDescarcare ?? null,
-    p.greutate ?? null,
-  ].filter(Boolean) as string[]
+  const priceDisplay = priceOk ? `${price.toLocaleString('ro-RO')} lei` : '—'
 
-  return (
-    <div
-      className={`w-full flex flex-col bg-[#f7f7f7] rounded-xl border overflow-hidden min-h-[340px] transition-all duration-200 ${
-        selected
-          ? 'border-slate-900 border-2 shadow-md'
-          : 'border-neutral-200 hover:border-neutral-300 hover:shadow-md'
-      }`}
-    >
+  const footer = (
+    <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-3">
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => onQuantityChange(-1)}
+          className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+          aria-label="Scade cantitatea"
+        >
+          −
+        </button>
+        <span className="text-black text-sm font-bold font-['Inter'] min-w-[1.5rem] text-center tabular-nums">
+          {quantity}
+        </span>
+        <button
+          type="button"
+          onClick={() => onQuantityChange(1)}
+          className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+          aria-label="Crește cantitatea"
+        >
+          +
+        </button>
+      </div>
       <button
         type="button"
-        onClick={onSelect}
-        className="w-full flex flex-col items-center cursor-pointer text-left flex-1 min-h-0 group"
+        onClick={onOrder}
+        className="w-full py-3 bg-slate-900 text-white rounded-lg text-sm font-bold font-['Inter'] uppercase tracking-wide hover:bg-slate-800 active:bg-slate-950 transition-colors"
       >
-        <div className="w-full flex items-center justify-center bg-[#f7f7f7] h-44 p-4">
-          <img
-            src={img}
-            alt={product.title}
-            className="max-w-full max-h-full w-auto h-36 object-contain transition-transform duration-200 group-hover:scale-105"
-          />
-        </div>
-        <div className="flex flex-col flex-1 w-full p-4 text-center">
-          <h3 className="text-black text-base font-bold font-['Inter'] leading-snug line-clamp-2">
-            {product.title}
-          </h3>
-          {cardSpecs.length > 0 && (
-            <p className="text-gray-500 text-sm font-['Inter'] mt-2 leading-snug">
-              {cardSpecs.join(' • ')}
-            </p>
-          )}
-          <p className="text-slate-900 text-lg font-bold font-['Inter'] mt-3 tracking-tight">
-            {priceOk ? `${price.toLocaleString('ro-RO')} lei` : '—'}
-          </p>
-        </div>
+        {orderLabel}
       </button>
-
-      <div className="w-full px-4 pb-4 pt-0" onClick={(e) => e.stopPropagation()}>
-        <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-3">
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => onQuantityChange(-1)}
-              className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
-              aria-label="Scade cantitatea"
-            >
-              −
-            </button>
-            <span className="text-black text-sm font-bold font-['Inter'] min-w-[1.5rem] text-center tabular-nums">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => onQuantityChange(1)}
-              className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
-              aria-label="Crește cantitatea"
-            >
-              +
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={onOrder}
-            className="w-full py-3 bg-slate-900 text-white rounded-lg text-sm font-bold font-['Inter'] uppercase tracking-wide hover:bg-slate-800 active:bg-slate-950 transition-colors"
-          >
-            {orderLabel}
-          </button>
-        </div>
-      </div>
     </div>
+  )
+
+  const industrialSubtitle = String(product.subtitle || '').trim() || undefined
+
+  const common = {
+    density: 'partner' as const,
+    imageSrc: img,
+    imageAlt: product.title,
+    title: product.title,
+    subtitle: industrialSubtitle,
+    specLine1,
+    specLine2,
+    linkState: { tipProdus: product.tipProdus } as { tipProdus: 'rezidential' | 'industrial' },
+    priceDisplay,
+    shellClassName: selected ? 'border-2 border-slate-900 shadow-md' : '',
+    onMainClick: onSelect,
+    footer,
+  }
+
+  return product.tipProdus === 'industrial' ? (
+    <IndustrialCatalogProductCard {...common} />
+  ) : (
+    <ResidentialCatalogProductCard {...common} />
   )
 }
 
@@ -378,7 +346,7 @@ export default function PartnerProducts() {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-[20px] overflow-y-auto">
               {Array.from({ length: 6 }).map((_, i) => (
-                <ProductCardSkeleton key={i} />
+                <CatalogProductCardSkeleton key={i} density="partner" />
               ))}
             </div>
           ) : filtered.length > 0 ? (

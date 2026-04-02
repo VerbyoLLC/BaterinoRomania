@@ -17,9 +17,12 @@ function renderBold(text: string) {
 function SmileyPopover({
   icon,
   info,
+  stopSelectBubble,
 }: {
   icon: string
   info?: { title: string; text: string }
+  /** When card is selectable, info icon must not trigger programme selection. */
+  stopSelectBubble?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -36,7 +39,12 @@ function SmileyPopover({
   }, [open])
 
   return (
-    <div ref={ref} className="absolute bottom-3 right-3 hidden md:block">
+    <div
+      ref={ref}
+      className="absolute bottom-3 right-3 z-20 hidden md:block"
+      onClick={stopSelectBubble ? (e) => e.stopPropagation() : undefined}
+      onKeyDown={stopSelectBubble ? (e) => e.stopPropagation() : undefined}
+    >
       {open && info && (
         <div className="absolute bottom-11 right-0 w-72 rounded-[5px] overflow-hidden z-10 shadow-lg">
           <div className="bg-white/70 backdrop-blur-sm px-3 py-3">
@@ -61,26 +69,77 @@ type CardProps = {
   program: ReducereProgram
   /** Hide CTA + terms (e.g. compact row in product modal). */
   hideCta?: boolean
+  /** Product modal: choose programme before Apply (clicks on card body select). */
+  selectable?: boolean
+  selected?: boolean
+  onSelect?: () => void
+  /** Modal: apply CTA over the photo on hover / focus-within. */
+  hoverApply?: { label: string; onApply: () => void }
 }
 
 /** Program card – same layout as `/reduceri` page. */
-export function ReduceriProgramCard({ program, hideCta = false }: CardProps) {
+export function ReduceriProgramCard({
+  program,
+  hideCta = false,
+  selectable = false,
+  selected = false,
+  onSelect,
+  hoverApply,
+}: CardProps) {
   const programName = program.programLabel.replace(/^PROGRAMUL\s*/i, '')
   const compact = hideCta
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-col flex-1 bg-neutral-100 rounded-[10px] overflow-hidden transition-shadow duration-300 hover:shadow-md">
-        <div className={`relative flex-shrink-0 ${compact ? 'h-36 sm:h-40' : 'h-56 md:h-48'}`}>
+      <div
+        className={`flex flex-col flex-1 bg-neutral-100 rounded-[10px] overflow-hidden transition-shadow duration-300 hover:shadow-md ${
+          selected ? 'ring-2 ring-slate-900 ring-offset-2 shadow-md' : ''
+        } ${selectable ? 'cursor-pointer' : ''}`}
+        onClick={selectable ? onSelect : undefined}
+        role={selectable ? 'button' : undefined}
+        tabIndex={selectable ? 0 : undefined}
+        onKeyDown={
+          selectable && onSelect
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelect()
+                }
+              }
+            : undefined
+        }
+        aria-pressed={selectable ? selected : undefined}
+      >
+        <div className={`group relative flex-shrink-0 ${compact ? 'h-36 sm:h-40' : 'h-56 md:h-48'}`}>
           <div className="absolute inset-0 bg-zinc-300" />
           <img src={program.photo} alt={programName} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40" />
           <img
             src="/images/programe reduceri/baterino-white-logo.png"
             alt="Baterino"
-            className="absolute top-3 right-3 h-5 w-auto object-contain"
+            className="absolute top-3 right-3 z-[1] h-5 w-auto object-contain"
           />
-          {program.topIcon ? <SmileyPopover icon={program.topIcon} info={program.stiaiCa} /> : null}
+          {program.topIcon ? (
+            <SmileyPopover
+              icon={program.topIcon}
+              info={program.stiaiCa}
+              stopSelectBubble={selectable || Boolean(hoverApply)}
+            />
+          ) : null}
+          {hoverApply ? (
+            <div className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  hoverApply.onApply()
+                }}
+                className="pointer-events-auto rounded-lg bg-white px-4 py-2.5 font-['Inter'] text-xs font-semibold uppercase tracking-wide text-slate-900 shadow-md transition-colors hover:bg-neutral-100 sm:text-sm"
+              >
+                {hoverApply.label}
+              </button>
+            </div>
+          ) : null}
           <div className="absolute left-5 bottom-[46px] text-white text-base font-medium font-['Nunito_Sans']">PROGRAMUL</div>
           <div className="absolute left-5 right-5 bottom-4 text-white text-xl font-bold font-['Inter'] leading-8">{programName}</div>
         </div>

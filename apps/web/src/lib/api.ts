@@ -76,6 +76,20 @@ export type PublicProduct = {
   [key: string]: unknown
 }
 
+/** Două linii de specificații pentru cardurile din catalog (Produse / Acasă). */
+export function getCatalogProductSpecLines(product: PublicProduct): { specLine1: string; specLine2: string } {
+  const conectivitate = [
+    product.conectivitateWifi && 'WiFi',
+    product.conectivitateBluetooth && 'Bluetooth',
+  ]
+    .filter(Boolean)
+    .join(' • ') || '—'
+  const specLine1 =
+    [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' • ') || '—'
+  const specLine2 = [product.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
+  return { specLine1, specLine2 }
+}
+
 /** Lista produselor publicate (fără auth) */
 export async function getProducts(): Promise<PublicProduct[]> {
   const res = await fetch(`${API_BASE}/products`, { headers: publicFetchHeaders() })

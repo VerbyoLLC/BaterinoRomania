@@ -16,9 +16,13 @@ import {
   X,
 } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
+import { IndustrialDesktopWhatsappSlide } from '../components/product/IndustrialDesktopWhatsappSlide'
+import {
+  IndustrialModelConfigurationCard,
+  IndustrialModelConfigurationSheetHeader,
+} from '../components/product/IndustrialModelConfigurationCard'
 import { IndustrialCarouselSlideImage } from '../components/product/ProductPageLoaders'
 import IndustrialTechnicalSpecTable from '../components/IndustrialTechnicalSpecTable'
-import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
 import {
   INDUSTRIAL_SPEC_FIELDS,
   normalizeIndustrialTechnicalSpecs,
@@ -32,10 +36,7 @@ import { getProductDetailTranslations } from '../i18n/product-detail'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
 import { useLanguage } from '../contexts/LanguageContext'
-import {
-  getIndustrialBessTemplateTranslations,
-  type IndustrialBessTemplateTranslations,
-} from '../i18n/industrial-bess-template'
+import { getIndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
 import {
   INDUSTRIAL_BREADCRUMB_NAV_CLASS,
   INDUSTRIAL_PRODUCT_ARTICLE_CLASS,
@@ -71,151 +72,6 @@ function chunkModelEntries<T>(arr: T[], size: number): T[][] {
   const chunks: T[][] = []
   for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
   return chunks
-}
-
-function WhatsappGlyph({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-    </svg>
-  )
-}
-
-function DesktopModelWhatsappSlide({
-  open,
-  tr,
-}: {
-  open: boolean
-  tr: IndustrialBessTemplateTranslations
-}) {
-  /** Same destination as Contact page & floating WhatsApp (no prefilled text). */
-  const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}`
-  return (
-    <div
-      className={`absolute left-0 right-0 top-full z-50 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
-        open
-          ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
-          : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
-      }`}
-    >
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="relative z-10 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
-      >
-        <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
-        {tr.modelDesktopDetailsCta}
-      </a>
-    </div>
-  )
-}
-
-function ModelConfigurationCard({
-  entry,
-  tr,
-  specLabel,
-  manyModels,
-  onPress,
-  /** Desktop: expands WhatsApp row; mutually exclusive with mobile onPress in practice */
-  onCardClick,
-  isCardExpanded,
-  /** Desktop slider: fill cell height so all cards align */
-  stretchHeight,
-}: {
-  entry: IndustrialModelSpecEntry
-  tr: IndustrialBessTemplateTranslations
-  specLabel: (key: string) => string
-  manyModels: boolean
-  /** Mobile: opens full spec sheet */
-  onPress?: () => void
-  onCardClick?: () => void
-  isCardExpanded?: boolean
-  stretchHeight?: boolean
-}) {
-  const nominalEnergyVal = String(entry.specs.nominalEnergy ?? '').trim() || '—'
-  const detailCells = [
-    { label: tr.modelLabel, value: entry.modelName },
-    { label: specLabel('nominalVoltage'), value: String(entry.specs.nominalVoltage ?? '').trim() || '—' },
-    { label: specLabel('maxOutputPower'), value: String(entry.specs.maxOutputPower ?? '').trim() || '—' },
-    { label: specLabel('cycleLife'), value: String(entry.specs.cycleLife ?? '').trim() || '—' },
-  ] as const
-  const pressableClass =
-    'cursor-pointer touch-manipulation text-left active:scale-[0.995] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2'
-
-  const shellClass = `flex min-h-0 min-w-0 w-full flex-col rounded-[10px] border border-neutral-200 bg-white shadow-sm transition-all duration-200 ease-out ${
-    stretchHeight ? 'h-full' : ''
-  } ${
-    onPress || onCardClick ? pressableClass : 'hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8'
-  } ${onCardClick && isCardExpanded ? 'border-slate-900 ring-1 ring-slate-900/15' : ''} ${
-    manyModels ? 'px-3 py-3 sm:px-3 sm:py-3.5' : 'px-4 py-4'
-  }`
-
-  const inner = (
-    <>
-      <div
-        className={`rounded-lg border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white ${
-          manyModels ? 'px-2.5 py-2.5 sm:px-3 sm:py-3' : 'px-3 py-3 sm:px-3.5 sm:py-3.5'
-        } ${
-          stretchHeight
-            ? 'flex min-h-[6.25rem] shrink-0 flex-col justify-center sm:min-h-[6.75rem]'
-            : ''
-        }`}
-      >
-        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 font-['Inter'] sm:text-xs">
-          {specLabel('nominalEnergy')}
-        </p>
-        <p
-          className={`m-0 mt-1.5 min-w-0 font-extrabold font-['Inter'] tracking-tight text-slate-900 leading-tight tabular-nums break-words ${
-            manyModels ? 'text-lg sm:text-xl' : 'text-2xl sm:text-[26px] leading-none'
-          }`}
-        >
-          {nominalEnergyVal}
-        </p>
-      </div>
-      <div
-        className={`mt-4 grid min-h-0 w-full grid-cols-2 gap-x-3 gap-y-4 ${stretchHeight ? 'min-h-0 flex-1 content-start' : ''}`}
-      >
-        {detailCells.map((cell, j) => (
-          <div key={`${cell.label}-${j}`} className="min-w-0">
-            <p className="m-0 text-xs font-medium text-neutral-500 font-['Inter'] leading-tight sm:text-[13px]">
-              {cell.label}
-            </p>
-            <p
-              className={`m-0 mt-1 font-semibold text-neutral-900 font-['Inter'] leading-snug break-words ${
-                manyModels ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
-              }`}
-            >
-              {cell.value}
-            </p>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-
-  if (onPress) {
-    return (
-      <button type="button" className={shellClass} onClick={onPress}>
-        {inner}
-      </button>
-    )
-  }
-
-  if (onCardClick) {
-    return (
-      <button
-        type="button"
-        className={shellClass}
-        onClick={onCardClick}
-        aria-expanded={Boolean(isCardExpanded)}
-      >
-        {inner}
-      </button>
-    )
-  }
-
-  return <div className={shellClass}>{inner}</div>
 }
 
 const SERVICE_ICONS = ['/images/shared/delivery-icon.svg', '/images/shared/instalare-icon.svg', '/images/shared/maintance-icon.svg'] as const
@@ -574,7 +430,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             <div className="lg:hidden">
               <div className="flex w-full min-w-0 flex-col gap-3">
                 {modelEntries.slice(0, mobileModelsVisible).map((entry, i) => (
-                  <ModelConfigurationCard
+                  <IndustrialModelConfigurationCard
                     key={`${entry.modelName}-mobile-${i}`}
                     entry={entry}
                     tr={tr}
@@ -649,7 +505,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                 }`}
                               >
                                 <div className="flex min-h-0 flex-1 flex-col">
-                                  <ModelConfigurationCard
+                                  <IndustrialModelConfigurationCard
                                     entry={entry}
                                     tr={tr}
                                     specLabel={specLabel}
@@ -659,8 +515,10 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                     isCardExpanded={desktopWhatsappModel === entry.modelName}
                                   />
                                 </div>
-                                <DesktopModelWhatsappSlide
+                                <IndustrialDesktopWhatsappSlide
                                   open={desktopWhatsappModel === entry.modelName}
+                                  productTitle={product.title}
+                                  modelName={entry.modelName}
                                   tr={tr}
                                 />
                               </div>
@@ -687,7 +545,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     }`}
                   >
                     <div className="flex min-h-0 flex-1 flex-col">
-                      <ModelConfigurationCard
+                      <IndustrialModelConfigurationCard
                         entry={entry}
                         tr={tr}
                         specLabel={specLabel}
@@ -697,7 +555,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                         isCardExpanded={desktopWhatsappModel === entry.modelName}
                       />
                     </div>
-                    <DesktopModelWhatsappSlide open={desktopWhatsappModel === entry.modelName} tr={tr} />
+                    <IndustrialDesktopWhatsappSlide
+                      open={desktopWhatsappModel === entry.modelName}
+                      productTitle={product.title}
+                      modelName={entry.modelName}
+                      tr={tr}
+                    />
                   </div>
                 ))}
               </div>
@@ -950,20 +813,11 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                <div className="min-w-0 flex-1 pr-2">
-                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
-                    {specLabel('nominalEnergy')}
-                  </p>
-                  <h2
-                    id="industrial-model-spec-sheet-title"
-                    className="m-0 mt-1 break-words font-['Inter'] text-2xl font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums"
-                  >
-                    {String(mobileSpecModalEntry.specs.nominalEnergy ?? '').trim() || '—'}
-                  </h2>
-                  <p className="m-0 mt-2 break-words font-['Inter'] text-base font-semibold leading-snug text-slate-800">
-                    {mobileSpecModalEntry.modelName || '—'}
-                  </p>
-                </div>
+                <IndustrialModelConfigurationSheetHeader
+                  entry={mobileSpecModalEntry}
+                  specLabel={specLabel}
+                  titleId="industrial-model-spec-sheet-title"
+                />
                 <button
                   type="button"
                   onClick={() => setMobileSpecModalEntry(null)}
