@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getContactTranslations } from '../i18n/contact'
 import { submitInquiry, type InquiryPayload } from '../lib/api'
 import SEO from '../components/SEO'
-import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
+import { digitsForWaMe, formatPhoneDisplay, telHrefFromStored } from '../lib/contactWhatsApp'
+import { departmentRow, ensurePublicDepartmentPhones } from '../lib/departmentPhones'
 
 const COMPANY_LEGAL_NAME = 'Baterino Energy SRL'
-const CONTACT_PHONE = '+40770106374'
 const CONTACT_EMAIL = 'suport@baterino.ro'
 const CONTACT_HOURS = 'Luni - Vineri | 8AM - 8PM'
 
@@ -71,6 +71,24 @@ export default function Contact() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [generalPhone, setGeneralPhone] = useState<string | undefined>()
+  const [generalWhatsapp, setGeneralWhatsapp] = useState<string | undefined>()
+
+  useEffect(() => {
+    ensurePublicDepartmentPhones()
+      .then((rows) => {
+        const g = departmentRow(rows, 'general')
+        const p = g?.phone?.trim()
+        const w = g?.whatsapp?.trim()
+        if (p) setGeneralPhone(p)
+        if (w) setGeneralWhatsapp(w)
+      })
+      .catch(() => {})
+  }, [])
+
+  const contactPhoneDisplay = formatPhoneDisplay(generalPhone)
+  const contactPhoneTel = telHrefFromStored(generalPhone)
+  const contactWaDigits = digitsForWaMe(generalWhatsapp)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -155,7 +173,7 @@ export default function Contact() {
             {/* Tab content */}
             {activeTab === 'whatsapp' && (
               <a
-                href={`https://wa.me/${CONTACT_WHATSAPP_WAME}`}
+                href={`https://wa.me/${contactWaDigits}`}
                 className="w-full flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 p-8 min-h-[8rem] bg-neutral-100 rounded-[10px] hover:bg-neutral-200 hover:shadow-sm transition-all group focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
               >
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 flex-1 min-w-0">
@@ -179,7 +197,7 @@ export default function Contact() {
 
             {activeTab === 'phone' && (
               <a
-                href={`tel:${CONTACT_PHONE}`}
+                href={`tel:${contactPhoneTel}`}
                 className="w-full flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 p-8 min-h-[8rem] bg-neutral-100 rounded-[10px] hover:bg-neutral-200 hover:shadow-sm transition-all group focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
               >
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 flex-1 min-w-0">
@@ -285,7 +303,10 @@ export default function Contact() {
                 <div>
                   <h3 className="text-slate-900 font-bold font-['Inter'] text-base mb-2">{tr.contactDirectLabel}</h3>
                   <p className="text-slate-600 text-sm font-['Inter'] leading-5">
-                    Tel: <a href={`tel:${CONTACT_PHONE}`} className="text-slate-900 hover:underline font-medium">{CONTACT_PHONE}</a>
+                    Tel:{' '}
+                    <a href={`tel:${contactPhoneTel}`} className="text-slate-900 hover:underline font-medium">
+                      {contactPhoneDisplay}
+                    </a>
                   </p>
                   <p className="text-slate-600 text-sm font-['Inter'] leading-5">
                     Email: <a href={`mailto:${CONTACT_EMAIL}`} className="text-slate-900 hover:underline font-medium break-all">{CONTACT_EMAIL}</a>

@@ -691,6 +691,18 @@ export type DepartmentPhoneRow = {
   whatsapp: string
 }
 
+/** Date publice pentru link-uri tel / WhatsApp (fără auth). */
+export async function getPublicDepartmentPhones(): Promise<DepartmentPhoneRow[]> {
+  try {
+    const res = await fetch(`${API_BASE}/department-phones`, { headers: publicFetchHeaders() })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return []
+    return Array.isArray(json) ? json : []
+  } catch {
+    return []
+  }
+}
+
 export async function getAdminDepartmentPhones(): Promise<DepartmentPhoneRow[]> {
   const res = await fetch(`${API_BASE}/admin/department-phones`, { headers: authHeaders() })
   const json = await res.json().catch(() => ({}))

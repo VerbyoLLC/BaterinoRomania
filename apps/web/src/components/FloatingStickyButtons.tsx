@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
-import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
+import { digitsForWaMe, formatPhoneDisplay, telHrefFromStored } from '../lib/contactWhatsApp'
+import { departmentRow, ensurePublicDepartmentPhones } from '../lib/departmentPhones'
 
 const WARNING_RISKS = [
   'Supraîncălzire și risc de incendiu',
@@ -10,14 +11,26 @@ const WARNING_RISKS = [
   'Pierderea investiției în doar 2 ani',
 ]
 
-const CONTACT_PHONE_DISPLAY = '+40 770 106 374'
-const CONTACT_PHONE_LINK = '+40770106374'
-
 export default function FloatingStickyButtons() {
   const [warningOpen, setWarningOpen] = useState(false)
   const [callBoxOpen, setCallBoxOpen] = useState(false)
   const [whatsappBoxOpen, setWhatsappBoxOpen] = useState(false)
   const floatingRef = useRef<HTMLDivElement>(null)
+  /** Din admin: departament „general” (număr apel + WhatsApp) */
+  const [generalPhone, setGeneralPhone] = useState<string | undefined>()
+  const [generalWhatsapp, setGeneralWhatsapp] = useState<string | undefined>()
+
+  useEffect(() => {
+    ensurePublicDepartmentPhones()
+      .then((rows) => {
+        const g = departmentRow(rows, 'general')
+        const p = g?.phone?.trim()
+        const w = g?.whatsapp?.trim()
+        if (p) setGeneralPhone(p)
+        if (w) setGeneralWhatsapp(w)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!warningOpen) return
@@ -65,10 +78,10 @@ export default function FloatingStickyButtons() {
             <div className="text-black text-lg font-bold font-['Inter'] text-center">Vorbește cu noi</div>
             <div className="text-black text-base font-normal font-['Inter'] text-center mt-4">Luni - Vineri | 8 AM - 8PM</div>
             <a
-              href={`tel:${CONTACT_PHONE_LINK}`}
+              href={`tel:${telHrefFromStored(generalPhone)}`}
               className="mt-6 w-full px-2.5 py-2.5 bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-800 transition-colors"
             >
-              {CONTACT_PHONE_DISPLAY}
+              {formatPhoneDisplay(generalPhone)}
             </a>
           </div>
         </div>
@@ -87,7 +100,7 @@ export default function FloatingStickyButtons() {
             <div className="text-black text-lg font-bold font-['Inter'] text-center">Chat pe Whatsapp</div>
             <div className="text-black text-base font-normal font-['Inter'] text-center mt-4">Luni - Vineri | 8 AM - 8PM</div>
             <a
-              href={`https://wa.me/${CONTACT_WHATSAPP_WAME}`}
+              href={`https://wa.me/${digitsForWaMe(generalWhatsapp)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 w-full px-2.5 py-2.5 bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-800 transition-colors"

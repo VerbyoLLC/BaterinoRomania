@@ -159,10 +159,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
           <div className="flex w-full flex-col gap-2 sm:w-fit sm:shrink-0">
-            <span className="text-xs font-semibold uppercase leading-tight text-gray-700 sm:text-left">
+            <span className="m-0 block text-xs font-semibold uppercase leading-tight text-gray-700 sm:flex sm:min-h-[2.5rem] sm:items-end sm:text-left">
               {tr.cantitateLabel}
             </span>
-            <div className="flex w-full min-h-[3.25rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3">
+            <div className="flex w-full min-h-[3.75rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3">
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -185,10 +185,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <label
               htmlFor="res-discount-program"
-              className="text-xs font-semibold text-gray-700 uppercase leading-tight"
+              className="m-0 block text-xs font-semibold uppercase leading-tight text-gray-700 sm:flex sm:min-h-[2.5rem] sm:items-end"
             >
               {tr.alegeProgramReduceri}
             </label>
@@ -197,7 +197,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                 id="res-discount-program"
                 value={discountProgramId}
                 onChange={(e) => setDiscountProgramId(e.target.value)}
-                className={`w-full appearance-none py-2 pl-2.5 pr-11 rounded-lg text-xs text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-offset-0 min-h-[2.5rem] sm:min-h-[2.75rem] ${
+                className={`w-full appearance-none min-h-[2.75rem] rounded-lg py-2 pl-2.5 pr-11 text-xs text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-offset-0 sm:py-3 max-sm:min-h-[3.75rem] max-sm:rounded-xl max-sm:py-4 max-sm:pl-4 max-sm:pr-12 max-sm:text-base max-sm:font-semibold ${
                   hasProgramDiscount
                     ? 'border border-green-300 bg-green-50 focus:ring-green-500'
                     : 'border border-gray-300 bg-white focus:ring-slate-900'
@@ -211,7 +211,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                 ))}
               </select>
               <ChevronDown
-                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700 sm:right-4"
+                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700 max-sm:right-4 max-sm:h-5 max-sm:w-5 sm:right-4"
                 strokeWidth={2.25}
                 aria-hidden
               />

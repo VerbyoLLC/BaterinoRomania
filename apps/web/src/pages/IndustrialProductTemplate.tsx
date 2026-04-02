@@ -14,7 +14,9 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import SEO from '../components/SEO'
+import { WhatsAppGlyph } from '../components/WhatsAppGlyph'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useIndustrialDepartmentContacts } from '../hooks/useIndustrialDepartmentContacts'
 import { getIndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
 import { getMenuTranslations } from '../i18n/menu'
 import {
@@ -227,10 +229,16 @@ const STATIC_TECH_SPEC_ROWS: TechSpecRow[] = [
   { key: 'weight', cells: ['~31.1T', '~34.3T', '~37.5T', '~43.9T'] },
 ]
 
+const STATIC_MODEL_NAMES: readonly string[] =
+  STATIC_TECH_SPEC_ROWS[0]?.key === 'model' && 'cells' in STATIC_TECH_SPEC_ROWS[0]
+    ? STATIC_TECH_SPEC_ROWS[0].cells
+    : []
+
 export default function IndustrialProductTemplate() {
   const { language } = useLanguage()
   const tr = getIndustrialBessTemplateTranslations(language.code)
   const menuT = getMenuTranslations(language.code)
+  const { whatsappWaMeDigits, phoneDisplay, phoneTelHref } = useIndustrialDepartmentContacts()
   const SLIDES = buildSlides(tr)
   const warrantyIcons = [ShieldCheck, Headset, Package, BookOpen] as const
 
@@ -359,6 +367,40 @@ export default function IndustrialProductTemplate() {
                   {tr.overviewP2}
                 </p>
               </div>
+
+              {STATIC_MODEL_NAMES.length > 0 ? (
+                <div className="mt-8 w-full sm:mt-10">
+                  <p className="m-0 mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
+                    {tr.overviewModelsHeading}
+                  </p>
+                  <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-4">
+                    {STATIC_MODEL_NAMES.map((modelName) => {
+                      const prefill = tr.modelDesktopWhatsappPrefill
+                        .replace(/\{product\}/g, tr.heroTitle.trim() || '—')
+                        .replace(/\{model\}/g, modelName.trim() || '—')
+                      const href = `https://wa.me/${whatsappWaMeDigits}?text=${encodeURIComponent(prefill)}`
+                      return (
+                        <li key={modelName} className="min-w-0">
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex h-full min-h-[4.25rem] flex-col items-center justify-center gap-2 rounded-[10px] border border-neutral-200 bg-white px-3 py-3 text-center shadow-sm transition-colors hover:border-slate-900 hover:bg-neutral-50"
+                          >
+                            <span className="text-xs font-semibold text-neutral-600 font-['Inter']">{modelName}</span>
+                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 font-['Inter']">
+                              <WhatsAppGlyph className="h-4 w-4 shrink-0 text-slate-900" />
+                              {tr.modelDesktopDetailsCta}
+                            </span>
+                          </a>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <p className="mt-3 text-xs text-neutral-500 font-['Inter']">{tr.overviewModelsTapHint}</p>
+                </div>
+              ) : null}
+
               <Link
                 to="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-300 bg-white text-slate-900 px-5 py-3 font-semibold font-['Inter'] text-sm sm:text-base hover:border-slate-400 hover:bg-neutral-50 transition-colors mt-6 sm:mt-8 w-full sm:w-auto"
@@ -384,13 +426,25 @@ export default function IndustrialProductTemplate() {
                   {tr.contactTitle}
                 </p>
               )}
-              <Link
-                to="/contact"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-slate-800 transition-colors shadow-sm"
-              >
-                <Phone size={18} aria-hidden />
-                {tr.contactCta}
-              </Link>
+              <div className="flex flex-col gap-2">
+                <a
+                  href={`tel:${phoneTelHref}`}
+                  aria-label={tr.contactCta}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                  <Phone size={18} aria-hidden />
+                  <span className="min-w-0 truncate">{phoneDisplay}</span>
+                </a>
+                <a
+                  href={`https://wa.me/${whatsappWaMeDigits}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-white text-slate-900 px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-neutral-50 transition-colors shadow-sm"
+                >
+                  <WhatsAppGlyph className="h-[18px] w-[18px] shrink-0 text-slate-900" />
+                  {tr.contactWhatsappCta}
+                </a>
+              </div>
             </div>
           </div>
         </section>
