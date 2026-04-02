@@ -12,6 +12,7 @@ import {
   IndustrialProductPageSkeleton,
   ResidentialProductPageSkeleton,
 } from '../components/product/ProductPageLoaders'
+import { ResidentialProductSpecCard } from '../components/product/ResidentialProductSpecCard'
 import { cacheProductTip, readCachedProductTip } from '../lib/productTipCache'
 import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 
@@ -341,10 +342,7 @@ function ResidentialFullTechDetailsModal({
           {techData.length > 0 ? (
             <ul className="m-0 grid list-none grid-cols-2 gap-3 p-4 pb-8 sm:px-6" aria-label={tr.dateTehnice}>
               {techData.map(([key, val], i) => (
-                <li key={i} className="min-w-0 rounded-[10px] bg-[#f7f7f7] px-3 py-3">
-                  <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{key}</span>
-                  <span className="mt-1.5 block text-sm font-semibold leading-snug break-words text-neutral-900 font-['Inter']">{val}</span>
-                </li>
+                <ResidentialProductSpecCard key={i} label={key} value={val} variant="tile" />
               ))}
             </ul>
           ) : null}
@@ -957,10 +955,7 @@ export default function ProductRezidential() {
             <section className="order-4 m-0 w-full max-w-lg lg:order-none hidden lg:block" aria-label={tr.dateTehnice}>
               <ul className="m-0 grid list-none gap-3 p-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_minmax(0,1.4fr)] lg:gap-x-8 lg:gap-y-5">
                 {specs.map((s, i) => (
-                  <li key={i} className="min-w-0">
-                    <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
-                    <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
-                  </li>
+                  <ResidentialProductSpecCard key={i} label={s.label} value={s.value} variant="plain" />
                 ))}
               </ul>
             </section>
@@ -1078,10 +1073,7 @@ export default function ProductRezidential() {
                   >
                     <ul className="m-0 grid list-none gap-3 p-0 grid-cols-2" aria-label={tr.dateTehnice}>
                       {specs.map((s, i) => (
-                        <li key={i} className="min-w-0 rounded-[10px] bg-[#f7f7f7] px-3 py-3">
-                          <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
-                          <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
-                        </li>
+                        <ResidentialProductSpecCard key={i} label={s.label} value={s.value} variant="tile" />
                       ))}
                     </ul>
                     {techData.length > 0 ? (
@@ -1171,14 +1163,7 @@ export default function ProductRezidential() {
                   <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
                   <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                     {techData.map(([key, val], i) => (
-                      <li key={i} className="min-w-0">
-                        <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">
-                          {key}
-                        </span>
-                        <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">
-                          {val}
-                        </span>
-                      </li>
+                      <ResidentialProductSpecCard key={i} label={key} value={val} variant="plain" />
                     ))}
                   </ul>
                 </section>

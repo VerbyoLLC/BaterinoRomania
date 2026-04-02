@@ -68,10 +68,12 @@ export type ProductDetailTranslations = {
   discountPctHighlight: string
   /** Suffix in residential discount dropdown options: "{name} : 12% …" */
   residentialDiscountOptionSuffix: string
-  /** Open modal with discount programme cards (residential pricing) */
+  /** Desktop link under dropdown → programmes modal */
   veziProgrameReduceri: string
-  /** CTA in modal footer → full /reduceri page */
-  reduceriModalSeeFullPage: string
+  /** Hover button on programme photo in modal */
+  reduceriHoverApplyBtn: string
+  /** Mobile: opens discount programme picker (replaces native select) */
+  mobileApplyDiscountBtn: string
   comandaBtn: string
   /** Guest user + discount programme: CTA prompts account */
   comandaCuContBtn: string
@@ -201,7 +203,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% REDUCERE',
     residentialDiscountOptionSuffix: 'REDUCERE',
     veziProgrameReduceri: 'Vezi programe reduceri',
-    reduceriModalSeeFullPage: 'Deschide pagina Programe reducere',
+    reduceriHoverApplyBtn: 'APLICĂ REDUCEREA',
+    mobileApplyDiscountBtn: 'APLICĂ REDUCERE',
     comandaBtn: 'COMANDĂ',
     comandaCuContBtn: 'COMANDĂ CU CONT',
     residentialDiscountGuestNotice:
@@ -313,7 +316,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% OFF',
     residentialDiscountOptionSuffix: 'DISCOUNT',
     veziProgrameReduceri: 'View discount programmes',
-    reduceriModalSeeFullPage: 'Open discount programmes page',
+    reduceriHoverApplyBtn: 'APPLY DISCOUNT',
+    mobileApplyDiscountBtn: 'APPLY DISCOUNT',
     comandaBtn: 'ORDER',
     comandaCuContBtn: 'ORDER WITH ACCOUNT',
     residentialDiscountGuestNotice:
@@ -425,7 +429,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% 折扣',
     residentialDiscountOptionSuffix: '折扣',
     veziProgrameReduceri: '查看折扣计划',
-    reduceriModalSeeFullPage: '打开折扣计划专页',
+    reduceriHoverApplyBtn: '应用折扣',
+    mobileApplyDiscountBtn: '应用折扣',
     comandaBtn: '订购',
     comandaCuContBtn: '登录账户订购',
     residentialDiscountGuestNotice:
