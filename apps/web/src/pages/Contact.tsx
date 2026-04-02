@@ -4,11 +4,11 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getContactTranslations } from '../i18n/contact'
 import { submitInquiry, type InquiryPayload } from '../lib/api'
 import SEO from '../components/SEO'
+import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
 
 const COMPANY_LEGAL_NAME = 'Baterino Energy SRL'
 const CONTACT_PHONE = '+40770106374'
 const CONTACT_EMAIL = 'suport@baterino.ro'
-const CONTACT_WHATSAPP = '40770106374'
 const CONTACT_HOURS = 'Luni - Vineri | 8AM - 8PM'
 
 function LocationIcon({ className }: { className?: string }) {
@@ -155,7 +155,7 @@ export default function Contact() {
             {/* Tab content */}
             {activeTab === 'whatsapp' && (
               <a
-                href={`https://wa.me/${CONTACT_WHATSAPP}`}
+                href={`https://wa.me/${CONTACT_WHATSAPP_WAME}`}
                 className="w-full flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 p-8 min-h-[8rem] bg-neutral-100 rounded-[10px] hover:bg-neutral-200 hover:shadow-sm transition-all group focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
               >
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 flex-1 min-w-0">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useId, type ReactNode } from 'react'
 import { Link, useParams, Navigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getProduct, type PublicProduct } from '../lib/api'
@@ -134,6 +134,224 @@ function getBadges(tr: ProductDetailTranslations) {
     { icon: '/images/shared/swap-icon.svg', label: tr.badgeSwap, id: 'swap' },
     { icon: '/images/shared/maintance-icon.svg', label: tr.badgeSuport, id: 'suport' },
   ]
+}
+
+type ResidentialBadge = ReturnType<typeof getBadges>[number]
+
+function ResidentialBadgesGrid({
+  badges,
+  onCompatibilitate99,
+  onGarantie,
+  onProducatori,
+  onRetur,
+  onSwap,
+  onSuport,
+}: {
+  badges: ResidentialBadge[]
+  onCompatibilitate99: () => void
+  onGarantie: () => void
+  onProducatori: () => void
+  onRetur: () => void
+  onSwap: () => void
+  onSuport: () => void
+}) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {badges.map((b, i) =>
+        b.id === 'compatibilitate' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onCompatibilitate99}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : b.id === 'garantie' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onGarantie}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : b.id === 'producatori' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onProducatori}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : b.id === 'retur' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onRetur}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : b.id === 'swap' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onSwap}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : b.id === 'suport' ? (
+          <button
+            key={i}
+            type="button"
+            onClick={onSuport}
+            className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
+          >
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </button>
+        ) : (
+          <div key={i} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center">
+            <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
+            <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
+          </div>
+        ),
+      )}
+    </div>
+  )
+}
+
+function ResidentialMobileExpandable({
+  title,
+  iconSrc,
+  open,
+  onToggle,
+  children,
+  triggerId,
+}: {
+  title: string
+  iconSrc: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+  triggerId: string
+}) {
+  const panelId = useId()
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        id={triggerId}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+        className="group flex w-full items-center gap-3 min-h-[52px] rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
+          <img src={iconSrc} alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
+        </span>
+        <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{title}</span>
+        <svg
+          className={`h-5 w-5 shrink-0 text-neutral-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open ? (
+        <div id={panelId} role="region" aria-labelledby={triggerId} className="pt-3">
+          {children}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function ResidentialFullTechDetailsModal({
+  onClose,
+  tr,
+  productTitle,
+  productImageSrc,
+  techData,
+}: {
+  onClose: () => void
+  tr: ProductDetailTranslations
+  productTitle: string
+  productImageSrc: string
+  techData: [string, string][]
+}) {
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+  return (
+    <div
+      className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="res-full-tech-modal-title"
+    >
+      <div
+        className="relative flex w-full max-w-[650px] max-h-[90vh] sm:max-h-[90vh] flex-col overflow-hidden rounded-t-[20px] bg-white shadow-2xl sm:rounded-2xl animate-slide-up-from-bottom"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-100 bg-white p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
+          <h1 id="res-full-tech-modal-title" className="min-w-0 text-xl font-semibold leading-tight text-black font-['Inter'] sm:text-2xl">
+            {productTitle}
+          </h1>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            aria-label={tr.compatibilitateClose}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex w-full items-center justify-center bg-neutral-100 px-6 py-8">
+            <img
+              src={productImageSrc}
+              alt={productTitle}
+              className="max-h-[200px] w-auto max-w-full object-contain"
+            />
+          </div>
+          <h2 className="m-0 px-4 pt-4 text-base font-bold text-black font-['Inter'] sm:px-6">
+            {tr.detaliiTehnice}
+          </h2>
+          {techData.length > 0 ? (
+            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-4 pb-8 sm:px-6" aria-label={tr.dateTehnice}>
+              {techData.map(([key, val], i) => (
+                <li key={i} className="min-w-0 rounded-[10px] bg-[#f7f7f7] px-3 py-3">
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{key}</span>
+                  <span className="mt-1.5 block text-sm font-semibold leading-snug break-words text-neutral-900 font-['Inter']">{val}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /* ── Product image lightbox modal ────────────────────────────────── */
@@ -622,6 +840,9 @@ export default function ProductRezidential() {
   const [showSuportModal, setShowSuportModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
+  const [mobileTechOpen, setMobileTechOpen] = useState(false)
+  const [mobileSafetyOpen, setMobileSafetyOpen] = useState(false)
+  const [showFullTechDetailsModal, setShowFullTechDetailsModal] = useState(false)
 
   useEffect(() => {
     if (!slug) {
@@ -702,48 +923,50 @@ export default function ProductRezidential() {
         </nav>
 
         <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-start gap-8 lg:gap-5 overflow-visible">
-          <div className="contents lg:flex lg:flex-col lg:col-span-5 lg:col-start-1 lg:sticky lg:top-20 lg:self-start">
-            <div className="order-1 lg:order-none flex flex-col max-w-lg w-full lg:col-span-5 lg:col-start-1 gap-8">
-              <header className="space-y-0">
-                <h1 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-tight tracking-tight m-0">
-                  {product.title}
-                </h1>
-                {rawDesc ? (
-                  <div className="mt-3 sm:mt-4 max-w-prose">
-                    <p
-                      className={`text-neutral-700 text-base font-['Inter'] leading-relaxed m-0 ${
-                        descNeedsToggle && !descExpanded ? 'line-clamp-4' : ''
-                      }`}
-                    >
-                      {rawDesc}
-                      {descNeedsToggle ? (
-                        <>
-                          {'\u00A0'}
-                          <button
-                            type="button"
-                            onClick={() => setDescExpanded((e) => !e)}
-                            className="inline p-0 border-0 bg-transparent text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700 font-['Inter'] align-baseline whitespace-nowrap"
-                          >
-                            {descExpanded ? tr.descriptionReadLess : tr.descriptionReadMore}
-                          </button>
-                        </>
-                      ) : null}
-                    </p>
-                  </div>
-                ) : null}
-              </header>
+          {/* Mobile: title → description → images → specs (boxed 2/col) → purchase via flex order; lg: sticky left column */}
+          <div className="max-lg:contents lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:row-span-full lg:sticky lg:top-20 lg:z-10 lg:flex lg:h-min lg:flex-col lg:gap-8 lg:self-start">
+            <header className="order-1 w-full max-w-lg space-y-0 lg:order-none">
+              <h1 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-tight tracking-tight m-0">
+                {product.title}
+              </h1>
+              {rawDesc ? (
+                <div className="mt-3 sm:mt-4 max-w-prose">
+                  <p
+                    className={`text-neutral-700 text-base font-['Inter'] leading-relaxed m-0 ${
+                      descNeedsToggle && !descExpanded ? 'line-clamp-4' : ''
+                    }`}
+                  >
+                    {rawDesc}
+                    {descNeedsToggle ? (
+                      <>
+                        {'\u00A0'}
+                        <button
+                          type="button"
+                          onClick={() => setDescExpanded((e) => !e)}
+                          className="inline p-0 border-0 bg-transparent text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700 font-['Inter'] align-baseline whitespace-nowrap"
+                        >
+                          {descExpanded ? tr.descriptionReadLess : tr.descriptionReadMore}
+                        </button>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              ) : null}
+            </header>
 
-              <section className="m-0" aria-label={tr.dateTehnice}>
-                <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_minmax(0,1.4fr)] gap-x-8 gap-y-5">
-                  {specs.map((s, i) => (
-                    <li key={i} className="min-w-0">
-                      <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
-                      <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+            <section className="order-4 m-0 w-full max-w-lg lg:order-none hidden lg:block" aria-label={tr.dateTehnice}>
+              <ul className="m-0 grid list-none gap-3 p-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.72fr)_minmax(0,1.4fr)] lg:gap-x-8 lg:gap-y-5">
+                {specs.map((s, i) => (
+                  <li key={i} className="min-w-0">
+                    <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
+                    <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
+            <div className="order-5 flex w-full max-w-lg flex-col gap-6 lg:order-none">
+              <hr className="m-0 w-full border-0 border-t border-neutral-200" />
               <section className="m-0">
                 {showResidentialClientPurchaseUI(product) ? (
                   <ResidentialClientPriceBlock product={product} tr={tr} lang={language.code as LangCode} />
@@ -754,8 +977,8 @@ export default function ProductRezidential() {
             </div>
           </div>
 
-          <div className="contents lg:flex lg:flex-col lg:col-span-6 lg:col-start-7 lg:min-w-0 gap-8">
-            <div className="order-2 lg:order-none flex flex-col gap-8">
+          <div className="max-lg:contents lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:flex lg:flex-col lg:gap-3 lg:min-w-0 lg:self-start">
+            <div className="order-2 w-full lg:order-none">
               <div
                 className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in"
                 onClick={() => setShowImageModal(true)}
@@ -790,125 +1013,127 @@ export default function ProductRezidential() {
                   <ProductImageWithLoader src={img} alt={product.title} />
                 )}
               </div>
+            </div>
 
-              <section className="flex flex-col" aria-labelledby="compat-util-heading">
-                <h3
-                  id="compat-util-heading"
-                  className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+            <div className="order-3 w-full flex flex-col lg:order-none lg:min-w-0">
+            <section className="flex flex-col lg:pt-6" aria-labelledby="compat-util-heading">
+              <h3
+                id="compat-util-heading"
+                className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
+              >
+                {tr.compatibilitateSiUtilizare}
+              </h3>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCompatibilitateModal(true)}
+                  className="group order-1 flex min-h-[52px] items-center gap-3 rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md lg:min-w-0"
                 >
-                  {tr.compatibilitateSiUtilizare}
-                </h3>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCompatibilitateModal(true)}
-                    className="group flex flex-1 items-center gap-3 min-h-[52px] rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md"
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
+                    <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.verificareCompatibilitate}</span>
+                  <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div className="order-2 lg:hidden">
+                  <ResidentialMobileExpandable
+                    title={tr.sigurantaBaterino}
+                    iconSrc="/images/shared/safety-icon.svg"
+                    open={mobileSafetyOpen}
+                    onToggle={() => {
+                      setMobileSafetyOpen((prev) => {
+                        const next = !prev
+                        if (next) setMobileTechOpen(false)
+                        return next
+                      })
+                    }}
+                    triggerId="res-mobile-safety-trigger"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
-                      <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.verificareCompatibilitate}</span>
-                    <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowCeSePoateAlimentaModal(true)}
-                    className="group flex flex-1 items-center gap-3 min-h-[52px] rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
-                      <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.ceSePoateAlimenta}</span>
-                    <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                    <ResidentialBadgesGrid
+                      badges={badges}
+                      onCompatibilitate99={() => setShowCompatibilitate99Modal(true)}
+                      onGarantie={() => setShowGarantieModal(true)}
+                      onProducatori={() => setShowProducatoriModal(true)}
+                      onRetur={() => setShowReturModal(true)}
+                      onSwap={() => setShowSwapModal(true)}
+                      onSuport={() => setShowSuportModal(true)}
+                    />
+                  </ResidentialMobileExpandable>
                 </div>
-              </section>
+                <div className="order-3 lg:hidden">
+                  <ResidentialMobileExpandable
+                    title={tr.detaliiTehnice}
+                    iconSrc="/images/shared/bms-icon.svg"
+                    open={mobileTechOpen}
+                    onToggle={() => {
+                      setMobileTechOpen((prev) => {
+                        const next = !prev
+                        if (next) setMobileSafetyOpen(false)
+                        return next
+                      })
+                    }}
+                    triggerId="res-mobile-tech-trigger"
+                  >
+                    <ul className="m-0 grid list-none gap-3 p-0 grid-cols-2" aria-label={tr.dateTehnice}>
+                      {specs.map((s, i) => (
+                        <li key={i} className="min-w-0 rounded-[10px] bg-[#f7f7f7] px-3 py-3">
+                          <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">{s.label}</span>
+                          <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">{s.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {techData.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowFullTechDetailsModal(true)}
+                        className="mt-3 flex w-full min-h-[3.25rem] items-center justify-center rounded-xl bg-gray-900 py-3.5 text-center text-base font-bold uppercase tracking-wide text-white font-['Inter'] transition-colors hover:bg-gray-800 sm:min-h-[3.5rem] sm:py-4 sm:text-lg"
+                      >
+                        {tr.toateDetaliileBtn}
+                      </button>
+                    ) : null}
+                  </ResidentialMobileExpandable>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCeSePoateAlimentaModal(true)}
+                  className="group order-4 flex min-h-[52px] items-center gap-3 rounded-xl bg-[#f7f7f7] px-4 py-3 text-left shadow-none transition-shadow duration-200 hover:shadow-md lg:order-2 lg:min-w-0"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/90">
+                    <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain opacity-90" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug">{tr.ceSePoateAlimenta}</span>
+                  <svg className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </section>
+          </div>
 
-              <section className="flex flex-col" aria-labelledby="siguranta-baterino-heading">
+            <div className="order-6 hidden w-full flex-col gap-8 lg:order-none lg:flex lg:min-w-0">
+              <section className="flex flex-col lg:pt-6" aria-labelledby="siguranta-baterino-heading">
                 <h3
                   id="siguranta-baterino-heading"
                   className="text-black text-base font-bold font-['Inter'] mb-3 m-0"
                 >
                   {tr.sigurantaBaterino}
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {badges.map((b, i) => (
-                  b.id === 'compatibilitate' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowCompatibilitate99Modal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : b.id === 'garantie' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowGarantieModal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : b.id === 'producatori' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowProducatoriModal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : b.id === 'retur' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowReturModal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : b.id === 'swap' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowSwapModal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : b.id === 'suport' ? (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setShowSuportModal(true)}
-                      className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </button>
-                  ) : (
-                    <div key={i} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center">
-                      <img src={b.icon} alt="" aria-hidden className="w-8 h-8 object-contain" />
-                      <p className="text-black text-xs font-bold font-['Inter'] leading-tight">{b.label}</p>
-                    </div>
-                  )
-                ))}
-                </div>
+                <ResidentialBadgesGrid
+                  badges={badges}
+                  onCompatibilitate99={() => setShowCompatibilitate99Modal(true)}
+                  onGarantie={() => setShowGarantieModal(true)}
+                  onProducatori={() => setShowProducatoriModal(true)}
+                  onRetur={() => setShowReturModal(true)}
+                  onSwap={() => setShowSwapModal(true)}
+                  onSuport={() => setShowSuportModal(true)}
+                />
               </section>
             </div>
+          </div>
 
-            <div className="order-4 lg:order-none flex flex-col gap-8">
+            <div className="order-7 flex flex-col gap-8 lg:col-span-6 lg:col-start-7 lg:min-w-0">
               {docs.length > 0 && (
                 <div>
                   <h3 className="text-black text-base font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
@@ -942,7 +1167,7 @@ export default function ProductRezidential() {
               )}
 
               {techData.length > 0 && (
-                <section>
+                <section className="hidden lg:block">
                   <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
                   <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                     {techData.map(([key, val], i) => (
@@ -991,7 +1216,6 @@ export default function ProductRezidential() {
                 </div>
               </section>
             </div>
-          </div>
         </div>
       </div>
 
@@ -1030,6 +1254,16 @@ export default function ProductRezidential() {
 
       {showSuportModal && (
         <SuportModal onClose={() => setShowSuportModal(false)} tr={tr} />
+      )}
+
+      {showFullTechDetailsModal && (
+        <ResidentialFullTechDetailsModal
+          onClose={() => setShowFullTechDetailsModal(false)}
+          tr={tr}
+          productTitle={product.title}
+          productImageSrc={img}
+          techData={techData}
+        />
       )}
 
       {showImageModal && (

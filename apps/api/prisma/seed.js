@@ -201,6 +201,17 @@ async function main() {
   }
 
   console.log(`Seeded ${Object.keys(programsByLocale).length * 4} ReducereProgram rows (ro, en, zh × 4 programs each)`)
+
+  const departmentPhoneKeys = ['general', 'rezidential', 'industrial', 'medical', 'maritim']
+  for (const department of departmentPhoneKeys) {
+    await prisma.departmentPhone.upsert({
+      where: { department },
+      create: { department, phone: '', whatsapp: '' },
+      update: {},
+    })
+  }
+  console.log(`Upserted ${departmentPhoneKeys.length} DepartmentPhone rows (empty phone/whatsapp; set via admin)`)
+
   await prisma.$disconnect()
 }
 
