@@ -78,6 +78,26 @@ Fără această variabilă, frontend-ul va încerca `/api` pe domeniul Vercel (i
 
 **Important pentru reset parolă**: Proiectul include `apps/web/vercel.json` cu rewrites SPA – fără el, link-urile directe (ex. `/reset-password?token=...`) ar returna 404 pe Vercel.
 
+### Staging Vercel + un singur API Railway (problemă obișnuită)
+
+- **Vercel Preview** folosește de obicei branch-ul **`staging`** (doar `apps/web`).
+- **Railway** este adesea legat de **`main`** + root **`apps/api`** = același API ca **producția**.
+
+**Ce se întâmplă:**
+
+1. Dacă în `vercel.json` rewrite-ul `/api` duce către Railway producție, **staging frontend** vorbește cu **API producție** (schema și cod pot fi în urmă sau în față față de branch-ul `staging`).
+2. Dacă vrei API-ul pe Railway la zi cu **`staging`**, trebuie să mergi cod API în **`main`** → asta **deploy-ui producția Railway**, nu un mediu de staging separat.
+
+**Variantă recomandată pentru staging real:**
+
+1. În Railway, **al doilea serviciu** (ex. „API Staging”): același repo, **Root Directory** `apps/api`, branch **`staging`**, `railway.json` / Dockerfile ca la producție.
+2. Postgres de staging (instanță separată) + `DATABASE_URL` doar pe serviciul staging (evită migrări experimentale pe DB-ul live).
+3. În **Vercel → Project → Environment Variables → Preview**: `VITE_API_URL` = `https://<serviciul-staging>.up.railway.app/api` (nu URL-ul de producție).
+
+Build-ul Preview va folosi `import.meta.env.VITE_API_URL` din `apps/web/src/lib/api.ts` și nu se mai bazează pe rewrite-ul către producție pentru apelurile din cod.
+
+**Variantă minimală (fără al doilea Railway):** păstrezi un singur API și accepți că **release-ul API = merge `staging` → `main`** când ești pregătit ca producția să primească aceleași schimbări.
+
 ---
 
 ## 5. După deploy

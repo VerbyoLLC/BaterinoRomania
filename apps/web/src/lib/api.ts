@@ -1,3 +1,6 @@
+import type { ReducereProgram } from '../i18n/reduceri'
+import type { LangCode } from '../i18n/menu'
+
 // Dev pe localhost/127.0.0.1: folosește direct API-ul. Prod: VITE_API_URL sau /api (proxy Vercel).
 const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
@@ -183,8 +186,13 @@ export async function login(email: string, password: string) {
   return data as { token: string; user: AuthUser }
 }
 
+function notifyAuthChanged() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('baterino-auth-change'))
+}
+
 export function setAuthToken(token: string) {
   localStorage.setItem('auth_token', token)
+  notifyAuthChanged()
 }
 
 export function getAuthToken(): string | null {
@@ -225,6 +233,7 @@ export function getAuthEmail(): string | null {
 
 export function clearAuth() {
   localStorage.removeItem('auth_token')
+  notifyAuthChanged()
 }
 
 function authHeaders(): Record<string, string> {
@@ -455,6 +464,73 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   return json
 }
 
+export type ReducereProgramRow = ReducereProgram & { id: string; locale?: string; sortOrder?: number }
+
+export async function getPublicReducerePrograms(lang: LangCode): Promise<ReducereProgramRow[]> {
+  const res = await fetch(`${API_BASE}/reducere-programs?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea programelor.')
+  return Array.isArray(json) ? json : []
+}
+
+export async function getAdminReducerePrograms(locale: string = 'ro'): Promise<ReducereProgramRow[]> {
+  const res = await fetch(`${API_BASE}/admin/reducere-programs?locale=${encodeURIComponent(locale)}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea programelor.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function createAdminReducereProgram(body: Record<string, unknown>): Promise<ReducereProgramRow> {
+  const res = await fetch(`${API_BASE}/admin/reducere-programs`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la creare.')
+  }
+  return json
+}
+
+export async function updateAdminReducereProgram(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<ReducereProgramRow> {
+  const res = await fetch(`${API_BASE}/admin/reducere-programs/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la salvare.')
+  }
+  return json
+}
+
+export async function deleteAdminReducereProgram(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/reducere-programs/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json.error || 'Eroare la ștergere.')
+  }
+}
+
 export type AdminProduct = {
   id: string
   status: string
@@ -604,5 +680,31 @@ export async function getAdminCompanies(): Promise<AdminCompany[]> {
     const detail = json.path ? ` (path: ${json.path})` : ''
     throw new Error((json.error || `Eroare la încărcarea companiilor (${res.status})`) + detail)
   }
+  return Array.isArray(json) ? json : []
+}
+
+export type DepartmentPhoneKey = 'general' | 'rezidential' | 'industrial' | 'medical' | 'maritim'
+
+export type DepartmentPhoneRow = {
+  department: DepartmentPhoneKey
+  phone: string
+  whatsapp: string
+}
+
+export async function getAdminDepartmentPhones(): Promise<DepartmentPhoneRow[]> {
+  const res = await fetch(`${API_BASE}/admin/department-phones`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea numerelor de telefon.')
+  return Array.isArray(json) ? json : []
+}
+
+export async function saveAdminDepartmentPhones(rows: DepartmentPhoneRow[]): Promise<DepartmentPhoneRow[]> {
+  const res = await fetch(`${API_BASE}/admin/department-phones`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(rows),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la salvare.')
   return Array.isArray(json) ? json : []
 }
