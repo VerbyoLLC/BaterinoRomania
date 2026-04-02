@@ -66,6 +66,10 @@ export type PublicProduct = {
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   /** simple | detailed (UI only) */
   pricePresentation?: 'simple' | 'detailed'
+  /** Rezidențial: etichetă în colțul imaginii pe card catalog */
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  /** Rezidențial: id-uri programe reducere (CMS); gol = toate programele în dropdown (comportament vechi) */
+  reducereProgramIds?: string[]
   tensiuneNominala?: string | null
   capacitate?: string | null
   compozitie?: string | null
@@ -88,6 +92,114 @@ export function getCatalogProductSpecLines(product: PublicProduct): { specLine1:
     [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' • ') || '—'
   const specLine2 = [product.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
   return { specLine1, specLine2 }
+}
+
+function catalogNum(v: string | number | null | undefined): number | null {
+  if (v == null || v === '') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+/** Monede permise pentru prețuri catalog (admin); afișate ca sufix lângă sumă. */
+export const CATALOG_CURRENCY_CODES = ['EUR', 'RON', 'IDR', 'MYR', 'PHP', 'USD'] as const
+export type CatalogCurrencyCode = (typeof CATALOG_CURRENCY_CODES)[number]
+
+export function normalizeCatalogCurrencyCode(v: unknown): CatalogCurrencyCode {
+  const s = String(v ?? '').trim().toUpperCase()
+  return (CATALOG_CURRENCY_CODES as readonly string[]).includes(s) ? (s as CatalogCurrencyCode) : 'RON'
+}
+
+/** Public catalog / Home: VAT-inclusive price for residential cards when `priceVisibility` is public. */
+export function formatResidentialCatalogPriceDisplay(
+  product: PublicProduct,
+  langCode: string,
+  /** Cod monedă afișat lângă sumă (din setări admin); implicit RON */
+  currencySuffix: string = 'RON',
+): string | null {
+  const vis = (product.priceVisibility as string) || 'public'
+  if (vis !== 'public') return null
+  const sale = catalogNum(product.salePrice)
+  if (sale == null || sale <= 0) return null
+  const vat = catalogNum(product.vat)
+  const unit = vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
+  const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
+  return `${Math.round(unit).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+export type CatalogStockStatus = 'in_stock' | 'out_of_stock' | 'coming_soon'
+
+/** Rezidențial: stoc epuizat sau în curând — fără preț parteneri, fără chip „disponibil parteneri”. */
+export function residentialProductStockUnavailable(
+  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
+): boolean {
+  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  const s = product.catalogStockStatus as CatalogStockStatus | undefined | null
+  return s === 'out_of_stock' || s === 'coming_soon'
+}
+
+/** Residential listing: show „Disponibil Parteneri”-style CTA instead of price (partner_only / hidden). */
+export function residentialCatalogUsesPartnerPriceCta(product: PublicProduct): boolean {
+  if (String(product.tipProdus || '').toLowerCase() === 'industrial') return false
+  if (residentialProductStockUnavailable(product)) return false
+  const vis = (product.priceVisibility as string) || 'public'
+  return vis === 'partner_only' || vis === 'hidden'
+}
+
+const CATALOG_STOCK_BADGE_BASE =
+  "pointer-events-none absolute left-2 top-2 z-10 max-w-[min(100%-1rem,12rem)] rounded-md px-2 py-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide shadow-sm font-['Inter'] sm:left-2.5 sm:top-2.5 sm:text-[11px]"
+
+/** Etichetă colț stânga sus pe imagine — doar „stoc suficient”; epuizat / în curând folosesc butonul din card, fără badge. */
+export function getResidentialCatalogStockBadge(
+  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
+  labels: { inStock: string },
+): { text: string; className: string } | null {
+  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return null
+  const s = product.catalogStockStatus as CatalogStockStatus | undefined | null
+  if (s !== 'in_stock') return null
+  return {
+    text: labels.inStock,
+    className: `${CATALOG_STOCK_BADGE_BASE} bg-emerald-600 text-white ring-1 ring-emerald-800/40`,
+  }
+}
+
+/** Rezidențial: text pentru butonul din locul prețului (fără badge pe imagine). */
+export function getResidentialCatalogStockListingCta(
+  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
+  labels: { outOfStock: string; comingSoon: string },
+): string | null {
+  if (!residentialProductStockUnavailable(product)) return null
+  const s = product.catalogStockStatus as CatalogStockStatus
+  if (s === 'out_of_stock') return labels.outOfStock
+  return labels.comingSoon
+}
+
+/** Id-uri program reducere salvate pe produs (doar string-uri valide, unice). */
+export function normalizeProductReducereProgramIds(product: {
+  reducereProgramIds?: unknown
+}): string[] {
+  const raw = product.reducereProgramIds
+  if (raw == null) return []
+  if (!Array.isArray(raw)) return []
+  return [
+    ...new Set(
+      raw.filter((x): x is string => typeof x === 'string' && String(x).trim() !== '').map((s) => String(s).trim()),
+    ),
+  ]
+}
+
+/** Produs rezidențial cu cel puțin un program bifat în admin (badge + filtrare dropdown). */
+export function productHasEligibleReducerePrograms(product: PublicProduct): boolean {
+  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  return normalizeProductReducereProgramIds(product).length > 0
+}
+
+/** VAT % for catalog caption; falls back to 21 when missing (ROM default). */
+export function getResidentialCatalogVatPercentLabel(product: PublicProduct): string {
+  const vat = catalogNum(product.vat)
+  if (vat == null || vat <= 0) return '21'
+  if (Number.isInteger(vat)) return String(vat)
+  const rounded = Math.round(vat * 100) / 100
+  return String(rounded).replace(/\.?0+$/, '')
 }
 
 /** Lista produselor publicate (fără auth) */
@@ -420,6 +532,9 @@ export type CreateProductPayload = {
   categorie?: string
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   pricePresentation?: 'simple' | 'detailed'
+  /** Doar rezidențial; la industrial se trimite null din admin */
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  reducereProgramIds?: string[]
   landedPrice: string | number
   salePrice: string | number
   vat: string | number
@@ -478,7 +593,13 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   return json
 }
 
-export type ReducereProgramRow = ReducereProgram & { id: string; locale?: string; sortOrder?: number }
+export type ReducereProgramRow = ReducereProgram & {
+  id: string
+  locale?: string
+  sortOrder?: number
+  /** Present on admin list; public list only returns active rows */
+  isActive?: boolean
+}
 
 export async function getPublicReducerePrograms(lang: LangCode): Promise<ReducereProgramRow[]> {
   const res = await fetch(`${API_BASE}/reducere-programs?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
@@ -560,6 +681,7 @@ export type AdminProduct = {
   conectivitateWifi?: boolean
   conectivitateBluetooth?: boolean
   salePrice?: string | number
+  reducereProgramIds?: unknown
   [key: string]: unknown
 }
 
@@ -730,4 +852,37 @@ export async function saveAdminDepartmentPhones(rows: DepartmentPhoneRow[]): Pro
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la salvare.')
   return Array.isArray(json) ? json : []
+}
+
+export async function getCatalogCurrency(): Promise<{ currency: CatalogCurrencyCode }> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/catalog-currency`)
+  } catch {
+    throw new Error('Nu s-a putut conecta la API.')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la încărcarea monedei.')
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export async function getAdminCatalogCurrency(): Promise<{ currency: CatalogCurrencyCode }> {
+  const res = await fetch(`${API_BASE}/admin/catalog-currency`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' ? json.error : 'Eroare la încărcarea monedei.'
+    throw new Error(msg)
+  }
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export async function saveAdminCatalogCurrency(currency: CatalogCurrencyCode): Promise<{ currency: CatalogCurrencyCode }> {
+  const res = await fetch(`${API_BASE}/admin/catalog-currency`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currency }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
 }

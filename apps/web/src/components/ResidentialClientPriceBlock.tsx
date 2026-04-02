@@ -1,15 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Minus, Plus } from 'lucide-react'
-import { getAuthRole, getPublicReducerePrograms, type PublicProduct } from '../lib/api'
+import {
+  getAuthRole,
+  getPublicReducerePrograms,
+  normalizeProductReducereProgramIds,
+  residentialProductStockUnavailable,
+  type PublicProduct,
+} from '../lib/api'
 import {
   RESIDENTIAL_DISCOUNT_GUEST_NOTICE_FALLBACK_RO,
   type ProductDetailTranslations,
 } from '../i18n/product-detail'
 import { getReduceriTranslations } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
+import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import ReduceriProgramsModal from './ReduceriProgramsModal'
+import ResidentialDiscountAboutModal from './ResidentialDiscountAboutModal'
 import ResidentialMobileDiscountModals from './ResidentialMobileDiscountModals'
 
 function num(v: string | number | null | undefined): number | null {
@@ -48,6 +56,7 @@ function formatResidentialDiscountOption(
 export function showResidentialClientPurchaseUI(product: PublicProduct): boolean {
   const vis = (product.priceVisibility as string) || 'public'
   if (vis !== 'public') return false
+  if (residentialProductStockUnavailable(product)) return false
   const sale = num(product.salePrice)
   return sale != null && sale > 0
 }
@@ -56,13 +65,15 @@ type Props = { product: PublicProduct; tr: ProductDetailTranslations; lang: Lang
 
 export default function ResidentialClientPriceBlock({ product, tr, lang }: Props) {
   const navigate = useNavigate()
-  const p = getProductPricingTranslations(lang)
+  const { currency } = useCatalogCurrency()
+  const p = getProductPricingTranslations(lang, currency)
   const [qty, setQty] = useState(1)
   const [discountOptions, setDiscountOptions] = useState<DiscountProgramOption[]>(() =>
     buildLocalDiscountOptions(lang),
   )
   const [discountProgramId, setDiscountProgramId] = useState<string>('none')
   const [showReduceriModal, setShowReduceriModal] = useState(false)
+  const [showAboutProgramModal, setShowAboutProgramModal] = useState(false)
   const [mobileDiscountPickOpen, setMobileDiscountPickOpen] = useState(false)
   const [mobileDiscountDetailId, setMobileDiscountDetailId] = useState<string | null>(null)
   const [mobilePickDraftId, setMobilePickDraftId] = useState<string>('none')
@@ -84,8 +95,14 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     }
   }, [])
 
+  const reducereFilterKey = useMemo(
+    () => `${product.id}\n${normalizeProductReducereProgramIds(product).sort().join(',')}`,
+    [product.id, product],
+  )
+
   useEffect(() => {
     setDiscountProgramId('none')
+    const allowed = normalizeProductReducereProgramIds(product)
     setDiscountOptions(buildLocalDiscountOptions(lang))
     let cancelled = false
     getPublicReducerePrograms(lang)
@@ -98,15 +115,21 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             programLabel: r.programLabel,
             discountPercent: Number(r.discountPercent),
           }))
-        setDiscountOptions(mapped.length > 0 ? mapped : buildLocalDiscountOptions(lang))
+        const localFallback = buildLocalDiscountOptions(lang)
+        if (mapped.length === 0) {
+          setDiscountOptions(allowed.length > 0 ? [] : localFallback)
+          return
+        }
+        const filtered = allowed.length > 0 ? mapped.filter((o) => allowed.includes(o.id)) : mapped
+        setDiscountOptions(filtered.length > 0 ? filtered : allowed.length > 0 ? [] : mapped)
       })
       .catch(() => {
-        if (!cancelled) setDiscountOptions(buildLocalDiscountOptions(lang))
+        if (!cancelled) setDiscountOptions(allowed.length > 0 ? [] : buildLocalDiscountOptions(lang))
       })
     return () => {
       cancelled = true
     }
-  }, [lang])
+  }, [lang, reducereFilterKey])
 
   useEffect(() => {
     if (discountProgramId === 'none') return
@@ -114,6 +137,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       setDiscountProgramId('none')
     }
   }, [discountOptions, discountProgramId])
+
+  useEffect(() => {
+    if (discountProgramId === 'none') setShowAboutProgramModal(false)
+  }, [discountProgramId])
 
   const sale = num(product.salePrice)!
   const landed = num((product as { landedPrice?: string | number | null }).landedPrice)
@@ -140,7 +167,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const totalSavings = unitDiscountAmount * qty
   const showPrevious = landed != null && landed > 0 && landed > sale
   const pctBadge = selectedDiscount ? selectedDiscount.discountPercent : Math.round(rate * 100)
-  const qtyPiecesWord = qty === 1 ? tr.residentialQtyPieceSingular : tr.residentialQtyPiecePlural
   const vatInline = hasVat ? tr.includesVatWithPct.replace(/\{pct\}/g, fmtPct(vatPct!)) : null
   const guestWithDiscount = hasProgramDiscount && !isClientUser
   const discountGuestNoticeText = (
@@ -150,7 +176,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   ).trim()
 
   return (
-    <div className="space-y-3 font-['Inter']">
+    <div className="space-y-2 font-['Inter']">
       {showPrevious ? (
         <div className="flex flex-wrap items-center gap-2 text-xs pb-1 border-b border-neutral-100">
           <span className="font-semibold uppercase tracking-wide text-neutral-500">{p.landedLabel}</span>
@@ -160,8 +186,8 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+      <div className="space-y-4 pb-[5px]">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-4">
           <div className="flex w-full flex-col gap-2 sm:w-fit sm:shrink-0">
             <span className="text-sm font-semibold uppercase leading-tight text-gray-700 sm:text-left">
               {tr.cantitateLabel}
@@ -190,7 +216,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="text-sm font-semibold uppercase leading-tight text-gray-700">{tr.alegeProgramReduceri}</div>
+            <div className="hidden text-sm font-semibold uppercase leading-tight text-gray-700 sm:block">
+              {tr.alegeProgramReduceri}
+            </div>
             <div className="hidden sm:block">
               <div className="relative">
                 <select
@@ -198,8 +226,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   aria-label={tr.alegeProgramReduceri}
                   value={discountProgramId}
                   onChange={(e) => setDiscountProgramId(e.target.value)}
-                  className={`w-full min-h-[3.5rem] appearance-none rounded-lg border border-gray-300 bg-white py-3 pl-2.5 pr-11 text-sm font-medium text-gray-700 box-border focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-slate-900 ${
-                    hasProgramDiscount ? 'border-green-300 bg-green-50 focus:ring-green-500' : ''
+                  className={`w-full min-h-[3.5rem] appearance-none py-3 pl-2.5 pr-11 text-sm font-medium box-border focus:outline-none focus:ring-1 focus:ring-offset-0 ${
+                    hasProgramDiscount
+                      ? 'rounded-xl border border-dashed border-green-800 bg-green-50/50 text-green-950 focus:ring-green-600'
+                      : 'rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-slate-900'
                   }`}
                 >
                   <option value="none">{tr.faraReducere}</option>
@@ -210,17 +240,20 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   ))}
                 </select>
                 <ChevronDown
-                  className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700"
+                  className={`pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${hasProgramDiscount ? 'text-green-900' : 'text-gray-700'}`}
                   strokeWidth={2.25}
                   aria-hidden
                 />
               </div>
               <button
                 type="button"
-                onClick={() => setShowReduceriModal(true)}
-                className="mt-2 w-full border-0 bg-transparent p-0 text-left font-['Inter'] text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700"
+                onClick={() => {
+                  if (hasProgramDiscount && selectedDiscount) setShowAboutProgramModal(true)
+                  else setShowReduceriModal(true)
+                }}
+                className="mt-2 block w-full border-0 bg-transparent p-0 text-right font-['Inter'] text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700"
               >
-                {tr.veziProgrameReduceri}
+                {hasProgramDiscount ? tr.despreProgram : tr.veziProgrameReduceri}
               </button>
             </div>
             <div className="sm:hidden">
@@ -233,23 +266,20 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                 }}
                 aria-haspopup="dialog"
                 aria-expanded={mobileDiscountPickOpen}
-                className={`w-full min-h-[3.75rem] rounded-lg border px-3 py-2 text-left text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                  hasProgramDiscount
-                    ? 'border-green-300 bg-green-50 focus:ring-green-500'
-                    : 'border-gray-300 bg-white focus:ring-slate-900'
+                className={`flex min-h-[3.75rem] w-full items-center justify-center rounded-xl border px-3 py-3 text-center text-sm font-semibold leading-snug focus:outline-none focus:ring-1 focus:ring-offset-0 ${
+                  hasProgramDiscount && selectedDiscount
+                    ? 'border border-dashed border-green-800 bg-green-50/50 text-green-950 focus:ring-green-600'
+                    : 'border-2 border-neutral-500 bg-neutral-100 uppercase tracking-wide text-gray-900 focus:ring-neutral-600'
                 }`}
               >
-                {tr.mobileApplyDiscountBtn}
-              </button>
-              <p className="mt-1.5 text-sm text-gray-600">
-                {selectedDiscount
+                {hasProgramDiscount && selectedDiscount
                   ? formatResidentialDiscountOption(
                       tr,
                       selectedDiscount.programLabel,
                       selectedDiscount.discountPercent,
                     )
-                  : tr.faraReducere}
-              </p>
+                  : tr.alegeProgramReduceri}
+              </button>
             </div>
           </div>
         </div>
@@ -257,61 +287,53 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         {hasProgramDiscount ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 sm:items-stretch">
             {/* Stânga: reduceri / preț vechi / economie; dreapta: preț curent (ordine inversată față de trecut). */}
-            <div className="min-w-0 flex flex-col items-start gap-2 rounded-xl border border-green-200/80 bg-green-50/50 px-4 py-5 sm:px-5 sm:py-6 text-left">
-              <div className="flex flex-wrap items-baseline justify-start gap-x-2 gap-y-0.5 w-full pb-1 border-b border-green-200/60">
+            <div className="min-w-0 flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-green-800 bg-green-50/50 px-4 py-5 text-center sm:items-start sm:px-5 sm:py-6 sm:text-left">
+              <div className="flex w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 border-b border-green-200/60 pb-1 sm:justify-start">
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{tr.pretVechiLabel}</span>
                 <span className="text-sm text-neutral-500 line-through tabular-nums whitespace-nowrap">
                   {fmtMoney(lineBaseTotal)} {p.currencySuffix}
                 </span>
               </div>
-              <p className="text-sm sm:text-base font-extrabold text-green-900 uppercase tracking-wide m-0 leading-tight">
+              <p className="text-sm font-bold text-green-900 uppercase tracking-wide m-0 leading-tight">
                 {tr.discountPctHighlight.replace(/\{pct\}/g, String(pctBadge))}
               </p>
-              <p className="text-xs sm:text-sm font-bold text-green-800/90 uppercase tracking-wide m-0 leading-tight">
+              <p className="text-xs font-semibold text-green-800/90 uppercase tracking-wide m-0 leading-tight">
                 {tr.economisestiLabel}
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold tabular-nums m-0 leading-none">
-                <span className="text-green-700">
-                  {fmtMoney(totalSavings)}{' '}
-                  <span className="text-base sm:text-lg font-bold align-baseline">{p.currencySuffix}</span>
-                </span>
+              <p className="text-2xl font-extrabold tabular-nums m-0 leading-none text-green-700">
+                {fmtMoney(totalSavings)}{' '}
+                <span className="text-lg font-bold align-baseline">{p.currencySuffix}</span>
               </p>
             </div>
-            <div className="min-w-0 flex h-full min-h-0 flex-col justify-end pt-6 sm:pt-0 sm:pb-1">
-              <div className="flex w-full flex-col items-stretch gap-3 rounded-xl border-2 border-white bg-white px-0 py-4 text-left text-black max-sm:gap-3 sm:items-start sm:gap-2.5 sm:px-5 sm:py-6">
+            <div className="min-w-0 flex h-full min-h-0 w-full flex-col items-center justify-end pt-4 sm:items-stretch sm:pt-0 sm:pb-0">
+              <div className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-white bg-white px-0 py-3 text-center text-black sm:items-start sm:gap-2 sm:px-5 sm:py-4 sm:text-left">
                 <span className="text-xs font-semibold uppercase tracking-wide">{tr.pretFinalLabel}</span>
-                <p className="m-0 text-3xl font-extrabold tabular-nums leading-none sm:text-4xl">
+                <p className="m-0 whitespace-nowrap text-3xl font-extrabold tabular-nums leading-tight sm:text-4xl">
                   {fmtMoney(lineTotal)}{' '}
-                  <span className="text-xl font-bold align-baseline sm:text-2xl">{p.currencySuffix}</span>
+                  <span className="text-lg font-bold align-baseline sm:text-xl">{p.currencySuffix}</span>
                 </p>
                 {vatInline ? (
-                  <p className="m-0 text-sm font-medium text-gray-600 sm:text-base">{vatInline}</p>
+                  <p className="m-0 text-sm font-medium text-gray-600">{vatInline}</p>
                 ) : null}
-                <p className="m-0 text-sm tabular-nums text-neutral-600">
-                  {fmtMoney(unitAfterDiscount)} {p.currencySuffix} × {qty} {qtyPiecesWord}
-                </p>
               </div>
             </div>
           </div>
         ) : (
           /* Fără reduceri: varianta standard — neutral, preț mare gri/negru. */
-          <div className="flex w-full flex-col items-stretch gap-3 px-0 py-4 text-left max-sm:gap-3 sm:items-start sm:gap-2 sm:px-5 sm:py-7">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-700">{tr.pretLabel}</span>
-            <p className="m-0 text-3xl font-bold tabular-nums leading-none text-gray-900 sm:text-4xl md:text-5xl">
+          <div className="flex w-full flex-col items-stretch gap-2 px-0 pt-3 pb-1 text-left text-black sm:items-start sm:px-5 sm:pt-4 sm:pb-2">
+            <span className="text-xs font-semibold uppercase tracking-wide">{tr.pretLabel}</span>
+            <p className="m-0 whitespace-nowrap text-3xl font-extrabold tabular-nums leading-tight sm:text-4xl">
               {fmtMoney(lineBaseTotal)}{' '}
-              <span className="text-2xl font-bold align-baseline sm:text-3xl md:text-4xl">{p.currencySuffix}</span>
+              <span className="text-lg font-bold align-baseline sm:text-xl">{p.currencySuffix}</span>
             </p>
             {vatInline ? (
-              <p className="m-0 text-sm font-medium text-gray-500 sm:text-base">{vatInline}</p>
+              <p className="m-0 text-sm font-medium text-gray-600">{vatInline}</p>
             ) : null}
-            <p className="m-0 text-sm tabular-nums text-neutral-500 sm:text-base">
-              {fmtMoney(baseUnitDisplay)} {p.currencySuffix} × {qty} {qtyPiecesWord}
-            </p>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col gap-2 shrink-0">
+      <div className="flex shrink-0 flex-col gap-2">
         <button
           type="button"
           onClick={() => {
@@ -332,7 +354,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
             window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
           }}
-          className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base sm:text-lg uppercase tracking-wide transition-colors ${
+          className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors ${
             hasProgramDiscount
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-gray-900 hover:bg-gray-800 text-white'
@@ -342,7 +364,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         </button>
         {guestWithDiscount ? (
           <p
-            className="text-xs sm:text-sm text-neutral-600 font-['Inter'] leading-snug m-0 mt-2 sm:mt-3 text-center max-w-prose mx-auto px-0.5 pb-1 relative z-[1]"
+            className="text-sm text-neutral-600 font-['Inter'] leading-snug m-0 mt-2 sm:mt-3 text-center max-w-prose mx-auto px-0.5 pb-1 relative z-[1]"
             role="note"
           >
             {discountGuestNoticeText}
@@ -360,6 +382,15 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             onApply: (id) => setDiscountProgramId(id),
             applyLabel: tr.reduceriHoverApplyBtn,
           }}
+        />
+      ) : null}
+
+      {showAboutProgramModal && selectedDiscount ? (
+        <ResidentialDiscountAboutModal
+          lang={lang}
+          tr={tr}
+          option={selectedDiscount}
+          onClose={() => setShowAboutProgramModal(false)}
         />
       ) : null}
 

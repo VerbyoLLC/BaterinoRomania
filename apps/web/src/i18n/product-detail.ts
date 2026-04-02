@@ -34,11 +34,20 @@ export type ProductDetailTranslations = {
   badgeRetur: string
   badgeSwap: string
   badgeSuport: string
+  /** Badge când produsul are programe de reducere asociate (CMS) */
+  programReducereBadge: string
   // Compatibility modal
   compatibilitateTitle: string
+  /** Inverter list modal: headline under icon */
+  compatibilitateInvertorHeroTitle: string
   compatibilitateClose: string
   compatibilitateSearch: string
   compatibilitateNoResults: string
+  /** Inverter search: no match — explanation + WhatsApp CTA */
+  compatibilitateInvertorNotFoundMessage: string
+  compatibilitateInvertorAskAssistanceBtn: string
+  /** WhatsApp prefill; replace {search} with the value typed in the inverter search field */
+  compatibilitateInvertorWhatsappPrefill: string
   // Sections
   compatibilitateLabel: string
   verificareCompatibilitate: string
@@ -70,6 +79,12 @@ export type ProductDetailTranslations = {
   residentialDiscountOptionSuffix: string
   /** Desktop link under dropdown → programmes modal */
   veziProgrameReduceri: string
+  /** Selected programme → about + terms modal link */
+  despreProgram: string
+  /** About modal: link to full terms page */
+  reduceriTermsOpenFullPage: string
+  /** About modal: right column title */
+  reduceriProgramTermsHeading: string
   /** Hover button on programme photo in modal */
   reduceriHoverApplyBtn: string
   /** Mobile: opens discount programme picker (replaces native select) */
@@ -82,10 +97,6 @@ export type ProductDetailTranslations = {
   /** Residential public pricing: order button follow-up (checkout not live) */
   clientOrderNotice: string
   totalEstimated: string
-  /** Residential breakdown: suffix after qty (singular), e.g. "1 bucată" */
-  residentialQtyPieceSingular: string
-  /** Residential breakdown: suffix after qty (plural), e.g. "3 bucăți" */
-  residentialQtyPiecePlural: string
   ariaQtyDecrease: string
   ariaQtyIncrease: string
   documenteTehnice: string
@@ -96,16 +107,15 @@ export type ProductDetailTranslations = {
   /** Opens full technical details bottom sheet (mobile accordion) */
   toateDetaliileBtn: string
   intrebariFrecvente: string
-  // Swap card
+  // Swap banner (CTA → /siguranta)
   stiaiCa: string
   swapDesc: string
+  swapBannerCta: string
   // Reduceri banner
   reduceriTitle: string
   reduceriDesc: string
+  /** Reduceri banner CTA (links to /reduceri) */
   intraInCont: string
-  /** Product hero description expand */
-  descriptionReadMore: string
-  descriptionReadLess: string
   // Contact CTA
   contactTitle: string
   contactDesc: string
@@ -179,10 +189,17 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: 'Retur in 15 zile',
     badgeSwap: 'SWAP - Baterie la schimb',
     badgeSuport: 'Suport & Service in Romania',
+    programReducereBadge: 'Program de reducere',
     compatibilitateTitle: 'Compatibilitate Invertor',
+    compatibilitateInvertorHeroTitle: 'Verifică compatibilitatea cu invertorul tău.',
     compatibilitateClose: 'Închide',
     compatibilitateSearch: 'Caută invertor...',
     compatibilitateNoResults: 'Niciun invertor găsit.',
+    compatibilitateInvertorNotFoundMessage:
+      'Invertorul tău nu este în lista noastră, însă s-ar putea ca această baterie să fie compatibilă. Hai să ne uităm în detaliu.',
+    compatibilitateInvertorAskAssistanceBtn: 'Cere asistență',
+    compatibilitateInvertorWhatsappPrefill:
+      'Salut. Eu am un invertor {search}. Nu l-am găsit în lista voastră. Credeți că bateriile voastre ar fi compatibile cu acest tip de invertor?',
     compatibilitateLabel: 'COMPATIBILITATE',
     verificareCompatibilitate: 'Verifică compatibilitate invertor',
     ceSePoateAlimenta: 'Ce se poate alimenta?',
@@ -203,6 +220,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% REDUCERE',
     residentialDiscountOptionSuffix: 'REDUCERE',
     veziProgrameReduceri: 'Vezi programe reduceri',
+    despreProgram: 'Despre program',
+    reduceriTermsOpenFullPage: 'Deschide pagina cu termenii completi',
+    reduceriProgramTermsHeading: 'Termeni și condiții ale programului de reducere',
     reduceriHoverApplyBtn: 'APLICĂ REDUCEREA',
     mobileApplyDiscountBtn: 'APLICĂ REDUCERE',
     comandaBtn: 'COMANDĂ',
@@ -212,8 +232,6 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     clientOrderNotice:
       'Comanda online nu este încă activă. Te rugăm să ne contactezi pentru ofertă sau să îți creezi cont pentru programele de reduceri.',
     totalEstimated: 'Total estimativ',
-    residentialQtyPieceSingular: 'bucată',
-    residentialQtyPiecePlural: 'bucăți',
     ariaQtyDecrease: 'Scade cantitatea',
     ariaQtyIncrease: 'Crește cantitatea',
     documenteTehnice: 'Documente Tehnice',
@@ -223,12 +241,13 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     toateDetaliileBtn: 'Toate detaliile',
     intrebariFrecvente: 'Întrebări frecvente',
     stiaiCa: 'ȘTIAI CĂ?',
-    swapDesc: 'Baterino îți oferă la schimb o baterie atunci când produsul tău se află în service pentru diagnoză sau mentenanță.',
-    reduceriTitle: 'UTILIZEAZĂ PROGRAMELE NOASTRE DE REDUCERI',
-    reduceriDesc: 'Creează un cont pe platforma Baterino și alege programul de reducere care ți se potrivește.',
-    intraInCont: 'intră în cont',
-    descriptionReadMore: 'Citește mai mult',
-    descriptionReadLess: 'Mai puțin',
+    swapDesc:
+      'Prin serviciul Baterino SWAP îți oferim o baterie la schimb pe toată durata perioadei în care bateria ta se află la noi în service?',
+    swapBannerCta: 'VEZI TOATE SERVICIILE',
+    reduceriTitle: 'REDUCERI ÎNTRE 5% ȘI 20%',
+    reduceriDesc:
+      'La Baterino, bateriile LiFePO4 au prețuri reduse prin programele noastre de reduceri dedicate. Vezi care ți se potrivește.',
+    intraInCont: 'VEZI PROGRAME REDUCERI',
     contactTitle: 'Nu ești sigur ce ți se potrivește?',
     contactDesc: 'Discută cu echipa noastră și află care este cea mai bună soluție pentru tine.',
     contacteazaNe: 'CONTACTEAZĂ-NE',
@@ -292,10 +311,17 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: '15-day returns',
     badgeSwap: 'SWAP - Replacement battery',
     badgeSuport: 'Support & Service in Romania',
+    programReducereBadge: 'Discount programme',
     compatibilitateTitle: 'Inverter Compatibility',
+    compatibilitateInvertorHeroTitle: 'Check compatibility with your inverter.',
     compatibilitateClose: 'Close',
     compatibilitateSearch: 'Search inverter...',
     compatibilitateNoResults: 'No inverter found.',
+    compatibilitateInvertorNotFoundMessage:
+      "Your inverter is not on our list, but this battery may still be compatible. Let's look at the details together.",
+    compatibilitateInvertorAskAssistanceBtn: 'Request assistance',
+    compatibilitateInvertorWhatsappPrefill:
+      'Hi. I have a {search} inverter. I could not find it on your list. Do you think your batteries would be compatible with this type of inverter?',
     compatibilitateLabel: 'COMPATIBILITY',
     verificareCompatibilitate: 'Check inverter compatibility',
     ceSePoateAlimenta: 'What can it power?',
@@ -316,6 +342,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% OFF',
     residentialDiscountOptionSuffix: 'DISCOUNT',
     veziProgrameReduceri: 'View discount programmes',
+    despreProgram: 'About this programme',
+    reduceriTermsOpenFullPage: 'Open full terms page',
+    reduceriProgramTermsHeading: 'Terms and conditions of the discount programme',
     reduceriHoverApplyBtn: 'APPLY DISCOUNT',
     mobileApplyDiscountBtn: 'APPLY DISCOUNT',
     comandaBtn: 'ORDER',
@@ -325,8 +354,6 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     clientOrderNotice:
       'Online checkout is not active yet. Please contact us for a quote or create an account to use our discount programmes.',
     totalEstimated: 'Estimated total',
-    residentialQtyPieceSingular: 'pc',
-    residentialQtyPiecePlural: 'pcs',
     ariaQtyDecrease: 'Decrease quantity',
     ariaQtyIncrease: 'Increase quantity',
     documenteTehnice: 'Technical Documents',
@@ -336,12 +363,13 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     toateDetaliileBtn: 'All details',
     intrebariFrecvente: 'Frequently asked questions',
     stiaiCa: 'DID YOU KNOW?',
-    swapDesc: 'Baterino offers you a replacement battery while your product is in service for diagnosis or maintenance.',
-    reduceriTitle: 'USE OUR DISCOUNT PROGRAMMES',
-    reduceriDesc: 'Create an account on the Baterino platform and choose the discount programme that suits you.',
-    intraInCont: 'log in',
-    descriptionReadMore: 'Read more',
-    descriptionReadLess: 'Show less',
+    swapDesc:
+      'With Baterino SWAP, we offer you a replacement battery for the entire period your battery is with us in service.',
+    swapBannerCta: 'VIEW ALL SERVICES',
+    reduceriTitle: 'DISCOUNTS FROM 5% TO 20%',
+    reduceriDesc:
+      'At Baterino, LiFePO4 batteries are available at reduced prices through our dedicated discount programmes. See which one suits you.',
+    intraInCont: 'VIEW DISCOUNT PROGRAMMES',
     contactTitle: 'Not sure what suits you?',
     contactDesc: 'Talk to our team and find out which is the best solution for you.',
     contacteazaNe: 'CONTACT US',
@@ -405,10 +433,17 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: '15天退货',
     badgeSwap: 'SWAP - 更换电池',
     badgeSuport: '罗马尼亚支持与服务',
+    programReducereBadge: '折扣计划',
     compatibilitateTitle: '逆变器兼容性',
+    compatibilitateInvertorHeroTitle: '检查与您逆变器的兼容性。',
     compatibilitateClose: '关闭',
     compatibilitateSearch: '搜索逆变器...',
     compatibilitateNoResults: '未找到逆变器。',
+    compatibilitateInvertorNotFoundMessage:
+      '您的逆变器不在我们的列表中，但这款电池仍有可能兼容。让我们一起详细了解。',
+    compatibilitateInvertorAskAssistanceBtn: '请求协助',
+    compatibilitateInvertorWhatsappPrefill:
+      '您好。我使用的逆变器是 {search}，在你们的列表中没有找到。请问贵司的电池是否与该型号逆变器兼容？',
     compatibilitateLabel: '兼容性',
     verificareCompatibilitate: '检查逆变器兼容性',
     ceSePoateAlimenta: '可以供电什么？',
@@ -429,6 +464,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     discountPctHighlight: '{pct}% 折扣',
     residentialDiscountOptionSuffix: '折扣',
     veziProgrameReduceri: '查看折扣计划',
+    despreProgram: '关于此计划',
+    reduceriTermsOpenFullPage: '查看完整条款页面',
+    reduceriProgramTermsHeading: '折扣计划条款与条件',
     reduceriHoverApplyBtn: '应用折扣',
     mobileApplyDiscountBtn: '应用折扣',
     comandaBtn: '订购',
@@ -437,8 +475,6 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
       '使用折扣下单需注册 Baterino 账户，以便我们核验信息并适用相应折扣计划。',
     clientOrderNotice: '在线结账尚未开通。请联系我们以获取报价，或注册账户使用折扣计划。',
     totalEstimated: '预估合计',
-    residentialQtyPieceSingular: '件',
-    residentialQtyPiecePlural: '件',
     ariaQtyDecrease: '减少数量',
     ariaQtyIncrease: '增加数量',
     documenteTehnice: '技术文档',
@@ -448,12 +484,11 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     toateDetaliileBtn: '全部参数',
     intrebariFrecvente: '常见问题',
     stiaiCa: '你知道吗？',
-    swapDesc: '当您的产品在服务中心进行诊断或维护时，Baterino为您提供更换电池。',
-    reduceriTitle: '使用我们的折扣计划',
-    reduceriDesc: '在Baterino平台创建账户并选择适合您的折扣计划。',
-    intraInCont: '登录',
-    descriptionReadMore: '展开全文',
-    descriptionReadLess: '收起',
+    swapDesc: '通过Baterino SWAP服务，在您的电池于我方服务中心期间，我们为您提供替换电池。',
+    swapBannerCta: '查看全部服务',
+    reduceriTitle: '5%–20%折扣',
+    reduceriDesc: '在Baterino，磷酸铁锂电池可通过我们专属的折扣计划享受优惠价。看看哪款适合您。',
+    intraInCont: '查看折扣计划',
     contactTitle: '不确定什么适合您？',
     contactDesc: '与我们的团队讨论，了解最适合您的解决方案。',
     contacteazaNe: '联系我们',

@@ -22,6 +22,7 @@ import {
   INDUSTRIAL_PRODUCT_ARTICLE_CLASS,
 } from '../lib/industrialProductPageLayout'
 import { IndustrialModelConfigurationCard } from '../components/product/IndustrialModelConfigurationCard'
+import { IndustrialDesktopWhatsappSlide } from '../components/product/IndustrialDesktopWhatsappSlide'
 import { industrialEntriesFromTemplateRows } from '../lib/industrialTechnicalSpec'
 
 type Slide = { title: string; content: ReactNode }
@@ -353,7 +354,7 @@ export default function IndustrialProductTemplate() {
 
         {templateModelEntries.length > 0 ? (
           <div
-            className="mx-auto w-full min-w-0 max-w-[1200px] mb-10 sm:mb-12"
+            className="mx-auto w-full min-w-0 max-w-[1200px] mb-6 sm:mb-8"
             aria-label={tr.overviewModelsHeading}
           >
             <p className="m-0 mb-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter']">
@@ -377,19 +378,33 @@ export default function IndustrialProductTemplate() {
               }}
             >
               {templateModelEntries.map((entry, i) => (
-                <IndustrialModelConfigurationCard
+                <div
                   key={`${entry.modelName}-d-${i}`}
-                  entry={entry}
-                  tr={tr}
-                  specLabel={rowLabel}
-                  stretchHeight
-                />
+                  className="group relative z-10 flex h-full min-h-0 min-w-0 flex-col pb-24 outline-none hover:z-20 focus-within:z-20"
+                  tabIndex={0}
+                >
+                  <div className="relative flex min-h-0 flex-1 flex-col">
+                    <IndustrialModelConfigurationCard
+                      entry={entry}
+                      tr={tr}
+                      specLabel={rowLabel}
+                      stretchHeight
+                    />
+                    <IndustrialDesktopWhatsappSlide
+                      reveal="group-hover"
+                      open={false}
+                      productTitle={tr.heroTitle}
+                      modelName={entry.modelName}
+                      tr={tr}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         ) : null}
 
-        <section className="border-t border-gray-100 pt-10 sm:pt-12">
+        <section className="border-t border-gray-100 pt-6 sm:pt-8">
           <h2 className="text-gray-700 text-xl lg:text-3xl font-bold font-['Inter'] leading-7 lg:leading-10 m-0 mb-6 sm:mb-7 lg:mb-8">
             {tr.overviewTitle}
           </h2>

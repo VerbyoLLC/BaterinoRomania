@@ -92,7 +92,7 @@ export function ReduceriProgramCard({
   return (
     <div className="flex flex-col h-full">
       <div
-        className={`flex flex-col flex-1 bg-neutral-100 rounded-[10px] overflow-hidden transition-shadow duration-300 hover:shadow-md ${
+        className={`group flex flex-col flex-1 bg-neutral-100 rounded-[10px] overflow-hidden transition-shadow duration-300 hover:shadow-md ${
           selected ? 'ring-2 ring-slate-900 ring-offset-2 shadow-md' : ''
         } ${selectable ? 'cursor-pointer' : ''}`}
         onClick={selectable ? onSelect : undefined}
@@ -110,7 +110,7 @@ export function ReduceriProgramCard({
         }
         aria-pressed={selectable ? selected : undefined}
       >
-        <div className={`group relative flex-shrink-0 ${compact ? 'h-36 sm:h-40' : 'h-56 md:h-48'}`}>
+        <div className={`relative flex-shrink-0 ${compact ? 'h-36 sm:h-40' : 'h-56 md:h-48'}`}>
           <div className="absolute inset-0 bg-zinc-300" />
           <img src={program.photo} alt={programName} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40" />
