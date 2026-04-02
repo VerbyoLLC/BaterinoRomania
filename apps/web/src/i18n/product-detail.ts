@@ -49,6 +49,8 @@ export type ProductDetailTranslations = {
   sigurantaBaterino: string
   cantitateLabel: string
   pretLabel: string
+  /** Discount layout: headline above final line total (cu reduceri) */
+  pretFinalLabel: string
   /** Strikethrough list price line, e.g. "PREȚ VECHI" next to old amount */
   pretVechiLabel: string
   includesTVA: string
@@ -64,19 +66,33 @@ export type ProductDetailTranslations = {
   economisestiLabel: string
   /** Discount headline next to savings — replace {pct} with whole number, e.g. "5% REDUCERE" */
   discountPctHighlight: string
+  /** Suffix in residential discount dropdown options: "{name} : 12% …" */
+  residentialDiscountOptionSuffix: string
   /** Open modal with discount programme cards (residential pricing) */
   veziProgrameReduceri: string
   /** CTA in modal footer → full /reduceri page */
   reduceriModalSeeFullPage: string
   comandaBtn: string
+  /** Guest user + discount programme: CTA prompts account */
+  comandaCuContBtn: string
+  /** Guest + discount: explanation under CTA */
+  residentialDiscountGuestNotice: string
   /** Residential public pricing: order button follow-up (checkout not live) */
   clientOrderNotice: string
   totalEstimated: string
+  /** Residential breakdown: suffix after qty (singular), e.g. "1 bucată" */
+  residentialQtyPieceSingular: string
+  /** Residential breakdown: suffix after qty (plural), e.g. "3 bucăți" */
+  residentialQtyPiecePlural: string
   ariaQtyDecrease: string
   ariaQtyIncrease: string
   documenteTehnice: string
   document: string
   dateTehnice: string
+  /** Mobile accordion label for main specs grid */
+  detaliiTehnice: string
+  /** Opens full technical details bottom sheet (mobile accordion) */
+  toateDetaliileBtn: string
   intrebariFrecvente: string
   // Swap card
   stiaiCa: string
@@ -172,6 +188,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     sigurantaBaterino: 'Siguranța Baterino',
     cantitateLabel: 'CANTITATE',
     pretLabel: 'PREȚ',
+    pretFinalLabel: 'PREȚ FINAL',
     pretVechiLabel: 'PREȚ VECHI',
     includesTVA: 'include TVA',
     includesVatWithPct: 'Include TVA {pct}%',
@@ -182,17 +199,25 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriProgram15: 'Program Reduceri 15%',
     economisestiLabel: 'Economisești',
     discountPctHighlight: '{pct}% REDUCERE',
+    residentialDiscountOptionSuffix: 'REDUCERE',
     veziProgrameReduceri: 'Vezi programe reduceri',
     reduceriModalSeeFullPage: 'Deschide pagina Programe reducere',
     comandaBtn: 'COMANDĂ',
+    comandaCuContBtn: 'COMANDĂ CU CONT',
+    residentialDiscountGuestNotice:
+      'Trebuie să îți creezi un cont pe platforma Baterino pentru a plasa o comandă cu reducere, deoarece sunt necesare mai multe informații.',
     clientOrderNotice:
       'Comanda online nu este încă activă. Te rugăm să ne contactezi pentru ofertă sau să îți creezi cont pentru programele de reduceri.',
     totalEstimated: 'Total estimativ',
+    residentialQtyPieceSingular: 'bucată',
+    residentialQtyPiecePlural: 'bucăți',
     ariaQtyDecrease: 'Scade cantitatea',
     ariaQtyIncrease: 'Crește cantitatea',
     documenteTehnice: 'Documente Tehnice',
     document: 'Document',
     dateTehnice: 'Date tehnice despre produs',
+    detaliiTehnice: 'Detalii tehnice',
+    toateDetaliileBtn: 'Toate detaliile',
     intrebariFrecvente: 'Întrebări frecvente',
     stiaiCa: 'ȘTIAI CĂ?',
     swapDesc: 'Baterino îți oferă la schimb o baterie atunci când produsul tău se află în service pentru diagnoză sau mentenanță.',
@@ -275,6 +300,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     sigurantaBaterino: 'Baterino assurance',
     cantitateLabel: 'QUANTITY',
     pretLabel: 'PRICE',
+    pretFinalLabel: 'FINAL PRICE',
     pretVechiLabel: 'OLD PRICE',
     includesTVA: 'includes VAT',
     includesVatWithPct: 'Includes VAT {pct}%',
@@ -285,17 +311,25 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriProgram15: 'Discount programme 15%',
     economisestiLabel: 'You save',
     discountPctHighlight: '{pct}% OFF',
+    residentialDiscountOptionSuffix: 'DISCOUNT',
     veziProgrameReduceri: 'View discount programmes',
     reduceriModalSeeFullPage: 'Open discount programmes page',
     comandaBtn: 'ORDER',
+    comandaCuContBtn: 'ORDER WITH ACCOUNT',
+    residentialDiscountGuestNotice:
+      'You need a Baterino account to place an order with a discount programme—we need a few more details to validate and apply your discount.',
     clientOrderNotice:
       'Online checkout is not active yet. Please contact us for a quote or create an account to use our discount programmes.',
     totalEstimated: 'Estimated total',
+    residentialQtyPieceSingular: 'pc',
+    residentialQtyPiecePlural: 'pcs',
     ariaQtyDecrease: 'Decrease quantity',
     ariaQtyIncrease: 'Increase quantity',
     documenteTehnice: 'Technical Documents',
     document: 'Document',
     dateTehnice: 'Technical product data',
+    detaliiTehnice: 'Technical details',
+    toateDetaliileBtn: 'All details',
     intrebariFrecvente: 'Frequently asked questions',
     stiaiCa: 'DID YOU KNOW?',
     swapDesc: 'Baterino offers you a replacement battery while your product is in service for diagnosis or maintenance.',
@@ -378,6 +412,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     sigurantaBaterino: 'Baterino保障与承诺',
     cantitateLabel: '数量',
     pretLabel: '价格',
+    pretFinalLabel: '最终价格',
     pretVechiLabel: '原价',
     includesTVA: '含增值税',
     includesVatWithPct: '含增值税 {pct}%',
@@ -388,16 +423,24 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriProgram15: '折扣计划 15%',
     economisestiLabel: '您节省',
     discountPctHighlight: '{pct}% 折扣',
+    residentialDiscountOptionSuffix: '折扣',
     veziProgrameReduceri: '查看折扣计划',
     reduceriModalSeeFullPage: '打开折扣计划专页',
     comandaBtn: '订购',
+    comandaCuContBtn: '登录账户订购',
+    residentialDiscountGuestNotice:
+      '使用折扣下单需注册 Baterino 账户，以便我们核验信息并适用相应折扣计划。',
     clientOrderNotice: '在线结账尚未开通。请联系我们以获取报价，或注册账户使用折扣计划。',
     totalEstimated: '预估合计',
+    residentialQtyPieceSingular: '件',
+    residentialQtyPiecePlural: '件',
     ariaQtyDecrease: '减少数量',
     ariaQtyIncrease: '增加数量',
     documenteTehnice: '技术文档',
     document: '文档',
     dateTehnice: '产品技术数据',
+    detaliiTehnice: '技术详情',
+    toateDetaliileBtn: '全部参数',
     intrebariFrecvente: '常见问题',
     stiaiCa: '你知道吗？',
     swapDesc: '当您的产品在服务中心进行诊断或维护时，Baterino为您提供更换电池。',
@@ -443,3 +486,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
 export function getProductDetailTranslations(lang: LangCode): ProductDetailTranslations {
   return translations[lang] ?? translations.ro
 }
+
+/** Fallback dacă un bundle vechi nu are încă `residentialDiscountGuestNotice` în `tr`. */
+export const RESIDENTIAL_DISCOUNT_GUEST_NOTICE_FALLBACK_RO =
+  translations.ro.residentialDiscountGuestNotice

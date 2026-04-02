@@ -1,9 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { getReduceriTranslations } from '../i18n/reduceri'
+import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
+import { getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import { ReduceriProgramCard } from './reduceri/ReduceriProgramCard'
+
+function rowToProgram(p: ReducereProgramRow): ReducereProgram {
+  const { id: _id, locale: _loc, sortOrder: _so, ...rest } = p
+  return rest
+}
 
 type Props = {
   lang: LangCode
@@ -14,9 +20,24 @@ type Props = {
 
 export default function ReduceriProgramsModal({ lang, onClose, closeLabel, seeFullPageLabel }: Props) {
   const reduceriTr = getReduceriTranslations(lang)
-  const programs = reduceriTr.programs
+  const [apiPrograms, setApiPrograms] = useState<ReducereProgram[] | null>(null)
+  const programs = apiPrograms ?? reduceriTr.programs
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+
+  useEffect(() => {
+    let cancelled = false
+    getPublicReducerePrograms(lang)
+      .then((rows) => {
+        if (!cancelled) setApiPrograms(rows.length > 0 ? rows.map(rowToProgram) : null)
+      })
+      .catch(() => {
+        if (!cancelled) setApiPrograms(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [lang])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -74,7 +95,7 @@ export default function ReduceriProgramsModal({ lang, onClose, closeLabel, seeFu
           <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] lg:snap-none lg:overflow-visible lg:gap-4">
             {programs.map((program, i) => (
               <div
-                key={i}
+                key={`${program.programLabel}-${i}`}
                 className="min-w-[min(100%,17.5rem)] max-w-[17.5rem] shrink-0 snap-center sm:min-w-[18rem] sm:max-w-[18rem] lg:min-w-0 lg:max-w-none lg:flex-1 lg:shrink"
               >
                 <ReduceriProgramCard program={program} hideCta />

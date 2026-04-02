@@ -1,9 +1,16 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getReduceriTranslations } from '../i18n/reduceri'
+import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
+import { getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 import { ReduceriProgramCard } from '../components/reduceri/ReduceriProgramCard'
+
+function rowToProgram(p: ReducereProgramRow): ReducereProgram {
+  const { id: _id, locale: _loc, sortOrder: _so, ...rest } = p
+  return rest
+}
 
 /* ── How to apply panel ────────────────────────────────────────── */
 function HowToApply({ title, steps }: { title: string; steps: string[] }) {
@@ -34,8 +41,25 @@ function HowToApply({ title, steps }: { title: string; steps: string[] }) {
 export default function Reduceri() {
   const { language } = useLanguage()
   const tr = getReduceriTranslations(language.code)
+  const [apiPrograms, setApiPrograms] = useState<ReducereProgram[] | null>(null)
 
-  const [p1, p2, p3, p4] = tr.programs
+  useEffect(() => {
+    let cancelled = false
+    getPublicReducerePrograms(language.code)
+      .then((rows) => {
+        if (!cancelled) setApiPrograms(rows.length > 0 ? rows.map(rowToProgram) : null)
+      })
+      .catch(() => {
+        if (!cancelled) setApiPrograms(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [language.code])
+
+  const programs = apiPrograms ?? tr.programs
+  const four = programs.length === 4
+  const [p1, p2, p3, p4] = programs
 
   return (
     <>
@@ -61,8 +85,8 @@ export default function Reduceri() {
 
         {/* ── MOBILE: single column with dividers + How to Apply at end ── */}
         <div className="flex flex-col md:hidden mb-10">
-          {[p1, p2, p3, p4].map((program, i) => (
-            <div key={i}>
+          {programs.map((program, i) => (
+            <div key={`${program.programLabel}-${i}`}>
               <ReduceriProgramCard program={program} />
               <hr className="border-gray-200 my-10" />
             </div>
@@ -72,22 +96,34 @@ export default function Reduceri() {
             to="/login"
             className="w-full h-14 mt-6 bg-slate-900 rounded-[10px] inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
           >
-            {tr.programs[0].ctaLabel}
+            {programs[0]?.ctaLabel ?? tr.programs[0].ctaLabel}
           </Link>
         </div>
 
-        {/* ── DESKTOP ROW 1: first 3 cards ── */}
-        <div className="hidden md:grid md:grid-cols-3 gap-6 mb-14 items-stretch">
-          {[p1, p2, p3].map((program, i) => (
-            <ReduceriProgramCard key={i} program={program} />
-          ))}
-        </div>
-
-        {/* ── DESKTOP ROW 2: 4th card + How to Apply ── */}
-        <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16 lg:mb-20 items-start">
-          <ReduceriProgramCard program={p4} />
-          <HowToApply title={tr.howTitle} steps={tr.howSteps} />
-        </div>
+        {four ? (
+          <>
+            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-14 items-stretch">
+              {[p1, p2, p3].map((program, i) => (
+                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} />
+              ))}
+            </div>
+            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16 lg:mb-20 items-start">
+              <ReduceriProgramCard program={p4} />
+              <HowToApply title={tr.howTitle} steps={tr.howSteps} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-10 items-stretch">
+              {programs.map((program, i) => (
+                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} />
+              ))}
+            </div>
+            <div className="hidden md:max-w-xl md:mx-auto md:block mb-16 lg:mb-20">
+              <HowToApply title={tr.howTitle} steps={tr.howSteps} />
+            </div>
+          </>
+        )}
 
         {/* ── BOTTOM CTA — desktop only ── */}
         <div className="hidden md:block">

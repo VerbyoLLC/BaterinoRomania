@@ -77,8 +77,8 @@
   }
 }
 
-/* Only on mobile: slide up from bottom; desktop shows modal with no animation */
-@media (max-width: 639px) {
+/* Bottom sheets: slide up below lg (matches industrial mobile tabs / cards). */
+@media (max-width: 1023px) {
   .animate-slide-up-from-bottom {
     animation: slide-up-from-bottom 0.35s ease-out forwards;
   }

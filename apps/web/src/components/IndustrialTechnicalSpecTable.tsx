@@ -8,15 +8,6 @@ type Props = {
   labelForKey?: (key: string) => string
 }
 
-function allValuesEqual(values: string[]): boolean {
-  if (values.length <= 1) return true
-  const a = values[0]?.trim() ?? ''
-  for (let i = 1; i < values.length; i++) {
-    if ((values[i]?.trim() ?? '') !== a) return false
-  }
-  return true
-}
-
 export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model', labelForKey }: Props) {
   const { entries } = data
   const n = entries.length
@@ -28,7 +19,6 @@ export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model
   const rowLabel = (key: string) => labelForKey?.(key) ?? INDUSTRIAL_SPEC_FIELDS.find((f) => f.key === key)?.label ?? key
 
   const modelValues = entries.map((e) => e.modelName || '—')
-  const modelMerged = allValuesEqual(modelValues)
 
   const dim = (r: number, c: number) => hoverRow === r || (c > 0 && hoverCol === c)
 
@@ -53,40 +43,24 @@ export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model
             >
               {modelLabel}
             </th>
-            {modelMerged ? (
+            {modelValues.map((cell, j) => (
               <td
-                colSpan={n}
+                key={`model-${j}`}
                 className={`border border-neutral-200 px-2 py-2 text-center font-semibold text-slate-900 transition-colors ${
-                  hoverCol !== null && hoverCol >= 1 ? 'bg-sky-50/80' : ''
+                  dim(0, j + 1) ? 'bg-sky-50/90' : ''
                 }`}
                 onMouseEnter={() => {
                   setHoverRow(0)
-                  setHoverCol(1)
+                  setHoverCol(j + 1)
                 }}
               >
-                {modelValues[0]}
+                {cell}
               </td>
-            ) : (
-              modelValues.map((cell, j) => (
-                <td
-                  key={`model-${j}`}
-                  className={`border border-neutral-200 px-2 py-2 text-center font-semibold text-slate-900 transition-colors ${
-                    dim(0, j + 1) ? 'bg-sky-50/90' : ''
-                  }`}
-                  onMouseEnter={() => {
-                    setHoverRow(0)
-                    setHoverCol(j + 1)
-                  }}
-                >
-                  {cell}
-                </td>
-              ))
-            )}
+            ))}
           </tr>
           {INDUSTRIAL_SPEC_FIELDS.map((field, i) => {
             const rowIdx = i + 1
             const values = entries.map((e) => e.specs[field.key] ?? '')
-            const merged = allValuesEqual(values)
             const strip = (i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/80') as string
             return (
               <tr
@@ -103,33 +77,20 @@ export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model
                 >
                   {rowLabel(field.key)}
                 </th>
-                {merged ? (
+                {values.map((cell, j) => (
                   <td
-                    colSpan={n}
-                    className="border border-neutral-200 px-2 py-2 text-center transition-colors"
+                    key={`${field.key}-${j}`}
+                    className={`border border-neutral-200 px-2 py-2 text-center transition-colors ${
+                      dim(rowIdx, j + 1) ? 'bg-sky-50/90' : ''
+                    }`}
                     onMouseEnter={() => {
                       setHoverRow(rowIdx)
-                      setHoverCol(1)
+                      setHoverCol(j + 1)
                     }}
                   >
-                    {values[0]}
+                    {cell}
                   </td>
-                ) : (
-                  values.map((cell, j) => (
-                    <td
-                      key={`${field.key}-${j}`}
-                      className={`border border-neutral-200 px-2 py-2 text-center transition-colors ${
-                        dim(rowIdx, j + 1) ? 'bg-sky-50/90' : ''
-                      }`}
-                      onMouseEnter={() => {
-                        setHoverRow(rowIdx)
-                        setHoverCol(j + 1)
-                      }}
-                    >
-                      {cell}
-                    </td>
-                  ))
-                )}
+                ))}
               </tr>
             )
           })}

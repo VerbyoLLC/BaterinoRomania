@@ -31,6 +31,7 @@ import AdminCompanies from './pages/admin/AdminCompanies'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminDiscounts from './pages/admin/AdminDiscounts'
 import AdminMessages from './pages/admin/AdminMessages'
+import AdminPhoneNumbers from './pages/admin/AdminPhoneNumbers'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="stocks"    element={<AdminDashboard />} />
           <Route path="orders"    element={<AdminDashboard />} />
           <Route path="discounts" element={<AdminDiscounts />} />
+          <Route path="phone-numbers" element={<AdminPhoneNumbers />} />
         </Route>
 
         {/* ── Auth: in instalatori-only mode, no register — redirect to login ── */}
