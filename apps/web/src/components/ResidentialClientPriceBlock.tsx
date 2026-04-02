@@ -65,6 +65,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const [showReduceriModal, setShowReduceriModal] = useState(false)
   const [mobileDiscountPickOpen, setMobileDiscountPickOpen] = useState(false)
   const [mobileDiscountDetailId, setMobileDiscountDetailId] = useState<string | null>(null)
+  const [mobilePickDraftId, setMobilePickDraftId] = useState<string>('none')
   /** Doar utilizatorul „client” poate plasa cu reducere; altfel afișăm COMANDĂ CU CONT. */
   const [isClientUser, setIsClientUser] = useState(() =>
     typeof window !== 'undefined' ? getAuthRole() === 'client' : false,
@@ -226,6 +227,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               <button
                 type="button"
                 onClick={() => {
+                  setMobilePickDraftId(discountProgramId)
                   setMobileDiscountDetailId(null)
                   setMobileDiscountPickOpen(true)
                 }}
@@ -365,15 +367,20 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         lang={lang}
         tr={tr}
         discountOptions={discountOptions}
-        discountProgramId={discountProgramId}
+        pickDraftId={mobilePickDraftId}
         formatOptionLabel={(opt) => formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
         pickOpen={mobileDiscountPickOpen}
         onClosePick={() => setMobileDiscountPickOpen(false)}
         detailOptionId={mobileDiscountDetailId}
         onCloseDetail={() => setMobileDiscountDetailId(null)}
+        onApplyDetail={() => {
+          if (mobileDiscountDetailId) setDiscountProgramId(mobileDiscountDetailId)
+          setMobileDiscountDetailId(null)
+        }}
         onSelectProgram={(id) => {
-          setDiscountProgramId(id)
+          setMobilePickDraftId(id)
           if (id === 'none') {
+            setDiscountProgramId('none')
             setMobileDiscountPickOpen(false)
             setMobileDiscountDetailId(null)
             return
