@@ -626,6 +626,83 @@ const adminCompaniesHandler = async (req, res) => {
 app.get('/api/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
 app.get('/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
 
+// ── Admin: telefoane pe departament ─────────────────────────────────────
+const DEPARTMENT_PHONE_KEYS = ['general', 'rezidential', 'industrial', 'medical', 'maritim']
+
+async function ensureDepartmentPhoneRows() {
+  for (const department of DEPARTMENT_PHONE_KEYS) {
+    await prisma.departmentPhone.upsert({
+      where: { department },
+      create: { department, phone: '', whatsapp: '' },
+      update: {},
+    })
+  }
+}
+
+function orderDepartmentPhones(rows) {
+  const byDept = new Map(rows.map((r) => [r.department, r]))
+  return DEPARTMENT_PHONE_KEYS.map((department) => {
+    const r = byDept.get(department)
+    return {
+      department,
+      phone: r?.phone ?? '',
+      whatsapp: r?.whatsapp ?? '',
+    }
+  })
+}
+
+const listDepartmentPhonesHandler = async (req, res) => {
+  try {
+    await ensureDepartmentPhoneRows()
+    const rows = await prisma.departmentPhone.findMany()
+    res.json(orderDepartmentPhones(rows))
+  } catch (err) {
+    console.error('Admin department phones list:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const putDepartmentPhonesHandler = async (req, res) => {
+  try {
+    const raw = req.body
+    const items = Array.isArray(raw) ? raw : raw?.rows
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'Body invalid: trimite un array sau { rows: [...] }.' })
+    }
+    const seen = new Set()
+    for (const item of items) {
+      const department = String(item?.department || '').trim()
+      if (!DEPARTMENT_PHONE_KEYS.includes(department)) {
+        return res.status(400).json({ error: `Departament necunoscut: ${department}` })
+      }
+      if (seen.has(department)) {
+        return res.status(400).json({ error: `Duplicat pentru departament: ${department}` })
+      }
+      seen.add(department)
+      const phone = String(item?.phone ?? '').trim()
+      const whatsapp = String(item?.whatsapp ?? '').trim()
+      await prisma.departmentPhone.upsert({
+        where: { department },
+        create: { department, phone, whatsapp },
+        update: { phone, whatsapp },
+      })
+    }
+    if (seen.size !== DEPARTMENT_PHONE_KEYS.length) {
+      return res.status(400).json({ error: 'Trimite toate departamentele: general, rezidential, industrial, medical, maritim.' })
+    }
+    const rows = await prisma.departmentPhone.findMany()
+    res.json(orderDepartmentPhones(rows))
+  } catch (err) {
+    console.error('Admin department phones save:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/admin/department-phones', authMiddleware, adminAuthMiddleware, listDepartmentPhonesHandler)
+app.get('/admin/department-phones', authMiddleware, adminAuthMiddleware, listDepartmentPhonesHandler)
+app.put('/api/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
+app.put('/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
+
 // ── Admin: update company discount ──────────────────────────────────────
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
@@ -668,6 +745,174 @@ app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddlewar
     if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
     console.error('Admin approve error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la aprobare.' })
+  }
+})
+
+/** API shape for ReducereProgram (popover fields flattened for admin/public). */
+function reducereProgramToApi(row) {
+  if (!row) return row
+  const t = row.stiaiCaTitle != null ? String(row.stiaiCaTitle).trim() : ''
+  const x = row.stiaiCaText != null ? String(row.stiaiCaText).trim() : ''
+  const stiaiCa = t || x ? { title: t || 'Știai că?', text: x } : undefined
+  return {
+    id: row.id,
+    locale: row.locale,
+    photo: row.photo,
+    programLabel: row.programLabel,
+    title: row.title,
+    descriereScurta: row.descriereScurta ?? undefined,
+    description: row.description,
+    ctaLabel: row.ctaLabel,
+    ctaTo: row.ctaTo,
+    termsLabel: row.termsLabel,
+    topIcon: row.topIcon ?? undefined,
+    stiaiCa,
+    durataProgram: row.durataProgram ?? undefined,
+    discountPercent: row.discountPercent != null ? Number(row.discountPercent) : undefined,
+    sortOrder: row.sortOrder,
+  }
+}
+
+function parseDiscountPercent(v) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  if (!Number.isFinite(n) || n < 0 || n > 100) return undefined
+  return Math.round(n)
+}
+
+// ── Public: discount programmes for /reduceri (locale) ─────────────────
+app.get('/api/reducere-programs', async (req, res) => {
+  try {
+    const raw = String(req.query.locale || 'ro').toLowerCase().replace(/[^a-z]/g, '')
+    const locale = raw === 'en' || raw === 'zh' ? raw : 'ro'
+    const rows = await prisma.reducereProgram.findMany({
+      where: { locale, isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    })
+    return res.json(rows.map(reducereProgramToApi))
+  } catch (err) {
+    console.error('Public reducere-programs error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// ── Admin: list / create / update / delete discount programmes ───────────
+const adminReducereListHandler = async (req, res) => {
+  try {
+    const raw = String(req.query.locale || 'ro').toLowerCase().replace(/[^a-z]/g, '')
+    const locale = raw === 'en' || raw === 'zh' ? raw : 'ro'
+    const rows = await prisma.reducereProgram.findMany({
+      where: { locale },
+      orderBy: { sortOrder: 'asc' },
+    })
+    return res.json(rows.map(reducereProgramToApi))
+  } catch (err) {
+    console.error('Admin reducere-programs list error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+app.get('/api/admin/reducere-programs', authMiddleware, adminAuthMiddleware, adminReducereListHandler)
+
+app.post('/api/admin/reducere-programs', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const b = req.body || {}
+    const raw = String(b.locale || 'ro').toLowerCase().replace(/[^a-z]/g, '')
+    const locale = raw === 'en' || raw === 'zh' ? raw : 'ro'
+    const maxSort = await prisma.reducereProgram.aggregate({
+      where: { locale },
+      _max: { sortOrder: true },
+    })
+    const sortOrder = (maxSort._max.sortOrder ?? -1) + 1
+    const disc = parseDiscountPercent(b.discountPercent)
+    if (disc === undefined && b.discountPercent !== null && b.discountPercent !== undefined && b.discountPercent !== '') {
+      return res.status(400).json({ error: 'Procent reducere invalid (0–100).' })
+    }
+    let stiaiCaTitle = null
+    let stiaiCaText = null
+    if (b.stiaiCa && typeof b.stiaiCa === 'object') {
+      stiaiCaTitle = String(b.stiaiCa.title || '').trim() || null
+      stiaiCaText = String(b.stiaiCa.text || '').trim() || null
+    }
+    const row = await prisma.reducereProgram.create({
+      data: {
+        locale,
+        photo: String(b.photo || '').trim() || '/images/programe%20reduceri/tva-cum-era.jpg',
+        programLabel: String(b.programLabel || '').trim() || 'PROGRAM',
+        title: String(b.title || '').trim() || '',
+        descriereScurta: b.descriereScurta ? String(b.descriereScurta).trim() : null,
+        description: String(b.description || '').trim() || '',
+        ctaLabel: String(b.ctaLabel || 'CREEAZĂ CONT').trim(),
+        ctaTo: String(b.ctaTo || '/login').trim(),
+        termsLabel: String(b.termsLabel || 'Termeni și Condiții Reducere').trim(),
+        topIcon: b.topIcon != null && String(b.topIcon).trim() !== '' ? String(b.topIcon).trim() : null,
+        stiaiCaTitle,
+        stiaiCaText,
+        durataProgram: b.durataProgram ? String(b.durataProgram).trim() : null,
+        discountPercent: disc,
+        sortOrder,
+        isActive: true,
+      },
+    })
+    return res.status(201).json(reducereProgramToApi(row))
+  } catch (err) {
+    console.error('Admin reducere-programs create error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la creare.' })
+  }
+})
+
+app.patch('/api/admin/reducere-programs/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const b = req.body || {}
+    const data = {}
+    if (typeof b.photo === 'string') data.photo = b.photo.trim()
+    if (typeof b.programLabel === 'string') data.programLabel = b.programLabel.trim()
+    if (typeof b.title === 'string') data.title = b.title.trim()
+    if (b.descriereScurta !== undefined) {
+      data.descriereScurta = b.descriereScurta == null || b.descriereScurta === '' ? null : String(b.descriereScurta).trim()
+    }
+    if (typeof b.description === 'string') data.description = b.description.trim()
+    if (typeof b.ctaLabel === 'string') data.ctaLabel = b.ctaLabel.trim()
+    if (typeof b.ctaTo === 'string') data.ctaTo = b.ctaTo.trim()
+    if (typeof b.termsLabel === 'string') data.termsLabel = b.termsLabel.trim()
+    if (b.topIcon !== undefined) data.topIcon = b.topIcon == null || b.topIcon === '' ? null : String(b.topIcon).trim()
+    if (b.durataProgram !== undefined) data.durataProgram = b.durataProgram == null || b.durataProgram === '' ? null : String(b.durataProgram).trim()
+    if (b.discountPercent !== undefined) {
+      const disc = parseDiscountPercent(b.discountPercent)
+      if (disc === undefined && b.discountPercent !== null && b.discountPercent !== '') {
+        return res.status(400).json({ error: 'Procent reducere invalid (0–100).' })
+      }
+      data.discountPercent = disc
+    }
+    if (b.stiaiCa === null) {
+      data.stiaiCaTitle = null
+      data.stiaiCaText = null
+    } else if (b.stiaiCa && typeof b.stiaiCa === 'object') {
+      data.stiaiCaTitle = String(b.stiaiCa.title || '').trim() || null
+      data.stiaiCaText = String(b.stiaiCa.text || '').trim() || null
+    }
+    if (Object.keys(data).length === 0) {
+      const existing = await prisma.reducereProgram.findUnique({ where: { id } })
+      if (!existing) return res.status(404).json({ error: 'Program negăsit.' })
+      return res.json(reducereProgramToApi(existing))
+    }
+    const updated = await prisma.reducereProgram.update({ where: { id }, data })
+    return res.json(reducereProgramToApi(updated))
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Program negăsit.' })
+    console.error('Admin reducere-programs patch error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+})
+
+app.delete('/api/admin/reducere-programs/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    await prisma.reducereProgram.delete({ where: { id: req.params.id } })
+    return res.status(204).end()
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Program negăsit.' })
+    console.error('Admin reducere-programs delete error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
   }
 })
 

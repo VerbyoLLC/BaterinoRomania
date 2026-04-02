@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState, type TouchEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowDown,
@@ -9,20 +9,33 @@ import {
   ChevronRight,
   Download,
   Headset,
+  Info,
   Package,
   Phone,
   ShieldCheck,
+  X,
 } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
 import { IndustrialCarouselSlideImage } from '../components/product/ProductPageLoaders'
 import IndustrialTechnicalSpecTable from '../components/IndustrialTechnicalSpecTable'
-import { normalizeIndustrialTechnicalSpecs, type IndustrialModelSpecEntry } from '../lib/industrialTechnicalSpec'
+import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
+import {
+  INDUSTRIAL_SPEC_FIELDS,
+  normalizeIndustrialTechnicalSpecs,
+  type IndustrialModelSpecEntry,
+} from '../lib/industrialTechnicalSpec'
 import SEO from '../components/SEO'
+import OutlineButton from '../components/OutlineButton'
 import ProductPriceBlock from '../components/ProductPriceBlock'
+import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
+import { getProductDetailTranslations } from '../i18n/product-detail'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getIndustrialBessTemplateTranslations, type IndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
+import {
+  getIndustrialBessTemplateTranslations,
+  type IndustrialBessTemplateTranslations,
+} from '../i18n/industrial-bess-template'
 import {
   INDUSTRIAL_BREADCRUMB_NAV_CLASS,
   INDUSTRIAL_PRODUCT_ARTICLE_CLASS,
@@ -38,7 +51,20 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-const MODEL_CONFIGS_PER_SLIDE = 4
+/** Desktop slider + compact mobile cards when model count exceeds this. */
+const MODEL_SLIDER_THRESHOLD = 4
+/** Desktop configuration slider: cards per horizontal page (when count > MODEL_SLIDER_THRESHOLD). */
+const MODEL_DESKTOP_SLIDE_SIZE = 3
+/** Mobile: first N model cards before "Load more" (one card per row). */
+const MOBILE_MODELS_INITIAL = 2
+/** Mobile: extra cards each time "Load more" is pressed. */
+const MOBILE_MODELS_STEP = 2
+
+const HERO_CAROUSEL_SWIPE_PX = 56
+
+/** Hero track transition when snapping (not finger-dragging). */
+const HERO_CAROUSEL_TRANSITION =
+  'transform 0.42s cubic-bezier(0.22, 1, 0.32, 1)'
 
 function chunkModelEntries<T>(arr: T[], size: number): T[][] {
   if (arr.length === 0) return []
@@ -47,21 +73,71 @@ function chunkModelEntries<T>(arr: T[], size: number): T[][] {
   return chunks
 }
 
-function modelConfigPageGridClass(pageLen: number): string {
-  if (pageLen >= 4) return 'grid grid-cols-1 min-[560px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4'
-  if (pageLen === 3) return 'grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4'
-  if (pageLen === 2) return 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'
-  return 'grid grid-cols-1 gap-3 sm:gap-4'
+function WhatsappGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  )
+}
+
+function DesktopModelWhatsappSlide({
+  open,
+  productTitle,
+  modelName,
+  tr,
+}: {
+  open: boolean
+  productTitle: string
+  modelName: string
+  tr: IndustrialBessTemplateTranslations
+}) {
+  const msg = tr.modelDesktopWhatsappPrefill
+    .replace(/\{product\}/g, productTitle.trim() || '—')
+    .replace(/\{model\}/g, modelName.trim() || '—')
+  const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(msg)}`
+  return (
+    <div
+      className={`pointer-events-none absolute left-0 right-0 top-full z-20 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
+        open
+          ? 'pointer-events-auto max-h-[4.5rem] opacity-100 translate-y-0 sm:max-h-24'
+          : 'max-h-0 -translate-y-1 opacity-0'
+      }`}
+    >
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
+      >
+        <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
+        {tr.modelDesktopDetailsCta}
+      </a>
+    </div>
+  )
 }
 
 function ModelConfigurationCard({
   entry,
   tr,
   specLabel,
+  manyModels,
+  onPress,
+  /** Desktop: expands WhatsApp row; mutually exclusive with mobile onPress in practice */
+  onCardClick,
+  isCardExpanded,
+  /** Desktop slider: fill cell height so all cards align */
+  stretchHeight,
 }: {
   entry: IndustrialModelSpecEntry
   tr: IndustrialBessTemplateTranslations
   specLabel: (key: string) => string
+  manyModels: boolean
+  /** Mobile: opens full spec sheet */
+  onPress?: () => void
+  onCardClick?: () => void
+  isCardExpanded?: boolean
+  stretchHeight?: boolean
 }) {
   const nominalEnergyVal = String(entry.specs.nominalEnergy ?? '').trim() || '—'
   const detailCells = [
@@ -70,28 +146,82 @@ function ModelConfigurationCard({
     { label: specLabel('maxOutputPower'), value: String(entry.specs.maxOutputPower ?? '').trim() || '—' },
     { label: specLabel('cycleLife'), value: String(entry.specs.cycleLife ?? '').trim() || '—' },
   ] as const
-  return (
-    <div className="flex min-w-0 w-full flex-col rounded-[10px] border border-neutral-200 bg-white px-4 py-4 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8">
-      <div className="rounded-lg border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white px-3 py-3 sm:px-3.5 sm:py-3.5">
-        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 font-['Inter']">
+  const pressableClass =
+    'cursor-pointer touch-manipulation text-left active:scale-[0.995] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2'
+
+  const shellClass = `flex min-h-0 min-w-0 w-full flex-col rounded-[10px] border border-neutral-200 bg-white shadow-sm transition-all duration-200 ease-out ${
+    stretchHeight ? 'h-full' : ''
+  } ${
+    onPress || onCardClick ? pressableClass : 'hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8'
+  } ${onCardClick && isCardExpanded ? 'border-slate-900 ring-1 ring-slate-900/15' : ''} ${
+    manyModels ? 'px-3 py-3 sm:px-3 sm:py-3.5' : 'px-4 py-4'
+  }`
+
+  const inner = (
+    <>
+      <div
+        className={`rounded-lg border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white ${
+          manyModels ? 'px-2.5 py-2.5 sm:px-3 sm:py-3' : 'px-3 py-3 sm:px-3.5 sm:py-3.5'
+        } ${
+          stretchHeight
+            ? 'flex min-h-[6.25rem] shrink-0 flex-col justify-center sm:min-h-[6.75rem]'
+            : ''
+        }`}
+      >
+        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 font-['Inter'] sm:text-xs">
           {specLabel('nominalEnergy')}
         </p>
-        <p className="m-0 mt-1.5 text-xl sm:text-2xl font-extrabold font-['Inter'] tracking-tight text-slate-900 leading-none tabular-nums">
+        <p
+          className={`m-0 mt-1.5 min-w-0 font-extrabold font-['Inter'] tracking-tight text-slate-900 leading-tight tabular-nums break-words ${
+            manyModels ? 'text-lg sm:text-xl' : 'text-2xl sm:text-[26px] leading-none'
+          }`}
+        >
           {nominalEnergyVal}
         </p>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3.5">
+      <div
+        className={`mt-4 grid min-h-0 w-full grid-cols-2 gap-x-3 gap-y-4 ${stretchHeight ? 'min-h-0 flex-1 content-start' : ''}`}
+      >
         {detailCells.map((cell, j) => (
           <div key={`${cell.label}-${j}`} className="min-w-0">
-            <p className="m-0 text-[10px] font-medium text-neutral-500 font-['Inter'] leading-tight">{cell.label}</p>
-            <p className="m-0 mt-0.5 text-xs font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">
+            <p className="m-0 text-xs font-medium text-neutral-500 font-['Inter'] leading-tight sm:text-[13px]">
+              {cell.label}
+            </p>
+            <p
+              className={`m-0 mt-1 font-semibold text-neutral-900 font-['Inter'] leading-snug break-words ${
+                manyModels ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+              }`}
+            >
               {cell.value}
             </p>
           </div>
         ))}
       </div>
-    </div>
+    </>
   )
+
+  if (onPress) {
+    return (
+      <button type="button" className={shellClass} onClick={onPress}>
+        {inner}
+      </button>
+    )
+  }
+
+  if (onCardClick) {
+    return (
+      <button
+        type="button"
+        className={shellClass}
+        onClick={onCardClick}
+        aria-expanded={Boolean(isCardExpanded)}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return <div className={shellClass}>{inner}</div>
 }
 
 const SERVICE_ICONS = ['/images/shared/delivery-icon.svg', '/images/shared/instalare-icon.svg', '/images/shared/maintance-icon.svg'] as const
@@ -106,6 +236,7 @@ type Props = {
 export default function ResidentialIndustrialProductPage({ product, breadcrumbHome, breadcrumbProducts }: Props) {
   const { language } = useLanguage()
   const tr = getIndustrialBessTemplateTranslations(language.code)
+  const productDetailTr = getProductDetailTranslations(language.code)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [activeTab, setActiveTab] = useState<TabId>('advantages')
 
@@ -122,24 +253,147 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
     (product as { technical_specs_models?: unknown }).technical_specs_models
   const technicalSpecs = normalizeIndustrialTechnicalSpecs(technicalSpecsRaw) ?? { entries: [] }
   const modelEntries = technicalSpecs.entries
-  const modelPages = chunkModelEntries(modelEntries, MODEL_CONFIGS_PER_SLIDE)
-  const modelsUseSlider = modelPages.length > 1
+  const modelsUseSlider = modelEntries.length > MODEL_SLIDER_THRESHOLD
+  const modelPages = modelsUseSlider
+    ? chunkModelEntries(modelEntries, MODEL_DESKTOP_SLIDE_SIZE)
+    : []
 
   const [modelConfigPage, setModelConfigPage] = useState(0)
+  const [mobileModelsVisible, setMobileModelsVisible] = useState(MOBILE_MODELS_INITIAL)
+  const [mobileSpecModalEntry, setMobileSpecModalEntry] = useState<IndustrialModelSpecEntry | null>(null)
+  const [desktopWhatsappModel, setDesktopWhatsappModel] = useState<string | null>(null)
+
+  const heroTouchStartX = useRef<number | null>(null)
+  const heroDragPxRef = useRef(0)
+  const [heroDragPx, setHeroDragPx] = useState(0)
+  const [heroIsDragging, setHeroIsDragging] = useState(false)
 
   useEffect(() => {
     setModelConfigPage(0)
   }, [product.id, modelEntries.length])
 
+  useEffect(() => {
+    setDesktopWhatsappModel(null)
+  }, [product.id, modelConfigPage])
+
+  useEffect(() => {
+    setMobileModelsVisible(Math.min(MOBILE_MODELS_INITIAL, modelEntries.length))
+  }, [product.id, modelEntries.length])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const syncTab = () => {
+      if (!mq.matches) setActiveTab((t) => (t === 'spec' ? 'advantages' : t))
+    }
+    syncTab()
+    mq.addEventListener('change', syncTab)
+    return () => mq.removeEventListener('change', syncTab)
+  }, [])
+
+  useEffect(() => {
+    if (!mobileSpecModalEntry) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileSpecModalEntry])
+
+  useEffect(() => {
+    if (!mobileSpecModalEntry) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileSpecModalEntry(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileSpecModalEntry])
+
+  useEffect(() => {
+    if (!mobileSpecModalEntry) return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const closeIfDesktop = () => {
+      if (mq.matches) setMobileSpecModalEntry(null)
+    }
+    closeIfDesktop()
+    mq.addEventListener('change', closeIfDesktop)
+    return () => mq.removeEventListener('change', closeIfDesktop)
+  }, [mobileSpecModalEntry])
+
   const subtitle = String(product.subtitle || '').trim()
   const overview = String(product.overview || '').trim()
   const overviewParagraphs = overview ? overview.split(/\n\s*\n/).filter(Boolean) : []
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slideCount)
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slideCount) % slideCount)
-  const goToSlide = (index: number) => setCurrentSlide(index)
+  const settleHeroCarousel = () => {
+    heroDragPxRef.current = 0
+    setHeroDragPx(0)
+    setHeroIsDragging(false)
+  }
+
+  const nextSlide = () => {
+    settleHeroCarousel()
+    setCurrentSlide((prev) => (prev + 1) % slideCount)
+  }
+
+  const prevSlide = () => {
+    settleHeroCarousel()
+    setCurrentSlide((prev) => (prev - 1 + slideCount) % slideCount)
+  }
+
+  const goToSlide = (index: number) => {
+    settleHeroCarousel()
+    setCurrentSlide(index)
+  }
+
+  const onHeroCarouselTouchStart = (e: TouchEvent) => {
+    if (imgs.length <= 1) return
+    const x = e.targetTouches[0]?.clientX
+    if (x === undefined) return
+    heroTouchStartX.current = x
+    heroDragPxRef.current = 0
+    setHeroDragPx(0)
+    setHeroIsDragging(true)
+  }
+
+  const onHeroCarouselTouchMove = (e: TouchEvent) => {
+    if (imgs.length <= 1 || heroTouchStartX.current == null) return
+    const x = e.targetTouches[0]?.clientX
+    if (x === undefined) return
+    let d = x - heroTouchStartX.current
+    if (currentSlide === 0 && d > 0) d *= 0.35
+    if (currentSlide >= imgs.length - 1 && d < 0) d *= 0.35
+    heroDragPxRef.current = d
+    setHeroDragPx(d)
+  }
+
+  const onHeroCarouselTouchEnd = () => {
+    if (imgs.length <= 1) return
+    heroTouchStartX.current = null
+    setHeroIsDragging(false)
+    const d = heroDragPxRef.current
+    heroDragPxRef.current = 0
+    if (d < -HERO_CAROUSEL_SWIPE_PX && currentSlide < imgs.length - 1) {
+      setHeroDragPx(0)
+      setCurrentSlide((c) => c + 1)
+    } else if (d > HERO_CAROUSEL_SWIPE_PX && currentSlide > 0) {
+      setHeroDragPx(0)
+      setCurrentSlide((c) => c - 1)
+    } else {
+      setHeroDragPx(0)
+    }
+  }
+
+  const onHeroCarouselTouchCancel = () => {
+    heroTouchStartX.current = null
+    heroDragPxRef.current = 0
+    setHeroDragPx(0)
+    setHeroIsDragging(false)
+  }
 
   const canonical = `/produse/${product.slug || product.id}`
+
+  const toggleDesktopModelWhatsapp = (modelName: string) => {
+    setDesktopWhatsappModel((prev) => (prev === modelName ? null : modelName))
+  }
 
   const tabLabel = (id: TabId) => {
     switch (id) {
@@ -196,130 +450,272 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           )}
         </header>
 
-        <div
-          className="relative mx-auto w-full max-w-[1200px] aspect-[1200/520] rounded-[10px] overflow-hidden bg-neutral-100 border border-neutral-200 mb-4 sm:mb-5"
-          role="region"
-          aria-roledescription="carousel"
-          aria-label={tr.carouselAria}
-        >
-          <div className="absolute inset-0 flex items-center justify-center bg-white">
-            {currentImg ? (
-              <IndustrialCarouselSlideImage src={currentImg} alt="" />
-            ) : (
-              <span className="text-neutral-400 text-sm font-['Inter']">{tr.noCarouselImages}</span>
-            )}
-          </div>
-
-          {imgs.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prevSlide}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/95 hover:bg-white shadow-md border border-neutral-200 flex items-center justify-center text-slate-800 transition-colors"
-                aria-label={tr.prevSlide}
+        <div className="mb-4 flex w-[calc(100%+2.5rem)] max-w-none flex-col sm:mx-auto sm:mb-5 sm:w-full sm:max-w-[1200px] -mx-5">
+          <div
+            className="relative aspect-[4/3] w-full touch-pan-y overflow-hidden border-y border-neutral-200 bg-neutral-100 sm:aspect-[1200/520] sm:rounded-[10px] sm:border select-none"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label={tr.carouselAria}
+            onTouchStart={onHeroCarouselTouchStart}
+            onTouchMove={onHeroCarouselTouchMove}
+            onTouchEnd={onHeroCarouselTouchEnd}
+            onTouchCancel={onHeroCarouselTouchCancel}
+          >
+            {imgs.length > 1 ? (
+              <div
+                className="flex h-full"
+                style={{
+                  width: `${imgs.length * 100}%`,
+                  transform: `translate3d(calc(-${(currentSlide * 100) / imgs.length}% + ${heroDragPx}px), 0, 0)`,
+                  transition: heroIsDragging ? 'none' : HERO_CAROUSEL_TRANSITION,
+                  willChange: heroIsDragging ? 'transform' : 'auto',
+                }}
               >
-                <ChevronLeft size={22} strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                onClick={nextSlide}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/95 hover:bg-white shadow-md border border-neutral-200 flex items-center justify-center text-slate-800 transition-colors"
-                aria-label={tr.nextSlide}
-              >
-                <ChevronRight size={22} strokeWidth={2} />
-              </button>
-              <div className="absolute bottom-3 left-0 right-0 z-20 flex justify-center gap-1.5">
-                {imgs.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => goToSlide(index)}
-                    className={`h-2 rounded-full transition-all ${
-                      index === currentSlide
-                        ? 'w-8 bg-slate-900'
-                        : 'w-2 bg-white/90 hover:bg-white border border-neutral-200 shadow-sm'
-                    }`}
-                    aria-label={`${tr.goToSlide} ${index + 1}`}
-                    aria-current={index === currentSlide}
-                  />
+                {imgs.map((src, i) => (
+                  <div
+                    key={`${i}-${src}`}
+                    className="h-full shrink-0"
+                    style={{ width: `${100 / imgs.length}%` }}
+                  >
+                    <div className="flex h-full w-full items-center justify-center bg-white">
+                      <IndustrialCarouselSlideImage src={src} alt="" />
+                    </div>
+                  </div>
                 ))}
               </div>
-            </>
-          )}
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-white">
+                {currentImg ? (
+                  <IndustrialCarouselSlideImage src={currentImg} alt="" />
+                ) : (
+                  <span className="text-neutral-400 text-sm font-['Inter']">{tr.noCarouselImages}</span>
+                )}
+              </div>
+            )}
+
+            {imgs.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={prevSlide}
+                  className="absolute left-3 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white/95 text-slate-800 shadow-md transition-colors hover:bg-white sm:flex"
+                  aria-label={tr.prevSlide}
+                >
+                  <ChevronLeft size={22} strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextSlide}
+                  className="absolute right-3 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white/95 text-slate-800 shadow-md transition-colors hover:bg-white sm:flex"
+                  aria-label={tr.nextSlide}
+                >
+                  <ChevronRight size={22} strokeWidth={2} />
+                </button>
+                <div className="absolute bottom-3 left-0 right-0 z-20 hidden justify-center gap-1.5 sm:flex">
+                  {imgs.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => goToSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'w-8 bg-slate-900'
+                          : 'w-2 bg-white/90 shadow-sm hover:bg-white border border-neutral-200'
+                      }`}
+                      aria-label={`${tr.goToSlide} ${index + 1}`}
+                      aria-current={index === currentSlide}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {imgs.length > 1 ? (
+            <div
+              className="mt-3 flex justify-center gap-2 sm:hidden"
+              role="tablist"
+              aria-label={tr.carouselAria}
+            >
+              {imgs.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  role="tab"
+                  aria-selected={index === currentSlide}
+                  onClick={() => goToSlide(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentSlide
+                      ? 'w-8 bg-slate-900'
+                      : 'w-2 bg-neutral-300 hover:bg-neutral-400'
+                  }`}
+                  aria-label={`${tr.goToSlide} ${index + 1}`}
+                  aria-current={index === currentSlide}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {modelEntries.length > 0 ? (
           <div
-            className="mx-auto w-full max-w-[1200px] mb-10 sm:mb-12"
+            className="mx-auto w-full min-w-0 max-w-[1200px] mb-10 sm:mb-12"
             aria-label={tr.overviewModelsHeading}
           >
             <p className="m-0 mb-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter']">
               {tr.overviewModelsHeading}
             </p>
-            <div className={`relative ${modelsUseSlider ? 'px-10 sm:px-12' : ''}`}>
-              {modelsUseSlider ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setModelConfigPage((p) => Math.max(0, p - 1))}
-                    disabled={modelConfigPage === 0}
-                    className="absolute left-0 top-[calc(50%-1.25rem)] z-10 flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-slate-800 shadow-md transition-colors hover:bg-neutral-50 disabled:pointer-events-none disabled:opacity-35"
-                    aria-label={tr.prevSlide}
-                  >
-                    <ChevronLeft size={22} strokeWidth={2} aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModelConfigPage((p) => Math.min(modelPages.length - 1, p + 1))}
-                    disabled={modelConfigPage >= modelPages.length - 1}
-                    className="absolute right-0 top-[calc(50%-1.25rem)] z-10 flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-slate-800 shadow-md transition-colors hover:bg-neutral-50 disabled:pointer-events-none disabled:opacity-35"
-                    aria-label={tr.nextSlide}
-                  >
-                    <ChevronRight size={22} strokeWidth={2} aria-hidden />
-                  </button>
-                </>
-              ) : null}
-              <div className="overflow-hidden">
-                <div
-                  className="flex transition-transform duration-300 ease-out will-change-transform"
-                  style={{ transform: `translate3d(-${modelConfigPage * 100}%, 0, 0)` }}
-                >
-                  {modelPages.map((page, pageIdx) => (
-                    <div key={pageIdx} className="min-w-full shrink-0 px-0.5">
-                      <div className={modelConfigPageGridClass(page.length)}>
-                        {page.map((entry, i) => (
-                          <ModelConfigurationCard
-                            key={`${entry.modelName}-${pageIdx * MODEL_CONFIGS_PER_SLIDE + i}`}
-                            entry={entry}
-                            tr={tr}
-                            specLabel={specLabel}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div
+              role="note"
+              className="mb-4 flex flex-col items-center gap-1.5 rounded-[10px] border border-amber-200/90 bg-amber-50/95 px-3 py-2.5 text-center font-['Inter'] shadow-sm sm:px-4 sm:py-3 lg:hidden"
+            >
+              <Info
+                className="h-4 w-4 shrink-0 text-amber-700 opacity-90 sm:h-[18px] sm:w-[18px]"
+                aria-hidden
+                strokeWidth={2}
+              />
+              <p className="m-0 max-w-lg text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] text-amber-950/90 sm:text-[11px] sm:tracking-[0.12em]">
+                {tr.overviewModelsTapHint}
+              </p>
             </div>
-            {modelsUseSlider ? (
-              <div className="mt-4 flex justify-center gap-2" role="tablist" aria-label={tr.overviewModelsHeading}>
-                {modelPages.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    role="tab"
-                    aria-selected={i === modelConfigPage}
-                    onClick={() => setModelConfigPage(i)}
-                    className={`h-2 rounded-full transition-all ${
-                      i === modelConfigPage
-                        ? 'w-8 bg-slate-900'
-                        : 'w-2 bg-neutral-300 hover:bg-neutral-400'
-                    }`}
-                    aria-label={`${tr.goToSlide} ${i + 1}`}
+            <div className="lg:hidden">
+              <div className="flex w-full min-w-0 flex-col gap-3">
+                {modelEntries.slice(0, mobileModelsVisible).map((entry, i) => (
+                  <ModelConfigurationCard
+                    key={`${entry.modelName}-mobile-${i}`}
+                    entry={entry}
+                    tr={tr}
+                    specLabel={specLabel}
+                    manyModels={modelEntries.length > MODEL_SLIDER_THRESHOLD}
+                    onPress={() => setMobileSpecModalEntry(entry)}
                   />
                 ))}
               </div>
-            ) : null}
+              {mobileModelsVisible < modelEntries.length ? (
+                <div className="mt-4 flex justify-center">
+                  <OutlineButton
+                    type="button"
+                    className="!h-12 !w-full max-w-md !px-4 sm:!w-72"
+                    onClick={() =>
+                      setMobileModelsVisible((v) =>
+                        Math.min(v + MOBILE_MODELS_STEP, modelEntries.length),
+                      )
+                    }
+                  >
+                    {tr.modelsLoadMore}
+                  </OutlineButton>
+                </div>
+              ) : null}
+            </div>
+            {modelsUseSlider ? (
+              <div className="hidden lg:block">
+                <div className="relative min-w-0">
+                  <div className="mb-2 flex min-h-10 items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setModelConfigPage((p) => Math.max(0, p - 1))}
+                      disabled={modelConfigPage === 0}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-slate-900 shadow-md transition-colors hover:bg-neutral-50 disabled:pointer-events-none disabled:opacity-35"
+                      aria-label={tr.prevSlide}
+                    >
+                      <ChevronLeft size={22} strokeWidth={2} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModelConfigPage((p) => Math.min(modelPages.length - 1, p + 1))}
+                      disabled={modelConfigPage >= modelPages.length - 1}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-slate-900 shadow-md transition-colors hover:bg-neutral-50 disabled:pointer-events-none disabled:opacity-35"
+                      aria-label={tr.nextSlide}
+                    >
+                      <ChevronRight size={22} strokeWidth={2} aria-hidden />
+                    </button>
+                  </div>
+                  <div
+                    className="min-w-0"
+                    style={{ overflowX: 'clip', overflowY: 'visible' }}
+                  >
+                    <div
+                      className="flex w-full min-w-0 transition-transform duration-300 ease-out will-change-transform"
+                      style={{ transform: `translate3d(-${modelConfigPage * 100}%, 0, 0)` }}
+                    >
+                      {modelPages.map((page, pageIdx) => (
+                        <div
+                          key={pageIdx}
+                          className="min-w-0 max-w-full shrink-0 grow-0 basis-full"
+                        >
+                          <div
+                            className="grid w-full min-w-0 gap-3 sm:gap-4"
+                            style={{
+                              gridTemplateColumns: `repeat(${page.length}, minmax(0, 1fr))`,
+                            }}
+                          >
+                            {page.map((entry, i) => (
+                              <div
+                                key={`${entry.modelName}-${pageIdx * MODEL_DESKTOP_SLIDE_SIZE + i}`}
+                                className={`relative flex h-full min-h-0 min-w-0 flex-col ${
+                                  desktopWhatsappModel === entry.modelName ? 'z-30' : 'z-10'
+                                }`}
+                              >
+                                <div className="flex min-h-0 flex-1 flex-col">
+                                  <ModelConfigurationCard
+                                    entry={entry}
+                                    tr={tr}
+                                    specLabel={specLabel}
+                                    manyModels={false}
+                                    stretchHeight
+                                    onCardClick={() => toggleDesktopModelWhatsapp(entry.modelName)}
+                                    isCardExpanded={desktopWhatsappModel === entry.modelName}
+                                  />
+                                </div>
+                                <DesktopModelWhatsappSlide
+                                  open={desktopWhatsappModel === entry.modelName}
+                                  productTitle={product.title}
+                                  modelName={entry.modelName}
+                                  tr={tr}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="hidden w-full min-w-0 gap-3 sm:gap-4 lg:grid"
+                style={{
+                  gridTemplateColumns: `repeat(${modelEntries.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {modelEntries.map((entry, i) => (
+                  <div
+                    key={`${entry.modelName}-${i}`}
+                    className={`relative flex h-full min-h-0 min-w-0 flex-col ${
+                      desktopWhatsappModel === entry.modelName ? 'z-30' : 'z-10'
+                    }`}
+                  >
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      <ModelConfigurationCard
+                        entry={entry}
+                        tr={tr}
+                        specLabel={specLabel}
+                        manyModels={false}
+                        stretchHeight
+                        onCardClick={() => toggleDesktopModelWhatsapp(entry.modelName)}
+                        isCardExpanded={desktopWhatsappModel === entry.modelName}
+                      />
+                    </div>
+                    <DesktopModelWhatsappSlide
+                      open={desktopWhatsappModel === entry.modelName}
+                      productTitle={product.title}
+                      modelName={entry.modelName}
+                      tr={tr}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -362,7 +758,15 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                 className="h-5 w-auto max-w-full object-contain object-left mb-3"
               />
               <div className="mb-4">
-                <ProductPriceBlock product={product} lang={language.code as LangCode} />
+                {showResidentialClientPurchaseUI(product) ? (
+                  <ResidentialClientPriceBlock
+                    product={product}
+                    tr={productDetailTr}
+                    lang={language.code as LangCode}
+                  />
+                ) : (
+                  <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+                )}
               </div>
               {tr.contactBlurb.trim() ? (
                 <>
@@ -386,7 +790,11 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
         </section>
 
         <section className="mt-12 sm:mt-16 pt-10 sm:pt-12 border-t border-gray-100 pb-8 sm:pb-10">
-          <div className="flex flex-wrap gap-2 border-b border-neutral-200 pb-px" role="tablist" aria-label={tr.tablistAria}>
+          <div
+            className="flex flex-wrap justify-center gap-2 sm:gap-2.5 lg:justify-start lg:border-b lg:border-neutral-200 lg:pb-px"
+            role="tablist"
+            aria-label={tr.tablistAria}
+          >
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -394,10 +802,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                 role="tab"
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm sm:text-base font-semibold font-['Inter'] rounded-t-lg border-b-2 -mb-px transition-colors ${
+                className={`max-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] px-3 py-2.5 text-center text-xs font-semibold font-['Inter'] rounded-lg transition-all sm:px-4 sm:py-3 sm:text-sm lg:max-w-none lg:flex-none lg:basis-auto lg:rounded-t-lg lg:rounded-b-none lg:border-x-0 lg:border-t-0 lg:px-4 lg:py-3 lg:text-base lg:-mb-px ${
+                  tab.id === 'spec' ? 'max-lg:hidden ' : ''
+                }${
                   activeTab === tab.id
-                    ? 'border-slate-900 text-slate-900 bg-neutral-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-neutral-300'
+                    ? 'max-lg:border-2 max-lg:border-slate-900 max-lg:bg-[#f7f7f7] max-lg:text-slate-900 max-lg:shadow-md lg:border-b-2 lg:border-slate-900 lg:bg-neutral-50 lg:shadow-none'
+                    : 'max-lg:border max-lg:border-neutral-200 max-lg:bg-[#f7f7f7] max-lg:text-gray-600 max-lg:shadow-sm max-lg:hover:border-neutral-300 max-lg:hover:text-gray-900 lg:border-b-2 lg:border-transparent lg:bg-transparent lg:text-gray-500 lg:shadow-none lg:hover:border-neutral-300 lg:hover:text-gray-800'
                 }`}
               >
                 {tabLabel(tab.id)}
@@ -539,6 +949,65 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             )}
           </div>
         </section>
+
+        {mobileSpecModalEntry ? (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 backdrop-blur-[2px] lg:hidden"
+            onClick={() => setMobileSpecModalEntry(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="industrial-model-spec-sheet-title"
+          >
+            <div
+              className="relative flex max-h-[88vh] w-full max-w-[100vw] flex-col overflow-hidden rounded-t-[20px] bg-white shadow-2xl animate-slide-up-from-bottom"
+              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+                <div className="min-w-0 flex-1 pr-2">
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
+                    {specLabel('nominalEnergy')}
+                  </p>
+                  <h2
+                    id="industrial-model-spec-sheet-title"
+                    className="m-0 mt-1 break-words font-['Inter'] text-2xl font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums"
+                  >
+                    {String(mobileSpecModalEntry.specs.nominalEnergy ?? '').trim() || '—'}
+                  </h2>
+                  <p className="m-0 mt-2 break-words font-['Inter'] text-base font-semibold leading-snug text-slate-800">
+                    {mobileSpecModalEntry.modelName || '—'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileSpecModalEntry(null)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                  aria-label={productDetailTr.compatibilitateClose}
+                >
+                  <X size={22} strokeWidth={2} aria-hidden />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2">
+                <dl className="m-0">
+                  {INDUSTRIAL_SPEC_FIELDS.filter((field) => field.key !== 'nominalEnergy').map((field) => {
+                    const raw = (mobileSpecModalEntry.specs[field.key] ?? '').trim()
+                    const value = raw || '—'
+                    return (
+                      <div key={field.key} className="border-b border-neutral-100 py-3.5 last:border-b-0">
+                        <dt className="m-0 text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 font-['Inter'] sm:text-[13px]">
+                          {specLabel(field.key)}
+                        </dt>
+                        <dd className="m-0 mt-1.5 break-words text-base font-semibold leading-snug text-slate-900 font-['Inter'] sm:text-lg">
+                          {value}
+                        </dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </article>
     </>
   )

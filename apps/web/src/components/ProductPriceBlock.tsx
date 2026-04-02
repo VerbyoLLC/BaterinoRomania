@@ -66,11 +66,11 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
 
   if (!hasMoney) return null
 
-  const fmt = (n: number) =>
-    n.toLocaleString(lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO', {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-    })
+  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const fmtMoney = (n: number) =>
+    n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+  const fmtPct = (n: number) =>
+    n.toLocaleString(locale, { maximumFractionDigits: 2, minimumFractionDigits: 0 })
 
   const withVat =
     sale != null && vatPct != null ? sale * (1 + vatPct / 100) : null
@@ -86,27 +86,27 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
           <div className="flex justify-between gap-4 text-sm sm:text-base">
             <span className="text-gray-600">{tr.landedLabel}</span>
             <span className="font-semibold tabular-nums">
-              {fmt(landed)} {tr.currencySuffix}
+              {fmtMoney(landed)} {tr.currencySuffix}
             </span>
           </div>
         ) : null}
         <div className="flex justify-between gap-4 text-sm sm:text-base">
           <span className="text-gray-600">{tr.saleLabel}</span>
           <span className="font-semibold tabular-nums">
-            {fmt(sale!)} {tr.currencySuffix}
+            {fmtMoney(sale!)} {tr.currencySuffix}
           </span>
         </div>
         {vatPct != null ? (
           <div className="flex justify-between gap-4 text-sm sm:text-base">
             <span className="text-gray-600">{tr.vatLabel}</span>
-            <span className="font-semibold tabular-nums">{fmt(vatPct)}%</span>
+            <span className="font-semibold tabular-nums">{fmtPct(vatPct)}%</span>
           </div>
         ) : null}
         {withVat != null ? (
           <div className="flex justify-between gap-4 text-base sm:text-lg pt-2 border-t border-neutral-100">
             <span className="font-bold text-black">{tr.priceWithVatLabel}</span>
             <span className="font-bold tabular-nums">
-              {fmt(withVat)} {tr.currencySuffix}
+              {fmtMoney(withVat)} {tr.currencySuffix}
             </span>
           </div>
         ) : null}
@@ -132,12 +132,12 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
           embedded ? 'text-3xl sm:text-4xl' : 'text-2xl'
         }`}
       >
-        {fmt(sale!)}{' '}
+        {fmtMoney(sale!)}{' '}
         <span className={`font-semibold text-gray-600 ${embedded ? 'text-xl' : 'text-lg'}`}>{tr.currencySuffix}</span>
       </p>
       {vatPct != null && withVat != null ? (
         <p className={`m-0 mt-2 text-gray-500 ${embedded ? 'text-sm' : 'text-xs'}`}>
-          {tr.priceWithVatLabel}: {fmt(withVat)} {tr.currencySuffix}
+          {tr.priceWithVatLabel}: {fmtMoney(withVat)} {tr.currencySuffix}
         </p>
       ) : null}
     </div>

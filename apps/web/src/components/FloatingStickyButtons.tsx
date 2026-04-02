@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-const CONTACT_WHATSAPP = '40770106374'
+import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
 
 const WARNING_RISKS = [
   'Supraîncălzire și risc de incendiu',
@@ -87,7 +87,7 @@ export default function FloatingStickyButtons() {
             <div className="text-black text-lg font-bold font-['Inter'] text-center">Chat pe Whatsapp</div>
             <div className="text-black text-base font-normal font-['Inter'] text-center mt-4">Luni - Vineri | 8 AM - 8PM</div>
             <a
-              href={`https://wa.me/${CONTACT_WHATSAPP}`}
+              href={`https://wa.me/${CONTACT_WHATSAPP_WAME}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 w-full px-2.5 py-2.5 bg-slate-900 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-800 transition-colors"

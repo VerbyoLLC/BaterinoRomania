@@ -161,3 +161,11 @@ model Product {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+/** Telefon principal și WhatsApp per departament (admin). Chei: general | rezidential | industrial | medical | maritim */
+model DepartmentPhone {
+  department String   @id
+  phone      String   @default("")
+  whatsapp   String   @default("")
+  updatedAt  DateTime @updatedAt
+}
