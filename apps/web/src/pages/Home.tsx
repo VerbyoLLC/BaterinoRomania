@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 
 import { getHomeTranslations } from '../i18n/home'
 import { getProducts, getProductCardImageUrl, type PublicProduct } from '../lib/api'
+import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 
@@ -45,7 +46,7 @@ function HomeProductCardSkeleton() {
 
 /* ── Mini product card for featured products ─────────────────── */
 function HomeProductCard({
-  id, name, image, spec1, spec2, partneriButtonLabel,
+  id, name, image, spec1, spec2, partneriButtonLabel, tipProdus,
 }: {
   id: string
   name: string
@@ -53,21 +54,23 @@ function HomeProductCard({
   spec1: string
   spec2: string
   partneriButtonLabel: string
+  tipProdus?: 'rezidential' | 'industrial'
 }) {
   const [imgLoaded, setImgLoaded] = useState(false)
+  const detailState = { tipProdus: tipProdus ?? 'rezidential' }
   return (
-    <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 transition-shadow duration-300 hover:shadow-md">
-      <Link to={`/produse/${id}`} className="flex flex-col items-center w-full">
-        <div className="relative w-36 h-44 mb-5 flex items-center justify-center">
+    <div className="flex flex-col overflow-hidden rounded-[10px] bg-neutral-100 pt-[10px] pb-6 transition-shadow duration-300 hover:shadow-md">
+      <Link to={`/produse/${id}`} state={detailState} className="flex w-full flex-col items-center">
+        <div className="relative h-56 w-full overflow-hidden bg-neutral-100">
           {!imgLoaded && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <img src="/images/shared/baterino-logo-black.svg" alt="" className="w-24 h-12 object-contain opacity-30 animate-pulse" aria-hidden />
+              <img src="/images/shared/baterino-logo-black.svg" alt="" className="h-12 w-24 object-contain opacity-30 animate-pulse" aria-hidden />
             </div>
           )}
           <img
             src={image}
             alt={name}
-            className={`w-36 h-44 object-contain transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`h-full w-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none'
@@ -75,15 +78,16 @@ function HomeProductCard({
             }}
           />
         </div>
-        <h3 className="text-center text-black text-lg font-bold font-['Inter'] leading-snug mb-3">
+        <h3 className="mb-3 mt-6 px-6 text-center text-lg font-bold font-['Inter'] leading-snug text-black">
           {name}
         </h3>
-        <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6">{spec1}</p>
-        <p className="text-neutral-950 text-sm font-normal font-['Nunito_Sans'] leading-6 mb-4">{spec2}</p>
+        <p className="px-6 text-center text-sm font-normal font-['Nunito_Sans'] leading-6 text-neutral-950">{spec1}</p>
+        <p className="mb-4 px-6 text-center text-sm font-normal font-['Nunito_Sans'] leading-6 text-neutral-950">{spec2}</p>
       </Link>
       <Link
         to={`/produse/${id}`}
-        className="w-full max-w-[200px] py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide"
+        state={detailState}
+        className="mx-auto w-full max-w-[200px] py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide"
       >
         {partneriButtonLabel}
       </Link>
@@ -195,6 +199,13 @@ export default function Home() {
       .catch(() => setProducts([]))
       .finally(() => setProductsLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (products.length === 0) return
+    syncProductTipsFromList(
+      products.map((p) => ({ slug: p.slug, id: p.id, tipProdus: p.tipProdus })),
+    )
+  }, [products])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)
@@ -756,6 +767,7 @@ export default function Home() {
                   spec1={spec1}
                   spec2={spec2}
                   partneriButtonLabel={tr.disponibilPentruParteneri}
+                  tipProdus={p.tipProdus}
                 />
               )
             })

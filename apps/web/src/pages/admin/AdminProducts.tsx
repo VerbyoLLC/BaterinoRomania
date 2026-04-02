@@ -83,6 +83,11 @@ export default function AdminProducts() {
   const [landedPrice, setLandedPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
   const [vat, setVat] = useState('')
+  const [priceVisibility, setPriceVisibility] = useState<'hidden' | 'public' | 'partner_only'>('public')
+  const [pricePresentation, setPricePresentation] = useState<'simple' | 'detailed'>('simple')
+  const [seoTitle, setSeoTitle] = useState('')
+  const [seoDescription, setSeoDescription] = useState('')
+  const [seoOgImage, setSeoOgImage] = useState('')
   const [documenteTehnice, setDocumenteTehnice] = useState<{ descriere: string; file: File | null; url?: string }[]>([
     { descriere: '', file: null },
   ])
@@ -213,6 +218,15 @@ export default function AdminProducts() {
     setLandedPrice(land != null ? String(land).replace('.', ',') : '')
     setSalePrice(sale != null ? String(sale).replace('.', ',') : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
+    const pv = String((row as { priceVisibility?: string }).priceVisibility || 'public')
+    setPriceVisibility(
+      pv === 'hidden' || pv === 'partner_only' || pv === 'public' ? pv : 'public'
+    )
+    const pp = String((row as { pricePresentation?: string }).pricePresentation || 'simple')
+    setPricePresentation(pp === 'detailed' ? 'detailed' : 'simple')
+    setSeoTitle(String((row as { seoTitle?: string }).seoTitle || ''))
+    setSeoDescription(String((row as { seoDescription?: string }).seoDescription || ''))
+    setSeoOgImage(String((row as { seoOgImage?: string }).seoOgImage || ''))
     const imgs = Array.isArray(row.images) ? row.images : []
     setImages(imgs.map((url) => ({ file: null, preview: url, url })))
     const docs = (row as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice
@@ -287,6 +301,11 @@ export default function AdminProducts() {
     setLandedPrice('')
     setSalePrice('')
     setVat('')
+    setPriceVisibility('public')
+    setPricePresentation('simple')
+    setSeoTitle('')
+    setSeoDescription('')
+    setSeoOgImage('')
     setDocumenteTehnice([{ descriere: '', file: null }])
     setFaq([{ q: '', a: '' }])
     setAlimentaModalContent('')
@@ -672,9 +691,14 @@ export default function AdminProducts() {
       description: descriptionOut,
       tipProdus,
       categorie: [categorieRezidential && 'rezidential', categorieIndustrial && 'industrial', categorieMedical && 'medical', categorieMaritim && 'maritim'].filter(Boolean).join(',') || undefined,
-      landedPrice: carouselTemplate ? '0' : parseFormattedNumber(landedPrice) || '0',
-      salePrice: carouselTemplate ? '0' : parseFormattedNumber(salePrice) || '0',
-      vat: carouselTemplate ? '19' : parseFormattedNumber(vat) || '19',
+      priceVisibility,
+      pricePresentation,
+      seoTitle: seoTitle.trim() || null,
+      seoDescription: seoDescription.trim() || null,
+      seoOgImage: seoOgImage.trim() || null,
+      landedPrice: parseFormattedNumber(landedPrice) || '0',
+      salePrice: parseFormattedNumber(salePrice) || '0',
+      vat: parseFormattedNumber(vat) || '19',
       energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
       capacitate: carouselTemplate ? undefined : capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
       curentMaxDescarcare: carouselTemplate ? undefined : curentMaxDescarcare ? `${parseFormattedNumber(curentMaxDescarcare)} A` : undefined,
@@ -1220,10 +1244,91 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Price Section */}
-              {tipProdus === 'rezidential' && (
+              {/* SEO — meta pagină produs (/produse/:slug) */}
+              <div className="pt-2 border-t border-gray-200">
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-2">SEO (Google / social)</h3>
+                <p className="text-xs text-gray-500 mb-4 font-['Inter']">
+                  Lasă gol pentru generare automată din titlu și descriere / overview. „Titlu SEO” este doar pentru &lt;title&gt; și Open Graph; pe site rămâne titlul produsului.
+                </p>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label htmlFor="product-seo-title" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Titlu SEO (opțional)
+                    </label>
+                    <input
+                      id="product-seo-title"
+                      type="text"
+                      value={seoTitle}
+                      onChange={(e) => setSeoTitle(e.target.value)}
+                      placeholder="Ex: Baterie rezidențială 5 kWh LiFePO4 — Baterino"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="product-seo-description" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Meta descriere (opțional)
+                    </label>
+                    <textarea
+                      id="product-seo-description"
+                      value={seoDescription}
+                      onChange={(e) => setSeoDescription(e.target.value)}
+                      placeholder="Rezumat pentru rezultatele de căutare și share-uri (recomandat ~150–170 caractere)."
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="product-seo-og-image" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Imagine Open Graph (URL opțional)
+                    </label>
+                    <input
+                      id="product-seo-og-image"
+                      type="url"
+                      value={seoOgImage}
+                      onChange={(e) => setSeoOgImage(e.target.value)}
+                      placeholder="https://… sau /images/…"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Section (rezidențial + industrial) */}
               <div className="pt-2 border-t border-gray-200">
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Preț</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 mb-4">
+                  <div>
+                    <label htmlFor="product-price-visibility" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Vizibilitate preț (site public)
+                    </label>
+                    <select
+                      id="product-price-visibility"
+                      value={priceVisibility}
+                      onChange={(e) =>
+                        setPriceVisibility(e.target.value as 'hidden' | 'public' | 'partner_only')
+                      }
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    >
+                      <option value="public">Public (toți vizitatorii)</option>
+                      <option value="partner_only">Doar parteneri (autentificați)</option>
+                      <option value="hidden">Ascuns pe pagină (vizibil partenerilor în cont)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="product-price-presentation" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Afișare preț pe pagina produsului
+                    </label>
+                    <select
+                      id="product-price-presentation"
+                      value={pricePresentation}
+                      onChange={(e) => setPricePresentation(e.target.value as 'simple' | 'detailed')}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    >
+                      <option value="simple">Simplu (preț + TVA)</option>
+                      <option value="detailed">Detaliat (aterizat, preț, TVA, total)</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                   <div>
                     <label htmlFor="product-landed-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
@@ -1269,7 +1374,6 @@ export default function AdminProducts() {
                   </div>
                 </div>
               </div>
-              )}
 
               {/* Detalii tehnice produs */}
               {tipProdus === 'rezidential' && (

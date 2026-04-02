@@ -47,13 +47,22 @@ export type PublicProduct = {
   description?: string | null
   subtitle?: string | null
   overview?: string | null
+  seoTitle?: string | null
+  seoDescription?: string | null
+  seoOgImage?: string | null
   cardImage?: string | null
   keyAdvantages?: { title: string; image: string }[]
   faq?: { q: string; a: string }[]
   documenteTehnice?: { descriere: string; url: string }[]
   technicalSpecsModels?: CreateProductPayload['technicalSpecsModels']
   images: string[]
-  salePrice: string | number
+  salePrice?: string | number | null
+  landedPrice?: string | number | null
+  vat?: string | number | null
+  /** hidden | public | partner_only */
+  priceVisibility?: 'hidden' | 'public' | 'partner_only'
+  /** simple | detailed (UI only) */
+  pricePresentation?: 'simple' | 'detailed'
   tensiuneNominala?: string | null
   capacitate?: string | null
   compozitie?: string | null
@@ -66,7 +75,7 @@ export type PublicProduct = {
 
 /** Lista produselor publicate (fără auth) */
 export async function getProducts(): Promise<PublicProduct[]> {
-  const res = await fetch(`${API_BASE}/products`)
+  const res = await fetch(`${API_BASE}/products`, { headers: publicFetchHeaders() })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la încărcare.')
   return Array.isArray(json) ? json : []
@@ -74,7 +83,9 @@ export async function getProducts(): Promise<PublicProduct[]> {
 
 /** Un singur produs publicat (fără auth). Acceptă id sau slug pentru SEO. */
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
-  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`)
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
+    headers: publicFetchHeaders(),
+  })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
   return json
@@ -178,6 +189,26 @@ export function setAuthToken(token: string) {
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
+}
+
+export function getAuthRole(): 'admin' | 'client' | 'partener' | null {
+  const token = getAuthToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1])) as { role?: string }
+    const r = payload.role
+    if (r === 'admin' || r === 'client' || r === 'partener') return r
+    return null
+  } catch {
+    return null
+  }
+}
+
+function publicFetchHeaders(): HeadersInit {
+  const h: Record<string, string> = {}
+  const token = getAuthToken()
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
 /** Extrage email-ul din token (pentru afișare). Returnează null dacă token invalid/lipsă. */
@@ -358,9 +389,14 @@ export type CreateProductPayload = {
   description?: string
   subtitle?: string
   overview?: string
+  seoTitle?: string | null
+  seoDescription?: string | null
+  seoOgImage?: string | null
   keyAdvantages?: { title: string; image: string }[]
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string
+  priceVisibility?: 'hidden' | 'public' | 'partner_only'
+  pricePresentation?: 'simple' | 'detailed'
   landedPrice: string | number
   salePrice: string | number
   vat: string | number

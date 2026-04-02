@@ -110,13 +110,21 @@ model Product {
   description           String?
   subtitle              String?  // short line under hero title (rezidential / industrial layout)
   overview              String?  @db.Text // overview section body (rezidential industrial-style page)
+  /** Optional SEO overrides for /produse/:slug (empty = derive from title/description/overview) */
+  seoTitle              String?
+  seoDescription        String?  @db.Text
+  seoOgImage            String? // absolute or site-relative image URL for Open Graph
   tipProdus             String   // "rezidential" = pagină clasică (specificații, preț) | "industrial" = șablon carousel (overview, avantaje)
   categorie             String?  // comma-separated: "rezidential,industrial,medical,maritim"
 
-  // Price
+  // Price (may be redacted in public API for guests when priceVisibility ≠ public)
   landedPrice           Decimal  @db.Decimal(12, 2)
   salePrice             Decimal  @db.Decimal(12, 2)
   vat                   Decimal  @db.Decimal(5, 2)
+  /** hidden | public | partner_only */
+  priceVisibility       String   @default("public")
+  /** simple | detailed — UI only; does not affect SEO */
+  pricePresentation     String   @default("simple")
 
   // Technical details
   energieNominala       String?
