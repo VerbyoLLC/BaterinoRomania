@@ -1,38 +1,70 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
 import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 import { getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import { ReduceriProgramCard } from './reduceri/ReduceriProgramCard'
+import { ReduceriProgramCardSkeleton } from './reduceri/ReduceriProgramCardSkeleton'
 
 function rowToProgram(p: ReducereProgramRow): ReducereProgram {
   const { id: _id, locale: _loc, sortOrder: _so, ...rest } = p
   return rest
 }
 
+function normProgramLabel(s: string): string {
+  return s.replace(/^PROGRAMUL\s*/i, '').trim().toLowerCase()
+}
+
+function matchDiscountOptionId(
+  program: ReducereProgram,
+  options: { id: string; programLabel: string; discountPercent: number }[],
+): string | null {
+  const pct = program.discountPercent
+  if (pct == null || !Number.isFinite(Number(pct))) return null
+  const pl = normProgramLabel(program.programLabel)
+  const exact = options.find(
+    (o) => normProgramLabel(o.programLabel) === pl && o.discountPercent === pct,
+  )
+  if (exact) return exact.id
+  const samePct = options.filter((o) => o.discountPercent === pct)
+  if (samePct.length === 1) return samePct[0].id
+  return null
+}
+
+const SKELETON_COUNT = 4
+
+type ApplyMode = {
+  discountOptions: { id: string; programLabel: string; discountPercent: number }[]
+  onApply: (id: string) => void
+  applyLabel: string
+}
+
 type Props = {
   lang: LangCode
   onClose: () => void
   closeLabel: string
-  seeFullPageLabel: string
+  applyMode?: ApplyMode
 }
 
-export default function ReduceriProgramsModal({ lang, onClose, closeLabel, seeFullPageLabel }: Props) {
+export default function ReduceriProgramsModal({ lang, onClose, closeLabel, applyMode }: Props) {
   const reduceriTr = getReduceriTranslations(lang)
-  const [apiPrograms, setApiPrograms] = useState<ReducereProgram[] | null>(null)
-  const programs = apiPrograms ?? reduceriTr.programs
+  const [programs, setPrograms] = useState<ReducereProgram[] | null>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
+  const loading = programs === null
+
   useEffect(() => {
     let cancelled = false
+    setPrograms(null)
+    const fallback = getReduceriTranslations(lang).programs
     getPublicReducerePrograms(lang)
       .then((rows) => {
-        if (!cancelled) setApiPrograms(rows.length > 0 ? rows.map(rowToProgram) : null)
+        if (cancelled) return
+        setPrograms(rows.length > 0 ? rows.map(rowToProgram) : fallback)
       })
       .catch(() => {
-        if (!cancelled) setApiPrograms(null)
+        if (!cancelled) setPrograms(fallback)
       })
     return () => {
       cancelled = true
@@ -55,64 +87,90 @@ export default function ReduceriProgramsModal({ lang, onClose, closeLabel, seeFu
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  const modal = (
-    <div
-      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm"
-      onClick={onClose}
+  const panel = (
+    <article
       role="dialog"
       aria-modal="true"
       aria-labelledby="reduceri-programs-modal-title"
+      aria-busy={loading}
+      className="box-border w-full max-w-[min(100%,calc(21rem+5rem))] bg-white shadow-2xl sm:max-w-[min(100%,calc(42rem+1.25rem+5rem))]"
+      style={{ borderRadius: 10, overflow: 'hidden' }}
+      onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="relative w-full max-w-[min(90rem,calc(100vw-1rem))] max-h-[92vh] sm:max-h-[90vh] bg-white rounded-t-[20px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 sm:p-6 border-b border-neutral-100 bg-white">
+      <header className="relative border-b border-neutral-100 px-[40px] pb-6 pt-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[40px] top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+          aria-label={closeLabel}
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="pr-12 text-center sm:pr-14">
           <h2
             id="reduceri-programs-modal-title"
-            className="text-black text-lg sm:text-2xl font-bold font-['Inter'] leading-tight min-w-0 pr-2"
+            className="break-words font-['Inter'] text-lg font-bold leading-tight text-black sm:text-2xl"
           >
             {reduceriTr.heroTitle}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
-            aria-label={closeLabel}
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 sm:pb-8">
-          <p className="text-gray-600 text-sm sm:text-base font-['Inter'] leading-relaxed max-w-3xl mb-5 sm:mb-6">
+          <p className="mt-2 font-['Inter'] text-sm leading-relaxed text-gray-600 sm:mt-3 sm:text-base">
             {reduceriTr.heroSubtitle}
           </p>
-
-          <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] lg:snap-none lg:overflow-visible lg:gap-4">
-            {programs.map((program, i) => (
-              <div
-                key={`${program.programLabel}-${i}`}
-                className="min-w-[min(100%,17.5rem)] max-w-[17.5rem] shrink-0 snap-center sm:min-w-[18rem] sm:max-w-[18rem] lg:min-w-0 lg:max-w-none lg:flex-1 lg:shrink"
-              >
-                <ReduceriProgramCard program={program} hideCta />
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 pt-2 border-t border-neutral-100">
-            <Link
-              to="/reduceri"
-              onClick={onClose}
-              className="inline-flex justify-center items-center min-h-12 px-6 rounded-xl bg-slate-900 text-white text-sm font-semibold font-['Inter'] hover:bg-slate-800 transition-colors"
-            >
-              {seeFullPageLabel}
-            </Link>
-          </div>
         </div>
+      </header>
+
+      <div className="p-[40px]">
+        <div
+          className="grid grid-cols-1 justify-items-center gap-[20px] sm:grid-cols-2"
+          aria-live={loading ? 'polite' : undefined}
+        >
+          {loading
+            ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
+                <div key={`sk-${i}`} className="flex w-full max-w-[21rem] flex-col">
+                  <ReduceriProgramCardSkeleton />
+                </div>
+              ))
+            : (programs ?? []).map((program, i) => {
+                const optionId = applyMode
+                  ? matchDiscountOptionId(program, applyMode.discountOptions)
+                  : null
+                const hoverApply =
+                  applyMode && optionId
+                    ? {
+                        label: applyMode.applyLabel,
+                        onApply: () => {
+                          applyMode.onApply(optionId)
+                          onClose()
+                        },
+                      }
+                    : undefined
+
+                return (
+                  <div key={`${program.programLabel}-${i}`} className="flex w-full max-w-[21rem] flex-col">
+                    <ReduceriProgramCard
+                      program={program}
+                      hideCta
+                      selectable={false}
+                      selected={false}
+                      hoverApply={hoverApply}
+                    />
+                  </div>
+                )
+              })}
+        </div>
+      </div>
+    </article>
+  )
+
+  const modal = (
+    <div
+      className="fixed inset-0 z-[80] overflow-y-auto overflow-x-hidden overscroll-contain bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div className="flex min-h-full items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
+        {panel}
       </div>
     </div>
   )

@@ -2,78 +2,19 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getProduseTranslations } from '../i18n/produse'
-import { getProducts, getProductCardImageUrl, type PublicProduct } from '../lib/api'
+import {
+  getProducts,
+  getProductCardImageUrl,
+  getCatalogProductSpecLines,
+  type PublicProduct,
+} from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
-
-/* ── Skeleton card for loading state ───────────────────────────── */
-function ProductCardSkeleton() {
-  return (
-    <div className="flex flex-col overflow-hidden rounded-[10px] bg-neutral-100 pt-[10px] pb-8 animate-pulse">
-      <div className="h-56 w-full overflow-hidden bg-neutral-100">
-        <div className="flex h-full w-full items-center justify-center">
-          <img src="/images/shared/baterino-logo-black.svg" alt="" className="h-14 w-28 object-contain opacity-30" aria-hidden />
-        </div>
-      </div>
-      <div className="mx-auto mt-4 h-5 w-48 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
-      <div className="mx-auto mt-3 h-4 w-56 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
-      <div className="mx-auto mt-2 h-4 w-52 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
-      <div className="mx-auto mt-8 h-9 w-40 max-w-[220px] rounded bg-neutral-200" />
-    </div>
-  )
-}
-
-/* ── Product card — same style as before ───────────────────────── */
-function ProductCard({ product, partneriButtonLabel }: {
-  product: PublicProduct
-  partneriButtonLabel: string
-}) {
-  const img = getProductCardImageUrl(product)
-  const conectivitate = [
-    product.conectivitateWifi && 'WiFi',
-    product.conectivitateBluetooth && 'Bluetooth',
-  ].filter(Boolean).join(' • ') || '—'
-  const spec1 = [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' • ') || '—'
-  const spec2 = [product.cicluriDescarcare, conectivitate].filter(Boolean).join(' • ') || '—'
-
-  return (
-    <div className="flex flex-col overflow-hidden rounded-[10px] bg-neutral-100 pt-[10px] pb-8 transition-shadow duration-300 hover:shadow-md">
-      <Link
-        to={`/produse/${product.slug || product.id}`}
-        state={{ tipProdus: product.tipProdus }}
-        className="flex w-full flex-col items-center"
-      >
-        <div className="h-56 w-full overflow-hidden bg-neutral-100">
-          <img
-            src={img}
-            alt={product.title}
-            className="h-full w-full object-cover object-center"
-          />
-        </div>
-
-        <h3 className="mt-4 w-full max-w-full px-4 text-center text-xl font-bold font-['Inter'] text-black leading-6">
-          {product.title}
-        </h3>
-
-        <p className="mt-1.5 text-center text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight text-neutral-950">
-          {spec1}
-        </p>
-
-        <p className="text-center text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight text-neutral-950">
-          {spec2}
-        </p>
-      </Link>
-
-      <Link
-        to={`/produse/${product.slug || product.id}`}
-        state={{ tipProdus: product.tipProdus }}
-        className="mx-auto mt-8 w-full max-w-[220px] py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide"
-      >
-        {partneriButtonLabel}
-      </Link>
-    </div>
-  )
-}
+import {
+  CatalogProductCardSkeleton,
+  IndustrialCatalogProductCard,
+  ResidentialCatalogProductCard,
+} from '../components/product/CatalogProductCard'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
@@ -244,18 +185,32 @@ export default function Produse() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <CatalogProductCardSkeleton key={i} />
             ))}
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                partneriButtonLabel={tr.disponibilPentruParteneri}
-              />
-            ))}
+            {filtered.map((product) => {
+              const img = getProductCardImageUrl(product)
+              const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
+              const props = {
+                density: 'produse' as const,
+                imageSrc: img,
+                imageAlt: product.title,
+                title: product.title,
+                specLine1,
+                specLine2,
+                to: `/produse/${product.slug || product.id}`,
+                linkState: { tipProdus: product.tipProdus },
+                ctaLabel: tr.disponibilPentruParteneri,
+              }
+              const industrialSubtitle = String(product.subtitle || '').trim() || undefined
+              return product.tipProdus === 'industrial' ? (
+                <IndustrialCatalogProductCard key={product.id} {...props} subtitle={industrialSubtitle} />
+              ) : (
+                <ResidentialCatalogProductCard key={product.id} {...props} />
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-24 text-gray-600 font-['Inter'] text-base">

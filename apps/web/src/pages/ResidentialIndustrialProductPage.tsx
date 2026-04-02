@@ -16,11 +16,13 @@ import {
   X,
 } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
+import { IndustrialDesktopWhatsappSlide } from '../components/product/IndustrialDesktopWhatsappSlide'
+import {
+  IndustrialModelConfigurationCard,
+  IndustrialModelConfigurationSheetHeader,
+} from '../components/product/IndustrialModelConfigurationCard'
 import { IndustrialCarouselSlideImage } from '../components/product/ProductPageLoaders'
 import IndustrialTechnicalSpecTable from '../components/IndustrialTechnicalSpecTable'
-import { WhatsAppGlyph } from '../components/WhatsAppGlyph'
-import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
-import { useIndustrialDepartmentContacts } from '../hooks/useIndustrialDepartmentContacts'
 import {
   INDUSTRIAL_SPEC_FIELDS,
   normalizeIndustrialTechnicalSpecs,
@@ -34,10 +36,7 @@ import { getProductDetailTranslations } from '../i18n/product-detail'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
 import { useLanguage } from '../contexts/LanguageContext'
-import {
-  getIndustrialBessTemplateTranslations,
-  type IndustrialBessTemplateTranslations,
-} from '../i18n/industrial-bess-template'
+import { getIndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
 import {
   INDUSTRIAL_BREADCRUMB_NAV_CLASS,
   INDUSTRIAL_PRODUCT_ARTICLE_CLASS,
@@ -75,152 +74,6 @@ function chunkModelEntries<T>(arr: T[], size: number): T[][] {
   return chunks
 }
 
-function DesktopModelWhatsappSlide({
-  open,
-  productTitle,
-  modelName,
-  tr,
-  waMeDigits = CONTACT_WHATSAPP_WAME,
-}: {
-  open: boolean
-  productTitle: string
-  modelName: string
-  tr: IndustrialBessTemplateTranslations
-  /** Cifre pentru wa.me — din admin, departament industrial */
-  waMeDigits?: string
-}) {
-  const prefill = tr.modelDesktopWhatsappPrefill
-    .replace(/\{product\}/g, productTitle.trim() || '—')
-    .replace(/\{model\}/g, modelName.trim() || '—')
-  const href = `https://wa.me/${waMeDigits}?text=${encodeURIComponent(prefill)}`
-  return (
-    <div
-      className={`absolute left-0 right-0 top-full z-50 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
-        open
-          ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
-          : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
-      }`}
-    >
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="relative z-10 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
-      >
-        <WhatsAppGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
-        {tr.modelDesktopDetailsCta}
-      </a>
-    </div>
-  )
-}
-
-function ModelConfigurationCard({
-  entry,
-  tr,
-  specLabel,
-  manyModels,
-  onPress,
-  /** Desktop: expands WhatsApp row; mutually exclusive with mobile onPress in practice */
-  onCardClick,
-  isCardExpanded,
-  /** Desktop slider: fill cell height so all cards align */
-  stretchHeight,
-}: {
-  entry: IndustrialModelSpecEntry
-  tr: IndustrialBessTemplateTranslations
-  specLabel: (key: string) => string
-  manyModels: boolean
-  /** Mobile: opens full spec sheet */
-  onPress?: () => void
-  onCardClick?: () => void
-  isCardExpanded?: boolean
-  stretchHeight?: boolean
-}) {
-  const nominalEnergyVal = String(entry.specs.nominalEnergy ?? '').trim() || '—'
-  const detailCells = [
-    { label: tr.modelLabel, value: entry.modelName },
-    { label: specLabel('nominalVoltage'), value: String(entry.specs.nominalVoltage ?? '').trim() || '—' },
-    { label: specLabel('maxOutputPower'), value: String(entry.specs.maxOutputPower ?? '').trim() || '—' },
-    { label: specLabel('cycleLife'), value: String(entry.specs.cycleLife ?? '').trim() || '—' },
-  ] as const
-  const pressableClass =
-    'cursor-pointer touch-manipulation text-left active:scale-[0.995] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2'
-
-  const shellClass = `flex min-h-0 min-w-0 w-full flex-col rounded-[10px] border border-neutral-200 bg-white shadow-sm transition-all duration-200 ease-out ${
-    stretchHeight ? 'h-full' : ''
-  } ${
-    onPress || onCardClick ? pressableClass : 'hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8'
-  } ${onCardClick && isCardExpanded ? 'border-slate-900 ring-1 ring-slate-900/15' : ''} ${
-    manyModels ? 'px-3 py-3 sm:px-3 sm:py-3.5' : 'px-4 py-4'
-  }`
-
-  const inner = (
-    <>
-      <div
-        className={`rounded-lg border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white ${
-          manyModels ? 'px-2.5 py-2.5 sm:px-3 sm:py-3' : 'px-3 py-3 sm:px-3.5 sm:py-3.5'
-        } ${
-          stretchHeight
-            ? 'flex min-h-[6.25rem] shrink-0 flex-col justify-center sm:min-h-[6.75rem]'
-            : ''
-        }`}
-      >
-        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 font-['Inter'] sm:text-xs">
-          {specLabel('nominalEnergy')}
-        </p>
-        <p
-          className={`m-0 mt-1.5 min-w-0 font-extrabold font-['Inter'] tracking-tight text-slate-900 leading-tight tabular-nums break-words ${
-            manyModels ? 'text-lg sm:text-xl' : 'text-2xl sm:text-[26px] leading-none'
-          }`}
-        >
-          {nominalEnergyVal}
-        </p>
-      </div>
-      <div
-        className={`mt-4 grid min-h-0 w-full grid-cols-2 gap-x-3 gap-y-4 ${stretchHeight ? 'min-h-0 flex-1 content-start' : ''}`}
-      >
-        {detailCells.map((cell, j) => (
-          <div key={`${cell.label}-${j}`} className="min-w-0">
-            <p className="m-0 text-xs font-medium text-neutral-500 font-['Inter'] leading-tight sm:text-[13px]">
-              {cell.label}
-            </p>
-            <p
-              className={`m-0 mt-1 font-semibold text-neutral-900 font-['Inter'] leading-snug break-words ${
-                manyModels ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
-              }`}
-            >
-              {cell.value}
-            </p>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-
-  if (onPress) {
-    return (
-      <button type="button" className={shellClass} onClick={onPress}>
-        {inner}
-      </button>
-    )
-  }
-
-  if (onCardClick) {
-    return (
-      <button
-        type="button"
-        className={shellClass}
-        onClick={onCardClick}
-        aria-expanded={Boolean(isCardExpanded)}
-      >
-        {inner}
-      </button>
-    )
-  }
-
-  return <div className={shellClass}>{inner}</div>
-}
-
 const SERVICE_ICONS = ['/images/shared/delivery-icon.svg', '/images/shared/instalare-icon.svg', '/images/shared/maintance-icon.svg'] as const
 const WARRANTY_ICONS = [ShieldCheck, Headset, Package, BookOpen] as const
 
@@ -234,8 +87,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const { language } = useLanguage()
   const tr = getIndustrialBessTemplateTranslations(language.code)
   const productDetailTr = getProductDetailTranslations(language.code)
-  const { whatsappWaMeDigits: industrialWhatsappDigits, phoneDisplay, phoneTelHref } =
-    useIndustrialDepartmentContacts()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [activeTab, setActiveTab] = useState<TabId>('advantages')
 
@@ -579,7 +430,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             <div className="lg:hidden">
               <div className="flex w-full min-w-0 flex-col gap-3">
                 {modelEntries.slice(0, mobileModelsVisible).map((entry, i) => (
-                  <ModelConfigurationCard
+                  <IndustrialModelConfigurationCard
                     key={`${entry.modelName}-mobile-${i}`}
                     entry={entry}
                     tr={tr}
@@ -654,7 +505,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                 }`}
                               >
                                 <div className="flex min-h-0 flex-1 flex-col">
-                                  <ModelConfigurationCard
+                                  <IndustrialModelConfigurationCard
                                     entry={entry}
                                     tr={tr}
                                     specLabel={specLabel}
@@ -664,12 +515,11 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                     isCardExpanded={desktopWhatsappModel === entry.modelName}
                                   />
                                 </div>
-                                <DesktopModelWhatsappSlide
+                                <IndustrialDesktopWhatsappSlide
                                   open={desktopWhatsappModel === entry.modelName}
                                   productTitle={product.title}
                                   modelName={entry.modelName}
                                   tr={tr}
-                                  waMeDigits={industrialWhatsappDigits}
                                 />
                               </div>
                             ))}
@@ -695,7 +545,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     }`}
                   >
                     <div className="flex min-h-0 flex-1 flex-col">
-                      <ModelConfigurationCard
+                      <IndustrialModelConfigurationCard
                         entry={entry}
                         tr={tr}
                         specLabel={specLabel}
@@ -705,12 +555,11 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                         isCardExpanded={desktopWhatsappModel === entry.modelName}
                       />
                     </div>
-                    <DesktopModelWhatsappSlide
+                    <IndustrialDesktopWhatsappSlide
                       open={desktopWhatsappModel === entry.modelName}
                       productTitle={product.title}
                       modelName={entry.modelName}
                       tr={tr}
-                      waMeDigits={industrialWhatsappDigits}
                     />
                   </div>
                 ))}
@@ -778,25 +627,13 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                   {tr.contactTitle}
                 </p>
               )}
-              <div className="flex flex-col gap-2">
-                <a
-                  href={`tel:${phoneTelHref}`}
-                  aria-label={tr.contactCta}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-slate-800 transition-colors shadow-sm"
-                >
-                  <Phone size={18} aria-hidden />
-                  <span className="min-w-0 truncate">{phoneDisplay}</span>
-                </a>
-                <a
-                  href={`https://wa.me/${industrialWhatsappDigits}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-white text-slate-900 px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-neutral-50 transition-colors shadow-sm"
-                >
-                  <WhatsAppGlyph className="h-[18px] w-[18px] shrink-0 text-slate-900" />
-                  {tr.contactWhatsappCta}
-                </a>
-              </div>
+              <Link
+                to="/contact"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-slate-800 transition-colors shadow-sm"
+              >
+                <Phone size={18} aria-hidden />
+                {tr.contactCta}
+              </Link>
             </div>
           </div>
         </section>
@@ -976,20 +813,11 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                <div className="min-w-0 flex-1 pr-2">
-                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
-                    {specLabel('nominalEnergy')}
-                  </p>
-                  <h2
-                    id="industrial-model-spec-sheet-title"
-                    className="m-0 mt-1 break-words font-['Inter'] text-2xl font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums"
-                  >
-                    {String(mobileSpecModalEntry.specs.nominalEnergy ?? '').trim() || '—'}
-                  </h2>
-                  <p className="m-0 mt-2 break-words font-['Inter'] text-base font-semibold leading-snug text-slate-800">
-                    {mobileSpecModalEntry.modelName || '—'}
-                  </p>
-                </div>
+                <IndustrialModelConfigurationSheetHeader
+                  entry={mobileSpecModalEntry}
+                  specLabel={specLabel}
+                  titleId="industrial-model-spec-sheet-title"
+                />
                 <button
                   type="button"
                   onClick={() => setMobileSpecModalEntry(null)}

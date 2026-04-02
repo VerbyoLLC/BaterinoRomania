@@ -119,3 +119,38 @@ export function normalizeIndustrialTechnicalSpecs(raw: unknown): IndustrialTechn
 
   return null
 }
+
+const SPEC_KEY_SET = new Set(INDUSTRIAL_SPEC_FIELDS.map((f) => f.key))
+
+/** One table column per model (`cells`) or merged row (`merged`) — static template & similar shapes. */
+export type IndustrialTemplateSpecRow =
+  | { key: string; merged: string }
+  | { key: string; cells: readonly string[] }
+
+/** Build {@link IndustrialModelSpecEntry} list from rows that include a `model` row with `cells`. */
+export function industrialEntriesFromTemplateRows(rows: IndustrialTemplateSpecRow[]): IndustrialModelSpecEntry[] {
+  const modelRow = rows.find(
+    (r): r is { key: string; cells: readonly string[] } =>
+      r.key === 'model' && 'cells' in r && Array.isArray(r.cells),
+  )
+  if (!modelRow?.cells.length) return []
+
+  const cols = modelRow.cells.length
+  const entries: IndustrialModelSpecEntry[] = []
+
+  for (let colIdx = 0; colIdx < cols; colIdx++) {
+    const modelName = String(modelRow.cells[colIdx] ?? '').trim()
+    const specs = emptySpecsRecord()
+    for (const row of rows) {
+      if (row.key === 'model') continue
+      if (!SPEC_KEY_SET.has(row.key)) continue
+      if ('merged' in row) {
+        specs[row.key] = row.merged
+      } else {
+        specs[row.key] = String(row.cells[colIdx] ?? '')
+      }
+    }
+    entries.push({ modelName, specs })
+  }
+  return entries
+}

@@ -10,6 +10,7 @@ import { getReduceriTranslations } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import ReduceriProgramsModal from './ReduceriProgramsModal'
+import ResidentialMobileDiscountModals from './ResidentialMobileDiscountModals'
 
 function num(v: string | number | null | undefined): number | null {
   if (v == null) return null
@@ -62,6 +63,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   )
   const [discountProgramId, setDiscountProgramId] = useState<string>('none')
   const [showReduceriModal, setShowReduceriModal] = useState(false)
+  const [mobileDiscountPickOpen, setMobileDiscountPickOpen] = useState(false)
+  const [mobileDiscountDetailId, setMobileDiscountDetailId] = useState<string | null>(null)
+  const [mobilePickDraftId, setMobilePickDraftId] = useState<string>('none')
   /** Doar utilizatorul „client” poate plasa cu reducere; altfel afișăm COMANDĂ CU CONT. */
   const [isClientUser, setIsClientUser] = useState(() =>
     typeof window !== 'undefined' ? getAuthRole() === 'client' : false,
@@ -159,10 +163,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
           <div className="flex w-full flex-col gap-2 sm:w-fit sm:shrink-0">
-            <span className="m-0 block text-xs font-semibold uppercase leading-tight text-gray-700 sm:flex sm:min-h-[2.5rem] sm:items-end sm:text-left">
+            <span className="text-sm font-semibold uppercase leading-tight text-gray-700 sm:text-left">
               {tr.cantitateLabel}
             </span>
-            <div className="flex w-full min-h-[3.75rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3">
+            <div className="flex w-full min-h-[3.25rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3">
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -171,7 +175,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               >
                 <Minus className="h-5 w-5 sm:h-3 sm:w-3" strokeWidth={3} aria-hidden />
               </button>
-              <span className="min-w-0 flex-1 text-center text-lg font-semibold tabular-nums text-gray-900 sm:w-6 sm:flex-none sm:text-xs">
+              <span className="min-w-0 flex-1 text-center text-lg font-semibold tabular-nums text-gray-900 sm:w-6 sm:flex-none sm:text-sm">
                 {qty}
               </span>
               <button
@@ -185,44 +189,68 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <label
-              htmlFor="res-discount-program"
-              className="m-0 block text-xs font-semibold uppercase leading-tight text-gray-700 sm:flex sm:min-h-[2.5rem] sm:items-end"
-            >
-              {tr.alegeProgramReduceri}
-            </label>
-            <div className="relative">
-              <select
-                id="res-discount-program"
-                value={discountProgramId}
-                onChange={(e) => setDiscountProgramId(e.target.value)}
-                className={`w-full appearance-none min-h-[2.75rem] rounded-lg py-2 pl-2.5 pr-11 text-xs text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-offset-0 sm:py-3 max-sm:min-h-[3.75rem] max-sm:rounded-xl max-sm:py-4 max-sm:pl-4 max-sm:pr-12 max-sm:text-base max-sm:font-semibold ${
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="text-sm font-semibold uppercase leading-tight text-gray-700">{tr.alegeProgramReduceri}</div>
+            <div className="hidden sm:block">
+              <div className="relative">
+                <select
+                  id="res-discount-program"
+                  aria-label={tr.alegeProgramReduceri}
+                  value={discountProgramId}
+                  onChange={(e) => setDiscountProgramId(e.target.value)}
+                  className={`w-full min-h-[3.5rem] appearance-none rounded-lg border border-gray-300 bg-white py-3 pl-2.5 pr-11 text-sm font-medium text-gray-700 box-border focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-slate-900 ${
+                    hasProgramDiscount ? 'border-green-300 bg-green-50 focus:ring-green-500' : ''
+                  }`}
+                >
+                  <option value="none">{tr.faraReducere}</option>
+                  {discountOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReduceriModal(true)}
+                className="mt-2 w-full border-0 bg-transparent p-0 text-left font-['Inter'] text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700"
+              >
+                {tr.veziProgrameReduceri}
+              </button>
+            </div>
+            <div className="sm:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobilePickDraftId(discountProgramId)
+                  setMobileDiscountDetailId(null)
+                  setMobileDiscountPickOpen(true)
+                }}
+                aria-haspopup="dialog"
+                aria-expanded={mobileDiscountPickOpen}
+                className={`w-full min-h-[3.75rem] rounded-lg border px-3 py-2 text-left text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-0 ${
                   hasProgramDiscount
-                    ? 'border border-green-300 bg-green-50 focus:ring-green-500'
-                    : 'border border-gray-300 bg-white focus:ring-slate-900'
+                    ? 'border-green-300 bg-green-50 focus:ring-green-500'
+                    : 'border-gray-300 bg-white focus:ring-slate-900'
                 }`}
               >
-                <option value="none">{tr.faraReducere}</option>
-                {discountOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700 max-sm:right-4 max-sm:h-5 max-sm:w-5 sm:right-4"
-                strokeWidth={2.25}
-                aria-hidden
-              />
+                {tr.mobileApplyDiscountBtn}
+              </button>
+              <p className="mt-1.5 text-sm text-gray-600">
+                {selectedDiscount
+                  ? formatResidentialDiscountOption(
+                      tr,
+                      selectedDiscount.programLabel,
+                      selectedDiscount.discountPercent,
+                    )
+                  : tr.faraReducere}
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowReduceriModal(true)}
-              className="w-full text-left p-0 border-0 bg-transparent text-xs font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700 font-['Inter']"
-            >
-              {tr.veziProgrameReduceri}
-            </button>
           </div>
         </div>
 
@@ -250,18 +278,16 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               </p>
             </div>
             <div className="min-w-0 flex h-full min-h-0 flex-col justify-end pt-6 sm:pt-0 sm:pb-1">
-              <div className="flex w-full flex-col items-start gap-2.5 rounded-xl border-2 border-white bg-white px-4 py-5 text-left text-black sm:px-5 sm:py-6">
+              <div className="flex w-full flex-col items-stretch gap-3 rounded-xl border-2 border-white bg-white px-0 py-4 text-left text-black max-sm:gap-3 sm:items-start sm:gap-2.5 sm:px-5 sm:py-6">
                 <span className="text-xs font-semibold uppercase tracking-wide">{tr.pretFinalLabel}</span>
-                <div className="flex flex-wrap items-baseline justify-start gap-x-3 gap-y-1 w-full">
-                  <p className="text-3xl sm:text-4xl font-extrabold m-0 tabular-nums leading-none">
-                    {fmtMoney(lineTotal)}{' '}
-                    <span className="text-xl sm:text-2xl font-bold align-baseline">{p.currencySuffix}</span>
-                  </p>
-                  {vatInline ? (
-                    <span className="text-sm font-medium whitespace-nowrap">{vatInline}</span>
-                  ) : null}
-                </div>
-                <p className="text-sm m-0 tabular-nums">
+                <p className="m-0 text-3xl font-extrabold tabular-nums leading-none sm:text-4xl">
+                  {fmtMoney(lineTotal)}{' '}
+                  <span className="text-xl font-bold align-baseline sm:text-2xl">{p.currencySuffix}</span>
+                </p>
+                {vatInline ? (
+                  <p className="m-0 text-sm font-medium text-gray-600 sm:text-base">{vatInline}</p>
+                ) : null}
+                <p className="m-0 text-sm tabular-nums text-neutral-600">
                   {fmtMoney(unitAfterDiscount)} {p.currencySuffix} × {qty} {qtyPiecesWord}
                 </p>
               </div>
@@ -269,18 +295,16 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
           </div>
         ) : (
           /* Fără reduceri: varianta standard — neutral, preț mare gri/negru. */
-          <div className="flex w-full flex-col items-start gap-2 px-4 py-6 sm:px-5 sm:py-7 text-left">
+          <div className="flex w-full flex-col items-stretch gap-3 px-0 py-4 text-left max-sm:gap-3 sm:items-start sm:gap-2 sm:px-5 sm:py-7">
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-700">{tr.pretLabel}</span>
-            <div className="flex flex-wrap items-baseline justify-start gap-x-3 gap-y-1 w-full max-w-full">
-              <p className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 m-0 tabular-nums leading-none">
-                {fmtMoney(lineBaseTotal)}{' '}
-                <span className="text-2xl sm:text-3xl md:text-4xl font-bold align-baseline">{p.currencySuffix}</span>
-              </p>
-              {vatInline ? (
-                <span className="text-sm sm:text-base text-gray-500 font-medium whitespace-nowrap">{vatInline}</span>
-              ) : null}
-            </div>
-            <p className="text-sm sm:text-base text-neutral-500 m-0 tabular-nums">
+            <p className="m-0 text-3xl font-bold tabular-nums leading-none text-gray-900 sm:text-4xl md:text-5xl">
+              {fmtMoney(lineBaseTotal)}{' '}
+              <span className="text-2xl font-bold align-baseline sm:text-3xl md:text-4xl">{p.currencySuffix}</span>
+            </p>
+            {vatInline ? (
+              <p className="m-0 text-sm font-medium text-gray-500 sm:text-base">{vatInline}</p>
+            ) : null}
+            <p className="m-0 text-sm tabular-nums text-neutral-500 sm:text-base">
               {fmtMoney(baseUnitDisplay)} {p.currencySuffix} × {qty} {qtyPiecesWord}
             </p>
           </div>
@@ -331,9 +355,40 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
           lang={lang}
           onClose={() => setShowReduceriModal(false)}
           closeLabel={tr.compatibilitateClose}
-          seeFullPageLabel={tr.reduceriModalSeeFullPage}
+          applyMode={{
+            discountOptions: discountOptions,
+            onApply: (id) => setDiscountProgramId(id),
+            applyLabel: tr.reduceriHoverApplyBtn,
+          }}
         />
       ) : null}
+
+      <ResidentialMobileDiscountModals
+        lang={lang}
+        tr={tr}
+        discountOptions={discountOptions}
+        pickDraftId={mobilePickDraftId}
+        formatOptionLabel={(opt) => formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
+        pickOpen={mobileDiscountPickOpen}
+        onClosePick={() => setMobileDiscountPickOpen(false)}
+        detailOptionId={mobileDiscountDetailId}
+        onCloseDetail={() => setMobileDiscountDetailId(null)}
+        onApplyDetail={() => {
+          if (mobileDiscountDetailId) setDiscountProgramId(mobileDiscountDetailId)
+          setMobileDiscountDetailId(null)
+        }}
+        onSelectProgram={(id) => {
+          setMobilePickDraftId(id)
+          if (id === 'none') {
+            setDiscountProgramId('none')
+            setMobileDiscountPickOpen(false)
+            setMobileDiscountDetailId(null)
+            return
+          }
+          setMobileDiscountPickOpen(false)
+          setMobileDiscountDetailId(id)
+        }}
+      />
     </div>
   )
 }
