@@ -83,32 +83,26 @@ function WhatsappGlyph({ className }: { className?: string }) {
 
 function DesktopModelWhatsappSlide({
   open,
-  productTitle,
-  modelName,
   tr,
 }: {
   open: boolean
-  productTitle: string
-  modelName: string
   tr: IndustrialBessTemplateTranslations
 }) {
-  const msg = tr.modelDesktopWhatsappPrefill
-    .replace(/\{product\}/g, productTitle.trim() || '—')
-    .replace(/\{model\}/g, modelName.trim() || '—')
-  const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(msg)}`
+  /** Same destination as Contact page & floating WhatsApp (no prefilled text). */
+  const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}`
   return (
     <div
-      className={`pointer-events-none absolute left-0 right-0 top-full z-20 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
+      className={`absolute left-0 right-0 top-full z-50 mt-4 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${
         open
-          ? 'pointer-events-auto max-h-[4.5rem] opacity-100 translate-y-0 sm:max-h-24'
-          : 'max-h-0 -translate-y-1 opacity-0'
+          ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
+          : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
       }`}
     >
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
+        className="relative z-10 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
       >
         <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
         {tr.modelDesktopDetailsCta}
@@ -630,8 +624,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     </button>
                   </div>
                   <div
-                    className="min-w-0"
-                    style={{ overflowX: 'clip', overflowY: 'visible' }}
+                    className={`min-w-0 overflow-x-hidden ${desktopWhatsappModel ? 'pb-28' : 'pb-3'}`}
                   >
                     <div
                       className="flex w-full min-w-0 transition-transform duration-300 ease-out will-change-transform"
@@ -668,8 +661,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                 </div>
                                 <DesktopModelWhatsappSlide
                                   open={desktopWhatsappModel === entry.modelName}
-                                  productTitle={product.title}
-                                  modelName={entry.modelName}
                                   tr={tr}
                                 />
                               </div>
@@ -706,12 +697,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                         isCardExpanded={desktopWhatsappModel === entry.modelName}
                       />
                     </div>
-                    <DesktopModelWhatsappSlide
-                      open={desktopWhatsappModel === entry.modelName}
-                      productTitle={product.title}
-                      modelName={entry.modelName}
-                      tr={tr}
-                    />
+                    <DesktopModelWhatsappSlide open={desktopWhatsappModel === entry.modelName} tr={tr} />
                   </div>
                 ))}
               </div>

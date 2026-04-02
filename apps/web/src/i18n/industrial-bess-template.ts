@@ -18,8 +18,6 @@ export type IndustrialBessTemplateTranslations = {
   modelsLoadMore: string
   /** Hint under model cards heading: tap to open technical details */
   overviewModelsTapHint: string
-  /** Desktop: WhatsApp CTA under configuration card (slide-down); placeholders {product}, {model} */
-  modelDesktopWhatsappPrefill: string
   /** Desktop: label for WhatsApp link under card */
   modelDesktopDetailsCta: string
   overviewP1: string
@@ -200,8 +198,6 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     overviewModelsHeading: 'Model highlights',
     modelsLoadMore: 'Load more',
     overviewModelsTapHint: 'Tap a model to see technical details',
-    modelDesktopWhatsappPrefill:
-      'An anonymous user would like to discuss {product} and model {model}.',
     modelDesktopDetailsCta: 'Product details',
     overviewP1:
       'The 20FT Container BESS delivers 334–501.5 kWh of modular energy storage with advanced liquid cooling, flexible expansion, and industry-leading reliability. Supports grid-side, transmission-side, and user-side deployment scenarios.',
@@ -354,8 +350,6 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     overviewModelsHeading: 'Configurații disponibile',
     modelsLoadMore: 'Încarcă mai mult',
     overviewModelsTapHint: 'Apasă pe model pentru a vedea detalii tehnice',
-    modelDesktopWhatsappPrefill:
-      'Un utilizator anonim dorește să discute despre {product} și modelul {model}.',
     modelDesktopDetailsCta: 'Detalii despre produs',
     overviewP1:
       'BESS-ul în container de 20ft oferă 334–501,5 kWh de stocare modulară cu răcire lichidă avansată, expansiune flexibilă și fiabilitate industrială. Compatibil cu scenarii în rețea, transport și parte utilizator.',
@@ -508,7 +502,6 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     overviewModelsHeading: '型号要点',
     modelsLoadMore: '加载更多',
     overviewModelsTapHint: '点击型号查看技术详情',
-    modelDesktopWhatsappPrefill: '匿名用户希望咨询 {product} 及型号 {model}。',
     modelDesktopDetailsCta: '产品详情',
     overviewP1:
       '20尺集装箱BESS以先进液冷、灵活扩展与工业级可靠性提供334–501.5 kWh模块化储能，适用于电网侧、输配电侧与用户侧场景。',

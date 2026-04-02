@@ -694,7 +694,16 @@ export type DepartmentPhoneRow = {
 export async function getAdminDepartmentPhones(): Promise<DepartmentPhoneRow[]> {
   const res = await fetch(`${API_BASE}/admin/department-phones`, { headers: authHeaders() })
   const json = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea numerelor de telefon.')
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' ? json.error : 'Eroare la încărcarea numerelor de telefon.'
+    if (res.status === 404) {
+      const p = typeof json.path === 'string' ? json.path : ''
+      throw new Error(
+        `${msg}${p ? ` (${p})` : ''} — API-ul de producție pare fără această rută; redeploy backend (Railway) cu ultimul cod și rulează migrarea Prisma pentru DepartmentPhone.`
+      )
+    }
+    throw new Error(msg)
+  }
   return Array.isArray(json) ? json : []
 }
 
