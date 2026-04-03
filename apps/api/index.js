@@ -802,6 +802,178 @@ app.get('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, getCatal
 app.put('/api/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
 app.put('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
 
+// ── Date companie Baterino (admin) — tabele Prisma + migrare din SiteSetting vechi ──
+const COMPANY_DATA_KEY = 'company_data' // legacy JSON (șters după import)
+const COMPANY_ID = 'default'
+const MAX_COMPANY_BANK_ACCOUNTS = 20
+
+const DEFAULT_COMPANY_DATA = {
+  name: 'Baterino SRL',
+  cui: '',
+  address: '',
+  bankAccounts: [],
+}
+
+function normalizeCompanyDataPayload(body) {
+  const name = String(body?.name ?? '').trim()
+  const cui = String(body?.cui ?? '').trim()
+  const address = String(body?.address ?? '').trim()
+  const rawList = Array.isArray(body?.bankAccounts) ? body.bankAccounts : []
+  const bankAccounts = []
+  for (const a of rawList.slice(0, MAX_COMPANY_BANK_ACCOUNTS)) {
+    bankAccounts.push({
+      id: String(a?.id ?? '').trim() || crypto.randomUUID(),
+      bankName: String(a?.bankName ?? '').trim(),
+      iban: String(a?.iban ?? '').trim(),
+      swift: String(a?.swift ?? '').trim(),
+      accountName: String(a?.accountName ?? '').trim(),
+    })
+  }
+  return { name, cui, address, bankAccounts }
+}
+
+async function ensureBaterinoCompanyRow() {
+  await prisma.baterinoCompany.upsert({
+    where: { id: COMPANY_ID },
+    create: { id: COMPANY_ID, name: 'Baterino SRL', cui: '', address: '' },
+    update: {},
+  })
+}
+
+/** Import o singură dată din SiteSetting.company_data (înainte de trecerea la tabele). */
+async function migrateCompanyDataFromSiteSettingIfNeeded() {
+  const legacy = await prisma.siteSetting.findUnique({ where: { key: COMPANY_DATA_KEY } })
+  if (!legacy?.value) return
+  let data
+  try {
+    data = normalizeCompanyDataPayload(JSON.parse(legacy.value))
+  } catch {
+    return
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.baterinoCompany.upsert({
+      where: { id: COMPANY_ID },
+      create: {
+        id: COMPANY_ID,
+        name: data.name || 'Baterino SRL',
+        cui: data.cui,
+        address: data.address,
+      },
+      update: {
+        name: data.name || 'Baterino SRL',
+        cui: data.cui,
+        address: data.address,
+      },
+    })
+    await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
+    for (let i = 0; i < data.bankAccounts.length; i++) {
+      const a = data.bankAccounts[i]
+      await tx.companyBankAccount.create({
+        data: {
+          id: a.id,
+          companyId: COMPANY_ID,
+          bankName: a.bankName,
+          iban: a.iban,
+          swift: a.swift,
+          accountName: a.accountName,
+          sortOrder: i,
+        },
+      })
+    }
+    await tx.siteSetting.delete({ where: { key: COMPANY_DATA_KEY } })
+  })
+}
+
+function companyToApiShape(company) {
+  return {
+    name: company.name,
+    cui: company.cui,
+    address: company.address,
+    bankAccounts: company.bankAccounts.map((b) => ({
+      id: b.id,
+      bankName: b.bankName,
+      iban: b.iban,
+      swift: b.swift,
+      accountName: b.accountName,
+    })),
+  }
+}
+
+async function readCompanyDataFromDb() {
+  try {
+    await migrateCompanyDataFromSiteSettingIfNeeded()
+    await ensureBaterinoCompanyRow()
+    const company = await prisma.baterinoCompany.findUnique({
+      where: { id: COMPANY_ID },
+      include: { bankAccounts: { orderBy: { sortOrder: 'asc' } } },
+    })
+    if (!company) {
+      return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+    }
+    return companyToApiShape(company)
+  } catch (err) {
+    console.error('readCompanyDataFromDb:', err)
+    return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+  }
+}
+
+const getAdminCompanyDataHandler = async (req, res) => {
+  try {
+    const data = await readCompanyDataFromDb()
+    res.json(data)
+  } catch (err) {
+    console.error('admin company-data get:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const putAdminCompanyDataHandler = async (req, res) => {
+  try {
+    const data = normalizeCompanyDataPayload(req.body)
+    await prisma.$transaction(async (tx) => {
+      await tx.baterinoCompany.upsert({
+        where: { id: COMPANY_ID },
+        create: {
+          id: COMPANY_ID,
+          name: data.name || 'Baterino SRL',
+          cui: data.cui,
+          address: data.address,
+        },
+        update: {
+          name: data.name,
+          cui: data.cui,
+          address: data.address,
+        },
+      })
+      await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
+      for (let i = 0; i < data.bankAccounts.length; i++) {
+        const a = data.bankAccounts[i]
+        await tx.companyBankAccount.create({
+          data: {
+            id: a.id,
+            companyId: COMPANY_ID,
+            bankName: a.bankName,
+            iban: a.iban,
+            swift: a.swift,
+            accountName: a.accountName,
+            sortOrder: i,
+          },
+        })
+      }
+      await tx.siteSetting.deleteMany({ where: { key: COMPANY_DATA_KEY } })
+    })
+    res.json(data)
+  } catch (err) {
+    console.error('admin company-data put:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/admin/company-data', authMiddleware, adminAuthMiddleware, getAdminCompanyDataHandler)
+app.get('/admin/company-data', authMiddleware, adminAuthMiddleware, getAdminCompanyDataHandler)
+app.put('/api/admin/company-data', authMiddleware, adminAuthMiddleware, putAdminCompanyDataHandler)
+app.put('/admin/company-data', authMiddleware, adminAuthMiddleware, putAdminCompanyDataHandler)
+
 // ── Admin: update company discount ──────────────────────────────────────
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {

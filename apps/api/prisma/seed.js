@@ -212,6 +212,18 @@ async function main() {
   }
   console.log(`Upserted ${departmentPhoneKeys.length} DepartmentPhone rows (empty phone/whatsapp; set via admin)`)
 
+  await prisma.baterinoCompany.upsert({
+    where: { id: 'default' },
+    create: {
+      id: 'default',
+      name: 'Baterino SRL',
+      cui: '',
+      address: '',
+    },
+    update: {},
+  })
+  console.log('Upserted BaterinoCompany default row (Date companie — completare în admin)')
+
   await prisma.$disconnect()
 }
 

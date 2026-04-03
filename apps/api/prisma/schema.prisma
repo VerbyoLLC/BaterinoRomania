@@ -180,3 +180,29 @@ model SiteSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+/** Date firmei Baterino (facturi, documente) — un singur rând, id fix „default”. */
+model BaterinoCompany {
+  id           String               @id @default("default")
+  name         String               @default("Baterino SRL")
+  cui          String               @default("")
+  address      String               @default("")
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  bankAccounts CompanyBankAccount[]
+}
+
+model CompanyBankAccount {
+  id          String          @id @default(cuid())
+  companyId   String          @default("default")
+  company     BaterinoCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankName    String          @default("")
+  iban        String          @default("")
+  swift       String          @default("")
+  accountName String          @default("")
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([companyId])
+}
