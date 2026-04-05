@@ -206,3 +206,38 @@ model CompanyBankAccount {
 
   @@index([companyId])
 }
+
+/** Comandă invitat flux rezidențial /comanda — urmărită prin orderNumber + email. */
+model GuestResidentialOrder {
+  id           String  @id @default(cuid())
+  orderNumber  String  @unique
+  /** guest = fără cont / anonim; client = JWT rol client la plasare */
+  orderSource  String  @default("guest")
+  email        String
+  /** 9 cifre naționale (fără +40) */
+  phone        String
+  lastName     String
+  firstName    String
+  billAddress  String
+  billCounty   String
+  billCity     String
+  billPostal   String
+  deliveryDifferent Boolean @default(false)
+  delAddress   String?
+  delCounty    String?
+  delCity      String?
+  delPostal    String?
+  productId    String
+  productSlug  String?
+  productTitle String
+  quantity     Int
+  currency     String   @default("RON")
+  unitPriceInclVat Decimal? @db.Decimal(14, 2)
+  lineTotalInclVat Decimal? @db.Decimal(14, 2)
+  vatPercent       Decimal? @db.Decimal(5, 2)
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+  @@index([orderSource])
+  @@index([createdAt])
+}

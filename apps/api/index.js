@@ -9,7 +9,15 @@ const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
 const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, sendInquiryNotification, sendInquiryConfirmation, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
-const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = require('./lib/r2.js')
+const {
+  uploadToR2,
+  generateKey,
+  isR2Configured,
+  urlToKey,
+  deleteFromR2,
+  ensureGuestOrderFolder,
+} = require('./lib/r2.js')
+const { buildSampleProformaPreviewHtml } = require('./lib/proforma-template.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
@@ -118,6 +126,63 @@ function applyPublicPricePolicy(apiProduct, authPayload) {
     salePrice: null,
     vat: null,
   }
+}
+
+function guestResidentialProductEligible(apiProduct) {
+  const vis = apiProduct.priceVisibility || 'public'
+  if (vis !== 'public') return false
+  if (String(apiProduct.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  const stock = apiProduct.catalogStockStatus
+  if (stock === 'out_of_stock' || stock === 'coming_soon') return false
+  const saleRaw = apiProduct.salePrice
+  const sale =
+    saleRaw == null || saleRaw === ''
+      ? NaN
+      : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
+  if (!Number.isFinite(sale) || sale <= 0) return false
+  return true
+}
+
+function computeGuestResidentialLineTotals(apiProduct, qty) {
+  const sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
+  const vatRaw = apiProduct.vat
+  const vat =
+    vatRaw == null || vatRaw === '' ? 0 : parseFloat(String(vatRaw).replace(/\s/g, '').replace(',', '.'))
+  const hasVat = Number.isFinite(vat) && vat > 0
+  const unitExcl = Number.isFinite(sale) ? sale : 0
+  const unitIncl = hasVat ? unitExcl * (1 + vat / 100) : unitExcl
+  const q = Math.min(99, Math.max(1, parseInt(String(qty), 10) || 1))
+  return {
+    quantity: q,
+    unitPriceInclVat: unitIncl,
+    lineTotalInclVat: unitIncl * q,
+    vatPercent: hasVat ? vat : null,
+  }
+}
+
+function sanitizeGuestOrderText(value) {
+  return String(value ?? '').replace(/[<>/\\]/g, '').trim()
+}
+
+async function findPublicProductRecordByIdOrSlug(idOrSlug) {
+  const id = String(idOrSlug || '').trim()
+  if (!id) return null
+  const isCuid = /^c[a-z0-9]{24}$/.test(id)
+  let product = await prisma.product.findFirst({
+    where: {
+      status: 'published',
+      ...(isCuid ? { id } : { slug: id }),
+    },
+  })
+  if (!product) {
+    const publishedCount = await prisma.product.count({ where: { status: 'published' } })
+    if (publishedCount === 0) {
+      product = await prisma.product.findFirst({
+        where: isCuid ? { id } : { slug: id },
+      })
+    }
+  }
+  return product
 }
 
 function slugify(title) {
@@ -593,6 +658,27 @@ app.get('/api/debug/mail', async (req, res) => {
     return res.status(500).json({ ok: false, configured: isMailConfigured(), error: err?.message || String(err) })
   }
 })
+
+// ── Debug: HTML proforma preview (always registered; blocked in prod unless BATERINO_DEBUG_PROFORMA=1) ──
+function proformaPreviewHandler(req, res) {
+  const enabledInProd = process.env.BATERINO_DEBUG_PROFORMA === '1'
+  if (process.env.NODE_ENV === 'production' && !enabledInProd) {
+    return res.status(403).json({
+      error: 'Proforma preview is off in production.',
+      hint: 'Set BATERINO_DEBUG_PROFORMA=1 on this API, or run the API locally and open http://localhost:3001/api/debug/proforma-preview',
+    })
+  }
+  try {
+    const html = buildSampleProformaPreviewHtml()
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    return res.send(html)
+  } catch (err) {
+    console.error('Proforma preview error:', err)
+    return res.status(500).type('text/plain').send(err?.message || String(err))
+  }
+}
+app.get('/api/debug/proforma-preview', proformaPreviewHandler)
+app.get('/debug/proforma-preview', proformaPreviewHandler)
 
 // ── Admin: list inquiries (messages) ───────────────────────────────────
 app.get('/api/admin/inquiries', authMiddleware, adminAuthMiddleware, async (req, res) => {
@@ -1501,6 +1587,132 @@ app.post('/api/inquiries', async (req, res) => {
   } catch (err) {
     console.error('Inquiry error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la trimiterea solicitării.' })
+  }
+})
+
+// ── Public: guest residential checkout — persist order (track by orderNumber + email) ──
+app.post('/api/guest-residential-orders', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const authPayload = readOptionalAuthPayload(req)
+    const isClient = authPayload?.role === 'client'
+    const orderSource = isClient ? 'client' : 'guest'
+
+    const productIdOrSlug = String(body.productIdOrSlug || body.slug || '').trim()
+    const rawQty = body.quantity
+    const emailRaw = String(body.email || '').trim().toLowerCase()
+    const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+    const lastName = sanitizeGuestOrderText(body.nume ?? body.lastName)
+    const firstName = sanitizeGuestOrderText(body.prenume ?? body.firstName)
+    const billAddress = sanitizeGuestOrderText(body.billAddress)
+    const billCounty = sanitizeGuestOrderText(body.billCounty)
+    const billCity = sanitizeGuestOrderText(body.billCity)
+    const billPostal = sanitizeGuestOrderText(body.billPostal)
+    const deliveryDifferent = Boolean(body.differentDeliveryAddress ?? body.deliveryDifferent)
+    let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
+    let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
+    let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
+    let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
+
+    if (!productIdOrSlug) {
+      return res.status(400).json({ error: 'Produs lipsește.' })
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailRaw)) {
+      return res.status(400).json({ error: 'Email invalid.' })
+    }
+    /** Pentru client autentificat, emailul din cont (JWT) — legătură reală în DB. */
+    let emailToStore = emailRaw
+    if (isClient) {
+      const tokenEmail = String(authPayload.email || '').trim().toLowerCase()
+      if (!tokenEmail || !emailRegex.test(tokenEmail)) {
+        return res.status(401).json({ error: 'Sesiune invalidă. Autentifică-te din nou ca și client.' })
+      }
+      emailToStore = tokenEmail
+    }
+    if (phoneDigits.length !== 9) {
+      return res.status(400).json({ error: 'Telefon invalid.' })
+    }
+    if (!lastName || !firstName) {
+      return res.status(400).json({ error: 'Nume și prenume sunt obligatorii.' })
+    }
+    if (!billAddress || !billCounty || !billCity || !billPostal) {
+      return res.status(400).json({ error: 'Adresa de facturare este incompletă.' })
+    }
+    if (deliveryDifferent) {
+      if (!delAddress || !delCounty || !delCity || !delPostal) {
+        return res.status(400).json({ error: 'Adresa de livrare este incompletă.' })
+      }
+    } else {
+      delAddress = null
+      delCounty = null
+      delCity = null
+      delPostal = null
+    }
+
+    const row = await findPublicProductRecordByIdOrSlug(productIdOrSlug)
+    if (!row) return res.status(404).json({ error: 'Produs negăsit.' })
+    const apiProduct = applyPublicPricePolicy(productToJson(row), null)
+    if (!guestResidentialProductEligible(apiProduct)) {
+      return res.status(400).json({ error: 'Acest produs nu poate fi comandat în fluxul public.' })
+    }
+
+    const totals = computeGuestResidentialLineTotals(apiProduct, rawQty)
+    const currency = await readCatalogCurrencyFromDb()
+    const title = String(apiProduct.title || '').trim() || 'Produs'
+    const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const orderSuffix = crypto.randomBytes(4).toString('hex').toUpperCase()
+    const orderNumber = `BTO-${today}-${orderSuffix}`
+
+    const createdOrder = await prisma.guestResidentialOrder.create({
+      data: {
+        orderNumber,
+        orderSource,
+        email: emailToStore,
+        phone: phoneDigits,
+        lastName,
+        firstName,
+        billAddress,
+        billCounty,
+        billCity,
+        billPostal,
+        deliveryDifferent,
+        delAddress,
+        delCounty,
+        delCity,
+        delPostal,
+        productId: row.id,
+        productSlug: slugVal,
+        productTitle: title,
+        quantity: totals.quantity,
+        currency,
+        unitPriceInclVat: totals.unitPriceInclVat.toFixed(2),
+        lineTotalInclVat: totals.lineTotalInclVat.toFixed(2),
+        vatPercent: totals.vatPercent != null ? totals.vatPercent.toFixed(2) : null,
+      },
+    })
+
+    if (isR2Configured()) {
+      ensureGuestOrderFolder(createdOrder.id).catch((e) =>
+        console.error('[GuestOrder] R2 orders folder error:', e?.message || e),
+      )
+    }
+
+    return res.status(201).json({
+      orderNumber,
+      orderId: createdOrder.id,
+      email: emailToStore,
+      orderSource,
+      message: 'Comanda a fost înregistrată.',
+    })
+  } catch (err) {
+    console.error('Guest residential order error:', err)
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Conflict la generarea numărului de comandă. Reîncearcă.' })
+    }
+    res.status(500).json({ error: err?.message || 'Eroare la înregistrarea comenzii.' })
   }
 })
 
