@@ -30,6 +30,76 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
+/** Payload POST /api/guest-residential-orders (comandă invitat, flux /comanda). */
+export type GuestResidentialOrderPayload = {
+  productIdOrSlug: string
+  quantity: number
+  email: string
+  /** Ultimele 9 cifre naționale (fără +40). */
+  phone: string
+  nume: string
+  prenume: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  differentDeliveryAddress: boolean
+  delAddress?: string
+  delCounty?: string
+  delCity?: string
+  delPostal?: string
+}
+
+export type GuestResidentialOrderResponse = {
+  orderNumber: string
+  /** ID rând Prisma — folosit în R2 la prefixul `orders/{orderId}/`. */
+  orderId?: string
+  email: string
+  /** Aliniat cu DB: guest | client */
+  orderSource?: 'guest' | 'client'
+  message?: string
+}
+
+export async function submitGuestResidentialOrder(
+  payload: GuestResidentialOrderPayload,
+): Promise<GuestResidentialOrderResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getAuthToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/guest-residential-orders`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      productIdOrSlug: payload.productIdOrSlug,
+      quantity: payload.quantity,
+      email: payload.email,
+      phone: payload.phone,
+      nume: payload.nume,
+      prenume: payload.prenume,
+      billAddress: payload.billAddress,
+      billCounty: payload.billCounty,
+      billCity: payload.billCity,
+      billPostal: payload.billPostal,
+      differentDeliveryAddress: payload.differentDeliveryAddress,
+      delAddress: payload.differentDeliveryAddress ? payload.delAddress : undefined,
+      delCounty: payload.differentDeliveryAddress ? payload.delCounty : undefined,
+      delCity: payload.differentDeliveryAddress ? payload.delCity : undefined,
+      delPostal: payload.differentDeliveryAddress ? payload.delPostal : undefined,
+    }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<GuestResidentialOrderResponse>
+  if (!res.ok) throw new Error(json.error || 'Eroare la înregistrarea comenzii.')
+  if (!json.orderNumber) throw new Error('Răspuns invalid de la server.')
+  const src = json.orderSource
+  return {
+    orderNumber: json.orderNumber,
+    orderId: typeof json.orderId === 'string' ? json.orderId : undefined,
+    email: String(json.email || payload.email),
+    orderSource: src === 'client' || src === 'guest' ? src : undefined,
+    message: json.message,
+  }
+}
+
 /** Imagine afișată pe carduri (listă produse, acasă, panou parteneri) */
 export function getProductCardImageUrl(
   product: Pick<PublicProduct, 'images'> & { cardImage?: string | null }
@@ -66,6 +136,10 @@ export type PublicProduct = {
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   /** simple | detailed (UI only) */
   pricePresentation?: 'simple' | 'detailed'
+  /** Rezidențial: etichetă în colțul imaginii pe card catalog */
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  /** Rezidențial: id-uri programe reducere (CMS); gol = toate programele în dropdown (comportament vechi) */
+  reducereProgramIds?: string[]
   tensiuneNominala?: string | null
   capacitate?: string | null
   compozitie?: string | null
@@ -90,6 +164,97 @@ export function getCatalogProductSpecLines(product: PublicProduct): { specLine1:
   return { specLine1, specLine2 }
 }
 
+function catalogNum(v: string | number | null | undefined): number | null {
+  if (v == null || v === '') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+/** Monede permise pentru prețuri catalog (admin); afișate ca sufix lângă sumă. */
+export const CATALOG_CURRENCY_CODES = ['EUR', 'RON', 'IDR', 'MYR', 'PHP', 'USD'] as const
+export type CatalogCurrencyCode = (typeof CATALOG_CURRENCY_CODES)[number]
+
+export function normalizeCatalogCurrencyCode(v: unknown): CatalogCurrencyCode {
+  const s = String(v ?? '').trim().toUpperCase()
+  return (CATALOG_CURRENCY_CODES as readonly string[]).includes(s) ? (s as CatalogCurrencyCode) : 'RON'
+}
+
+/** Public catalog / Home: VAT-inclusive price for residential cards when `priceVisibility` is public. */
+export function formatResidentialCatalogPriceDisplay(
+  product: PublicProduct,
+  langCode: string,
+  /** Cod monedă afișat lângă sumă (din setări admin); implicit RON */
+  currencySuffix: string = 'RON',
+): string | null {
+  const vis = (product.priceVisibility as string) || 'public'
+  if (vis !== 'public') return null
+  const sale = catalogNum(product.salePrice)
+  if (sale == null || sale <= 0) return null
+  const vat = catalogNum(product.vat)
+  const unit = vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
+  const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
+  return `${Math.round(unit).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+export type CatalogStockStatus = 'in_stock' | 'out_of_stock' | 'coming_soon'
+
+/** Rezidențial: stoc epuizat sau în curând — fără preț parteneri, fără chip „disponibil parteneri”. */
+export function residentialProductStockUnavailable(
+  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
+): boolean {
+  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  const s = product.catalogStockStatus as CatalogStockStatus | undefined | null
+  return s === 'out_of_stock' || s === 'coming_soon'
+}
+
+/** Residential listing: show „Disponibil Parteneri”-style CTA instead of price (partner_only / hidden). */
+export function residentialCatalogUsesPartnerPriceCta(product: PublicProduct): boolean {
+  if (String(product.tipProdus || '').toLowerCase() === 'industrial') return false
+  if (residentialProductStockUnavailable(product)) return false
+  const vis = (product.priceVisibility as string) || 'public'
+  return vis === 'partner_only' || vis === 'hidden'
+}
+
+/** Rezidențial: text pentru butonul din locul prețului (fără badge pe imagine). */
+export function getResidentialCatalogStockListingCta(
+  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
+  labels: { outOfStock: string; comingSoon: string },
+): string | null {
+  if (!residentialProductStockUnavailable(product)) return null
+  const s = product.catalogStockStatus as CatalogStockStatus
+  if (s === 'out_of_stock') return labels.outOfStock
+  return labels.comingSoon
+}
+
+/** Id-uri program reducere salvate pe produs (doar string-uri valide, unice). */
+export function normalizeProductReducereProgramIds(product: {
+  reducereProgramIds?: unknown
+}): string[] {
+  const raw = product.reducereProgramIds
+  if (raw == null) return []
+  if (!Array.isArray(raw)) return []
+  return [
+    ...new Set(
+      raw.filter((x): x is string => typeof x === 'string' && String(x).trim() !== '').map((s) => String(s).trim()),
+    ),
+  ]
+}
+
+/** Produs rezidențial cu cel puțin un program bifat în admin (badge + filtrare dropdown). */
+export function productHasEligibleReducerePrograms(product: PublicProduct): boolean {
+  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  return normalizeProductReducereProgramIds(product).length > 0
+}
+
+/** VAT % for catalog caption; falls back to 21 when missing (ROM default). */
+export function getResidentialCatalogVatPercentLabel(product: PublicProduct): string {
+  const vat = catalogNum(product.vat)
+  if (vat == null || vat <= 0) return '21'
+  if (Number.isInteger(vat)) return String(vat)
+  const rounded = Math.round(vat * 100) / 100
+  return String(rounded).replace(/\.?0+$/, '')
+}
+
 /** Lista produselor publicate (fără auth) */
 export async function getProducts(): Promise<PublicProduct[]> {
   const res = await fetch(`${API_BASE}/products`, { headers: publicFetchHeaders() })
@@ -102,6 +267,19 @@ export async function getProducts(): Promise<PublicProduct[]> {
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
   const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
     headers: publicFetchHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
+  return json
+}
+
+/**
+ * Same as getProduct, but never sends Authorization — matches what a logged-out visitor
+ * sees on the PDP (applyPublicPricePolicy with no JWT). Use for guest checkout.
+ */
+export async function getProductAsGuest(idOrSlug: string): Promise<PublicProduct> {
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
+    headers: {},
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
@@ -420,6 +598,9 @@ export type CreateProductPayload = {
   categorie?: string
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   pricePresentation?: 'simple' | 'detailed'
+  /** Doar rezidențial; la industrial se trimite null din admin */
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  reducereProgramIds?: string[]
   landedPrice: string | number
   salePrice: string | number
   vat: string | number
@@ -478,7 +659,13 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   return json
 }
 
-export type ReducereProgramRow = ReducereProgram & { id: string; locale?: string; sortOrder?: number }
+export type ReducereProgramRow = ReducereProgram & {
+  id: string
+  locale?: string
+  sortOrder?: number
+  /** Present on admin list; public list only returns active rows */
+  isActive?: boolean
+}
 
 export async function getPublicReducerePrograms(lang: LangCode): Promise<ReducereProgramRow[]> {
   const res = await fetch(`${API_BASE}/reducere-programs?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
@@ -560,6 +747,7 @@ export type AdminProduct = {
   conectivitateWifi?: boolean
   conectivitateBluetooth?: boolean
   salePrice?: string | number
+  reducereProgramIds?: unknown
   [key: string]: unknown
 }
 
@@ -656,6 +844,48 @@ export type AdminInquiry = {
   createdAt: string
 }
 
+export type AdminGuestResidentialOrderRow = {
+  id: string
+  orderNumber: string
+  orderSource: string
+  email: string
+  phone: string
+  lastName: string
+  firstName: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  deliveryDifferent: boolean
+  delAddress: string | null
+  delCounty: string | null
+  delCity: string | null
+  delPostal: string | null
+  productId: string
+  productSlug: string | null
+  productTitle: string
+  quantity: number
+  currency: string
+  unitPriceInclVat: string | null
+  lineTotalInclVat: string | null
+  vatPercent: string | null
+  createdAt: string
+}
+
+export async function getAdminGuestResidentialOrders(): Promise<AdminGuestResidentialOrderRow[]> {
+  const res = await fetch(`${API_BASE}/admin/guest-residential-orders`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea comenzilor.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
 export async function getAdminInquiries(): Promise<AdminInquiry[]> {
   const res = await fetch(`${API_BASE}/admin/inquiries`, { headers: authHeaders() })
   const json = await res.json().catch(() => ({}))
@@ -742,4 +972,97 @@ export async function saveAdminDepartmentPhones(rows: DepartmentPhoneRow[]): Pro
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la salvare.')
   return Array.isArray(json) ? json : []
+}
+
+export async function getCatalogCurrency(): Promise<{ currency: CatalogCurrencyCode }> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/catalog-currency`)
+  } catch {
+    throw new Error('Nu s-a putut conecta la API.')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la încărcarea monedei.')
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export async function getAdminCatalogCurrency(): Promise<{ currency: CatalogCurrencyCode }> {
+  const res = await fetch(`${API_BASE}/admin/catalog-currency`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' ? json.error : 'Eroare la încărcarea monedei.'
+    throw new Error(msg)
+  }
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export async function saveAdminCatalogCurrency(currency: CatalogCurrencyCode): Promise<{ currency: CatalogCurrencyCode }> {
+  const res = await fetch(`${API_BASE}/admin/catalog-currency`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currency }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
+  return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export type CompanyBankAccount = {
+  id: string
+  bankName: string
+  iban: string
+  swift: string
+  accountName: string
+}
+
+export type AdminCompanyData = {
+  name: string
+  cui: string
+  address: string
+  bankAccounts: CompanyBankAccount[]
+}
+
+function normalizeAdminCompanyData(json: unknown): AdminCompanyData {
+  if (!json || typeof json !== 'object') {
+    return { name: 'Baterino SRL', cui: '', address: '', bankAccounts: [] }
+  }
+  const o = json as Record<string, unknown>
+  const rawAccounts = Array.isArray(o.bankAccounts) ? o.bankAccounts : []
+  const bankAccounts: CompanyBankAccount[] = rawAccounts.slice(0, 20).map((a) => {
+    const row = a && typeof a === 'object' ? (a as Record<string, unknown>) : {}
+    return {
+      id: typeof row.id === 'string' && row.id.trim() ? row.id.trim() : crypto.randomUUID(),
+      bankName: typeof row.bankName === 'string' ? row.bankName : '',
+      iban: typeof row.iban === 'string' ? row.iban : '',
+      swift: typeof row.swift === 'string' ? row.swift : '',
+      accountName: typeof row.accountName === 'string' ? row.accountName : '',
+    }
+  })
+  return {
+    name: typeof o.name === 'string' ? o.name : '',
+    cui: typeof o.cui === 'string' ? o.cui : '',
+    address: typeof o.address === 'string' ? o.address : '',
+    bankAccounts,
+  }
+}
+
+export async function getAdminCompanyData(): Promise<AdminCompanyData> {
+  const res = await fetch(`${API_BASE}/admin/company-data`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' ? json.error : 'Eroare la încărcarea datelor companiei.'
+    throw new Error(msg)
+  }
+  return normalizeAdminCompanyData(json)
+}
+
+export async function saveAdminCompanyData(data: AdminCompanyData): Promise<AdminCompanyData> {
+  const res = await fetch(`${API_BASE}/admin/company-data`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
+  return normalizeAdminCompanyData(json)
 }

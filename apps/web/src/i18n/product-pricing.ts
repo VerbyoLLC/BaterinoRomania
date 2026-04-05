@@ -48,6 +48,12 @@ const translations: Record<LangCode, ProductPricingTranslations> = {
   },
 }
 
-export function getProductPricingTranslations(lang: LangCode): ProductPricingTranslations {
-  return translations[lang] ?? translations.ro
+export function getProductPricingTranslations(
+  lang: LangCode,
+  /** Dacă este setat, înlocuiește sufixul monedei (din setări admin catalog). */
+  currencySuffixOverride?: string,
+): ProductPricingTranslations {
+  const base = translations[lang] ?? translations.ro
+  if (currencySuffixOverride === undefined || currencySuffixOverride === '') return base
+  return { ...base, currencySuffix: currencySuffixOverride }
 }

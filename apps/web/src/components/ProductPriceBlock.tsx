@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { PublicProduct } from '../lib/api'
-import { getAuthRole } from '../lib/api'
+import { getAuthRole, getResidentialCatalogStockListingCta } from '../lib/api'
+import { getProduseTranslations } from '../i18n/produse'
+import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import type { LangCode } from '../i18n/menu'
 
@@ -20,12 +22,33 @@ type Props = {
 }
 
 export default function ProductPriceBlock({ product, lang, className = '', embedded = false }: Props) {
-  const tr = getProductPricingTranslations(lang)
+  const { currency } = useCatalogCurrency()
+  const tr = getProductPricingTranslations(lang, currency)
   const vis = (product.priceVisibility as 'hidden' | 'public' | 'partner_only' | undefined) || 'public'
   const presentation =
     (product.pricePresentation as 'simple' | 'detailed' | undefined) || 'simple'
   const role = getAuthRole()
   const isPartner = role === 'partener'
+
+  const produseTr = getProduseTranslations(lang)
+  const stockListingLabel = getResidentialCatalogStockListingCta(product, {
+    outOfStock: produseTr.catalogStockOutOfStock,
+    comingSoon: produseTr.catalogStockComingSoon,
+  })
+  if (stockListingLabel) {
+    return (
+      <div
+        className={`font-['Inter'] text-gray-900 ${
+          embedded ? '' : 'rounded-xl border border-neutral-200 bg-white/90 px-4 py-4 shadow-sm'
+        } ${className}`}
+      >
+        <p className={`m-0 font-bold uppercase tracking-wide text-slate-900 ${embedded ? 'text-lg' : 'text-base'}`}>
+          {stockListingLabel}
+        </p>
+        <p className="m-0 mt-2 text-sm text-gray-600 leading-relaxed">{produseTr.catalogStockUnavailableDetailNote}</p>
+      </div>
+    )
+  }
 
   const sale = num(product.salePrice)
   const landed = num((product as { landedPrice?: string | number | null }).landedPrice)
@@ -83,29 +106,29 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
         } ${className}`}
       >
         {landed != null && landed > 0 ? (
-          <div className="flex justify-between gap-4 text-sm sm:text-base">
+          <div className="flex justify-between gap-4 text-sm">
             <span className="text-gray-600">{tr.landedLabel}</span>
             <span className="font-semibold tabular-nums">
               {fmtMoney(landed)} {tr.currencySuffix}
             </span>
           </div>
         ) : null}
-        <div className="flex justify-between gap-4 text-sm sm:text-base">
+        <div className="flex justify-between gap-4 text-sm">
           <span className="text-gray-600">{tr.saleLabel}</span>
           <span className="font-semibold tabular-nums">
             {fmtMoney(sale!)} {tr.currencySuffix}
           </span>
         </div>
         {vatPct != null ? (
-          <div className="flex justify-between gap-4 text-sm sm:text-base">
+          <div className="flex justify-between gap-4 text-sm">
             <span className="text-gray-600">{tr.vatLabel}</span>
             <span className="font-semibold tabular-nums">{fmtPct(vatPct)}%</span>
           </div>
         ) : null}
         {withVat != null ? (
-          <div className="flex justify-between gap-4 text-base sm:text-lg pt-2 border-t border-neutral-100">
-            <span className="font-bold text-black">{tr.priceWithVatLabel}</span>
-            <span className="font-bold tabular-nums">
+          <div className="flex justify-between gap-4 text-base font-bold pt-2 border-t border-neutral-100">
+            <span className="text-black">{tr.priceWithVatLabel}</span>
+            <span className="tabular-nums">
               {fmtMoney(withVat)} {tr.currencySuffix}
             </span>
           </div>
@@ -129,11 +152,11 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
       </p>
       <p
         className={`m-0 mt-2 font-bold tabular-nums text-slate-900 ${
-          embedded ? 'text-3xl sm:text-4xl' : 'text-2xl'
+          embedded ? 'text-3xl' : 'text-2xl'
         }`}
       >
         {fmtMoney(sale!)}{' '}
-        <span className={`font-semibold text-gray-600 ${embedded ? 'text-xl' : 'text-lg'}`}>{tr.currencySuffix}</span>
+        <span className="font-semibold text-gray-600 text-lg">{tr.currencySuffix}</span>
       </p>
       {vatPct != null && withVat != null ? (
         <p className={`m-0 mt-2 text-gray-500 ${embedded ? 'text-sm' : 'text-xs'}`}>

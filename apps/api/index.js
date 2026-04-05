@@ -9,7 +9,15 @@ const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
 const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, sendInquiryNotification, sendInquiryConfirmation, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
-const { uploadToR2, generateKey, isR2Configured, urlToKey, deleteFromR2 } = require('./lib/r2.js')
+const {
+  uploadToR2,
+  generateKey,
+  isR2Configured,
+  urlToKey,
+  deleteFromR2,
+  ensureGuestOrderFolder,
+} = require('./lib/r2.js')
+const { buildSampleProformaPreviewHtml } = require('./lib/proforma-template.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
@@ -66,6 +74,22 @@ function parsePricePresentation(v) {
   return 'simple'
 }
 
+/** Rezidențial: in_stock | out_of_stock | coming_soon — null clears badge */
+function parseCatalogStockStatus(v) {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (['in_stock', 'out_of_stock', 'coming_soon'].includes(s)) return s
+  return null
+}
+
+/** string[] of ReducereProgram ids; invalid input → [] */
+function parseReducereProgramIds(v) {
+  if (v == null) return []
+  if (!Array.isArray(v)) return []
+  const ids = [...new Set(v.filter((x) => typeof x === 'string' && String(x).trim()).map((s) => String(s).trim()))]
+  return ids
+}
+
 /** Optional JWT for public product routes (partners see prices when allowed). */
 function readOptionalAuthPayload(req) {
   const auth = req.headers.authorization
@@ -78,11 +102,23 @@ function readOptionalAuthPayload(req) {
   }
 }
 
-/** Strip money fields for anonymous users when visibility is not public. */
+/** Strip money fields for anonymous users when visibility is not public. Rezidențial epuizat/în curând: și partenerii nu primesc preț. */
 function applyPublicPricePolicy(apiProduct, authPayload) {
   const vis = apiProduct.priceVisibility || 'public'
-  if (vis === 'public') return apiProduct
+  const tip = String(apiProduct.tipProdus || '').toLowerCase()
+  const stock = apiProduct.catalogStockStatus
+  const residentialUnavailable =
+    tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')
   const role = authPayload?.role
+  if (residentialUnavailable && role === 'partener') {
+    return {
+      ...apiProduct,
+      landedPrice: null,
+      salePrice: null,
+      vat: null,
+    }
+  }
+  if (vis === 'public') return apiProduct
   if (role === 'partener') return apiProduct
   return {
     ...apiProduct,
@@ -90,6 +126,63 @@ function applyPublicPricePolicy(apiProduct, authPayload) {
     salePrice: null,
     vat: null,
   }
+}
+
+function guestResidentialProductEligible(apiProduct) {
+  const vis = apiProduct.priceVisibility || 'public'
+  if (vis !== 'public') return false
+  if (String(apiProduct.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  const stock = apiProduct.catalogStockStatus
+  if (stock === 'out_of_stock' || stock === 'coming_soon') return false
+  const saleRaw = apiProduct.salePrice
+  const sale =
+    saleRaw == null || saleRaw === ''
+      ? NaN
+      : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
+  if (!Number.isFinite(sale) || sale <= 0) return false
+  return true
+}
+
+function computeGuestResidentialLineTotals(apiProduct, qty) {
+  const sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
+  const vatRaw = apiProduct.vat
+  const vat =
+    vatRaw == null || vatRaw === '' ? 0 : parseFloat(String(vatRaw).replace(/\s/g, '').replace(',', '.'))
+  const hasVat = Number.isFinite(vat) && vat > 0
+  const unitExcl = Number.isFinite(sale) ? sale : 0
+  const unitIncl = hasVat ? unitExcl * (1 + vat / 100) : unitExcl
+  const q = Math.min(99, Math.max(1, parseInt(String(qty), 10) || 1))
+  return {
+    quantity: q,
+    unitPriceInclVat: unitIncl,
+    lineTotalInclVat: unitIncl * q,
+    vatPercent: hasVat ? vat : null,
+  }
+}
+
+function sanitizeGuestOrderText(value) {
+  return String(value ?? '').replace(/[<>/\\]/g, '').trim()
+}
+
+async function findPublicProductRecordByIdOrSlug(idOrSlug) {
+  const id = String(idOrSlug || '').trim()
+  if (!id) return null
+  const isCuid = /^c[a-z0-9]{24}$/.test(id)
+  let product = await prisma.product.findFirst({
+    where: {
+      status: 'published',
+      ...(isCuid ? { id } : { slug: id }),
+    },
+  })
+  if (!product) {
+    const publishedCount = await prisma.product.count({ where: { status: 'published' } })
+    if (publishedCount === 0) {
+      product = await prisma.product.findFirst({
+        where: isCuid ? { id } : { slug: id },
+      })
+    }
+  }
+  return product
 }
 
 function slugify(title) {
@@ -566,6 +659,27 @@ app.get('/api/debug/mail', async (req, res) => {
   }
 })
 
+// ── Debug: HTML proforma preview (always registered; blocked in prod unless BATERINO_DEBUG_PROFORMA=1) ──
+function proformaPreviewHandler(req, res) {
+  const enabledInProd = process.env.BATERINO_DEBUG_PROFORMA === '1'
+  if (process.env.NODE_ENV === 'production' && !enabledInProd) {
+    return res.status(403).json({
+      error: 'Proforma preview is off in production.',
+      hint: 'Set BATERINO_DEBUG_PROFORMA=1 on this API, or run the API locally and open http://localhost:3001/api/debug/proforma-preview',
+    })
+  }
+  try {
+    const html = buildSampleProformaPreviewHtml()
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    return res.send(html)
+  } catch (err) {
+    console.error('Proforma preview error:', err)
+    return res.status(500).type('text/plain').send(err?.message || String(err))
+  }
+}
+app.get('/api/debug/proforma-preview', proformaPreviewHandler)
+app.get('/debug/proforma-preview', proformaPreviewHandler)
+
 // ── Admin: list inquiries (messages) ───────────────────────────────────
 app.get('/api/admin/inquiries', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
@@ -717,6 +831,235 @@ const publicDepartmentPhonesHandler = async (req, res) => {
 app.get('/api/department-phones', publicDepartmentPhonesHandler)
 app.get('/department-phones', publicDepartmentPhonesHandler)
 
+// ── Monedă catalog produse (public + admin) ─────────────────────────────
+const CATALOG_CURRENCY_KEY = 'catalog_currency'
+const ALLOWED_CATALOG_CURRENCIES = ['EUR', 'RON', 'IDR', 'MYR', 'PHP', 'USD']
+
+function normalizeCatalogCurrency(value) {
+  const code = String(value ?? '').trim().toUpperCase()
+  return ALLOWED_CATALOG_CURRENCIES.includes(code) ? code : 'RON'
+}
+
+async function readCatalogCurrencyFromDb() {
+  try {
+    const row = await prisma.siteSetting.findUnique({ where: { key: CATALOG_CURRENCY_KEY } })
+    return normalizeCatalogCurrency(row?.value)
+  } catch (err) {
+    console.error('readCatalogCurrencyFromDb:', err)
+    return 'RON'
+  }
+}
+
+const getCatalogCurrencyHandler = async (req, res) => {
+  try {
+    const currency = await readCatalogCurrencyFromDb()
+    res.json({ currency })
+  } catch (err) {
+    console.error('catalog-currency get:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const putAdminCatalogCurrencyHandler = async (req, res) => {
+  try {
+    const raw = String(req.body?.currency ?? req.body?.code ?? '').trim().toUpperCase()
+    if (!ALLOWED_CATALOG_CURRENCIES.includes(raw)) {
+      return res.status(400).json({
+        error: `Monedă invalidă. Valori permise: ${ALLOWED_CATALOG_CURRENCIES.join(', ')}.`,
+      })
+    }
+    const currency = raw
+    await prisma.siteSetting.upsert({
+      where: { key: CATALOG_CURRENCY_KEY },
+      create: { key: CATALOG_CURRENCY_KEY, value: currency },
+      update: { value: currency },
+    })
+    res.json({ currency })
+  } catch (err) {
+    console.error('admin catalog-currency put:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/catalog-currency', getCatalogCurrencyHandler)
+app.get('/catalog-currency', getCatalogCurrencyHandler)
+app.get('/api/admin/catalog-currency', authMiddleware, adminAuthMiddleware, getCatalogCurrencyHandler)
+app.get('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, getCatalogCurrencyHandler)
+app.put('/api/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
+app.put('/admin/catalog-currency', authMiddleware, adminAuthMiddleware, putAdminCatalogCurrencyHandler)
+
+// ── Date companie Baterino (admin) — tabele Prisma + migrare din SiteSetting vechi ──
+const COMPANY_DATA_KEY = 'company_data' // legacy JSON (șters după import)
+const COMPANY_ID = 'default'
+const MAX_COMPANY_BANK_ACCOUNTS = 20
+
+const DEFAULT_COMPANY_DATA = {
+  name: 'Baterino SRL',
+  cui: '',
+  address: '',
+  bankAccounts: [],
+}
+
+function normalizeCompanyDataPayload(body) {
+  const name = String(body?.name ?? '').trim()
+  const cui = String(body?.cui ?? '').trim()
+  const address = String(body?.address ?? '').trim()
+  const rawList = Array.isArray(body?.bankAccounts) ? body.bankAccounts : []
+  const bankAccounts = []
+  for (const a of rawList.slice(0, MAX_COMPANY_BANK_ACCOUNTS)) {
+    bankAccounts.push({
+      id: String(a?.id ?? '').trim() || crypto.randomUUID(),
+      bankName: String(a?.bankName ?? '').trim(),
+      iban: String(a?.iban ?? '').trim(),
+      swift: String(a?.swift ?? '').trim(),
+      accountName: String(a?.accountName ?? '').trim(),
+    })
+  }
+  return { name, cui, address, bankAccounts }
+}
+
+async function ensureBaterinoCompanyRow() {
+  await prisma.baterinoCompany.upsert({
+    where: { id: COMPANY_ID },
+    create: { id: COMPANY_ID, name: 'Baterino SRL', cui: '', address: '' },
+    update: {},
+  })
+}
+
+/** Import o singură dată din SiteSetting.company_data (înainte de trecerea la tabele). */
+async function migrateCompanyDataFromSiteSettingIfNeeded() {
+  const legacy = await prisma.siteSetting.findUnique({ where: { key: COMPANY_DATA_KEY } })
+  if (!legacy?.value) return
+  let data
+  try {
+    data = normalizeCompanyDataPayload(JSON.parse(legacy.value))
+  } catch {
+    return
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.baterinoCompany.upsert({
+      where: { id: COMPANY_ID },
+      create: {
+        id: COMPANY_ID,
+        name: data.name || 'Baterino SRL',
+        cui: data.cui,
+        address: data.address,
+      },
+      update: {
+        name: data.name || 'Baterino SRL',
+        cui: data.cui,
+        address: data.address,
+      },
+    })
+    await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
+    for (let i = 0; i < data.bankAccounts.length; i++) {
+      const a = data.bankAccounts[i]
+      await tx.companyBankAccount.create({
+        data: {
+          id: a.id,
+          companyId: COMPANY_ID,
+          bankName: a.bankName,
+          iban: a.iban,
+          swift: a.swift,
+          accountName: a.accountName,
+          sortOrder: i,
+        },
+      })
+    }
+    await tx.siteSetting.delete({ where: { key: COMPANY_DATA_KEY } })
+  })
+}
+
+function companyToApiShape(company) {
+  return {
+    name: company.name,
+    cui: company.cui,
+    address: company.address,
+    bankAccounts: company.bankAccounts.map((b) => ({
+      id: b.id,
+      bankName: b.bankName,
+      iban: b.iban,
+      swift: b.swift,
+      accountName: b.accountName,
+    })),
+  }
+}
+
+async function readCompanyDataFromDb() {
+  try {
+    await migrateCompanyDataFromSiteSettingIfNeeded()
+    await ensureBaterinoCompanyRow()
+    const company = await prisma.baterinoCompany.findUnique({
+      where: { id: COMPANY_ID },
+      include: { bankAccounts: { orderBy: { sortOrder: 'asc' } } },
+    })
+    if (!company) {
+      return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+    }
+    return companyToApiShape(company)
+  } catch (err) {
+    console.error('readCompanyDataFromDb:', err)
+    return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+  }
+}
+
+const getAdminCompanyDataHandler = async (req, res) => {
+  try {
+    const data = await readCompanyDataFromDb()
+    res.json(data)
+  } catch (err) {
+    console.error('admin company-data get:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const putAdminCompanyDataHandler = async (req, res) => {
+  try {
+    const data = normalizeCompanyDataPayload(req.body)
+    await prisma.$transaction(async (tx) => {
+      await tx.baterinoCompany.upsert({
+        where: { id: COMPANY_ID },
+        create: {
+          id: COMPANY_ID,
+          name: data.name || 'Baterino SRL',
+          cui: data.cui,
+          address: data.address,
+        },
+        update: {
+          name: data.name,
+          cui: data.cui,
+          address: data.address,
+        },
+      })
+      await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
+      for (let i = 0; i < data.bankAccounts.length; i++) {
+        const a = data.bankAccounts[i]
+        await tx.companyBankAccount.create({
+          data: {
+            id: a.id,
+            companyId: COMPANY_ID,
+            bankName: a.bankName,
+            iban: a.iban,
+            swift: a.swift,
+            accountName: a.accountName,
+            sortOrder: i,
+          },
+        })
+      }
+      await tx.siteSetting.deleteMany({ where: { key: COMPANY_DATA_KEY } })
+    })
+    res.json(data)
+  } catch (err) {
+    console.error('admin company-data put:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/admin/company-data', authMiddleware, adminAuthMiddleware, getAdminCompanyDataHandler)
+app.get('/admin/company-data', authMiddleware, adminAuthMiddleware, getAdminCompanyDataHandler)
+app.put('/api/admin/company-data', authMiddleware, adminAuthMiddleware, putAdminCompanyDataHandler)
+app.put('/admin/company-data', authMiddleware, adminAuthMiddleware, putAdminCompanyDataHandler)
+
 // ── Admin: update company discount ──────────────────────────────────────
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
@@ -784,6 +1127,7 @@ function reducereProgramToApi(row) {
     durataProgram: row.durataProgram ?? undefined,
     discountPercent: row.discountPercent != null ? Number(row.discountPercent) : undefined,
     sortOrder: row.sortOrder,
+    isActive: row.isActive !== false,
   }
 }
 
@@ -1005,6 +1349,9 @@ const createProductHandler = async (req, res) => {
         categorie: body.categorie?.trim() || null,
         priceVisibility: parsePriceVisibility(body.priceVisibility),
         pricePresentation: parsePricePresentation(body.pricePresentation),
+        catalogStockStatus:
+          tipProdus === 'rezidential' ? parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock' : null,
+        reducereProgramIds: tipProdus === 'rezidential' ? parseReducereProgramIds(body.reducereProgramIds) : [],
         landedPrice,
         salePrice,
         vat,
@@ -1124,6 +1471,31 @@ const updateProductHandler = async (req, res) => {
       }
     }
 
+    if (tipProdus === 'industrial') {
+      data.catalogStockStatus = null
+      data.reducereProgramIds = []
+    } else if (body.catalogStockStatus !== undefined) {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential') {
+        data.catalogStockStatus = parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock'
+      }
+    }
+
+    if (body.reducereProgramIds !== undefined && tipProdus !== 'industrial') {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential') {
+        data.reducereProgramIds = parseReducereProgramIds(body.reducereProgramIds)
+      }
+    }
+
     if (title) {
       let baseSlug = slugify(title)
       let newSlug = baseSlug
@@ -1217,6 +1589,174 @@ app.post('/api/inquiries', async (req, res) => {
     res.status(500).json({ error: err?.message || 'Eroare la trimiterea solicitării.' })
   }
 })
+
+// ── Public: guest residential checkout — persist order (track by orderNumber + email) ──
+app.post('/api/guest-residential-orders', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const authPayload = readOptionalAuthPayload(req)
+    const isClient = authPayload?.role === 'client'
+    const orderSource = isClient ? 'client' : 'guest'
+
+    const productIdOrSlug = String(body.productIdOrSlug || body.slug || '').trim()
+    const rawQty = body.quantity
+    const emailRaw = String(body.email || '').trim().toLowerCase()
+    const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+    const lastName = sanitizeGuestOrderText(body.nume ?? body.lastName)
+    const firstName = sanitizeGuestOrderText(body.prenume ?? body.firstName)
+    const billAddress = sanitizeGuestOrderText(body.billAddress)
+    const billCounty = sanitizeGuestOrderText(body.billCounty)
+    const billCity = sanitizeGuestOrderText(body.billCity)
+    const billPostal = sanitizeGuestOrderText(body.billPostal)
+    const deliveryDifferent = Boolean(body.differentDeliveryAddress ?? body.deliveryDifferent)
+    let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
+    let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
+    let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
+    let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
+
+    if (!productIdOrSlug) {
+      return res.status(400).json({ error: 'Produs lipsește.' })
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailRaw)) {
+      return res.status(400).json({ error: 'Email invalid.' })
+    }
+    /** Pentru client autentificat, emailul din cont (JWT) — legătură reală în DB. */
+    let emailToStore = emailRaw
+    if (isClient) {
+      const tokenEmail = String(authPayload.email || '').trim().toLowerCase()
+      if (!tokenEmail || !emailRegex.test(tokenEmail)) {
+        return res.status(401).json({ error: 'Sesiune invalidă. Autentifică-te din nou ca și client.' })
+      }
+      emailToStore = tokenEmail
+    }
+    if (phoneDigits.length !== 9) {
+      return res.status(400).json({ error: 'Telefon invalid.' })
+    }
+    if (!lastName || !firstName) {
+      return res.status(400).json({ error: 'Nume și prenume sunt obligatorii.' })
+    }
+    if (!billAddress || !billCounty || !billCity || !billPostal) {
+      return res.status(400).json({ error: 'Adresa de facturare este incompletă.' })
+    }
+    if (deliveryDifferent) {
+      if (!delAddress || !delCounty || !delCity || !delPostal) {
+        return res.status(400).json({ error: 'Adresa de livrare este incompletă.' })
+      }
+    } else {
+      delAddress = null
+      delCounty = null
+      delCity = null
+      delPostal = null
+    }
+
+    const row = await findPublicProductRecordByIdOrSlug(productIdOrSlug)
+    if (!row) return res.status(404).json({ error: 'Produs negăsit.' })
+    const apiProduct = applyPublicPricePolicy(productToJson(row), null)
+    if (!guestResidentialProductEligible(apiProduct)) {
+      return res.status(400).json({ error: 'Acest produs nu poate fi comandat în fluxul public.' })
+    }
+
+    const totals = computeGuestResidentialLineTotals(apiProduct, rawQty)
+    const currency = await readCatalogCurrencyFromDb()
+    const title = String(apiProduct.title || '').trim() || 'Produs'
+    const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const orderSuffix = crypto.randomBytes(4).toString('hex').toUpperCase()
+    const orderNumber = `BTO-${today}-${orderSuffix}`
+
+    const createdOrder = await prisma.guestResidentialOrder.create({
+      data: {
+        orderNumber,
+        orderSource,
+        email: emailToStore,
+        phone: phoneDigits,
+        lastName,
+        firstName,
+        billAddress,
+        billCounty,
+        billCity,
+        billPostal,
+        deliveryDifferent,
+        delAddress,
+        delCounty,
+        delCity,
+        delPostal,
+        productId: row.id,
+        productSlug: slugVal,
+        productTitle: title,
+        quantity: totals.quantity,
+        currency,
+        unitPriceInclVat: totals.unitPriceInclVat.toFixed(2),
+        lineTotalInclVat: totals.lineTotalInclVat.toFixed(2),
+        vatPercent: totals.vatPercent != null ? totals.vatPercent.toFixed(2) : null,
+      },
+    })
+
+    if (isR2Configured()) {
+      ensureGuestOrderFolder(createdOrder.id).catch((e) =>
+        console.error('[GuestOrder] R2 orders folder error:', e?.message || e),
+      )
+    }
+
+    return res.status(201).json({
+      orderNumber,
+      orderId: createdOrder.id,
+      email: emailToStore,
+      orderSource,
+      message: 'Comanda a fost înregistrată.',
+    })
+  } catch (err) {
+    console.error('Guest residential order error:', err)
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Conflict la generarea numărului de comandă. Reîncearcă.' })
+    }
+    res.status(500).json({ error: err?.message || 'Eroare la înregistrarea comenzii.' })
+  }
+})
+
+const adminGuestResidentialOrdersHandler = async (req, res) => {
+  try {
+    const rows = await prisma.guestResidentialOrder.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    })
+    const out = rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      orderSource: r.orderSource,
+      email: r.email,
+      phone: r.phone,
+      lastName: r.lastName,
+      firstName: r.firstName,
+      billAddress: r.billAddress,
+      billCounty: r.billCounty,
+      billCity: r.billCity,
+      billPostal: r.billPostal,
+      deliveryDifferent: r.deliveryDifferent,
+      delAddress: r.delAddress,
+      delCounty: r.delCounty,
+      delCity: r.delCity,
+      delPostal: r.delPostal,
+      productId: r.productId,
+      productSlug: r.productSlug,
+      productTitle: r.productTitle,
+      quantity: r.quantity,
+      currency: r.currency,
+      unitPriceInclVat: r.unitPriceInclVat != null ? String(r.unitPriceInclVat) : null,
+      lineTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
+      vatPercent: r.vatPercent != null ? String(r.vatPercent) : null,
+      createdAt: r.createdAt.toISOString(),
+    }))
+    return res.json(out)
+  } catch (err) {
+    console.error('Admin guest residential orders error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comenzilor.' })
+  }
+}
+app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 
 // ── Public: list published products (no auth) ───────────────────────────
 // When no published products exist, fall back to drafts (helps new sites / dev)

@@ -24,6 +24,7 @@ import ResetPassword from './pages/ResetPassword'
 import SignupParteneriProfil from './pages/SignupParteneriProfil'
 import SignupParteneriProfilPublic from './pages/SignupParteneriProfilPublic'
 import ProductRezidential from './pages/ProductRezidential'
+import GuestCheckout from './pages/GuestCheckout'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -32,6 +33,10 @@ import AdminProducts from './pages/admin/AdminProducts'
 import AdminDiscounts from './pages/admin/AdminDiscounts'
 import AdminMessages from './pages/admin/AdminMessages'
 import AdminPhoneNumbers from './pages/admin/AdminPhoneNumbers'
+import AdminCurrency from './pages/admin/AdminCurrency'
+import AdminCompanyData from './pages/admin/AdminCompanyData'
+import AdminOrders from './pages/admin/AdminOrders'
+import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
@@ -48,11 +53,13 @@ import PartnerOrders from './pages/partner/PartnerOrders'
 import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
 import { INSTALATORI_ONLY } from './lib/siteMode'
+import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
 
 export default function App() {
   return (
     <HelmetProvider>
     <BrowserRouter>
+      <CatalogCurrencyProvider>
       <ScrollToTop />
       <Routes>
         {/* ── Admin (no header / footer) ── */}
@@ -64,9 +71,12 @@ export default function App() {
           <Route path="clients"   element={<AdminDashboard />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="articles"  element={<AdminDashboard />} />
+          <Route path="studii-de-caz" element={<AdminStudiiDeCaz />} />
           <Route path="stocks"    element={<AdminDashboard />} />
-          <Route path="orders"    element={<AdminDashboard />} />
+          <Route path="orders"    element={<AdminOrders />} />
           <Route path="discounts" element={<AdminDiscounts />} />
+          <Route path="currency" element={<AdminCurrency />} />
+          <Route path="company-data" element={<AdminCompanyData />} />
           <Route path="phone-numbers" element={<AdminPhoneNumbers />} />
         </Route>
 
@@ -103,6 +113,7 @@ export default function App() {
             <>
               <Route index element={<Navigate to="/instalatori" replace />} />
               <Route path="instalatori" element={<Instalatori />} />
+              <Route path="comanda" element={<GuestCheckout />} />
               <Route path="*" element={<Navigate to="/instalatori" replace />} />
             </>
           ) : (
@@ -110,6 +121,7 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="produse" element={<Produse />} />
               <Route path="produse/:slug" element={<ProductRezidential />} />
+              <Route path="comanda" element={<GuestCheckout />} />
               <Route path="reduceri" element={<Reduceri />} />
               <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
               <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
@@ -136,6 +148,7 @@ export default function App() {
           )}
         </Route>
       </Routes>
+      </CatalogCurrencyProvider>
     </BrowserRouter>
     </HelmetProvider>
   )

@@ -1,11 +1,16 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getProduseTranslations } from '../i18n/produse'
 import {
   getProducts,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
+  formatResidentialCatalogPriceDisplay,
+  getResidentialCatalogStockListingCta,
+  getResidentialCatalogVatPercentLabel,
+  residentialCatalogUsesPartnerPriceCta,
   type PublicProduct,
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
@@ -21,6 +26,7 @@ const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
 
 export default function Produse() {
   const { language } = useLanguage()
+  const { currency } = useCatalogCurrency()
   const tr = getProduseTranslations(language.code)
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState<PublicProduct[]>([])
@@ -193,22 +199,63 @@ export default function Produse() {
             {filtered.map((product) => {
               const img = getProductCardImageUrl(product)
               const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
-              const props = {
+              const stockListingCta = getResidentialCatalogStockListingCta(product, {
+                outOfStock: tr.catalogStockOutOfStock,
+                comingSoon: tr.catalogStockComingSoon,
+              })
+              const residentialPartnerPriceCta =
+                product.tipProdus !== 'industrial' &&
+                !stockListingCta &&
+                residentialCatalogUsesPartnerPriceCta(product)
+                  ? tr.catalogDisponibilParteneriPrice
+                  : null
+              const priceDisplay =
+                product.tipProdus === 'industrial'
+                  ? undefined
+                  : stockListingCta || residentialPartnerPriceCta
+                    ? undefined
+                    : formatResidentialCatalogPriceDisplay(product, language.code, currency)
+              const to = `/produse/${product.slug || product.id}`
+              const linkState = { tipProdus: product.tipProdus }
+              const common = {
                 density: 'produse' as const,
                 imageSrc: img,
                 imageAlt: product.title,
                 title: product.title,
                 specLine1,
                 specLine2,
-                to: `/produse/${product.slug || product.id}`,
-                linkState: { tipProdus: product.tipProdus },
-                ctaLabel: tr.disponibilPentruParteneri,
+                to,
+                linkState,
+                priceDisplay,
               }
               const industrialSubtitle = String(product.subtitle || '').trim() || undefined
+              const showResPriceExtras =
+                priceDisplay != null &&
+                priceDisplay !== '' &&
+                (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
               return product.tipProdus === 'industrial' ? (
-                <IndustrialCatalogProductCard key={product.id} {...props} subtitle={industrialSubtitle} />
+                <IndustrialCatalogProductCard
+                  key={product.id}
+                  {...common}
+                  subtitle={industrialSubtitle}
+                  ctaLabel={tr.disponibilPentruParteneri}
+                />
               ) : (
-                <ResidentialCatalogProductCard key={product.id} {...props} />
+                <ResidentialCatalogProductCard
+                  key={product.id}
+                  {...common}
+                  residentialPartnerPriceCta={residentialPartnerPriceCta}
+                  residentialStockListingCta={stockListingCta}
+                  residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
+                  residentialPriceVatNote={
+                    showResPriceExtras
+                      ? tr.catalogIncludesVatWithPct.replace(
+                          '{pct}',
+                          getResidentialCatalogVatPercentLabel(product),
+                        )
+                      : null
+                  }
+                />
               )
             })}
           </div>

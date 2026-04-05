@@ -97,18 +97,20 @@ export default function ReduceriProgramsModal({ lang, onClose, closeLabel, apply
       style={{ borderRadius: 10, overflow: 'hidden' }}
       onClick={(e) => e.stopPropagation()}
     >
-      <header className="relative border-b border-neutral-100 px-[40px] pb-6 pt-6">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-[40px] top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
-          aria-label={closeLabel}
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="pr-12 text-center sm:pr-14">
+      <header className="border-b border-neutral-100 px-[40px] pb-6 pt-5 sm:pt-6">
+        <div className="mb-4 flex justify-end sm:mb-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            aria-label={closeLabel}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="text-center">
           <h2
             id="reduceri-programs-modal-title"
             className="break-words font-['Inter'] text-lg font-bold leading-tight text-black sm:text-2xl"

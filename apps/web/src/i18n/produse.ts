@@ -32,6 +32,18 @@ export type ProduseTranslations = {
   productsComingSoon: string
   loadingProducts: string
   disponibilPentruParteneri: string
+  /** Residential card: replaces price when visibility is partner-only / hidden */
+  catalogDisponibilParteneriPrice: string
+  /** Residential card under price; `{pct}` = VAT % */
+  catalogIncludesVatWithPct: string
+  /** Residential card image corner */
+  catalogStockInStock: string
+  catalogStockOutOfStock: string
+  catalogStockComingSoon: string
+  /** Pagină produs: text sub eticheta stoc */
+  catalogStockUnavailableDetailNote: string
+  /** Panou parteneri: sub eticheta stoc când nu se poate comanda */
+  catalogStockPartnerFooterNote: string
   seoTitle: string
   seoDesc: string
   sectorOptions: { value: string; label: string }[]
@@ -63,6 +75,13 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
     loadingProducts: 'Se încarcă produsele…',
     disponibilPentruParteneri: 'VEZI DETALII',
+    catalogDisponibilParteneriPrice: 'Disponibil Partneri',
+    catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogStockInStock: 'Stoc suficient',
+    catalogStockOutOfStock: 'Stoc epuizat',
+    catalogStockComingSoon: 'În curând',
+    catalogStockUnavailableDetailNote: 'Acest produs nu este disponibil pentru comandă în acest moment.',
+    catalogStockPartnerFooterNote: 'Momentan indisponibil pentru comenzi în contul partener.',
     seoTitle: 'Baterii LiFePO4',
     seoDesc: 'Sisteme de stocare a energiei LiFePO4 pentru uz rezidential, industrial, medical și maritim. Importator oficial LithTech în România.',
     sectorOptions: [
@@ -113,6 +132,13 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsComingSoon: 'The site is being updated. Products will be available soon.',
     loadingProducts: 'Loading products…',
     disponibilPentruParteneri: 'VIEW DETAILS',
+    catalogDisponibilParteneriPrice: 'Available to partners',
+    catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogStockInStock: 'In stock',
+    catalogStockOutOfStock: 'Out of stock',
+    catalogStockComingSoon: 'Coming soon',
+    catalogStockUnavailableDetailNote: 'This product is not available to order at the moment.',
+    catalogStockPartnerFooterNote: 'Currently unavailable for partner portal orders.',
     seoTitle: 'LiFePO4 Batteries',
     seoDesc: 'LiFePO4 energy storage systems for residential, industrial, medical and marine use. Official LithTech importer in Romania.',
     sectorOptions: [
@@ -163,6 +189,13 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsComingSoon: '网站正在更新中，产品即将推出。',
     loadingProducts: '正在加载产品…',
     disponibilPentruParteneri: '查看详情',
+    catalogDisponibilParteneriPrice: '合作伙伴专享',
+    catalogIncludesVatWithPct: '含增值税 {pct}%',
+    catalogStockInStock: '库存充足',
+    catalogStockOutOfStock: '售罄',
+    catalogStockComingSoon: '即将到货',
+    catalogStockUnavailableDetailNote: '该产品目前无法下单。',
+    catalogStockPartnerFooterNote: '合作伙伴账户暂不可下单。',
     seoTitle: 'LiFePO4电池',
     seoDesc: '用于住宅、工业、医疗和海事的LiFePO4储能系统。罗马尼亚官方LithTech进口商。',
     sectorOptions: [

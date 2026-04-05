@@ -4,9 +4,11 @@ import {
   getProduct,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
+  getResidentialCatalogStockListingCta,
   type PublicProduct,
 } from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
 import ProductDetailRightSection from '../../components/ProductDetailRightSection'
@@ -43,45 +45,63 @@ function ProductCard({
   onOrder: () => void
   orderLabel: string
 }) {
+  const { language } = useLanguage()
+  const { currency } = useCatalogCurrency()
+  const tr = getProduseTranslations(language.code)
   const img = getProductCardImageUrl(product)
   const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
+  const stockListingCta = getResidentialCatalogStockListingCta(product, {
+    outOfStock: tr.catalogStockOutOfStock,
+    comingSoon: tr.catalogStockComingSoon,
+  })
   const price =
     product.salePrice != null && product.salePrice !== '' ? Number(product.salePrice) : NaN
   const priceOk = Number.isFinite(price) && price > 0
-  const priceDisplay = priceOk ? `${price.toLocaleString('ro-RO')} lei` : '—'
+  const priceDisplay =
+    product.tipProdus !== 'industrial' && stockListingCta
+      ? null
+      : priceOk
+        ? `${price.toLocaleString('ro-RO')} ${currency}`
+        : '—'
 
-  const footer = (
-    <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-3">
-      <div className="flex items-center justify-center gap-3">
+  const footer =
+    product.tipProdus !== 'industrial' && stockListingCta ? (
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-4 text-center">
+        <p className="m-0 text-sm font-semibold font-['Inter'] text-slate-900">{stockListingCta}</p>
+        <p className="m-0 mt-2 text-xs font-['Inter'] text-neutral-600 leading-snug">{tr.catalogStockPartnerFooterNote}</p>
+      </div>
+    ) : (
+      <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-3">
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => onQuantityChange(-1)}
+            className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+            aria-label="Scade cantitatea"
+          >
+            −
+          </button>
+          <span className="text-black text-sm font-bold font-['Inter'] min-w-[1.5rem] text-center tabular-nums">
+            {quantity}
+          </span>
+          <button
+            type="button"
+            onClick={() => onQuantityChange(1)}
+            className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
+            aria-label="Crește cantitatea"
+          >
+            +
+          </button>
+        </div>
         <button
           type="button"
-          onClick={() => onQuantityChange(-1)}
-          className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
-          aria-label="Scade cantitatea"
+          onClick={onOrder}
+          className="w-full py-3 bg-slate-900 text-white rounded-lg text-sm font-bold font-['Inter'] uppercase tracking-wide hover:bg-slate-800 active:bg-slate-950 transition-colors"
         >
-          −
-        </button>
-        <span className="text-black text-sm font-bold font-['Inter'] min-w-[1.5rem] text-center tabular-nums">
-          {quantity}
-        </span>
-        <button
-          type="button"
-          onClick={() => onQuantityChange(1)}
-          className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg font-bold text-slate-700 hover:bg-neutral-100 hover:border-neutral-300 transition-colors"
-          aria-label="Crește cantitatea"
-        >
-          +
+          {orderLabel}
         </button>
       </div>
-      <button
-        type="button"
-        onClick={onOrder}
-        className="w-full py-3 bg-slate-900 text-white rounded-lg text-sm font-bold font-['Inter'] uppercase tracking-wide hover:bg-slate-800 active:bg-slate-950 transition-colors"
-      >
-        {orderLabel}
-      </button>
-    </div>
-  )
+    )
 
   const industrialSubtitle = String(product.subtitle || '').trim() || undefined
 
@@ -103,7 +123,10 @@ function ProductCard({
   return product.tipProdus === 'industrial' ? (
     <IndustrialCatalogProductCard {...common} />
   ) : (
-    <ResidentialCatalogProductCard {...common} />
+    <ResidentialCatalogProductCard
+      {...common}
+      residentialStockListingCta={stockListingCta}
+    />
   )
 }
 
@@ -206,6 +229,7 @@ function ProductDetailPanel({
 /* ── Page ─────────────────────────────────────────────────────── */
 export default function PartnerProducts() {
   const { language } = useLanguage()
+  const { currency } = useCatalogCurrency()
   const tr = getProductDetailTranslations(language.code)
   const trProduse = getProduseTranslations(language.code)
   const [products, setProducts] = useState<PublicProduct[]>([])
@@ -373,7 +397,7 @@ export default function PartnerProducts() {
                         ? Number(product.salePrice)
                         : NaN
                     const line = Number.isFinite(p) && p > 0
-                      ? `Total: ${(p * qty).toLocaleString('ro-RO')} lei`
+                      ? `Total: ${(p * qty).toLocaleString('ro-RO')} ${currency}`
                       : 'Total: —'
                     alert(`Comandă: ${product.title}\nCantitate: ${qty}\n${line}\n\nFuncționalitate comandă în curând.`)
                   }}
