@@ -39,7 +39,7 @@ export type CatalogProductCardBaseProps = {
    */
   residentialPartnerPriceCta?: string | null
   /**
-   * Residential: „stoc epuizat” / „în curând” — același chip ca la parteneri; ascunde prețul; fără badge pe imagine.
+   * Residential: „stoc epuizat” / „în curând” — același chip ca la parteneri; ascunde prețul.
    */
   residentialStockListingCta?: string | null
   /** Above residential public price (e.g. PREȚ). */
@@ -48,8 +48,6 @@ export type CatalogProductCardBaseProps = {
   residentialPriceVatNote?: string | null
   /** Merged onto outer shell (e.g. partner selected border). */
   shellClassName?: string
-  /** Rezidențial: etichetă colț stânga sus pe imagine (ex. stoc). */
-  imageCornerBadge?: { text: string; className: string } | null
 }
 
 type CatalogProductCardProps = CatalogProductCardBaseProps & {
@@ -77,7 +75,6 @@ function CatalogProductCard({
   residentialPriceHeading = null,
   residentialPriceVatNote = null,
   shellClassName = '',
-  imageCornerBadge = null,
 }: CatalogProductCardProps) {
   const isProduseDensity = density === 'produse'
   const isPartnerDensity = density === 'partner'
@@ -99,6 +96,7 @@ function CatalogProductCard({
       ? (isProduseDensity ? 'pb-8' : 'pb-6')
       : (isProduseDensity ? 'pb-5' : 'pb-4')
   const imageFrameH = isPartnerDensity ? 'h-44' : 'h-56'
+  const imageTopRadius = isPartnerDensity ? 'rounded-t-xl' : 'rounded-t-[10px]'
 
   let titleClass: string
   let specClass: string
@@ -142,16 +140,17 @@ function CatalogProductCard({
       "mt-1.5 w-full max-w-full px-6 text-center text-sm font-medium font-['Inter'] leading-snug text-neutral-600"
   }
 
+  const titleMt =
+    isPartnerDensity ? 'mt-3' : isProduseDensity ? 'mt-4' : 'mt-6'
+  const titleClassWithMargin = `${titleMt} ${titleClass.replace(/\bmt-\d+(\.\d+)?\b/g, '').replace(/\s+/g, ' ').trim()}`.trim()
+
   const imageBlock = (
-    <div className="w-full px-3">
+    <div className="w-full">
       <div
-        className={`relative ${imageFrameH} w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 ${
+        className={`relative ${imageFrameH} w-full overflow-hidden ${imageTopRadius} border-b border-neutral-200 bg-[#f7f7f7] ${
           isIndustrial ? 'flex items-center justify-center' : ''
         }`}
       >
-        {imageCornerBadge ? (
-          <span className={imageCornerBadge.className}>{imageCornerBadge.text}</span>
-        ) : null}
         {imageLoadingPlaceholder && !imgLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <img
@@ -169,7 +168,7 @@ function CatalogProductCard({
             partnerMode ? 'transition-transform duration-200 group-hover:scale-105' : ''
           } ${
             isIndustrial
-              ? 'max-h-full max-w-full object-contain object-center p-3'
+              ? 'h-full w-full max-h-full max-w-full object-contain object-center'
               : 'h-full w-full object-cover object-center'
           } ${imageLoadingPlaceholder && !imgLoaded ? 'opacity-0' : 'opacity-100'}`}
           onLoad={() => setImgLoaded(true)}
@@ -200,7 +199,9 @@ function CatalogProductCard({
       ? String(residentialPartnerPriceCta).trim()
       : ''
   const showDarkListingChip =
-    !isIndustrial && (stockListingTrim || partnerListingCta) && darkListingLabel !== ''
+    !isIndustrial &&
+    ((stockListingTrim && !partnerMode) || partnerListingCta) &&
+    darkListingLabel !== ''
 
   const metaBlock = (
     <>
@@ -259,19 +260,19 @@ function CatalogProductCard({
     </>
   )
 
-  const mainClassName = `flex w-full flex-col items-center ${partnerMode ? 'group flex-1 min-h-0 cursor-pointer' : ''}`
+  const mainClassName = `flex w-full min-w-0 flex-col items-stretch ${partnerMode ? 'group flex-1 min-h-0 cursor-pointer' : ''}`
 
   const mainInner = (
     <>
       {imageBlock}
-      <h3 className={titleClass}>{title}</h3>
+      <h3 className={titleClassWithMargin}>{title}</h3>
       {showSubtitle ? <p className={subtitleClass}>{subtitleLine}</p> : null}
       {metaBlock}
     </>
   )
 
   const defaultShell =
-    `flex flex-col overflow-hidden bg-neutral-100 pt-[10px] ${shellPb} transition-shadow duration-300 ` +
+    `flex flex-col overflow-hidden bg-[#f7f7f7] ${shellPb} transition-shadow duration-300 ` +
     (isPartnerDensity
       ? 'min-h-[340px] rounded-xl border border-neutral-200 hover:border-neutral-300 hover:shadow-md'
       : 'rounded-[10px] hover:shadow-md')
@@ -330,8 +331,8 @@ export function CatalogProductCardSkeleton({
 }) {
   if (density === 'home') {
     return (
-      <div className="flex flex-col items-center bg-neutral-100 rounded-[10px] px-6 pt-8 pb-6 animate-pulse">
-        <div className="mb-5 flex w-36 h-44 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+      <div className="flex flex-col items-center overflow-hidden rounded-[10px] bg-[#f7f7f7] pb-6 animate-pulse">
+        <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-[10px] border-b border-neutral-200 bg-[#f7f7f7]">
           <img
             src="/images/shared/baterino-logo-black.svg"
             alt=""
@@ -339,21 +340,23 @@ export function CatalogProductCardSkeleton({
             aria-hidden
           />
         </div>
-        <div className="w-40 h-5 bg-neutral-200 rounded mb-3" />
-        <div className="w-full h-4 bg-neutral-200 rounded mb-1" />
-        <div className="w-full h-4 bg-neutral-200 rounded mb-2" />
-        <div className="h-3 w-16 rounded bg-neutral-300 mb-1" />
-        <div className="w-36 h-8 bg-neutral-200 rounded mb-1" />
-        <div className="h-3 w-28 rounded bg-neutral-300" />
+        <div className="flex w-full flex-col items-center px-6 pt-8">
+          <div className="w-40 h-5 bg-neutral-200 rounded mb-3" />
+          <div className="w-full h-4 bg-neutral-200 rounded mb-1" />
+          <div className="w-full h-4 bg-neutral-200 rounded mb-2" />
+          <div className="h-3 w-16 rounded bg-neutral-300 mb-1" />
+          <div className="w-36 h-8 bg-neutral-200 rounded mb-1" />
+          <div className="h-3 w-28 rounded bg-neutral-300" />
+        </div>
       </div>
     )
   }
 
   if (density === 'partner') {
     return (
-      <div className="flex min-h-[340px] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 animate-pulse">
-        <div className="w-full px-3 pt-[10px]">
-          <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+      <div className="flex min-h-[340px] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-[#f7f7f7] animate-pulse">
+        <div className="w-full">
+          <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-xl border-b border-neutral-200 bg-[#f7f7f7]">
             <img
               src="/images/shared/baterino-logo-black.svg"
               alt=""
@@ -364,14 +367,14 @@ export function CatalogProductCardSkeleton({
         </div>
         <div className="flex flex-1 flex-col px-4 pt-3">
           <div className="mx-auto h-5 w-full max-w-[90%] rounded bg-neutral-200" />
-          <div className="mx-auto mt-3 h-3 w-full max-w-[85%] rounded bg-neutral-100" />
-          <div className="mx-auto mt-2 h-3 w-2/3 rounded bg-neutral-100" />
+          <div className="mx-auto mt-3 h-3 w-full max-w-[85%] rounded bg-neutral-200/80" />
+          <div className="mx-auto mt-2 h-3 w-2/3 rounded bg-neutral-200/80" />
           <div className="mx-auto mt-4 h-6 w-24 rounded bg-neutral-200" />
         </div>
         <div className="space-y-3 px-4 pb-4">
           <div className="flex justify-center gap-2 rounded-lg bg-[#f7f7f7] p-3">
             <div className="h-9 w-9 rounded-lg bg-neutral-200" />
-            <div className="h-9 w-6 bg-neutral-100 rounded" />
+            <div className="h-9 w-6 bg-neutral-200/80 rounded" />
             <div className="h-9 w-9 rounded-lg bg-neutral-200" />
           </div>
           <div className="h-10 w-full rounded-lg bg-neutral-200" />
@@ -381,9 +384,9 @@ export function CatalogProductCardSkeleton({
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[10px] bg-neutral-100 pt-[10px] pb-8 animate-pulse">
-      <div className="w-full px-3">
-        <div className="h-56 w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+    <div className="flex flex-col overflow-hidden rounded-[10px] bg-[#f7f7f7] pb-8 animate-pulse">
+      <div className="w-full">
+        <div className="h-56 w-full overflow-hidden rounded-t-[10px] border-b border-neutral-200 bg-[#f7f7f7]">
           <div className="flex h-full w-full items-center justify-center">
             <img
               src="/images/shared/baterino-logo-black.svg"

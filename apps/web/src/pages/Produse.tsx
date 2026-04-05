@@ -8,7 +8,6 @@ import {
   getProductCardImageUrl,
   getCatalogProductSpecLines,
   formatResidentialCatalogPriceDisplay,
-  getResidentialCatalogStockBadge,
   getResidentialCatalogStockListingCta,
   getResidentialCatalogVatPercentLabel,
   residentialCatalogUsesPartnerPriceCta,
@@ -204,18 +203,18 @@ export default function Produse() {
                 outOfStock: tr.catalogStockOutOfStock,
                 comingSoon: tr.catalogStockComingSoon,
               })
-              const priceDisplay =
-                product.tipProdus === 'industrial'
-                  ? undefined
-                  : stockListingCta
-                    ? undefined
-                    : formatResidentialCatalogPriceDisplay(product, language.code, currency)
               const residentialPartnerPriceCta =
                 product.tipProdus !== 'industrial' &&
                 !stockListingCta &&
                 residentialCatalogUsesPartnerPriceCta(product)
                   ? tr.catalogDisponibilParteneriPrice
                   : null
+              const priceDisplay =
+                product.tipProdus === 'industrial'
+                  ? undefined
+                  : stockListingCta || residentialPartnerPriceCta
+                    ? undefined
+                    : formatResidentialCatalogPriceDisplay(product, language.code, currency)
               const to = `/produse/${product.slug || product.id}`
               const linkState = { tipProdus: product.tipProdus }
               const common = {
@@ -228,16 +227,12 @@ export default function Produse() {
                 to,
                 linkState,
                 priceDisplay,
-                residentialPartnerPriceCta,
               }
               const industrialSubtitle = String(product.subtitle || '').trim() || undefined
               const showResPriceExtras =
                 priceDisplay != null &&
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
-              const imageCornerBadge = getResidentialCatalogStockBadge(product, {
-                inStock: tr.catalogStockInStock,
-              })
               return product.tipProdus === 'industrial' ? (
                 <IndustrialCatalogProductCard
                   key={product.id}
@@ -249,7 +244,7 @@ export default function Produse() {
                 <ResidentialCatalogProductCard
                   key={product.id}
                   {...common}
-                  imageCornerBadge={imageCornerBadge}
+                  residentialPartnerPriceCta={residentialPartnerPriceCta}
                   residentialStockListingCta={stockListingCta}
                   residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
                   residentialPriceVatNote={
