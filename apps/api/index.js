@@ -1757,6 +1757,8 @@ const adminGuestResidentialOrdersHandler = async (req, res) => {
 }
 app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get('/api/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get('/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 
 // ── Public: list published products (no auth) ───────────────────────────
 // When no published products exist, fall back to drafts (helps new sites / dev)
