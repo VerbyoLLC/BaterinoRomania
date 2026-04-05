@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
   createProduct,
@@ -6,10 +6,13 @@ import {
   uploadAdminFile,
   getAdminProducts,
   getAdminProduct,
+  getAdminReducerePrograms,
   updateProductStatus,
   deleteProduct,
+  normalizeProductReducereProgramIds,
   type AdminProduct,
   type CreateProductPayload,
+  type ReducereProgramRow,
 } from '../../lib/api'
 import {
   INDUSTRIAL_SPEC_FIELDS,
@@ -18,15 +21,18 @@ import {
   normalizeIndustrialTechnicalSpecs,
   type IndustrialTechnicalSpecsData,
 } from '../../lib/industrialTechnicalSpec'
+import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 
 const MAX_IMAGES = 5
 
 export default function AdminProducts() {
+  const { currency } = useCatalogCurrency()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const replaceIndexRef = useRef<number | null>(null)
   const docFileInputRef = useRef<HTMLInputElement>(null)
   const docUploadIndexRef = useRef(0)
   const cardPhotoInputRef = useRef<HTMLInputElement>(null)
+  const seoOgImageInputRef = useRef<HTMLInputElement>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -85,9 +91,17 @@ export default function AdminProducts() {
   const [vat, setVat] = useState('')
   const [priceVisibility, setPriceVisibility] = useState<'hidden' | 'public' | 'partner_only'>('public')
   const [pricePresentation, setPricePresentation] = useState<'simple' | 'detailed'>('simple')
+  const [catalogStockStatus, setCatalogStockStatus] = useState<'in_stock' | 'out_of_stock' | 'coming_soon'>('in_stock')
+  const [adminReducerPrograms, setAdminReducerPrograms] = useState<ReducereProgramRow[]>([])
+  const [reducereProgramsLoadError, setReducereProgramsLoadError] = useState<string | null>(null)
+  const [reducereProgramIds, setReducereProgramIds] = useState<string[]>([])
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
-  const [seoOgImage, setSeoOgImage] = useState('')
+  const [seoOgImagePhoto, setSeoOgImagePhoto] = useState<{
+    file: File | null
+    url?: string
+    preview: string
+  }>({ file: null, preview: '' })
   const [documenteTehnice, setDocumenteTehnice] = useState<{ descriere: string; file: File | null; url?: string }[]>([
     { descriere: '', file: null },
   ])
@@ -128,6 +142,36 @@ export default function AdminProducts() {
     if (tipProdus !== 'industrial' || !panelOpen) return
     setDocumenteTehnice((prev) => (prev.length === 0 ? [{ descriere: '', file: null }] : prev))
   }, [tipProdus, panelOpen])
+
+  useEffect(() => {
+    if (!panelOpen) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await getAdminReducerePrograms('ro')
+        if (!cancelled) {
+          setAdminReducerPrograms(list)
+          setReducereProgramsLoadError(null)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReducereProgramsLoadError(e instanceof Error ? e.message : 'Eroare la programe.')
+          setAdminReducerPrograms([])
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [panelOpen])
+
+  const sortedActiveReducerePrograms = useMemo(
+    () =>
+      [...adminReducerPrograms]
+        .filter((p) => p.isActive !== false)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    [adminReducerPrograms],
+  )
 
   const parseUnitValue = (s: string | null | undefined, _unit: string): string => {
     if (!s) return ''
@@ -224,9 +268,15 @@ export default function AdminProducts() {
     )
     const pp = String((row as { pricePresentation?: string }).pricePresentation || 'simple')
     setPricePresentation(pp === 'detailed' ? 'detailed' : 'simple')
+    const cs = String((row as { catalogStockStatus?: string }).catalogStockStatus || '')
+    setCatalogStockStatus(
+      cs === 'out_of_stock' ? 'out_of_stock' : cs === 'coming_soon' ? 'coming_soon' : 'in_stock',
+    )
+    setReducereProgramIds(normalizeProductReducereProgramIds(row))
     setSeoTitle(String((row as { seoTitle?: string }).seoTitle || ''))
     setSeoDescription(String((row as { seoDescription?: string }).seoDescription || ''))
-    setSeoOgImage(String((row as { seoOgImage?: string }).seoOgImage || ''))
+    const og = String((row as { seoOgImage?: string }).seoOgImage || '').trim()
+    setSeoOgImagePhoto(og ? { file: null, url: og, preview: og } : { file: null, preview: '' })
     const imgs = Array.isArray(row.images) ? row.images : []
     setImages(imgs.map((url) => ({ file: null, preview: url, url })))
     const docs = (row as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice
@@ -303,9 +353,14 @@ export default function AdminProducts() {
     setVat('')
     setPriceVisibility('public')
     setPricePresentation('simple')
+    setCatalogStockStatus('in_stock')
+    setReducereProgramIds([])
     setSeoTitle('')
     setSeoDescription('')
-    setSeoOgImage('')
+    setSeoOgImagePhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file: null, preview: '' }
+    })
     setDocumenteTehnice([{ descriere: '', file: null }])
     setFaq([{ q: '', a: '' }])
     setAlimentaModalContent('')
@@ -532,6 +587,31 @@ export default function AdminProducts() {
     })
   }
 
+  const onSeoOgImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file?.type.startsWith('image/')) return
+    setSeoOgImagePhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file, url: undefined, preview: URL.createObjectURL(file) }
+    })
+  }
+
+  const clearSeoOgImage = () => {
+    setSeoOgImagePhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file: null, url: undefined, preview: '' }
+    })
+  }
+
+  const onSeoOgImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    setSeoOgImagePhoto((prev) => {
+      if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
+      return { file: null, url: v, preview: v }
+    })
+  }
+
   const addTechnicalSpecModel = () => {
     setTechnicalSpecs((prev) => ({
       entries: [...prev.entries, createEmptyIndustrialModelEntry()],
@@ -575,6 +655,10 @@ export default function AdminProducts() {
       images.forEach(({ preview }) => preview.startsWith('blob:') && URL.revokeObjectURL(preview))
       keyAdvantages.forEach((ka) => ka.preview?.startsWith('blob:') && URL.revokeObjectURL(ka.preview))
       if (cardPhoto.preview.startsWith('blob:')) URL.revokeObjectURL(cardPhoto.preview)
+      setSeoOgImagePhoto((og) => {
+        if (og.preview.startsWith('blob:')) URL.revokeObjectURL(og.preview)
+        return { file: null, preview: '' }
+      })
       setImages([])
       setKeyAdvantages([])
       setCardPhoto({ file: null, preview: '' })
@@ -617,14 +701,13 @@ export default function AdminProducts() {
 
     const keyAdvPayload: { title: string; image: string }[] = []
     if (tipProdus === 'industrial') {
-      let ki = 0
       for (const row of keyAdvantages) {
         if (!row.title.trim() && !row.file && !row.url) continue
         let imageUrl = row.url || ''
         if (row.file) {
-          const { url } = await uploadAdminFile(row.file, productFolder, 100 + ki)
+          // No fixed imageIndex: unique R2 key per upload (timestamp). Fixes replace + reorder.
+          const { url } = await uploadAdminFile(row.file, productFolder)
           imageUrl = url
-          ki++
         }
         keyAdvPayload.push({ title: row.title.trim(), image: imageUrl })
       }
@@ -672,6 +755,15 @@ export default function AdminProducts() {
       cardImageOut = null
     }
 
+    let seoOgImageOut: string | null = null
+    if (seoOgImagePhoto.file) {
+      const { url } = await uploadAdminFile(seoOgImagePhoto.file, productFolder, 98)
+      seoOgImageOut = url.trim() || null
+    } else {
+      const u = (seoOgImagePhoto.url ?? '').trim()
+      seoOgImageOut = u || null
+    }
+
     let technicalSpecsModelsOut: CreateProductPayload['technicalSpecsModels'] = null
     if (carouselTemplate) {
       technicalSpecsModelsOut = {
@@ -693,9 +785,11 @@ export default function AdminProducts() {
       categorie: [categorieRezidential && 'rezidential', categorieIndustrial && 'industrial', categorieMedical && 'medical', categorieMaritim && 'maritim'].filter(Boolean).join(',') || undefined,
       priceVisibility,
       pricePresentation,
+      catalogStockStatus: tipProdus === 'rezidential' ? catalogStockStatus : null,
+      reducereProgramIds: tipProdus === 'rezidential' ? [...new Set(reducereProgramIds)] : [],
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
-      seoOgImage: seoOgImage.trim() || null,
+      seoOgImage: seoOgImageOut,
       landedPrice: parseFormattedNumber(landedPrice) || '0',
       salePrice: parseFormattedNumber(salePrice) || '0',
       vat: parseFormattedNumber(vat) || '19',
@@ -1014,7 +1108,7 @@ export default function AdminProducts() {
                           <span>Conectivitate: {conectivitate}</span>
                         </div>
                         {priceStr && !Number.isNaN(Number(priceStr)) && (
-                          <p className="text-sm font-semibold text-gray-800 mt-auto">{Number(priceStr).toLocaleString('ro-RO')} lei</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-auto">{Number(priceStr).toLocaleString('ro-RO')} {currency}</p>
                         )}
                       </div>
                     </div>
@@ -1108,6 +1202,82 @@ export default function AdminProducts() {
                   </label>
                 </div>
               </div>
+
+              {tipProdus === 'rezidential' && (
+                <div className="pt-2 border-t border-gray-200">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-1">Stoc</h3>
+                  <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                    Etichetă în colțul stânga al imaginii pe cardul produsului (catalog).
+                  </p>
+                  <div role="radiogroup" aria-label="Stoc catalog" className="flex flex-col gap-2.5">
+                    {(
+                      [
+                        { id: 'catalog-stock-suficient', value: 'in_stock' as const, label: 'Stoc suficient' },
+                        { id: 'catalog-stock-epuizat', value: 'out_of_stock' as const, label: 'Stoc epuizat' },
+                        { id: 'catalog-stock-curand', value: 'coming_soon' as const, label: 'În curând' },
+                      ] as const
+                    ).map((opt) => (
+                      <label
+                        key={opt.id}
+                        htmlFor={opt.id}
+                        className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                      >
+                        <input
+                          id={opt.id}
+                          type="radio"
+                          name="catalogStockStatus"
+                          checked={catalogStockStatus === opt.value}
+                          onChange={() => setCatalogStockStatus(opt.value)}
+                          className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {tipProdus === 'rezidential' && (
+                <div className="pt-2 border-t border-gray-200">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-1">Programe Reduceri</h3>
+                  <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                    Bifează programele disponibile pentru acest produs. Lista goală = toate programele active în dropdown-ul de pe site (comportament vechi).
+                  </p>
+                  {reducereProgramsLoadError && (
+                    <p className="text-sm text-red-600 font-['Inter'] mb-2">{reducereProgramsLoadError}</p>
+                  )}
+                  {sortedActiveReducerePrograms.length === 0 && !reducereProgramsLoadError ? (
+                    <p className="text-sm text-gray-500 font-['Inter']">Nu există programe active (ro).</p>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      {sortedActiveReducerePrograms.map((program) => {
+                        const label = program.programLabel?.trim() || program.title || program.id
+                        return (
+                          <label
+                            key={program.id}
+                            htmlFor={`reducere-program-${program.id}`}
+                            className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                          >
+                            <input
+                              id={`reducere-program-${program.id}`}
+                              type="checkbox"
+                              checked={reducereProgramIds.includes(program.id)}
+                              onChange={(e) => {
+                                const on = e.target.checked
+                                setReducereProgramIds((prev) =>
+                                  on ? [...new Set([...prev, program.id])] : prev.filter((id) => id !== program.id),
+                                )
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900"
+                            />
+                            {label}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* SKU */}
               <div className="pt-2 border-t border-gray-200">
@@ -1278,14 +1448,54 @@ export default function AdminProducts() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="product-seo-og-image" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Imagine Open Graph (URL opțional)
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Imagine Open Graph (opțional)
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                      Încarcă o imagine (recomandat 1200×630) sau introdu manual un URL public.
+                    </p>
+                    <input
+                      ref={seoOgImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onSeoOgImageChange}
+                    />
+                    <div className="flex flex-wrap items-center gap-4 mb-3">
+                      {seoOgImagePhoto.preview ? (
+                        <img
+                          src={seoOgImagePhoto.preview}
+                          alt=""
+                          className="h-24 max-w-[min(100%,20rem)] object-contain rounded-xl border border-gray-200 bg-neutral-50"
+                        />
+                      ) : null}
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => seoOgImageInputRef.current?.click()}
+                          className="h-10 px-4 rounded-xl border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 bg-white w-fit"
+                        >
+                          Încarcă imagine OG
+                        </button>
+                        {seoOgImagePhoto.preview || seoOgImagePhoto.file ? (
+                          <button
+                            type="button"
+                            onClick={clearSeoOgImage}
+                            className="text-sm text-red-600 hover:underline text-left w-fit font-['Inter']"
+                          >
+                            Elimină imaginea încărcată
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <label htmlFor="product-seo-og-image-url" className="block text-xs font-medium font-['Inter'] text-gray-600 mb-1">
+                      URL manual (opțional)
                     </label>
                     <input
-                      id="product-seo-og-image"
-                      type="url"
-                      value={seoOgImage}
-                      onChange={(e) => setSeoOgImage(e.target.value)}
+                      id="product-seo-og-image-url"
+                      type="text"
+                      value={seoOgImagePhoto.url ?? ''}
+                      onChange={onSeoOgImageUrlChange}
                       placeholder="https://… sau /images/…"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />

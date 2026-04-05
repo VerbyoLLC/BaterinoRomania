@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { getAuthToken, getAdminInquiriesUnreadCount } from '../../lib/api'
 
@@ -29,6 +29,17 @@ function IconClients() {
     </svg>
   )
 }
+function IconParteneri() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+      />
+    </svg>
+  )
+}
 function IconCompanies() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -43,10 +54,43 @@ function IconArticles() {
     </svg>
   )
 }
+function IconMedia() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+  )
+}
+function IconStudiiDeCaz() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  )
+}
 function IconStocks() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    </svg>
+  )
+}
+function IconInventar() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
     </svg>
   )
 }
@@ -78,6 +122,50 @@ function IconPhone() {
     </svg>
   )
 }
+function IconSettings() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )
+}
+function IconCurrency() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+function IconCompanyData() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+      />
+    </svg>
+  )
+}
+function IconChevronNav({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`w-4 h-4 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
 function IconLogout() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -86,24 +174,94 @@ function IconLogout() {
   )
 }
 
-const NAV_ITEMS = [
-  { to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
-  { to: '/admin/products', label: 'Produse', icon: <IconProducts />, end: false },
-  { to: '/admin/messages', label: 'Messages', icon: <IconMessages />, end: false },
-  { to: '/admin/clients', label: 'Clienți', icon: <IconClients />, end: false },
-  { to: '/admin/companies', label: 'Companii', icon: <IconCompanies />, end: false },
-  { to: '/admin/articles', label: 'Articole', icon: <IconArticles />, end: false },
-  { to: '/admin/stocks', label: 'Stocuri', icon: <IconStocks />, end: false },
-  { to: '/admin/orders', label: 'Comenzi', icon: <IconOrders />, end: false },
-  { to: '/admin/discounts', label: 'Reduceri', icon: <IconDiscounts />, end: false },
-  { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone />, end: false },
+type NavLinkItem = { kind: 'link'; to: string; label: string; icon: ReactNode; end: boolean }
+
+type NavGroupItem = {
+  kind: 'group'
+  id: string
+  label: string
+  icon: ReactNode
+  children: { to: string; label: string; icon: ReactNode }[]
+}
+
+const SETARI_PATHS = ['/admin/currency', '/admin/company-data', '/admin/phone-numbers'] as const
+const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
+const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
+const INVENTAR_PATHS = ['/admin/products', '/admin/stocks'] as const
+
+const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
+  { kind: 'link', to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
+  { kind: 'link', to: '/admin/orders', label: 'Comenzi', icon: <IconOrders />, end: false },
+  { kind: 'link', to: '/admin/messages', label: 'Messages', icon: <IconMessages />, end: false },
+  {
+    kind: 'group',
+    id: 'inventar',
+    label: 'Inventar',
+    icon: <IconInventar />,
+    children: [
+      { to: '/admin/products', label: 'Produse', icon: <IconProducts /> },
+      { to: '/admin/stocks', label: 'Stocuri', icon: <IconStocks /> },
+    ],
+  },
+  {
+    kind: 'group',
+    id: 'parteneri',
+    label: 'Parteneri',
+    icon: <IconParteneri />,
+    children: [
+      { to: '/admin/clients', label: 'Clienți', icon: <IconClients /> },
+      { to: '/admin/companies', label: 'Companii', icon: <IconCompanies /> },
+    ],
+  },
+  {
+    kind: 'group',
+    id: 'media',
+    label: 'Media',
+    icon: <IconMedia />,
+    children: [
+      { to: '/admin/articles', label: 'Articole', icon: <IconArticles /> },
+      { to: '/admin/studii-de-caz', label: 'Studii de caz', icon: <IconStudiiDeCaz /> },
+      { to: '/admin/discounts', label: 'Reduceri', icon: <IconDiscounts /> },
+    ],
+  },
+  {
+    kind: 'group',
+    id: 'setari',
+    label: 'Setări',
+    icon: <IconSettings />,
+    children: [
+      { to: '/admin/currency', label: 'Currency', icon: <IconCurrency /> },
+      { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
+      { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
+    ],
+  },
 ]
+
+function pathUnderSetari(pathname: string) {
+  return SETARI_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
+function pathUnderParteneri(pathname: string) {
+  return PARTENERI_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
+function pathUnderMedia(pathname: string) {
+  return MEDIA_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
+function pathUnderInventar(pathname: string) {
+  return INVENTAR_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
 
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [setariOpen, setSetariOpen] = useState(() => pathUnderSetari(location.pathname))
+  const [parteneriOpen, setParteneriOpen] = useState(() => pathUnderParteneri(location.pathname))
+  const [mediaOpen, setMediaOpen] = useState(() => pathUnderMedia(location.pathname))
+  const [inventarOpen, setInventarOpen] = useState(() => pathUnderInventar(location.pathname))
 
   useEffect(() => {
     if (!getAuthToken() && location.pathname !== '/admin/login') {
@@ -121,6 +279,13 @@ export default function AdminLayout() {
     fetchCount()
     window.addEventListener('admin-inquiries-updated', fetchCount)
     return () => window.removeEventListener('admin-inquiries-updated', fetchCount)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (pathUnderSetari(location.pathname)) setSetariOpen(true)
+    if (pathUnderParteneri(location.pathname)) setParteneriOpen(true)
+    if (pathUnderMedia(location.pathname)) setMediaOpen(true)
+    if (pathUnderInventar(location.pathname)) setInventarOpen(true)
   }, [location.pathname])
 
   return (
@@ -153,31 +318,99 @@ export default function AdminLayout() {
 
           {/* Nav */}
           <nav className="flex-1 flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`
-                }
-              >
-                <span className="relative flex-shrink-0">
-                  {item.icon}
-                  {item.to === '/admin/messages' && unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
-                      {unreadCount > 99 ? '99+' : unreadCount}
+            {NAV_ITEMS.map((item) => {
+              if (item.kind === 'link') {
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-white/10 text-white'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                      }`
+                    }
+                  >
+                    <span className="relative flex-shrink-0">
+                      {item.icon}
+                      {item.to === '/admin/messages' && unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </span>
+                    {item.label}
+                  </NavLink>
+                )
+              }
+
+              const childActive = item.children.some(
+                (c) => location.pathname === c.to || location.pathname.startsWith(`${c.to}/`)
+              )
+              const groupOpen =
+                item.id === 'setari'
+                  ? setariOpen
+                  : item.id === 'parteneri'
+                    ? parteneriOpen
+                    : item.id === 'media'
+                      ? mediaOpen
+                      : item.id === 'inventar'
+                        ? inventarOpen
+                        : false
+              const setGroupOpen =
+                item.id === 'setari'
+                  ? setSetariOpen
+                  : item.id === 'parteneri'
+                    ? setParteneriOpen
+                    : item.id === 'media'
+                      ? setMediaOpen
+                      : item.id === 'inventar'
+                        ? setInventarOpen
+                        : () => {}
+              return (
+                <div key={item.id} className="flex flex-col gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setGroupOpen((o) => !o)}
+                    className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors text-left ${
+                      childActive
+                        ? 'bg-white/10 text-white'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`}
+                    aria-expanded={groupOpen}
+                  >
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="flex-1 min-w-0">{item.label}</span>
+                    <IconChevronNav open={groupOpen} />
+                  </button>
+                  {groupOpen && (
+                    <div className="flex flex-col gap-0.5 pl-2 border-l border-slate-700/60 ml-6 mr-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          end={false}
+                          onClick={() => setSidebarOpen(false)}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-['Inter'] font-medium transition-colors ${
+                              isActive
+                                ? 'bg-white/10 text-white'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                            }`
+                          }
+                        >
+                          <span className="flex-shrink-0 opacity-90">{child.icon}</span>
+                          {child.label}
+                        </NavLink>
+                      ))}
+                    </div>
                   )}
-                </span>
-                {item.label}
-              </NavLink>
-            ))}
+                </div>
+              )
+            })}
           </nav>
 
           {/* User + Logout */}

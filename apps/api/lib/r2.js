@@ -160,4 +160,55 @@ async function deleteFromR2(key) {
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
 }
 
-module.exports = { uploadToR2, generateKey, sanitizeFolderName, isR2Configured, urlToKey, deleteFromR2 }
+/** R2 has no real folders; prefix is `orders/<Prisma order id>/`. */
+const ORDERS_PREFIX = 'orders'
+
+/**
+ * @param {string} orderDbId - GuestResidentialOrder.id (cuid)
+ * @returns {string} Safe key prefix, e.g. orders/clxyz...
+ */
+function orderFolderPrefix(orderDbId) {
+  const s = String(orderDbId || '').trim()
+  if (!/^c[a-z0-9]{24}$/i.test(s)) {
+    throw new Error('Invalid order id for R2 path')
+  }
+  return `${ORDERS_PREFIX}/${s}`
+}
+
+/**
+ * Creates the order “folder” in R2 by uploading a tiny placeholder. Later PDFs use the same prefix, e.g. `proforma.pdf`.
+ * @param {string} orderDbId
+ * @returns {Promise<string>} Public URL of the placeholder object
+ */
+async function ensureGuestOrderFolder(orderDbId) {
+  const base = orderFolderPrefix(orderDbId)
+  const key = `${base}/.placeholder`
+  const buf = Buffer.from('Reserved for order documents.\n', 'utf8')
+  return uploadToR2(buf, key, 'text/plain')
+}
+
+/**
+ * Suggested key for a future PDF (or other doc) under this order.
+ * @param {string} orderDbId
+ * @param {string} [filename] - default proforma.pdf
+ * @returns {string} R2 object key (not full URL)
+ */
+function guestOrderDocumentKey(orderDbId, filename = 'proforma.pdf') {
+  const base = orderFolderPrefix(orderDbId)
+  const safe = String(filename || 'proforma.pdf')
+    .replace(/[/\\]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+  return `${base}/${safe || 'document.pdf'}`
+}
+
+module.exports = {
+  uploadToR2,
+  generateKey,
+  sanitizeFolderName,
+  isR2Configured,
+  urlToKey,
+  deleteFromR2,
+  orderFolderPrefix,
+  ensureGuestOrderFolder,
+  guestOrderDocumentKey,
+}
