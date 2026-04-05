@@ -5,6 +5,17 @@ import PasswordInput from '../components/PasswordInput'
 import { login as apiLogin, setAuthToken } from '../lib/api'
 import { INSTALATORI_ONLY } from '../lib/siteMode'
 
+function safeInternalNext(raw: string | null): string | undefined {
+  if (!raw) return undefined
+  try {
+    const decoded = decodeURIComponent(raw.trim())
+    if (!decoded.startsWith('/') || decoded.startsWith('//')) return undefined
+    return decoded
+  } catch {
+    return undefined
+  }
+}
+
 function GoogleButton({ label }: { label: string }) {
   return (
     <button
@@ -25,6 +36,7 @@ function GoogleButton({ label }: { label: string }) {
 export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const nextPath = safeInternalNext(searchParams.get('next'))
   const tabParam = searchParams.get('tab')
   const initialTab = INSTALATORI_ONLY ? 'partener' : (tabParam === 'partener' ? 'partener' : 'client')
   const [tab, setTab] = useState<'client' | 'partener'>(initialTab)
@@ -50,7 +62,7 @@ export default function Login() {
       if (user.role === 'partener') {
         navigate('/partner')
       } else {
-        navigate('/')
+        navigate(nextPath ?? '/')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eroare la autentificare.')

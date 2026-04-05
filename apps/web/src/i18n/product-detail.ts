@@ -34,6 +34,8 @@ export type ProductDetailTranslations = {
   badgeRetur: string
   badgeSwap: string
   badgeSuport: string
+  /** Lângă titlu: produs în stoc (înainte de program reducere) */
+  residentialStockInStockBadge: string
   /** Badge când produsul are programe de reducere asociate (CMS) */
   programReducereBadge: string
   // Compatibility modal
@@ -189,6 +191,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: 'Retur in 15 zile',
     badgeSwap: 'SWAP - Baterie la schimb',
     badgeSuport: 'Suport & Service in Romania',
+    residentialStockInStockBadge: 'Stoc suficient',
     programReducereBadge: 'Program de reducere',
     compatibilitateTitle: 'Compatibilitate Invertor',
     compatibilitateInvertorHeroTitle: 'Verifică compatibilitatea cu invertorul tău.',
@@ -311,6 +314,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: '15-day returns',
     badgeSwap: 'SWAP - Replacement battery',
     badgeSuport: 'Support & Service in Romania',
+    residentialStockInStockBadge: 'In stock',
     programReducereBadge: 'Discount programme',
     compatibilitateTitle: 'Inverter Compatibility',
     compatibilitateInvertorHeroTitle: 'Check compatibility with your inverter.',
@@ -433,6 +437,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     badgeRetur: '15天退货',
     badgeSwap: 'SWAP - 更换电池',
     badgeSuport: '罗马尼亚支持与服务',
+    residentialStockInStockBadge: '库存充足',
     programReducereBadge: '折扣计划',
     compatibilitateTitle: '逆变器兼容性',
     compatibilitateInvertorHeroTitle: '检查与您逆变器的兼容性。',

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useId, useCallback, type ReactNod
 import { ChevronDown } from 'lucide-react'
 import { Link, useParams, Navigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getProduct, type PublicProduct } from '../lib/api'
+import { getProduct, productHasEligibleReducerePrograms, residentialProductStockUnavailable, type PublicProduct } from '../lib/api'
 import { getProductDetailTranslations, type ProductDetailTranslations } from '../i18n/product-detail'
 import SEO from '../components/SEO'
 import ProductPriceBlock from '../components/ProductPriceBlock'
@@ -78,7 +78,7 @@ function ProductImageWithLoader({ src, alt }: { src: string; alt: string }) {
 const INVERTER_BRANDS = [
   'ATESS', 'DEYE', 'EPEVER', 'GINLONG', 'GOODWE', 'GROWATT', 'HYPONTECH',
   'KOYOE', 'LUXPOWERTEK', 'MEGAREVO', 'MUST', 'SCHNEIDER ELECTRIC', 'SENERGY',
-  'SINEXCEL', 'SMA', 'SOFAR', 'SOLAX POWER', 'SOROTEC', 'SRNE', 'SUNGROW',
+  'SINEXCEL', 'SMA', 'SOFAR', 'SOLAX POWER', 'SOLIS', 'SOROTEC', 'SRNE', 'SUNGROW',
   'VICTRON ENERGY', 'VOLTRONIC POWER',
 ]
 
@@ -1006,7 +1006,16 @@ export default function ProductRezidential() {
               <h1 className="text-black text-2xl font-bold font-['Inter'] leading-tight tracking-tight m-0 sm:text-3xl">
                 {product.title}
               </h1>
-              <ResidentialReducereProgramBadge product={product} label={tr.programReducereBadge} className="mt-2" />
+              {!residentialProductStockUnavailable(product) || productHasEligibleReducerePrograms(product) ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {!residentialProductStockUnavailable(product) ? (
+                    <span className="inline-flex max-w-full items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] shadow-sm ring-1 ring-emerald-800/40">
+                      {tr.residentialStockInStockBadge}
+                    </span>
+                  ) : null}
+                  <ResidentialReducereProgramBadge product={product} label={tr.programReducereBadge} />
+                </div>
+              ) : null}
               {rawDesc ? (
                 <div className="mt-3 sm:mt-4 max-w-prose">
                   <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed m-0">

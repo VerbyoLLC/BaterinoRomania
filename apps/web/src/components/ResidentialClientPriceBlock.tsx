@@ -5,7 +5,6 @@ import {
   getAuthRole,
   getPublicReducerePrograms,
   normalizeProductReducereProgramIds,
-  residentialProductStockUnavailable,
   type PublicProduct,
 } from '../lib/api'
 import {
@@ -19,6 +18,8 @@ import { getProductPricingTranslations } from '../i18n/product-pricing'
 import ReduceriProgramsModal from './ReduceriProgramsModal'
 import ResidentialDiscountAboutModal from './ResidentialDiscountAboutModal'
 import ResidentialMobileDiscountModals from './ResidentialMobileDiscountModals'
+
+export { showResidentialClientPurchaseUI } from '../lib/residentialPublicPurchase'
 
 function num(v: string | number | null | undefined): number | null {
   if (v == null) return null
@@ -50,15 +51,6 @@ function formatResidentialDiscountOption(
 ): string {
   const suffix = tr.residentialDiscountOptionSuffix || 'REDUCERE'
   return `${cleanProgramDisplayName(programLabel)} : ${discountPercent}% ${suffix}`
-}
-
-/** Residential template: show public client purchase UI (price, programme, qty, order). */
-export function showResidentialClientPurchaseUI(product: PublicProduct): boolean {
-  const vis = (product.priceVisibility as string) || 'public'
-  if (vis !== 'public') return false
-  if (residentialProductStockUnavailable(product)) return false
-  const sale = num(product.salePrice)
-  return sale != null && sale > 0
 }
 
 type Props = { product: PublicProduct; tr: ProductDetailTranslations; lang: LangCode }
@@ -340,6 +332,13 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             if (guestWithDiscount) {
               navigate('/signup/clienti')
               return
+            }
+            if (!hasProgramDiscount) {
+              const s = String(product.slug || product.id || '').trim()
+              if (s) {
+                navigate(`/comanda?slug=${encodeURIComponent(s)}&qty=${qty}`)
+                return
+              }
             }
             const lines = [
               product.title,

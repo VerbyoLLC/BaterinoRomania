@@ -1716,6 +1716,48 @@ app.post('/api/guest-residential-orders', async (req, res) => {
   }
 })
 
+const adminGuestResidentialOrdersHandler = async (req, res) => {
+  try {
+    const rows = await prisma.guestResidentialOrder.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    })
+    const out = rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      orderSource: r.orderSource,
+      email: r.email,
+      phone: r.phone,
+      lastName: r.lastName,
+      firstName: r.firstName,
+      billAddress: r.billAddress,
+      billCounty: r.billCounty,
+      billCity: r.billCity,
+      billPostal: r.billPostal,
+      deliveryDifferent: r.deliveryDifferent,
+      delAddress: r.delAddress,
+      delCounty: r.delCounty,
+      delCity: r.delCity,
+      delPostal: r.delPostal,
+      productId: r.productId,
+      productSlug: r.productSlug,
+      productTitle: r.productTitle,
+      quantity: r.quantity,
+      currency: r.currency,
+      unitPriceInclVat: r.unitPriceInclVat != null ? String(r.unitPriceInclVat) : null,
+      lineTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
+      vatPercent: r.vatPercent != null ? String(r.vatPercent) : null,
+      createdAt: r.createdAt.toISOString(),
+    }))
+    return res.json(out)
+  } catch (err) {
+    console.error('Admin guest residential orders error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comenzilor.' })
+  }
+}
+app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+
 // ── Public: list published products (no auth) ───────────────────────────
 // When no published products exist, fall back to drafts (helps new sites / dev)
 const listPublicProductsHandler = async (req, res) => {

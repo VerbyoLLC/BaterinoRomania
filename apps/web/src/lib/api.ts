@@ -30,6 +30,76 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
+/** Payload POST /api/guest-residential-orders (comandă invitat, flux /comanda). */
+export type GuestResidentialOrderPayload = {
+  productIdOrSlug: string
+  quantity: number
+  email: string
+  /** Ultimele 9 cifre naționale (fără +40). */
+  phone: string
+  nume: string
+  prenume: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  differentDeliveryAddress: boolean
+  delAddress?: string
+  delCounty?: string
+  delCity?: string
+  delPostal?: string
+}
+
+export type GuestResidentialOrderResponse = {
+  orderNumber: string
+  /** ID rând Prisma — folosit în R2 la prefixul `orders/{orderId}/`. */
+  orderId?: string
+  email: string
+  /** Aliniat cu DB: guest | client */
+  orderSource?: 'guest' | 'client'
+  message?: string
+}
+
+export async function submitGuestResidentialOrder(
+  payload: GuestResidentialOrderPayload,
+): Promise<GuestResidentialOrderResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getAuthToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/guest-residential-orders`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      productIdOrSlug: payload.productIdOrSlug,
+      quantity: payload.quantity,
+      email: payload.email,
+      phone: payload.phone,
+      nume: payload.nume,
+      prenume: payload.prenume,
+      billAddress: payload.billAddress,
+      billCounty: payload.billCounty,
+      billCity: payload.billCity,
+      billPostal: payload.billPostal,
+      differentDeliveryAddress: payload.differentDeliveryAddress,
+      delAddress: payload.differentDeliveryAddress ? payload.delAddress : undefined,
+      delCounty: payload.differentDeliveryAddress ? payload.delCounty : undefined,
+      delCity: payload.differentDeliveryAddress ? payload.delCity : undefined,
+      delPostal: payload.differentDeliveryAddress ? payload.delPostal : undefined,
+    }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<GuestResidentialOrderResponse>
+  if (!res.ok) throw new Error(json.error || 'Eroare la înregistrarea comenzii.')
+  if (!json.orderNumber) throw new Error('Răspuns invalid de la server.')
+  const src = json.orderSource
+  return {
+    orderNumber: json.orderNumber,
+    orderId: typeof json.orderId === 'string' ? json.orderId : undefined,
+    email: String(json.email || payload.email),
+    orderSource: src === 'client' || src === 'guest' ? src : undefined,
+    message: json.message,
+  }
+}
+
 /** Imagine afișată pe carduri (listă produse, acasă, panou parteneri) */
 export function getProductCardImageUrl(
   product: Pick<PublicProduct, 'images'> & { cardImage?: string | null }
@@ -145,23 +215,6 @@ export function residentialCatalogUsesPartnerPriceCta(product: PublicProduct): b
   return vis === 'partner_only' || vis === 'hidden'
 }
 
-const CATALOG_STOCK_BADGE_BASE =
-  "pointer-events-none absolute left-2 top-2 z-10 max-w-[min(100%-1rem,12rem)] rounded-md px-2 py-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide shadow-sm font-['Inter'] sm:left-2.5 sm:top-2.5 sm:text-[11px]"
-
-/** Etichetă colț stânga sus pe imagine — doar „stoc suficient”; epuizat / în curând folosesc butonul din card, fără badge. */
-export function getResidentialCatalogStockBadge(
-  product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
-  labels: { inStock: string },
-): { text: string; className: string } | null {
-  if (String(product.tipProdus || '').toLowerCase() !== 'rezidential') return null
-  const s = product.catalogStockStatus as CatalogStockStatus | undefined | null
-  if (s !== 'in_stock') return null
-  return {
-    text: labels.inStock,
-    className: `${CATALOG_STOCK_BADGE_BASE} bg-emerald-600 text-white ring-1 ring-emerald-800/40`,
-  }
-}
-
 /** Rezidențial: text pentru butonul din locul prețului (fără badge pe imagine). */
 export function getResidentialCatalogStockListingCta(
   product: Pick<PublicProduct, 'tipProdus' | 'catalogStockStatus'>,
@@ -214,6 +267,19 @@ export async function getProducts(): Promise<PublicProduct[]> {
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
   const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
     headers: publicFetchHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
+  return json
+}
+
+/**
+ * Same as getProduct, but never sends Authorization — matches what a logged-out visitor
+ * sees on the PDP (applyPublicPricePolicy with no JWT). Use for guest checkout.
+ */
+export async function getProductAsGuest(idOrSlug: string): Promise<PublicProduct> {
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
+    headers: {},
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
@@ -778,6 +844,48 @@ export type AdminInquiry = {
   createdAt: string
 }
 
+export type AdminGuestResidentialOrderRow = {
+  id: string
+  orderNumber: string
+  orderSource: string
+  email: string
+  phone: string
+  lastName: string
+  firstName: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  deliveryDifferent: boolean
+  delAddress: string | null
+  delCounty: string | null
+  delCity: string | null
+  delPostal: string | null
+  productId: string
+  productSlug: string | null
+  productTitle: string
+  quantity: number
+  currency: string
+  unitPriceInclVat: string | null
+  lineTotalInclVat: string | null
+  vatPercent: string | null
+  createdAt: string
+}
+
+export async function getAdminGuestResidentialOrders(): Promise<AdminGuestResidentialOrderRow[]> {
+  const res = await fetch(`${API_BASE}/admin/guest-residential-orders`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea comenzilor.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
 export async function getAdminInquiries(): Promise<AdminInquiry[]> {
   const res = await fetch(`${API_BASE}/admin/inquiries`, { headers: authHeaders() })
   const json = await res.json().catch(() => ({}))
@@ -885,4 +993,64 @@ export async function saveAdminCatalogCurrency(currency: CatalogCurrencyCode): P
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
   return { currency: normalizeCatalogCurrencyCode(json.currency) }
+}
+
+export type CompanyBankAccount = {
+  id: string
+  bankName: string
+  iban: string
+  swift: string
+  accountName: string
+}
+
+export type AdminCompanyData = {
+  name: string
+  cui: string
+  address: string
+  bankAccounts: CompanyBankAccount[]
+}
+
+function normalizeAdminCompanyData(json: unknown): AdminCompanyData {
+  if (!json || typeof json !== 'object') {
+    return { name: 'Baterino SRL', cui: '', address: '', bankAccounts: [] }
+  }
+  const o = json as Record<string, unknown>
+  const rawAccounts = Array.isArray(o.bankAccounts) ? o.bankAccounts : []
+  const bankAccounts: CompanyBankAccount[] = rawAccounts.slice(0, 20).map((a) => {
+    const row = a && typeof a === 'object' ? (a as Record<string, unknown>) : {}
+    return {
+      id: typeof row.id === 'string' && row.id.trim() ? row.id.trim() : crypto.randomUUID(),
+      bankName: typeof row.bankName === 'string' ? row.bankName : '',
+      iban: typeof row.iban === 'string' ? row.iban : '',
+      swift: typeof row.swift === 'string' ? row.swift : '',
+      accountName: typeof row.accountName === 'string' ? row.accountName : '',
+    }
+  })
+  return {
+    name: typeof o.name === 'string' ? o.name : '',
+    cui: typeof o.cui === 'string' ? o.cui : '',
+    address: typeof o.address === 'string' ? o.address : '',
+    bankAccounts,
+  }
+}
+
+export async function getAdminCompanyData(): Promise<AdminCompanyData> {
+  const res = await fetch(`${API_BASE}/admin/company-data`, { headers: authHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' ? json.error : 'Eroare la încărcarea datelor companiei.'
+    throw new Error(msg)
+  }
+  return normalizeAdminCompanyData(json)
+}
+
+export async function saveAdminCompanyData(data: AdminCompanyData): Promise<AdminCompanyData> {
+  const res = await fetch(`${API_BASE}/admin/company-data`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
+  return normalizeAdminCompanyData(json)
 }

@@ -4,7 +4,6 @@ import {
   getProduct,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
-  getResidentialCatalogStockBadge,
   getResidentialCatalogStockListingCta,
   type PublicProduct,
 } from '../../lib/api'
@@ -106,10 +105,6 @@ function ProductCard({
 
   const industrialSubtitle = String(product.subtitle || '').trim() || undefined
 
-  const imageCornerBadge = getResidentialCatalogStockBadge(product, {
-    inStock: tr.catalogStockInStock,
-  })
-
   const common = {
     density: 'partner' as const,
     imageSrc: img,
@@ -130,7 +125,6 @@ function ProductCard({
   ) : (
     <ResidentialCatalogProductCard
       {...common}
-      imageCornerBadge={imageCornerBadge}
       residentialStockListingCta={stockListingCta}
     />
   )
