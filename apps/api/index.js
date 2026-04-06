@@ -164,6 +164,22 @@ function sanitizeGuestOrderText(value) {
   return String(value ?? '').replace(/[<>/\\]/g, '').trim()
 }
 
+function normalizeCheckoutItems(body) {
+  if (Array.isArray(body.items) && body.items.length > 0) {
+    const out = []
+    for (const x of body.items) {
+      if (!x || typeof x !== 'object') continue
+      const productIdOrSlug = String(x.productIdOrSlug || x.slug || '').trim()
+      if (!productIdOrSlug) continue
+      out.push({ productIdOrSlug, quantity: x.quantity })
+    }
+    return out
+  }
+  const one = String(body.productIdOrSlug || body.slug || '').trim()
+  if (!one) return []
+  return [{ productIdOrSlug: one, quantity: body.quantity }]
+}
+
 async function findPublicProductRecordByIdOrSlug(idOrSlug) {
   const id = String(idOrSlug || '').trim()
   if (!id) return null
@@ -229,6 +245,7 @@ function authMiddleware(req, res, next) {
     const payload = jwt.verify(token, JWT_SECRET)
     req.userId = payload.userId
     req.userRole = payload.role
+    req.userEmail = payload.email ?? null
     next()
   } catch {
     return res.status(401).json({ error: 'Token invalid.' })
@@ -238,6 +255,13 @@ function authMiddleware(req, res, next) {
 function adminAuthMiddleware(req, res, next) {
   if (req.userRole !== 'admin') {
     return res.status(403).json({ error: 'Acces restricționat. Doar administratorii pot accesa.' })
+  }
+  next()
+}
+
+function clientAuthMiddleware(req, res, next) {
+  if (req.userRole !== 'client') {
+    return res.status(403).json({ error: 'Acces restricționat. Doar conturile client pot accesa.' })
   }
   next()
 }
@@ -489,6 +513,240 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err)
     res.status(500).json({ error: 'Eroare la autentificare.' })
+  }
+})
+
+// ── Client: profil, parolă, comenzi ──────────────────────────────────────
+app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { email: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const profile = await prisma.clientProfile.findUnique({ where: { userId: req.userId } })
+    return res.json({
+      email: user.email,
+      profile: profile
+        ? {
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            phone: profile.phone,
+            billAddress: profile.billAddress,
+            billCounty: profile.billCounty,
+            billCity: profile.billCity,
+            billPostal: profile.billPostal,
+            deliveryDifferent: profile.deliveryDifferent,
+            delAddress: profile.delAddress,
+            delCounty: profile.delCounty,
+            delCity: profile.delCity,
+            delPostal: profile.delPostal,
+          }
+        : null,
+    })
+  } catch (err) {
+    console.error('Client profile GET error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+    const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
+    let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
+    let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
+    let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
+    let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
+    if (!deliveryDifferent) {
+      delAddress = null
+      delCounty = null
+      delCity = null
+      delPostal = null
+    } else {
+      delAddress = delAddress || null
+      delCounty = delCounty || null
+      delCity = delCity || null
+      delPostal = delPostal || null
+    }
+
+    const data = {
+      firstName: sanitizeGuestOrderText(body.firstName),
+      lastName: sanitizeGuestOrderText(body.lastName),
+      phone: phoneDigits,
+      billAddress: sanitizeGuestOrderText(body.billAddress),
+      billCounty: sanitizeGuestOrderText(body.billCounty),
+      billCity: sanitizeGuestOrderText(body.billCity),
+      billPostal: sanitizeGuestOrderText(body.billPostal),
+      deliveryDifferent,
+      delAddress,
+      delCounty,
+      delCity,
+      delPostal,
+    }
+
+    const profile = await prisma.clientProfile.upsert({
+      where: { userId: req.userId },
+      create: { userId: req.userId, ...data },
+      update: data,
+    })
+
+    return res.json({
+      profile: {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        billAddress: profile.billAddress,
+        billCounty: profile.billCounty,
+        billCity: profile.billCity,
+        billPostal: profile.billPostal,
+        deliveryDifferent: profile.deliveryDifferent,
+        delAddress: profile.delAddress,
+        delCounty: profile.delCounty,
+        delCity: profile.delCity,
+        delPostal: profile.delPostal,
+      },
+    })
+  } catch (err) {
+    console.error('Client profile PUT error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+})
+
+app.post('/api/client/change-password', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const currentPassword = body.currentPassword
+    const newPassword = body.newPassword
+    if (!currentPassword || !newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({
+        error: 'Parola curentă și parola nouă (minimum 8 caractere) sunt obligatorii.',
+      })
+    }
+    const user = await prisma.user.findUnique({ where: { id: req.userId } })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const valid = await bcrypt.compare(String(currentPassword), user.password)
+    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
+    const hashed = await bcrypt.hash(String(newPassword), 10)
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashed } })
+    return res.json({ message: 'Parola a fost actualizată.' })
+  } catch (err) {
+    console.error('Client change-password error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+function mapResidentialOrderToClientJson(o) {
+  const lines = (o.lines || []).map((L) => ({
+    id: L.id,
+    productId: L.productId,
+    productSlug: L.productSlug,
+    productTitle: L.productTitle,
+    quantity: L.quantity,
+    unitPriceInclVat: L.unitPriceInclVat != null ? String(L.unitPriceInclVat) : null,
+    lineTotalInclVat: L.lineTotalInclVat != null ? String(L.lineTotalInclVat) : null,
+    vatPercent: L.vatPercent != null ? String(L.vatPercent) : null,
+  }))
+  let totalIncl = 0
+  for (const L of lines) {
+    const v = parseFloat(String(L.lineTotalInclVat || '').replace(',', '.'))
+    if (Number.isFinite(v)) totalIncl += v
+  }
+  return {
+    orderKind: 'residential',
+    id: o.id,
+    orderNumber: o.orderNumber,
+    orderSource: o.orderSource,
+    email: o.email,
+    phone: o.phone,
+    lastName: o.lastName,
+    firstName: o.firstName,
+    billAddress: o.billAddress,
+    billCounty: o.billCounty,
+    billCity: o.billCity,
+    billPostal: o.billPostal,
+    deliveryDifferent: o.deliveryDifferent,
+    delAddress: o.delAddress,
+    delCounty: o.delCounty,
+    delCity: o.delCity,
+    delPostal: o.delPostal,
+    currency: o.currency,
+    createdAt: o.createdAt.toISOString(),
+    lines,
+    lineCount: lines.length,
+    orderTotalInclVat: totalIncl > 0 ? totalIncl.toFixed(2) : null,
+  }
+}
+
+function mapLegacyGuestOrderToClientJson(r) {
+  const lines = [
+    {
+      id: r.id,
+      productId: r.productId,
+      productSlug: r.productSlug,
+      productTitle: r.productTitle,
+      quantity: r.quantity,
+      unitPriceInclVat: r.unitPriceInclVat != null ? String(r.unitPriceInclVat) : null,
+      lineTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
+      vatPercent: r.vatPercent != null ? String(r.vatPercent) : null,
+    },
+  ]
+  return {
+    orderKind: 'legacy',
+    id: r.id,
+    orderNumber: r.orderNumber,
+    orderSource: r.orderSource,
+    email: r.email,
+    phone: r.phone,
+    lastName: r.lastName,
+    firstName: r.firstName,
+    billAddress: r.billAddress,
+    billCounty: r.billCounty,
+    billCity: r.billCity,
+    billPostal: r.billPostal,
+    deliveryDifferent: r.deliveryDifferent,
+    delAddress: r.delAddress,
+    delCounty: r.delCounty,
+    delCity: r.delCity,
+    delPostal: r.delPostal,
+    currency: r.currency,
+    createdAt: r.createdAt.toISOString(),
+    lines,
+    lineCount: 1,
+    orderTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
+  }
+}
+
+app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const email = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+    if (!email) return res.status(400).json({ error: 'Email lipsă din sesiune.' })
+
+    const [modern, legacy] = await Promise.all([
+      prisma.residentialOrder.findMany({
+        where: { OR: [{ userId: req.userId }, { email }] },
+        include: { lines: { orderBy: { id: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      prisma.guestResidentialOrder.findMany({
+        where: { email, orderSource: 'client' },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+    ])
+
+    const merged = [...modern.map(mapResidentialOrderToClientJson), ...legacy.map(mapLegacyGuestOrderToClientJson)].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+
+    return res.json(merged)
+  } catch (err) {
+    console.error('Client orders error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
   }
 })
 
@@ -1591,15 +1849,15 @@ app.post('/api/inquiries', async (req, res) => {
 })
 
 // ── Public: guest residential checkout — persist order (track by orderNumber + email) ──
+// Acceptă `items: [{ productIdOrSlug, quantity }]` (coș) sau câmpurile vechi produs unic.
 app.post('/api/guest-residential-orders', async (req, res) => {
   try {
     const body = req.body || {}
     const authPayload = readOptionalAuthPayload(req)
     const isClient = authPayload?.role === 'client'
     const orderSource = isClient ? 'client' : 'guest'
+    const userIdForOrder = isClient && authPayload?.userId ? String(authPayload.userId) : null
 
-    const productIdOrSlug = String(body.productIdOrSlug || body.slug || '').trim()
-    const rawQty = body.quantity
     const emailRaw = String(body.email || '').trim().toLowerCase()
     const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
     const lastName = sanitizeGuestOrderText(body.nume ?? body.lastName)
@@ -1614,9 +1872,14 @@ app.post('/api/guest-residential-orders', async (req, res) => {
     let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
     let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
 
-    if (!productIdOrSlug) {
-      return res.status(400).json({ error: 'Produs lipsește.' })
+    const parsedItems = normalizeCheckoutItems(body)
+    if (parsedItems.length === 0) {
+      return res.status(400).json({ error: 'Adaugă cel puțin un produs.' })
     }
+    if (parsedItems.length > 40) {
+      return res.status(400).json({ error: 'Prea multe linii în comandă.' })
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(emailRaw)) {
       return res.status(400).json({ error: 'Email invalid.' })
@@ -1650,48 +1913,69 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       delPostal = null
     }
 
-    const row = await findPublicProductRecordByIdOrSlug(productIdOrSlug)
-    if (!row) return res.status(404).json({ error: 'Produs negăsit.' })
-    const apiProduct = applyPublicPricePolicy(productToJson(row), null)
-    if (!guestResidentialProductEligible(apiProduct)) {
-      return res.status(400).json({ error: 'Acest produs nu poate fi comandat în fluxul public.' })
-    }
-
-    const totals = computeGuestResidentialLineTotals(apiProduct, rawQty)
-    const currency = await readCatalogCurrencyFromDb()
-    const title = String(apiProduct.title || '').trim() || 'Produs'
-    const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const orderSuffix = crypto.randomBytes(4).toString('hex').toUpperCase()
-    const orderNumber = `BTO-${today}-${orderSuffix}`
-
-    const createdOrder = await prisma.guestResidentialOrder.create({
-      data: {
-        orderNumber,
-        orderSource,
-        email: emailToStore,
-        phone: phoneDigits,
-        lastName,
-        firstName,
-        billAddress,
-        billCounty,
-        billCity,
-        billPostal,
-        deliveryDifferent,
-        delAddress,
-        delCounty,
-        delCity,
-        delPostal,
+    const linePayloads = []
+    for (const it of parsedItems) {
+      const row = await findPublicProductRecordByIdOrSlug(it.productIdOrSlug)
+      if (!row) {
+        return res.status(404).json({ error: `Produs negăsit: ${it.productIdOrSlug}.` })
+      }
+      const apiProduct = applyPublicPricePolicy(productToJson(row), null)
+      if (!guestResidentialProductEligible(apiProduct)) {
+        return res.status(400).json({ error: 'Unul sau mai multe produse nu pot fi comandate în fluxul public.' })
+      }
+      const totals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
+      const title = String(apiProduct.title || '').trim() || 'Produs'
+      const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
+      linePayloads.push({
         productId: row.id,
         productSlug: slugVal,
         productTitle: title,
         quantity: totals.quantity,
-        currency,
         unitPriceInclVat: totals.unitPriceInclVat.toFixed(2),
         lineTotalInclVat: totals.lineTotalInclVat.toFixed(2),
         vatPercent: totals.vatPercent != null ? totals.vatPercent.toFixed(2) : null,
-      },
+      })
+    }
+
+    const currency = await readCatalogCurrencyFromDb()
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const orderSuffix = crypto.randomBytes(4).toString('hex').toUpperCase()
+    const orderNumber = `BTO-${today}-${orderSuffix}`
+
+    const createdOrder = await prisma.$transaction(async (tx) => {
+      const order = await tx.residentialOrder.create({
+        data: {
+          orderNumber,
+          orderSource,
+          userId: userIdForOrder,
+          email: emailToStore,
+          phone: phoneDigits,
+          lastName,
+          firstName,
+          billAddress,
+          billCounty,
+          billCity,
+          billPostal,
+          deliveryDifferent,
+          delAddress,
+          delCounty,
+          delCity,
+          delPostal,
+          currency,
+          lines: {
+            create: linePayloads.map((L) => ({
+              productId: L.productId,
+              productSlug: L.productSlug,
+              productTitle: L.productTitle,
+              quantity: L.quantity,
+              unitPriceInclVat: L.unitPriceInclVat,
+              lineTotalInclVat: L.lineTotalInclVat,
+              vatPercent: L.vatPercent,
+            })),
+          },
+        },
+      })
+      return order
     })
 
     if (isR2Configured()) {
@@ -1716,40 +2000,55 @@ app.post('/api/guest-residential-orders', async (req, res) => {
   }
 })
 
+function mapLegacyGuestRowAdmin(r) {
+  const base = mapLegacyGuestOrderToClientJson(r)
+  const first = base.lines[0]
+  return {
+    ...base,
+    productId: first?.productId,
+    productSlug: first?.productSlug,
+    productTitle: first?.productTitle,
+    quantity: first?.quantity ?? r.quantity,
+    unitPriceInclVat: first?.unitPriceInclVat,
+    lineTotalInclVat: base.orderTotalInclVat,
+    vatPercent: first?.vatPercent,
+  }
+}
+
+function mapResidentialRowAdmin(o) {
+  const base = mapResidentialOrderToClientJson(o)
+  const first = base.lines[0]
+  return {
+    ...base,
+    productId: first?.productId,
+    productSlug: first?.productSlug,
+    productTitle:
+      base.lines.length > 1 ? `${first?.productTitle || '—'} (+${base.lines.length - 1})` : first?.productTitle,
+    quantity: base.lines.reduce((s, L) => s + (L.quantity || 0), 0),
+    unitPriceInclVat: first?.unitPriceInclVat,
+    lineTotalInclVat: base.orderTotalInclVat,
+    vatPercent: first?.vatPercent,
+  }
+}
+
 const adminGuestResidentialOrdersHandler = async (req, res) => {
   try {
-    const rows = await prisma.guestResidentialOrder.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 500,
-    })
-    const out = rows.map((r) => ({
-      id: r.id,
-      orderNumber: r.orderNumber,
-      orderSource: r.orderSource,
-      email: r.email,
-      phone: r.phone,
-      lastName: r.lastName,
-      firstName: r.firstName,
-      billAddress: r.billAddress,
-      billCounty: r.billCounty,
-      billCity: r.billCity,
-      billPostal: r.billPostal,
-      deliveryDifferent: r.deliveryDifferent,
-      delAddress: r.delAddress,
-      delCounty: r.delCounty,
-      delCity: r.delCity,
-      delPostal: r.delPostal,
-      productId: r.productId,
-      productSlug: r.productSlug,
-      productTitle: r.productTitle,
-      quantity: r.quantity,
-      currency: r.currency,
-      unitPriceInclVat: r.unitPriceInclVat != null ? String(r.unitPriceInclVat) : null,
-      lineTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
-      vatPercent: r.vatPercent != null ? String(r.vatPercent) : null,
-      createdAt: r.createdAt.toISOString(),
-    }))
-    return res.json(out)
+    const [legacyRows, modernRows] = await Promise.all([
+      prisma.guestResidentialOrder.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 400,
+      }),
+      prisma.residentialOrder.findMany({
+        include: { lines: { orderBy: { id: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
+        take: 400,
+      }),
+    ])
+    const out = [
+      ...modernRows.map(mapResidentialRowAdmin),
+      ...legacyRows.map(mapLegacyGuestRowAdmin),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return res.json(out.slice(0, 500))
   } catch (err) {
     console.error('Admin guest residential orders error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comenzilor.' })
