@@ -22,6 +22,75 @@ model User {
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   partner                   Partner?
+  clientProfile             ClientProfile?
+  residentialOrders         ResidentialOrder[]
+}
+
+/** Profil livrare/facturare pentru conturi client (1:1 User). */
+model ClientProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName           String   @default("")
+  lastName            String   @default("")
+  phone               String   @default("")
+  billAddress         String   @default("")
+  billCounty          String   @default("")
+  billCity            String   @default("")
+  billPostal          String   @default("")
+  deliveryDifferent   Boolean  @default(false)
+  delAddress          String?
+  delCounty           String?
+  delCity             String?
+  delPostal           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/** Comandă rezidențială cu una sau mai multe linii (coș). */
+model ResidentialOrder {
+  id                String   @id @default(cuid())
+  orderNumber       String   @unique
+  orderSource       String   @default("guest")
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email             String
+  phone             String
+  lastName          String
+  firstName         String
+  billAddress       String
+  billCounty        String
+  billCity          String
+  billPostal        String
+  deliveryDifferent Boolean  @default(false)
+  delAddress        String?
+  delCounty         String?
+  delCity           String?
+  delPostal         String?
+  currency          String   @default("RON")
+  createdAt         DateTime @default(now())
+
+  lines             ResidentialOrderLine[]
+
+  @@index([email])
+  @@index([userId])
+  @@index([orderSource])
+  @@index([createdAt])
+}
+
+model ResidentialOrderLine {
+  id               String           @id @default(cuid())
+  orderId          String
+  order            ResidentialOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  productSlug      String?
+  productTitle     String
+  quantity         Int
+  unitPriceInclVat Decimal? @db.Decimal(14, 2)
+  lineTotalInclVat Decimal? @db.Decimal(14, 2)
+  vatPercent       Decimal? @db.Decimal(5, 2)
+
+  @@index([orderId])
 }
 
 model Partner {
