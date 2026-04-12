@@ -14,10 +14,10 @@ const { PrismaClient } = require('../generated/prisma')
 const bcrypt = require('bcryptjs')
 
 const email = String(process.env.TEST_CLIENT_EMAIL || 'client-test@baterino.local').trim().toLowerCase()
-const password = process.env.TEST_CLIENT_PASSWORD || 'BaterinoTestClient1!'
+const password = process.env.TEST_CLIENT_PASSWORD || '123123'
 
-if (password.length < 8) {
-  console.error('Password must be at least 8 characters.')
+if (password.length < 6) {
+  console.error('Password must be at least 6 characters.')
   process.exit(1)
 }
 

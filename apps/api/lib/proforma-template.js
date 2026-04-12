@@ -305,6 +305,98 @@ function buildGuestOrderProformaHtml(order, company, opts) {
   return buildProformaHtml(mapGuestResidentialOrderToProforma(order, company, opts))
 }
 
+/**
+ * Multi-line residential order (Prisma `ResidentialOrder` + `lines`).
+ * @param {object} order
+ * @param {object} company
+ * @param {object} [opts]
+ */
+function mapResidentialOrderToProforma(order, company, opts = {}) {
+  const accounts = Array.isArray(company?.bankAccounts)
+    ? [...company.bankAccounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : []
+  const ibanRonRow =
+    accounts.find((a) => /RON/i.test(String(a.iban || '')) || /RON/i.test(String(a.bankName || ''))) || accounts[0]
+  const ibanEurRow = accounts.find((a) => /EUR/i.test(String(a.iban || '')) || /EUR/i.test(String(a.bankName || '')))
+
+  const d = order.createdAt ? new Date(order.createdAt) : new Date()
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const dateStr = `${dd}/${mm}/${yyyy}`
+
+  const series = opts.proformaSeries || process.env.BATERINO_PROFORMA_SERIA || 'BAT'
+  const number = opts.proformaNumber || order.orderNumber || order.id
+
+  const clientName = `${order.lastName || ''} ${order.firstName || ''}`.trim()
+  const clientAddress = [order.billAddress, order.billCity, order.billPostal].filter(Boolean).join(', ')
+
+  const supplier = {
+    name: company?.name || 'Baterino SRL',
+    regCom: opts.supplierRegCom || process.env.BATERINO_REG_COM || '',
+    cui:
+      company?.cui && String(company.cui).trim()
+        ? `RO${String(company.cui).replace(/^RO/i, '').trim()}`
+        : '—',
+    address: company?.address || '',
+    ibanRon: ibanRonRow?.iban || '',
+    bankName: ibanRonRow?.bankName || '',
+    ibanEur: ibanEurRow?.iban || '',
+    bankEur: ibanEurRow?.bankName || '',
+    email: opts.supplierEmail || process.env.BATERINO_OFFICE_EMAIL || '',
+    web: opts.supplierWeb || process.env.BATERINO_WEB || '',
+    capitalSocial: opts.supplierCapital || process.env.BATERINO_CAPITAL_SOCIAL || '',
+  }
+
+  const client = {
+    name: clientName,
+    regCom: '',
+    cui: '',
+    address: clientAddress,
+    county: order.billCounty || '',
+  }
+
+  const orderLines = Array.isArray(order.lines) ? order.lines : []
+  const lines = orderLines.map((L, idx) => {
+    const vatRate = numDecimal(L.vatPercent) || 21
+    const qty = Math.max(1, parseInt(String(L.quantity), 10) || 1)
+    let lineIncl = numDecimal(L.lineTotalInclVat)
+    if (!lineIncl || lineIncl <= 0) lineIncl = numDecimal(L.unitPriceInclVat) * qty
+    const unitIncl = qty > 0 ? lineIncl / qty : numDecimal(L.unitPriceInclVat)
+    const unitExcl = unitIncl > 0 ? unitIncl / (1 + vatRate / 100) : 0
+    const lineExcl = unitExcl * qty
+    const lineVat = Math.max(0, lineIncl - lineExcl)
+    return {
+      index: idx + 1,
+      name: L.productTitle || 'Produs',
+      um: 'buc',
+      qty,
+      unitPriceExcl: unitExcl,
+      lineTotalExcl: lineExcl,
+      lineVat,
+    }
+  })
+
+  const headerVat = orderLines.length > 0 ? numDecimal(orderLines[0].vatPercent) || 21 : 21
+
+  return {
+    series,
+    number,
+    dateStr,
+    vatRatePercent: headerVat,
+    supplier,
+    client,
+    lines,
+    paymentDueStr: dateStr,
+    note: `Referință comandă: ${order.orderNumber}. Email: ${order.email}. Tel: +40 ${order.phone}`,
+    preparedBy: '—',
+  }
+}
+
+function buildResidentialOrderProformaHtml(order, company, opts) {
+  return buildProformaHtml(mapResidentialOrderToProforma(order, company, opts))
+}
+
 /** Dummy data for local preview — same shape as SmartBill-style proformas. */
 function buildSampleProformaPreviewHtml() {
   return buildProformaHtml({
@@ -354,5 +446,7 @@ module.exports = {
   buildProformaHtml,
   mapGuestResidentialOrderToProforma,
   buildGuestOrderProformaHtml,
+  mapResidentialOrderToProforma,
+  buildResidentialOrderProformaHtml,
   buildSampleProformaPreviewHtml,
 }
