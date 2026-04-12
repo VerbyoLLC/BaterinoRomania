@@ -16,8 +16,13 @@ const {
   urlToKey,
   deleteFromR2,
   ensureGuestOrderFolder,
+  guestOrderDocumentKey,
 } = require('./lib/r2.js')
-const { buildSampleProformaPreviewHtml } = require('./lib/proforma-template.js')
+const {
+  buildSampleProformaPreviewHtml,
+  buildGuestOrderProformaHtml,
+  buildResidentialOrderProformaHtml,
+} = require('./lib/proforma-template.js')
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
@@ -143,25 +148,127 @@ function guestResidentialProductEligible(apiProduct) {
   return true
 }
 
+/**
+ * Catalog line: salePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
+ * @returns {{ quantity: number, unitExclCatalog: number, vatPercent: number | null }}
+ */
 function computeGuestResidentialLineTotals(apiProduct, qty) {
   const sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
   const vatRaw = apiProduct.vat
   const vat =
     vatRaw == null || vatRaw === '' ? 0 : parseFloat(String(vatRaw).replace(/\s/g, '').replace(',', '.'))
   const hasVat = Number.isFinite(vat) && vat > 0
-  const unitExcl = Number.isFinite(sale) ? sale : 0
-  const unitIncl = hasVat ? unitExcl * (1 + vat / 100) : unitExcl
+  const unitExclCatalog = Number.isFinite(sale) ? sale : 0
   const q = Math.min(99, Math.max(1, parseInt(String(qty), 10) || 1))
   return {
     quantity: q,
-    unitPriceInclVat: unitIncl,
-    lineTotalInclVat: unitIncl * q,
+    unitExclCatalog,
     vatPercent: hasVat ? vat : null,
   }
 }
 
+/** Reducerea (factor 0–1) se aplică pe prețul fără TVA; apoi se adaugă TVA → preț final cu TVA. */
+function applyDiscountFactorToGuestLineTotals(baseTotals, discountFactor) {
+  const f = Math.min(1, Math.max(0, Number(discountFactor) || 0))
+  const unitExclAfterDiscount = baseTotals.unitExclCatalog * (1 - f)
+  const vp = baseTotals.vatPercent
+  const unitIncl =
+    vp != null && Number(vp) > 0 ? unitExclAfterDiscount * (1 + Number(vp) / 100) : unitExclAfterDiscount
+  return {
+    quantity: baseTotals.quantity,
+    unitPriceInclVat: unitIncl,
+    lineTotalInclVat: unitIncl * baseTotals.quantity,
+    vatPercent: baseTotals.vatPercent,
+  }
+}
+
+async function resolveGuestLineDiscountFactor(productRecord, reducereProgramId) {
+  const raw = String(reducereProgramId || '').trim()
+  if (!raw || raw.startsWith('local-')) return 0
+  const prog = await prisma.reducereProgram.findUnique({ where: { id: raw } })
+  if (!prog || prog.discountPercent == null) {
+    throw new Error('Programul de reducere nu este valid.')
+  }
+  const pct = Number(prog.discountPercent)
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+    throw new Error('Programul de reducere nu este valid.')
+  }
+  const allowed = parseReducereProgramIds(productRecord.reducereProgramIds)
+  if (allowed.length > 0 && !allowed.includes(raw)) {
+    throw new Error('Acest program de reducere nu se aplică la acest produs.')
+  }
+  return pct / 100
+}
+
+function stripControlChars(s) {
+  return String(s).replace(/[\u0000-\u001F\u007F]/g, '')
+}
+
+/** Nume / prenume: litere Unicode, spațiu, cratimă, apostrof. */
+function sanitizeGuestOrderPersonName(value) {
+  const s = stripControlChars(value ?? '')
+  return s.replace(/[^\p{L}\s]/gu, '').replace(/\s+/g, ' ').trim()
+}
+
+/** Adresă, județ, localitate: litere, cifre, punctuație limitată (fără ghilimele / caractere tip injection). */
 function sanitizeGuestOrderText(value) {
-  return String(value ?? '').replace(/[<>/\\]/g, '').trim()
+  const s = stripControlChars(value ?? '')
+  return s.replace(/[^\p{L}\p{N}\s.,'\-/#]/gu, '').trim()
+}
+
+/** Cod poștal: litere, cifre, spațiu, cratimă. */
+function sanitizeGuestOrderPostal(value) {
+  const s = stripControlChars(value ?? '')
+  return s.replace(/[^\p{L}\p{N}\s\-]/gu, '').trim()
+}
+
+function clientProfileDefaultsFromRow(prev) {
+  if (!prev) {
+    return {
+      firstName: '',
+      lastName: '',
+      phone: '',
+      billAddress: '',
+      billCounty: '',
+      billCity: '',
+      billPostal: '',
+      deliveryDifferent: false,
+      delAddress: null,
+      delCounty: null,
+      delCity: null,
+      delPostal: null,
+    }
+  }
+  return {
+    firstName: prev.firstName ?? '',
+    lastName: prev.lastName ?? '',
+    phone: prev.phone ?? '',
+    billAddress: prev.billAddress ?? '',
+    billCounty: prev.billCounty ?? '',
+    billCity: prev.billCity ?? '',
+    billPostal: prev.billPostal ?? '',
+    deliveryDifferent: Boolean(prev.deliveryDifferent),
+    delAddress: prev.delAddress ?? null,
+    delCounty: prev.delCounty ?? null,
+    delCity: prev.delCity ?? null,
+    delPostal: prev.delPostal ?? null,
+  }
+}
+
+function sanitizeDeliveryBlock(body, deliveryDifferent) {
+  let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
+  let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
+  let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
+  let delPostal = body.delPostal != null ? sanitizeGuestOrderPostal(body.delPostal) : ''
+  if (!deliveryDifferent) {
+    return { delAddress: null, delCounty: null, delCity: null, delPostal: null }
+  }
+  return {
+    delAddress: delAddress || null,
+    delCounty: delCounty || null,
+    delCity: delCity || null,
+    delPostal: delPostal || null,
+  }
 }
 
 function normalizeCheckoutItems(body) {
@@ -171,7 +278,12 @@ function normalizeCheckoutItems(body) {
       if (!x || typeof x !== 'object') continue
       const productIdOrSlug = String(x.productIdOrSlug || x.slug || '').trim()
       if (!productIdOrSlug) continue
-      out.push({ productIdOrSlug, quantity: x.quantity })
+      const rid = x.reducereProgramId != null ? String(x.reducereProgramId).trim() : ''
+      out.push({
+        productIdOrSlug,
+        quantity: x.quantity,
+        reducereProgramId: rid && !rid.startsWith('local-') ? rid : null,
+      })
     }
     return out
   }
@@ -517,6 +629,26 @@ app.post('/api/auth/login', async (req, res) => {
 })
 
 // ── Client: profil, parolă, comenzi ──────────────────────────────────────
+async function ensureUserReferralCode(userId) {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { referralCode: true },
+  })
+  if (!u) return null
+  if (u.referralCode) return u.referralCode
+  for (let attempt = 0; attempt < 15; attempt++) {
+    const code = `BAT-${crypto.randomBytes(3).toString('hex').toUpperCase()}`
+    try {
+      await prisma.user.update({ where: { id: userId }, data: { referralCode: code } })
+      return code
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') continue
+      throw err
+    }
+  }
+  return null
+}
+
 app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -524,9 +656,11 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
       select: { email: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const referralCode = await ensureUserReferralCode(req.userId)
     const profile = await prisma.clientProfile.findUnique({ where: { userId: req.userId } })
     return res.json({
       email: user.email,
+      referralCode,
       profile: profile
         ? {
             firstName: profile.firstName,
@@ -553,37 +687,61 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
 app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const body = req.body || {}
-    const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
-    const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
-    let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
-    let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
-    let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
-    let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
-    if (!deliveryDifferent) {
-      delAddress = null
-      delCounty = null
-      delCity = null
-      delPostal = null
-    } else {
-      delAddress = delAddress || null
-      delCounty = delCounty || null
-      delCity = delCity || null
-      delPostal = delPostal || null
-    }
+    const section = body.section === 'personal' || body.section === 'address' ? body.section : null
 
-    const data = {
-      firstName: sanitizeGuestOrderText(body.firstName),
-      lastName: sanitizeGuestOrderText(body.lastName),
-      phone: phoneDigits,
-      billAddress: sanitizeGuestOrderText(body.billAddress),
-      billCounty: sanitizeGuestOrderText(body.billCounty),
-      billCity: sanitizeGuestOrderText(body.billCity),
-      billPostal: sanitizeGuestOrderText(body.billPostal),
-      deliveryDifferent,
-      delAddress,
-      delCounty,
-      delCity,
-      delPostal,
+    const prev = await prisma.clientProfile.findUnique({ where: { userId: req.userId } })
+    const base = clientProfileDefaultsFromRow(prev)
+
+    let data
+    if (section === 'personal') {
+      const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+      if (phoneDigits.length !== 9) {
+        return res.status(400).json({ error: 'Telefon: exact 9 cifre.' })
+      }
+      const firstName = sanitizeGuestOrderPersonName(body.firstName)
+      const lastName = sanitizeGuestOrderPersonName(body.lastName)
+      if (!firstName || !lastName) {
+        return res.status(400).json({ error: 'Nume și prenume sunt obligatorii.' })
+      }
+      data = {
+        ...base,
+        firstName,
+        lastName,
+        phone: phoneDigits,
+      }
+    } else if (section === 'address') {
+      const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
+      const { delAddress, delCounty, delCity, delPostal } = sanitizeDeliveryBlock(body, deliveryDifferent)
+      data = {
+        ...base,
+        billAddress: sanitizeGuestOrderText(body.billAddress),
+        billCounty: sanitizeGuestOrderText(body.billCounty),
+        billCity: sanitizeGuestOrderText(body.billCity),
+        billPostal: sanitizeGuestOrderPostal(body.billPostal),
+        deliveryDifferent,
+        delAddress,
+        delCounty,
+        delCity,
+        delPostal,
+      }
+    } else {
+      const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+      const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
+      const { delAddress, delCounty, delCity, delPostal } = sanitizeDeliveryBlock(body, deliveryDifferent)
+      data = {
+        firstName: sanitizeGuestOrderPersonName(body.firstName),
+        lastName: sanitizeGuestOrderPersonName(body.lastName),
+        phone: phoneDigits,
+        billAddress: sanitizeGuestOrderText(body.billAddress),
+        billCounty: sanitizeGuestOrderText(body.billCounty),
+        billCity: sanitizeGuestOrderText(body.billCity),
+        billPostal: sanitizeGuestOrderPostal(body.billPostal),
+        deliveryDifferent,
+        delAddress,
+        delCounty,
+        delCity,
+        delPostal,
+      }
     }
 
     const profile = await prisma.clientProfile.upsert({
@@ -592,7 +750,10 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
       update: data,
     })
 
+    const referralCode = await ensureUserReferralCode(req.userId)
+
     return res.json({
+      referralCode,
       profile: {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -637,6 +798,69 @@ app.post('/api/client/change-password', authMiddleware, clientAuthMiddleware, as
   }
 })
 
+app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const newEmailRaw = String(body.newEmail || '')
+      .trim()
+      .toLowerCase()
+    const currentPassword = body.currentPassword
+    if (!newEmailRaw || !currentPassword) {
+      return res.status(400).json({ error: 'Email nou și parola curentă sunt obligatorii.' })
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailRaw)) {
+      return res.status(400).json({ error: 'Adresa de email nu este validă.' })
+    }
+    const user = await prisma.user.findUnique({ where: { id: req.userId } })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const oldEmail = String(user.email || '').trim()
+    const oldNorm = oldEmail.toLowerCase()
+    if (newEmailRaw === oldNorm) {
+      return res.status(400).json({ error: 'Noul email este identic cu cel curent.' })
+    }
+    const valid = await bcrypt.compare(String(currentPassword), user.password)
+    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
+    const taken = await prisma.user.findUnique({ where: { email: newEmailRaw } })
+    if (taken && taken.id !== user.id) {
+      return res.status(409).json({ error: 'Acest email este deja folosit de un alt cont.' })
+    }
+    const guestEmailSync = [
+      prisma.guestResidentialOrder.updateMany({
+        where: { orderSource: 'client', email: oldEmail },
+        data: { email: newEmailRaw },
+      }),
+    ]
+    if (oldNorm !== oldEmail) {
+      guestEmailSync.push(
+        prisma.guestResidentialOrder.updateMany({
+          where: { orderSource: 'client', email: oldNorm },
+          data: { email: newEmailRaw },
+        }),
+      )
+    }
+    await prisma.$transaction([
+      ...guestEmailSync,
+      prisma.residentialOrder.updateMany({
+        where: { userId: user.id },
+        data: { email: newEmailRaw },
+      }),
+      prisma.user.update({ where: { id: user.id }, data: { email: newEmailRaw } }),
+    ])
+    const token = jwt.sign(
+      { userId: user.id, email: newEmailRaw, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' },
+    )
+    return res.json({ token, email: newEmailRaw, message: 'Emailul a fost actualizat.' })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Acest email este deja folosit.' })
+    }
+    console.error('Client change-email error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
 function mapResidentialOrderToClientJson(o) {
   const lines = (o.lines || []).map((L) => ({
     id: L.id,
@@ -672,6 +896,8 @@ function mapResidentialOrderToClientJson(o) {
     delCity: o.delCity,
     delPostal: o.delPostal,
     currency: o.currency,
+    fulfillmentStatus: String(o.fulfillmentStatus || 'de_platit'),
+    clientHasInvoice: Boolean(o.clientInvoiceUrl && String(o.clientInvoiceUrl).trim()),
     createdAt: o.createdAt.toISOString(),
     lines,
     lineCount: lines.length,
@@ -711,11 +937,58 @@ function mapLegacyGuestOrderToClientJson(r) {
     delCity: r.delCity,
     delPostal: r.delPostal,
     currency: r.currency,
+    fulfillmentStatus: String(r.fulfillmentStatus || 'de_platit'),
+    clientHasInvoice: Boolean(r.clientInvoiceUrl && String(r.clientInvoiceUrl).trim()),
     createdAt: r.createdAt.toISOString(),
     lines,
     lineCount: 1,
     orderTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
   }
+}
+
+const FULFILLMENT_STATUSES = [
+  'de_platit',
+  'preluata',
+  'in_pregatire',
+  'in_curs_livrare',
+  'livrata',
+  'anulata',
+]
+
+const PROFORMA_ALLOWED_STATUSES = new Set(['de_platit', 'preluata'])
+const CLIENT_INVOICE_DOWNLOAD_STATUSES = new Set(['in_pregatire', 'in_curs_livrare', 'livrata'])
+
+function productCardImageUrlFromRow(p) {
+  const card = String(p?.cardImage ?? '').trim()
+  if (card) return card
+  const imgs = Array.isArray(p?.images) ? p.images : []
+  const first = imgs[0]
+  return typeof first === 'string' && first.trim() ? first.trim() : ''
+}
+
+async function enrichClientOrderListWithProductImages(rows) {
+  const productIds = new Set()
+  for (const o of rows) {
+    for (const L of o.lines || []) {
+      if (L.productId) productIds.add(String(L.productId))
+    }
+  }
+  if (productIds.size === 0) return rows
+  const plist = await prisma.product.findMany({
+    where: { id: { in: [...productIds] } },
+    select: { id: true, cardImage: true, images: true },
+  })
+  const thumbById = new Map()
+  for (const p of plist) {
+    thumbById.set(p.id, productCardImageUrlFromRow(p))
+  }
+  return rows.map((o) => ({
+    ...o,
+    lines: (o.lines || []).map((L) => ({
+      ...L,
+      imageUrl: thumbById.get(L.productId) || null,
+    })),
+  }))
 }
 
 app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, res) => {
@@ -743,9 +1016,148 @@ app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, 
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )
 
-    return res.json(merged)
+    const out = await enrichClientOrderListWithProductImages(merged)
+    return res.json(out)
   } catch (err) {
     console.error('Client orders error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const emailNorm = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+    const orderId = String(req.params.orderId || '').trim()
+    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+    const company = await readCompanyDataFromDb()
+    const residential = await prisma.residentialOrder.findFirst({
+      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+      include: { lines: { orderBy: { id: 'asc' } } },
+    })
+    let html
+    let orderNumber
+    if (residential) {
+      if (!PROFORMA_ALLOWED_STATUSES.has(String(residential.fulfillmentStatus || 'de_platit'))) {
+        return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
+      }
+      html = buildResidentialOrderProformaHtml(residential, company)
+      orderNumber = residential.orderNumber
+    } else {
+      const legacy = await prisma.guestResidentialOrder.findFirst({
+        where: { id: orderId, email: emailNorm, orderSource: 'client' },
+      })
+      if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
+      if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
+        return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
+      }
+      html = buildGuestOrderProformaHtml(legacy, company)
+      orderNumber = legacy.orderNumber
+    }
+    const safeFile = `proforma-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.html`
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
+    return res.send(html)
+  } catch (err) {
+    console.error('Client order proforma error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la generarea proformei.' })
+  }
+})
+
+app.get('/api/client/orders/:orderId/invoice', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const emailNorm = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+    const orderId = String(req.params.orderId || '').trim()
+    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+    let orderNumber = ''
+    let invoiceUrl = ''
+
+    const residential = await prisma.residentialOrder.findFirst({
+      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+    })
+    if (residential) {
+      const st = String(residential.fulfillmentStatus || 'de_platit')
+      if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
+        return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+      }
+      invoiceUrl = String(residential.clientInvoiceUrl || '').trim()
+      orderNumber = residential.orderNumber
+    } else {
+      const legacy = await prisma.guestResidentialOrder.findFirst({
+        where: { id: orderId, email: emailNorm, orderSource: 'client' },
+      })
+      if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
+      const st = String(legacy.fulfillmentStatus || 'de_platit')
+      if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
+        return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+      }
+      invoiceUrl = String(legacy.clientInvoiceUrl || '').trim()
+      orderNumber = legacy.orderNumber
+    }
+
+    if (!invoiceUrl) {
+      return res.status(404).json({ error: 'Factura nu a fost încă încărcată.' })
+    }
+
+    const upstream = await fetch(invoiceUrl)
+    if (!upstream.ok) {
+      console.error('Client invoice fetch failed', upstream.status, invoiceUrl)
+      return res.status(502).json({ error: 'Fișierul facturii nu poate fi citit.' })
+    }
+    const ct = upstream.headers.get('content-type') || 'application/pdf'
+    const safeFile = `factura-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.pdf`
+    res.setHeader('Content-Type', ct)
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
+    const buf = Buffer.from(await upstream.arrayBuffer())
+    return res.send(buf)
+  } catch (err) {
+    console.error('Client order invoice error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la descărcarea facturii.' })
+  }
+})
+
+app.post('/api/client/orders/:orderId/cancel', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const emailNorm = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+    const orderId = String(req.params.orderId || '').trim()
+    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+    const residential = await prisma.residentialOrder.findFirst({
+      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+    })
+    if (residential) {
+      if (residential.fulfillmentStatus !== 'de_platit') {
+        return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
+      }
+      await prisma.residentialOrder.update({
+        where: { id: orderId },
+        data: { fulfillmentStatus: 'anulata' },
+      })
+      return res.json({ ok: true, fulfillmentStatus: 'anulata' })
+    }
+    const legacy = await prisma.guestResidentialOrder.findFirst({
+      where: { id: orderId, email: emailNorm, orderSource: 'client' },
+    })
+    if (legacy) {
+      if (legacy.fulfillmentStatus !== 'de_platit') {
+        return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
+      }
+      await prisma.guestResidentialOrder.update({
+        where: { id: orderId },
+        data: { fulfillmentStatus: 'anulata' },
+      })
+      return res.json({ ok: true, fulfillmentStatus: 'anulata' })
+    }
+    return res.status(404).json({ error: 'Comandă negăsită.' })
+  } catch (err) {
+    console.error('Client order cancel error:', err)
     res.status(500).json({ error: err?.message || 'Eroare.' })
   }
 })
@@ -1860,17 +2272,17 @@ app.post('/api/guest-residential-orders', async (req, res) => {
 
     const emailRaw = String(body.email || '').trim().toLowerCase()
     const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
-    const lastName = sanitizeGuestOrderText(body.nume ?? body.lastName)
-    const firstName = sanitizeGuestOrderText(body.prenume ?? body.firstName)
+    const lastName = sanitizeGuestOrderPersonName(body.nume ?? body.lastName)
+    const firstName = sanitizeGuestOrderPersonName(body.prenume ?? body.firstName)
     const billAddress = sanitizeGuestOrderText(body.billAddress)
     const billCounty = sanitizeGuestOrderText(body.billCounty)
     const billCity = sanitizeGuestOrderText(body.billCity)
-    const billPostal = sanitizeGuestOrderText(body.billPostal)
+    const billPostal = sanitizeGuestOrderPostal(body.billPostal)
     const deliveryDifferent = Boolean(body.differentDeliveryAddress ?? body.deliveryDifferent)
     let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
     let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
     let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
-    let delPostal = body.delPostal != null ? sanitizeGuestOrderText(body.delPostal) : ''
+    let delPostal = body.delPostal != null ? sanitizeGuestOrderPostal(body.delPostal) : ''
 
     const parsedItems = normalizeCheckoutItems(body)
     if (parsedItems.length === 0) {
@@ -1923,7 +2335,23 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       if (!guestResidentialProductEligible(apiProduct)) {
         return res.status(400).json({ error: 'Unul sau mai multe produse nu pot fi comandate în fluxul public.' })
       }
-      const totals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
+      let discountFactor = 0
+      if (it.reducereProgramId) {
+        try {
+          discountFactor = await resolveGuestLineDiscountFactor(row, it.reducereProgramId)
+        } catch (e) {
+          return res.status(400).json({ error: e?.message || 'Reducere invalidă.' })
+        }
+      }
+      const qParsed = Math.min(99, Math.max(1, parseInt(String(it.quantity), 10) || 1))
+      if (it.reducereProgramId && qParsed > 1) {
+        return res.status(400).json({
+          error:
+            'Cu program de reducere se poate comanda maximum 1 bucată per produs. Actualizează coșul și încearcă din nou.',
+        })
+      }
+      const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
+      const totals = applyDiscountFactorToGuestLineTotals(baseTotals, discountFactor)
       const title = String(apiProduct.title || '').trim() || 'Produs'
       const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
       linePayloads.push({
@@ -2005,6 +2433,7 @@ function mapLegacyGuestRowAdmin(r) {
   const first = base.lines[0]
   return {
     ...base,
+    clientInvoiceUrl: r.clientInvoiceUrl ? String(r.clientInvoiceUrl) : null,
     productId: first?.productId,
     productSlug: first?.productSlug,
     productTitle: first?.productTitle,
@@ -2020,6 +2449,7 @@ function mapResidentialRowAdmin(o) {
   const first = base.lines[0]
   return {
     ...base,
+    clientInvoiceUrl: o.clientInvoiceUrl ? String(o.clientInvoiceUrl) : null,
     productId: first?.productId,
     productSlug: first?.productSlug,
     productTitle:
@@ -2058,6 +2488,114 @@ app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddlewa
 app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/api/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+
+const patchAdminOrderFulfillmentStatusHandler = async (req, res) => {
+  try {
+    const status = String(req.body?.fulfillmentStatus || '').trim()
+    if (!FULFILLMENT_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Status invalid.' })
+    }
+    const orderId = String(req.params.orderId || '').trim()
+    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+    const file = req.file || null
+
+    const mod = await prisma.residentialOrder.findUnique({ where: { id: orderId } })
+    if (mod) {
+      const prev = String(mod.fulfillmentStatus || 'de_platit')
+      if (status === 'in_pregatire' && prev !== 'in_pregatire' && !file && !mod.clientInvoiceUrl) {
+        return res.status(400).json({
+          error:
+            'Pentru „În pregătire” încarcă factura client (PDF): același PATCH cu multipart/form-data și câmpul clientInvoice.',
+        })
+      }
+      let nextInvoiceUrl = mod.clientInvoiceUrl
+      if (file) {
+        if (file.mimetype !== 'application/pdf') {
+          return res.status(400).json({ error: 'Factura trebuie să fie PDF.' })
+        }
+        if (!isR2Configured()) {
+          return res.status(503).json({ error: 'Stocarea fișierelor (R2) nu este configurată.' })
+        }
+        try {
+          const key = guestOrderDocumentKey(orderId, 'factura-client.pdf')
+          const oldKey = mod.clientInvoiceUrl ? urlToKey(String(mod.clientInvoiceUrl)) : null
+          if (oldKey) await deleteFromR2(oldKey).catch(() => {})
+          nextInvoiceUrl = await uploadToR2(file.buffer, key, 'application/pdf')
+        } catch (e) {
+          console.error('Residential order invoice upload:', e)
+          return res.status(500).json({ error: e?.message || 'Încărcare factură eșuată.' })
+        }
+      }
+      const data = { fulfillmentStatus: status }
+      if (file) data.clientInvoiceUrl = nextInvoiceUrl
+      await prisma.residentialOrder.update({ where: { id: orderId }, data })
+      return res.json({
+        ok: true,
+        id: orderId,
+        fulfillmentStatus: status,
+        clientInvoiceUrl: file ? nextInvoiceUrl : mod.clientInvoiceUrl,
+      })
+    }
+
+    const leg = await prisma.guestResidentialOrder.findUnique({ where: { id: orderId } })
+    if (leg) {
+      const prev = String(leg.fulfillmentStatus || 'de_platit')
+      if (status === 'in_pregatire' && prev !== 'in_pregatire' && !file && !leg.clientInvoiceUrl) {
+        return res.status(400).json({
+          error:
+            'Pentru „În pregătire” încarcă factura client (PDF): PATCH multipart cu câmpul clientInvoice.',
+        })
+      }
+      let nextInvoiceUrl = leg.clientInvoiceUrl
+      if (file) {
+        if (file.mimetype !== 'application/pdf') {
+          return res.status(400).json({ error: 'Factura trebuie să fie PDF.' })
+        }
+        if (!isR2Configured()) {
+          return res.status(503).json({ error: 'Stocarea fișierelor (R2) nu este configurată.' })
+        }
+        try {
+          const key = guestOrderDocumentKey(orderId, 'factura-client.pdf')
+          const oldKey = leg.clientInvoiceUrl ? urlToKey(String(leg.clientInvoiceUrl)) : null
+          if (oldKey) await deleteFromR2(oldKey).catch(() => {})
+          nextInvoiceUrl = await uploadToR2(file.buffer, key, 'application/pdf')
+        } catch (e) {
+          console.error('Guest order invoice upload:', e)
+          return res.status(500).json({ error: e?.message || 'Încărcare factură eșuată.' })
+        }
+      }
+      const data = { fulfillmentStatus: status }
+      if (file) data.clientInvoiceUrl = nextInvoiceUrl
+      await prisma.guestResidentialOrder.update({ where: { id: orderId }, data })
+      return res.json({
+        ok: true,
+        id: orderId,
+        fulfillmentStatus: status,
+        clientInvoiceUrl: file ? nextInvoiceUrl : leg.clientInvoiceUrl,
+      })
+    }
+
+    return res.status(404).json({ error: 'Comandă negăsită.' })
+  } catch (err) {
+    console.error('Admin order status patch error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+app.patch(
+  '/api/admin/orders/:orderId',
+  authMiddleware,
+  adminAuthMiddleware,
+  uploadMiddleware.single('clientInvoice'),
+  patchAdminOrderFulfillmentStatusHandler,
+)
+app.patch(
+  '/admin/orders/:orderId',
+  authMiddleware,
+  adminAuthMiddleware,
+  uploadMiddleware.single('clientInvoice'),
+  patchAdminOrderFulfillmentStatusHandler,
+)
 
 // ── Public: list published products (no auth) ───────────────────────────
 // When no published products exist, fall back to drafts (helps new sites / dev)
