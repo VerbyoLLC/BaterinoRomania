@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Minus, Plus } from 'lucide-react'
 import {
   getAuthRole,
+  getProductCardImageUrl,
   getPublicReducerePrograms,
   normalizeProductReducereProgramIds,
   type PublicProduct,
@@ -14,6 +15,7 @@ import {
 import { getReduceriTranslations } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
+import { useCart } from '../contexts/CartContext'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import ReduceriProgramsModal from './ReduceriProgramsModal'
 import ResidentialDiscountAboutModal from './ResidentialDiscountAboutModal'
@@ -57,6 +59,7 @@ type Props = { product: PublicProduct; tr: ProductDetailTranslations; lang: Lang
 
 export default function ResidentialClientPriceBlock({ product, tr, lang }: Props) {
   const navigate = useNavigate()
+  const { addLine } = useCart()
   const { currency } = useCatalogCurrency()
   const p = getProductPricingTranslations(lang, currency)
   const [qty, setQty] = useState(1)
@@ -145,18 +148,25 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     n.toLocaleString(locale, { maximumFractionDigits: 2, minimumFractionDigits: 0 })
 
   const hasVat = vatPct != null && vatPct > 0
+  /** Preț afișat fără reduceri: cu TVA dacă există cotă. */
   const baseUnitDisplay = hasVat ? sale * (1 + vatPct! / 100) : sale
   const selectedDiscount =
     discountProgramId === 'none' ? null : discountOptions.find((o) => o.id === discountProgramId)
   const rate = selectedDiscount ? selectedDiscount.discountPercent / 100 : 0
   const hasProgramDiscount = rate > 0
-  const unitAfterDiscount = baseUnitDisplay * (1 - rate)
-  const unitDiscountAmount = baseUnitDisplay * rate
-  /** Full line before programme discount (VAT-inclusive unit × qty). */
+
+  useEffect(() => {
+    if (hasProgramDiscount && qty > 1) setQty(1)
+  }, [hasProgramDiscount, qty])
+
+  /** Reducere din prețul fără TVA, apoi TVA pe netul după reducere (aceeași regulă ca la comandă / coș). */
+  const unitNetExclAfterDiscount = sale * (1 - rate)
+  const unitAfterDiscount = hasVat ? unitNetExclAfterDiscount * (1 + vatPct! / 100) : unitNetExclAfterDiscount
+  /** Linie înainte de program (unit cu TVA × cantitate). */
   const lineBaseTotal = baseUnitDisplay * qty
-  /** Final line total: discount applies to the full line (same as unit × qty with discount per unit). */
+  /** Total de plată după reducere. */
   const lineTotal = unitAfterDiscount * qty
-  const totalSavings = unitDiscountAmount * qty
+  const totalSavings = lineBaseTotal - lineTotal
   const showPrevious = landed != null && landed > 0 && landed > sale
   const pctBadge = selectedDiscount ? selectedDiscount.discountPercent : Math.round(rate * 100)
   const vatInline = hasVat ? tr.includesVatWithPct.replace(/\{pct\}/g, fmtPct(vatPct!)) : null
@@ -198,8 +208,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               </span>
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.min(99, q + 1))}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition-colors sm:h-8 sm:w-8"
+                disabled={hasProgramDiscount && qty >= 1}
+                onClick={() => setQty((q) => Math.min(hasProgramDiscount ? 1 : 99, q + 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:pointer-events-none sm:h-8 sm:w-8"
                 aria-label={tr.ariaQtyIncrease}
               >
                 <Plus className="h-5 w-5 sm:h-3 sm:w-3" strokeWidth={3} aria-hidden />
@@ -326,6 +337,36 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       </div>
 
       <div className="flex shrink-0 flex-col gap-2">
+        {!guestWithDiscount ? (
+          <button
+            type="button"
+            onClick={() => {
+              const s = String(product.slug || product.id || '').trim()
+              if (!s) return
+              const progId =
+                hasProgramDiscount && selectedDiscount && !String(selectedDiscount.id).startsWith('local-')
+                  ? selectedDiscount.id.trim()
+                  : undefined
+              const pct = hasProgramDiscount && selectedDiscount ? selectedDiscount.discountPercent : undefined
+              const withReducere =
+                Boolean(progId) && pct != null && pct > 0
+                  ? { reducereDiscountPercent: pct, reducereProgramId: progId as string }
+                  : {}
+              addLine({
+                productId: product.id,
+                slug: s,
+                title: String(product.title || '').trim() || 'Produs',
+                qty,
+                imageUrl: getProductCardImageUrl(product),
+                ...withReducere,
+              })
+              navigate('/cos')
+            }}
+            className="w-full min-h-[3rem] font-bold py-3 rounded-xl text-base uppercase tracking-wide border-2 border-slate-900 text-slate-900 bg-white hover:bg-slate-50 transition-colors"
+          >
+            Adaugă în coș
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => {

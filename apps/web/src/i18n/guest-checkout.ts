@@ -80,6 +80,10 @@ export type GuestCheckoutTranslations = {
   orderNumberLabel: string
   /** Use literal `{email}` in the string; UI replaces with the customer email. */
   orderTrackHint: string
+  /** Logged-in client: shown instead of `orderTrackHint` after a successful order. */
+  orderTrackHintClient: string
+  /** Logged-in client: primary CTA from checkout success → `/client/comenzi`. */
+  orderSuccessViewOrders: string
   orderSuccessTitle: string
   orderSuccessBody: string
   authTitle: string
@@ -98,6 +102,31 @@ export type GuestCheckoutTranslations = {
   authGoogleSignup: string
   missingSlugTitle: string
   missingSlugBody: string
+  /** No slug and empty cart on `/comanda` */
+  emptyCheckoutTitle: string
+  emptyCheckoutBody: string
+  /** Cart checkout step 1 — loading aggregated prices */
+  cartLoadingTotals: string
+  /** Link to `/cos` from checkout */
+  cartEditInCos: string
+  /** Cart checkout step 1: secondary button → catalogue (1/3 width vs continue) */
+  btnEditProductsStep1: string
+  /** Cart line list heading */
+  cartItemsHeading: string
+  /** Checkout step 1: cart line price header — `{pct}` = VAT % (e.g. 21), e.g. `Preț (include TVA {pct}%)`; use `cartLineTotalLabelNoVat` when no rate */
+  cartLineTotalLabel: string
+  /** Cart line header when product has no VAT % in data */
+  cartLineTotalLabelNoVat: string
+  /** `{pct}` = VAT % shown to customer (e.g. 21) */
+  priceIncludesVatPercent: string
+  /** Cart lines use different VAT rates */
+  priceIncludesVatMixed: string
+  /** Remove one line from cart on checkout step 1 */
+  cartRemoveLine: string
+  /** Mobile strip: `{n}` = number of distinct lines */
+  cartOrderLineCount: string
+  /** Step 2 back button when order is cart-based */
+  btnBackToCart: string
   browseProducts: string
   loadErrorTitle: string
   loadErrorBody: string
@@ -106,10 +135,18 @@ export type GuestCheckoutTranslations = {
   breadcrumbHome: string
   breadcrumbCheckout: string
   guestBadge: string
+  /** Logged-in client — badge next to headline (replaces guest-only badge) */
+  clientBadge: string
+  /** Logged-in client — intro under headline (no “create account on the right”) */
+  sublineClient: string
   loadingProduct: string
   /** Heading above the numbered finalization steps */
   paymentCalloutTitle: string
   stepsAriaLabel: string
+  /** Client: loading profile before contact step */
+  profileLoadingAccount: string
+  /** Client: autosave profile from checkout failed */
+  profileSaveError: string
 }
 
 const translations: Record<LangCode, GuestCheckoutTranslations> = {
@@ -148,7 +185,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnBackStep3: 'Înapoi la adresă de livrare și date factură',
     orderProductLabel: 'Produs',
     orderQtyLabel: 'Cantitate',
-    orderTotalLabel: 'Total estimat',
+    orderTotalLabel: 'Total final',
     orderBackToProduct: 'Înapoi la produs',
     orderShippingLabel: 'Livrare',
     orderShippingTitle: 'Transport Baterino gratuit',
@@ -186,6 +223,9 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     orderNumberLabel: 'Număr comandă',
     orderTrackHint:
       'Pentru urmărire sau întrebări, menționează numărul de comandă și adresa de e-mail folosită: {email}.',
+    orderTrackHintClient:
+      'Comanda este salvată în contul tău. Pentru urmărire sau întrebări, menționează numărul de comandă de mai sus.',
+    orderSuccessViewOrders: 'Vezi comenzile mele',
     orderSuccessTitle: 'Comanda a fost înregistrată',
     orderSuccessBody:
       'Îți mulțumim! Vei primi în curând factura proformă la adresa de e-mail indicată. Te vom contacta și telefonic, conform pașilor de mai sus.',
@@ -203,6 +243,20 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authGoogleSignup: 'Înregistrare cu Google',
     missingSlugTitle: 'Lipsește produsul',
     missingSlugBody: 'Nu s-a putut identifica produsul. Alege un produs din catalog.',
+    emptyCheckoutTitle: 'Nu există produse de comandat',
+    emptyCheckoutBody:
+      'Coșul este gol și nu ai selectat un produs din link. Mergi la catalog sau adaugă produse în coș, apoi finalizează aici.',
+    cartLoadingTotals: 'Se calculează totalul coșului…',
+    cartEditInCos: 'Modifică coșul',
+    btnEditProductsStep1: 'Modifică produsele',
+    cartItemsHeading: 'Produse în comandă',
+    cartLineTotalLabel: 'Preț (include TVA {pct}%)',
+    cartLineTotalLabelNoVat: 'Total',
+    priceIncludesVatPercent: 'Include TVA {pct}%',
+    priceIncludesVatMixed: 'Prețurile includ TVA (procente diferite pe produs)',
+    cartRemoveLine: 'Elimină',
+    cartOrderLineCount: '{n} articole',
+    btnBackToCart: 'Înapoi la coș',
     browseProducts: 'Vezi produsele',
     loadErrorTitle: 'Produs negăsit',
     loadErrorBody: 'Nu am putut încărca acest produs. Verifică linkul sau încearcă din pagina produsului.',
@@ -212,9 +266,14 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     breadcrumbHome: 'Acasă',
     breadcrumbCheckout: 'Comandă',
     guestBadge: 'Fără cont — preț public',
+    clientBadge: 'Cont client',
+    sublineClient:
+      'Ești autentificat cu cont client. Am precompletat datele din profil; le poți modifica la fiecare pas. Continuă mai jos pentru a plasa comanda.',
     loadingProduct: 'Se încarcă produsul…',
     paymentCalloutTitle: 'Ce urmează',
     stepsAriaLabel: 'Pași comandă',
+    profileLoadingAccount: 'Se încarcă datele din cont…',
+    profileSaveError: 'Nu am putut salva datele în cont. Încearcă din nou.',
   },
   en: {
     pageTitle: 'Guest checkout',
@@ -251,7 +310,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnBackStep3: 'Back to delivery and invoice details',
     orderProductLabel: 'Product',
     orderQtyLabel: 'Quantity',
-    orderTotalLabel: 'Estimated total',
+    orderTotalLabel: 'Final total',
     orderBackToProduct: 'Back to product',
     orderShippingLabel: 'Delivery',
     orderShippingTitle: 'Free Baterino delivery',
@@ -289,6 +348,9 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     orderNumberLabel: 'Order number',
     orderTrackHint:
       'For follow-up, quote your order number and the email address you used: {email}.',
+    orderTrackHintClient:
+      'The order is saved on your account. For follow-up, quote your order number above.',
+    orderSuccessViewOrders: 'View my orders',
     orderSuccessTitle: 'Order received',
     orderSuccessBody:
       'Thank you. Your proforma invoice will arrive shortly at the email address you provided. We will also call you as described in the steps above.',
@@ -306,6 +368,20 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authGoogleSignup: 'Continue with Google',
     missingSlugTitle: 'Missing product',
     missingSlugBody: 'We could not tell which product to order. Pick one from the catalogue.',
+    emptyCheckoutTitle: 'Nothing to checkout',
+    emptyCheckoutBody:
+      'Your cart is empty and no product was selected from a link. Browse the catalogue or add items to your cart, then continue here.',
+    cartLoadingTotals: 'Calculating cart total…',
+    cartEditInCos: 'Edit cart',
+    btnEditProductsStep1: 'Edit products',
+    cartItemsHeading: 'Items in this order',
+    cartLineTotalLabel: 'Price (includes {pct}% VAT)',
+    cartLineTotalLabelNoVat: 'Total',
+    priceIncludesVatPercent: 'Includes {pct}% VAT',
+    priceIncludesVatMixed: 'Prices include VAT (rate may differ by product)',
+    cartRemoveLine: 'Remove',
+    cartOrderLineCount: '{n} items',
+    btnBackToCart: 'Back to cart',
     browseProducts: 'Browse products',
     loadErrorTitle: 'Product not found',
     loadErrorBody: 'We could not load this product. Check the link or start again from the product page.',
@@ -315,9 +391,14 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     breadcrumbHome: 'Home',
     breadcrumbCheckout: 'Checkout',
     guestBadge: 'Guest — public price',
+    clientBadge: 'Client account',
+    sublineClient:
+      'You are signed in with a client account. We prefilled your details from your profile — you can edit them at each step below and place your order.',
     loadingProduct: 'Loading product…',
     paymentCalloutTitle: 'What happens next',
     stepsAriaLabel: 'Checkout steps',
+    profileLoadingAccount: 'Loading your account details…',
+    profileSaveError: 'We could not save your details to your account. Please try again.',
   },
   zh: {
     pageTitle: '访客下单',
@@ -352,7 +433,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnBackStep3: '返回收货地址与发票信息',
     orderProductLabel: '商品',
     orderQtyLabel: '数量',
-    orderTotalLabel: '预估合计',
+    orderTotalLabel: '最终合计',
     orderBackToProduct: '返回商品页',
     orderShippingLabel: '配送',
     orderShippingTitle: 'Baterino 免费配送',
@@ -388,6 +469,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     placeOrderErrorGeneric: '订单未能提交，请重试。',
     orderNumberLabel: '订单编号',
     orderTrackHint: '如需跟进，请提供订单编号与您使用的邮箱：{email}。',
+    orderTrackHintClient: '订单已保存在您的账户中。如需跟进，请提供上方的订单编号。',
+    orderSuccessViewOrders: '查看我的订单',
     orderSuccessTitle: '订单已提交',
     orderSuccessBody:
       '感谢您的信任！形式发票将很快发送至您填写的邮箱，我们也会按上述步骤与您电话联系。',
@@ -405,6 +488,20 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authGoogleSignup: '使用 Google 注册',
     missingSlugTitle: '缺少商品',
     missingSlugBody: '无法识别要下单的商品，请从目录中选择。',
+    emptyCheckoutTitle: '没有可结算的商品',
+    emptyCheckoutBody:
+      '购物车是空的，且链接中未指定商品。请前往目录或将商品加入购物车后再继续结算。',
+    cartLoadingTotals: '正在计算购物车合计…',
+    cartEditInCos: '编辑购物车',
+    btnEditProductsStep1: '修改商品',
+    cartItemsHeading: '本订单商品',
+    cartLineTotalLabel: '价格（含增值税 {pct}%）',
+    cartLineTotalLabelNoVat: '合计',
+    priceIncludesVatPercent: '含增值税 {pct}%',
+    priceIncludesVatMixed: '价格含增值税（各商品税率可能不同）',
+    cartRemoveLine: '移除',
+    cartOrderLineCount: '{n} 件商品',
+    btnBackToCart: '返回购物车',
     browseProducts: '浏览商品',
     loadErrorTitle: '未找到商品',
     loadErrorBody: '无法加载该商品，请检查链接或从商品页重新进入。',
@@ -413,9 +510,14 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     breadcrumbHome: '首页',
     breadcrumbCheckout: '下单',
     guestBadge: '访客 — 公开价',
+    clientBadge: '客户账户',
+    sublineClient:
+      '您已使用客户账户登录。我们已从个人资料预填信息，您可在下方各步修改并提交订单。',
     loadingProduct: '正在加载商品…',
     paymentCalloutTitle: '接下来',
     stepsAriaLabel: '下单步骤',
+    profileLoadingAccount: '正在加载账户信息…',
+    profileSaveError: '无法将信息保存到账户，请重试。',
   },
 }
 

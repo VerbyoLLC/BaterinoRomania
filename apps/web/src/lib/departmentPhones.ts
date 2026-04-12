@@ -9,12 +9,11 @@ let inflight: Promise<DepartmentPhoneRow[]> | undefined
  */
 export function ensurePublicDepartmentPhones(): Promise<DepartmentPhoneRow[]> {
   if (inflight) return inflight
-  inflight = getPublicDepartmentPhones()
-    .then((rows) => rows)
-    .finally(() => {
-      inflight = undefined
-    })
-  return inflight
+  const p = getPublicDepartmentPhones().finally(() => {
+    inflight = undefined
+  })
+  inflight = p
+  return p
 }
 
 /** Pentru teste sau după ce știi că datele s-au schimbat în alt tab. */

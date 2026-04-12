@@ -4,7 +4,8 @@ import { HelmetProvider } from 'react-helmet-async'
 import { LanguageProvider } from './contexts/LanguageContext'
 import Layout from './components/Layout'
 import AuthWrapper from './components/AuthWrapper'
-import Home from './pages/Home'
+import HomeEntry from './pages/HomeEntry'
+import InstalatoriOnlyIndex from './pages/InstalatoriOnlyIndex'
 import Produse from './pages/Produse'
 import Siguranta from './pages/Siguranta'
 import Divizii from './pages/Divizii'
@@ -54,11 +55,21 @@ import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
 import { INSTALATORI_ONLY } from './lib/siteMode'
 import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
+import { CartProvider } from './contexts/CartContext'
+import ClientOutlet from './pages/client/ClientOutlet'
+import ClientDashboard from './pages/client/ClientDashboard'
+import ClientOrders from './pages/client/ClientOrders'
+import ClientSettings from './pages/client/ClientSettings'
+import ClientMyProducts from './pages/client/ClientMyProducts'
+import ClientBenefits from './pages/client/ClientBenefits'
+import ClientDiscountCodes from './pages/client/ClientDiscountCodes'
+import CartPage from './pages/CartPage'
 
 export default function App() {
   return (
     <HelmetProvider>
     <BrowserRouter>
+      <CartProvider>
       <CatalogCurrencyProvider>
       <ScrollToTop />
       <Routes>
@@ -111,17 +122,35 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           {INSTALATORI_ONLY ? (
             <>
-              <Route index element={<Navigate to="/instalatori" replace />} />
+              <Route index element={<InstalatoriOnlyIndex />} />
               <Route path="instalatori" element={<Instalatori />} />
               <Route path="comanda" element={<GuestCheckout />} />
+              <Route path="cos" element={<CartPage />} />
+              <Route path="client" element={<ClientOutlet />}>
+                <Route index element={<ClientDashboard />} />
+                <Route path="produse" element={<ClientMyProducts />} />
+                <Route path="beneficii" element={<ClientBenefits />} />
+                <Route path="coduri-reducere" element={<ClientDiscountCodes />} />
+                <Route path="comenzi" element={<ClientOrders />} />
+                <Route path="setari" element={<ClientSettings />} />
+              </Route>
               <Route path="*" element={<Navigate to="/instalatori" replace />} />
             </>
           ) : (
             <>
-              <Route index element={<Home />} />
+              <Route index element={<HomeEntry />} />
               <Route path="produse" element={<Produse />} />
               <Route path="produse/:slug" element={<ProductRezidential />} />
               <Route path="comanda" element={<GuestCheckout />} />
+              <Route path="cos" element={<CartPage />} />
+              <Route path="client" element={<ClientOutlet />}>
+                <Route index element={<ClientDashboard />} />
+                <Route path="produse" element={<ClientMyProducts />} />
+                <Route path="beneficii" element={<ClientBenefits />} />
+                <Route path="coduri-reducere" element={<ClientDiscountCodes />} />
+                <Route path="comenzi" element={<ClientOrders />} />
+                <Route path="setari" element={<ClientSettings />} />
+              </Route>
               <Route path="reduceri" element={<Reduceri />} />
               <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
               <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
@@ -149,6 +178,7 @@ export default function App() {
         </Route>
       </Routes>
       </CatalogCurrencyProvider>
+      </CartProvider>
     </BrowserRouter>
     </HelmetProvider>
   )
