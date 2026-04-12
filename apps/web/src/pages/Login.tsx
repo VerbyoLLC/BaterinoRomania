@@ -61,6 +61,8 @@ export default function Login() {
       setAuthToken(token)
       if (user.role === 'partener') {
         navigate('/partner')
+      } else if (user.role === 'client') {
+        navigate(nextPath ?? '/client')
       } else {
         navigate(nextPath ?? '/')
       }

@@ -1,12 +1,35 @@
 import type { ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 
-// Dev pe localhost/127.0.0.1: folosește direct API-ul. Prod: VITE_API_URL sau /api (proxy Vercel).
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string) ||
-  (import.meta.env.DEV && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:3001/api'
-    : '/api')
+/**
+ * Origine pentru `${API_BASE}/admin/...` → server Express `/api/admin/...`.
+ * - Fără env: dev → localhost:3001/api; prod (Vercel) → `/api` (rewrite către Railway).
+ * - VITE_API_URL: trebuie să fie rădăcina cu `/api`, ex. `https://xxx.up.railway.app/api`.
+ *   Dacă lipsește `/api` pe un URL absolut, îl adăugăm automat. Dacă env se termină în `/admin`, îl tăiem (altfel URL-urile devin `/api/admin/admin/...`).
+ */
+function resolveApiBase(): string {
+  const envRaw = import.meta.env.VITE_API_URL as string | undefined
+  if (envRaw != null && String(envRaw).trim() !== '') {
+    let base = String(envRaw).trim().replace(/\/+$/, '')
+    if (base.endsWith('/admin')) {
+      base = base.slice(0, -6)
+    }
+    if (/^https?:\/\//i.test(base) && !/\/api$/i.test(base)) {
+      base = `${base}/api`
+    }
+    return base
+  }
+  if (
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ) {
+    return 'http://localhost:3001/api'
+  }
+  return '/api'
+}
+
+const API_BASE = resolveApiBase()
 
 /** Payload pentru trimiterea formularului de contact */
 export type InquiryPayload = {
@@ -30,10 +53,20 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
-/** Payload POST /api/guest-residential-orders (comandă invitat, flux /comanda). */
-export type GuestResidentialOrderPayload = {
+/** Linie coș → același POST ca produs unic. */
+export type GuestResidentialOrderLineInput = {
   productIdOrSlug: string
   quantity: number
+  /** ID program din CMS; aplicat la total dacă e permis pentru produs. */
+  reducereProgramId?: string | null
+}
+
+/** Payload POST /api/guest-residential-orders (comandă invitat, flux /comanda). */
+export type GuestResidentialOrderPayload = {
+  /** Dacă e setat și nevid, înlocuiește perechea productIdOrSlug + quantity. */
+  items?: GuestResidentialOrderLineInput[]
+  productIdOrSlug?: string
+  quantity?: number
   email: string
   /** Ultimele 9 cifre naționale (fără +40). */
   phone: string
@@ -66,26 +99,39 @@ export async function submitGuestResidentialOrder(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   const token = getAuthToken()
   if (token) headers.Authorization = `Bearer ${token}`
+  const body: Record<string, unknown> = {
+    email: payload.email,
+    phone: payload.phone,
+    nume: payload.nume,
+    prenume: payload.prenume,
+    billAddress: payload.billAddress,
+    billCounty: payload.billCounty,
+    billCity: payload.billCity,
+    billPostal: payload.billPostal,
+    differentDeliveryAddress: payload.differentDeliveryAddress,
+    delAddress: payload.differentDeliveryAddress ? payload.delAddress : undefined,
+    delCounty: payload.differentDeliveryAddress ? payload.delCounty : undefined,
+    delCity: payload.differentDeliveryAddress ? payload.delCity : undefined,
+    delPostal: payload.differentDeliveryAddress ? payload.delPostal : undefined,
+  }
+  if (payload.items && payload.items.length > 0) {
+    body.items = payload.items.map((x) => {
+      const row: Record<string, unknown> = {
+        productIdOrSlug: x.productIdOrSlug,
+        quantity: x.quantity,
+      }
+      const rid = x.reducereProgramId != null ? String(x.reducereProgramId).trim() : ''
+      if (rid && !rid.startsWith('local-')) row.reducereProgramId = rid
+      return row
+    })
+  } else {
+    body.productIdOrSlug = payload.productIdOrSlug
+    body.quantity = payload.quantity
+  }
   const res = await fetch(`${API_BASE}/guest-residential-orders`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      productIdOrSlug: payload.productIdOrSlug,
-      quantity: payload.quantity,
-      email: payload.email,
-      phone: payload.phone,
-      nume: payload.nume,
-      prenume: payload.prenume,
-      billAddress: payload.billAddress,
-      billCounty: payload.billCounty,
-      billCity: payload.billCity,
-      billPostal: payload.billPostal,
-      differentDeliveryAddress: payload.differentDeliveryAddress,
-      delAddress: payload.differentDeliveryAddress ? payload.delAddress : undefined,
-      delCounty: payload.differentDeliveryAddress ? payload.delCounty : undefined,
-      delCity: payload.differentDeliveryAddress ? payload.delCity : undefined,
-      delPostal: payload.differentDeliveryAddress ? payload.delPostal : undefined,
-    }),
+    body: JSON.stringify(body),
   })
   const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<GuestResidentialOrderResponse>
   if (!res.ok) throw new Error(json.error || 'Eroare la înregistrarea comenzii.')
@@ -147,6 +193,7 @@ export type PublicProduct = {
   conectivitateWifi?: boolean
   conectivitateBluetooth?: boolean
   energieNominala?: string | null
+  garantie?: string | null
   [key: string]: unknown
 }
 
@@ -376,6 +423,221 @@ export async function login(email: string, password: string) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Eroare la autentificare.')
   return data as { token: string; user: AuthUser }
+}
+
+export type ClientProfilePayload = {
+  firstName: string
+  lastName: string
+  phone: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  deliveryDifferent: boolean
+  delAddress?: string
+  delCounty?: string
+  delCity?: string
+  delPostal?: string
+}
+
+export type ClientProfileDto = ClientProfilePayload
+
+export type ClientProfileSaveSection = 'personal' | 'address'
+
+export async function getClientProfile(): Promise<{
+  email: string
+  referralCode: string | null
+  profile: ClientProfileDto | null
+}> {
+  const res = await fetch(`${API_BASE}/client/profile`, { headers: authHeaders(), cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as { email: string; referralCode: string | null; profile: ClientProfileDto | null }
+}
+
+export async function putClientProfile(
+  payload: ClientProfilePayload,
+  section: ClientProfileSaveSection,
+): Promise<{ referralCode: string | null; profile: ClientProfileDto }> {
+  const res = await fetch(`${API_BASE}/client/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      section,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      phone: payload.phone,
+      billAddress: payload.billAddress,
+      billCounty: payload.billCounty,
+      billCity: payload.billCity,
+      billPostal: payload.billPostal,
+      deliveryDifferent: payload.deliveryDifferent,
+      delAddress: payload.deliveryDifferent ? payload.delAddress : undefined,
+      delCounty: payload.deliveryDifferent ? payload.delCounty : undefined,
+      delCity: payload.deliveryDifferent ? payload.delCity : undefined,
+      delPostal: payload.deliveryDifferent ? payload.delPostal : undefined,
+    }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvare.')
+  }
+  return json as { referralCode: string | null; profile: ClientProfileDto }
+}
+
+export async function postClientChangePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/client/change-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error((json as { error?: string }).error || 'Parolă incorectă.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+}
+
+export async function postClientChangeEmail(
+  newEmail: string,
+  currentPassword: string,
+): Promise<{ token: string; email: string }> {
+  const res = await fetch(`${API_BASE}/client/change-email`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ newEmail: newEmail.trim(), currentPassword }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error((json as { error?: string }).error || 'Parolă incorectă.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  const token = (json as { token?: string }).token
+  const email = (json as { email?: string }).email
+  if (!token || !email) throw new Error('Răspuns invalid.')
+  return { token, email }
+}
+
+export type ClientOrderLine = {
+  id: string
+  productId: string
+  productSlug: string | null
+  productTitle: string
+  quantity: number
+  unitPriceInclVat: string | null
+  lineTotalInclVat: string | null
+  vatPercent: string | null
+  /** Populated by API from catalog (card / first image). */
+  imageUrl?: string | null
+}
+
+export type OrderFulfillmentStatus =
+  | 'de_platit'
+  | 'preluata'
+  | 'in_pregatire'
+  | 'in_curs_livrare'
+  | 'livrata'
+  | 'anulata'
+
+export type ClientOrderRow = {
+  orderKind: string
+  id: string
+  orderNumber: string
+  orderSource: string
+  /** Implicit `de_platit` dacă lipsește (API vechi înainte de migrare). */
+  fulfillmentStatus?: OrderFulfillmentStatus | string
+  email: string
+  phone: string
+  lastName: string
+  firstName: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  deliveryDifferent: boolean
+  delAddress: string | null
+  delCounty: string | null
+  delCity: string | null
+  delPostal: string | null
+  currency: string
+  createdAt: string
+  lines: ClientOrderLine[]
+  lineCount?: number
+  orderTotalInclVat?: string | null
+  /** Factură PDF încărcată de admin (comenzi în „în pregătire” și ulterior). */
+  clientHasInvoice?: boolean
+}
+
+export async function getClientOrders(): Promise<ClientOrderRow[]> {
+  const res = await fetch(`${API_BASE}/client/orders`, { headers: authHeaders(), cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentStatus: string }> {
+  const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; fulfillmentStatus?: string }
+  if (!res.ok) throw new Error(json.error || 'Nu am putut anula comanda.')
+  return { fulfillmentStatus: String(json.fulfillmentStatus || 'anulata') }
+}
+
+/** Descarcă HTML proformă (print → PDF din browser). */
+export async function downloadClientOrderProforma(orderId: string, orderNumber: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/proforma`, {
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(json.error || 'Nu am putut genera proforma.')
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `proforma-${orderNumber.replace(/[^\w.-]+/g, '_')}.html`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/** Descarcă factura PDF (după ce comanda e în „în pregătire” și admin a încărcat factura). */
+export async function downloadClientOrderInvoice(orderId: string, orderNumber: string): Promise<void> {
+  const token = getAuthToken()
+  const h: Record<string, string> = {}
+  if (token) h['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/invoice`, {
+    headers: h,
+  })
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(json.error || 'Nu am putut descărca factura.')
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `factura-${orderNumber.replace(/[^\w.-]+/g, '_')}.pdf`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 function notifyAuthChanged() {
@@ -845,9 +1107,11 @@ export type AdminInquiry = {
 }
 
 export type AdminGuestResidentialOrderRow = {
+  orderKind?: string
   id: string
   orderNumber: string
   orderSource: string
+  fulfillmentStatus?: OrderFulfillmentStatus | string
   email: string
   phone: string
   lastName: string
@@ -861,7 +1125,7 @@ export type AdminGuestResidentialOrderRow = {
   delCounty: string | null
   delCity: string | null
   delPostal: string | null
-  productId: string
+  productId?: string
   productSlug: string | null
   productTitle: string
   quantity: number
@@ -870,10 +1134,14 @@ export type AdminGuestResidentialOrderRow = {
   lineTotalInclVat: string | null
   vatPercent: string | null
   createdAt: string
+  lines?: ClientOrderLine[]
+  lineCount?: number
+  orderTotalInclVat?: string | null
+  clientInvoiceUrl?: string | null
 }
 
 export async function getAdminGuestResidentialOrders(): Promise<AdminGuestResidentialOrderRow[]> {
-  const res = await fetch(`${API_BASE}/admin/guest-residential-orders`, {
+  const res = await fetch(`${API_BASE}/admin/orders`, {
     headers: authHeaders(),
     cache: 'no-store',
   })
@@ -881,9 +1149,48 @@ export async function getAdminGuestResidentialOrders(): Promise<AdminGuestReside
   if (!res.ok) {
     if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
     if (res.status === 403) throw new Error('Acces restricționat.')
-    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea comenzilor.')
+    const body = json as { error?: string; path?: string }
+    if (res.status === 404 && body.path) {
+      throw new Error(
+        `${body.error || 'Rută negăsită pe API'} — path: ${body.path}. Redeploy backend (Railway) sau setează VITE_API_URL la URL-ul API cu /api la final.`,
+      )
+    }
+    throw new Error(body.error || 'Eroare la încărcarea comenzilor.')
   }
   return Array.isArray(json) ? json : []
+}
+
+export async function patchAdminOrderFulfillmentStatus(
+  orderId: string,
+  fulfillmentStatus: OrderFulfillmentStatus | string,
+  clientInvoice?: File | null,
+): Promise<{ clientInvoiceUrl?: string | null }> {
+  const token = getAuthToken()
+  let res: Response
+  if (clientInvoice) {
+    const fd = new FormData()
+    fd.append('fulfillmentStatus', fulfillmentStatus)
+    fd.append('clientInvoice', clientInvoice)
+    const h: Record<string, string> = {}
+    if (token) h['Authorization'] = `Bearer ${token}`
+    res = await fetch(`${API_BASE}/admin/orders/${encodeURIComponent(orderId)}`, {
+      method: 'PATCH',
+      headers: h,
+      body: fd,
+    })
+  } else {
+    res = await fetch(`${API_BASE}/admin/orders/${encodeURIComponent(orderId)}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ fulfillmentStatus }),
+    })
+  }
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    clientInvoiceUrl?: string | null
+  }
+  if (!res.ok) throw new Error(json.error || 'Eroare la actualizarea statusului.')
+  return { clientInvoiceUrl: json.clientInvoiceUrl }
 }
 
 export async function getAdminInquiries(): Promise<AdminInquiry[]> {

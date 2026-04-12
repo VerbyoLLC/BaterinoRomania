@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LANGUAGES } from '../i18n/menu'
 import { INSTALATORI_ONLY } from '../lib/siteMode'
+import { clearAuth, getAuthEmail, getAuthRole } from '../lib/api'
 
 const DIVIZII_SUBMENU_ITEMS = [
   { key: 'rezidential', path: '/divizii/rezidential', subtitleKey: 'divRezSubtitle' as const },
@@ -63,8 +64,28 @@ export default function MobileMenu({
   isOpen: boolean
   onClose: () => void
 }) {
+  const navigate = useNavigate()
   const { language, setLanguage } = useLanguage()
   const t = getMenuTranslations(language.code)
+  const [authRole, setAuthRole] = useState<'admin' | 'client' | 'partener' | null>(() =>
+    typeof window !== 'undefined' ? getAuthRole() : null,
+  )
+  const [authEmail, setAuthEmail] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? getAuthEmail() : null,
+  )
+  useEffect(() => {
+    const sync = () => {
+      setAuthRole(getAuthRole())
+      setAuthEmail(getAuthEmail())
+    }
+    sync()
+    window.addEventListener('baterino-auth-change', sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener('baterino-auth-change', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
   const [showProductsPage, setShowProductsPage] = useState(false)
   const [showDiviziiPage, setShowDiviziiPage] = useState(false)
   const [showCompaniePage, setShowCompaniePage] = useState(false)
@@ -360,18 +381,19 @@ export default function MobileMenu({
             <div className="flex flex-col pt-2">
               {INSTALATORI_ONLY ? (
                 <>
-                  {/* Instalatori */}
-                  <Link
-                    to="/instalatori"
-                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                    onClick={handleLinkClick}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
-                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
-                    </div>
-                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                  </Link>
+                  {authRole !== 'client' ? (
+                    <Link
+                      to="/instalatori"
+                      className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                      onClick={handleLinkClick}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
+                        <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
+                      </div>
+                      <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                    </Link>
+                  ) : null}
                   <div className="flex-1" />
                   <div className="mt-6" />
                   <button
@@ -445,17 +467,19 @@ export default function MobileMenu({
                     </div>
                     <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                   </button>
-                  <Link
-                    to="/instalatori"
-                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                    onClick={handleLinkClick}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
-                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
-                    </div>
-                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                  </Link>
+                  {authRole !== 'client' ? (
+                    <Link
+                      to="/instalatori"
+                      className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                      onClick={handleLinkClick}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainInstalatori}</p>
+                        <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainInstalatoriSubtitle}</p>
+                      </div>
+                      <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleCompanieClick}
@@ -481,18 +505,98 @@ export default function MobileMenu({
                     </div>
                     <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleLoginClick}
-                    className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
-                  >
-                    <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainLogin}</p>
-                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLoginSubtitle}</p>
-                    </div>
-                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                  </button>
+                  {authRole === 'client' ? (
+                    <>
+                      <div className="mt-2 border-t border-gray-200 pt-4 space-y-2">
+                        {authEmail ? (
+                          <p className="text-xs text-gray-500 font-['Inter'] px-1 truncate" title={authEmail}>
+                            {authEmail}
+                          </p>
+                        ) : null}
+                        <Link
+                          to="/client"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">{t.accountMenuLabel}</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/client/produse"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Produsele mele</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/client/beneficii"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Beneficii</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/client/coduri-reducere"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Coduri reducere</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/client/comenzi"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Comenzile mele</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/client/setari"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Setări</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <Link
+                          to="/cos"
+                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                          onClick={handleLinkClick}
+                        >
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Coș</span>
+                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                        </Link>
+                        <button
+                          type="button"
+                          className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                          onClick={() => {
+                            clearAuth()
+                            handleLinkClick()
+                            navigate('/login')
+                          }}
+                        >
+                          <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0 opacity-70" />
+                          <span className="text-black text-xl font-bold font-['Inter'] leading-8">Deconectare</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleLoginClick}
+                      className="flex items-center gap-3 w-full py-3 border-b border-gray-100 text-left"
+                    >
+                      <img src="/images/menu/account.svg" alt="" className="size-7 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.mainLogin}</p>
+                        <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainLoginSubtitle}</p>
+                      </div>
+                      <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                    </button>
+                  )}
                 </>
               )}
             </div>

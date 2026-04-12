@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { getAuthRole } from '../lib/api'
+import { INSTALATORI_ONLY } from '../lib/siteMode'
 import { getInstallatoriTranslations } from '../i18n/instalatori'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
@@ -89,6 +91,10 @@ const FEAT4_ICONS = [
 export default function Instalatori() {
   const { language } = useLanguage()
   const tr = getInstallatoriTranslations(language.code)
+
+  if (getAuthRole() === 'client') {
+    return <Navigate to={INSTALATORI_ONLY ? '/client' : '/produse'} replace />
+  }
 
   return (
     <>
