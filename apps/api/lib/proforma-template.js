@@ -18,6 +18,14 @@ function fmtMoney(n) {
   return x.toFixed(2)
 }
 
+/** Absolute logo URL for print/PDF (browser nu poate încărca fișiere locale din API). */
+function defaultProformaLogoUrl() {
+  const base = String(process.env.FRONTEND_URL || process.env.BATERINO_ASSET_ORIGIN || 'https://baterino.ro')
+    .trim()
+    .replace(/\/$/, '')
+  return `${base}/images/shared/baterino-logo-black.svg`
+}
+
 /**
  * @param {object} params
  * @param {string} params.series - ex. DIP, BAT
@@ -30,6 +38,7 @@ function fmtMoney(n) {
  * @param {string} params.paymentDueStr - dd/mm/yyyy
  * @param {string} [params.note]
  * @param {string} [params.preparedBy]
+ * @param {string} [params.logoUrl] - ex. https://baterino.ro/images/shared/baterino-logo-black.svg
  * @returns {string} full HTML document
  */
 function buildProformaHtml(params) {
@@ -44,7 +53,9 @@ function buildProformaHtml(params) {
     paymentDueStr,
     note = '',
     preparedBy = '',
+    logoUrl: logoUrlParam,
   } = params
+  const logoUrl = escapeHtml((logoUrlParam && String(logoUrlParam).trim()) || defaultProformaLogoUrl())
 
   let totalExcl = 0
   let totalVat = 0
@@ -86,8 +97,15 @@ function buildProformaHtml(params) {
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 24px; }
     .wrap { max-width: 800px; margin: 0 auto; }
+    .top { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+    .logo-col { flex-shrink: 0; padding-top: 2px; }
+    .logo-col img.logo { height: 44px; width: auto; max-width: 150px; display: block; object-fit: contain; }
+    .title-col { flex: 1; min-width: 0; }
     h1 { font-size: 18px; letter-spacing: 0.05em; margin: 0 0 8px 0; }
-    .meta { margin-bottom: 14px; line-height: 1.5; }
+    .meta { margin-bottom: 0; line-height: 1.5; }
+    .parties { display: flex; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+    .party { flex: 1; min-width: 0; border: 1px solid #333; padding: 10px 12px; line-height: 1.45; }
+    .party-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #444; margin-bottom: 6px; }
     .block { margin-bottom: 14px; line-height: 1.45; }
     .block-title { font-weight: 700; margin-bottom: 4px; }
     table.grid { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10px; }
@@ -108,28 +126,38 @@ function buildProformaHtml(params) {
 </head>
 <body>
   <div class="wrap">
-    <h1>PROFORMA</h1>
-    <div class="meta">
-      Seria <strong>${escapeHtml(series)}</strong> nr. <strong>${escapeHtml(number)}</strong><br />
-      Data (zi/luna/an): ${escapeHtml(dateStr)}<br />
-      Cotă TVA: ${escapeHtml(String(vatRatePercent))}%
+    <div class="top">
+      <div class="logo-col">
+        <img class="logo" src="${logoUrl}" alt="Baterino" width="150" height="44" />
+      </div>
+      <div class="title-col">
+        <h1>PROFORMA</h1>
+        <div class="meta">
+          Seria <strong>${escapeHtml(series)}</strong> nr. <strong>${escapeHtml(number)}</strong><br />
+          Data (zi/luna/an): ${escapeHtml(dateStr)}<br />
+          Cotă TVA: ${escapeHtml(String(vatRatePercent))}%
+        </div>
+      </div>
     </div>
 
-    <div class="block">
-      <div class="block-title">${escapeHtml(sup.name || '')}</div>
-      ${sup.regCom ? `Reg. com.: ${escapeHtml(sup.regCom)}<br />` : ''}
-      CIF: ${escapeHtml(sup.cui || '—')}<br />
-      Adresă: ${escapeHtml(sup.address || '—')}<br />
-      ${sup.ibanRon ? `IBAN(RON) ${escapeHtml(sup.ibanRon)}<br />` : ''}
-      ${sup.bankName ? `Bancă: ${escapeHtml(sup.bankName)}` : ''}
-    </div>
-
-    <div class="block">
-      <div class="block-title">Client: ${escapeHtml(cl.name || '—')}</div>
-      ${cl.regCom ? `Reg. com.: ${escapeHtml(cl.regCom)}<br />` : ''}
-      CIF: ${cl.cui ? escapeHtml(cl.cui) : '—'}<br />
-      Adresă: ${escapeHtml(cl.address || '—')}<br />
-      ${cl.county ? `Județ: ${escapeHtml(cl.county)}` : ''}
+    <div class="parties">
+      <div class="party">
+        <div class="party-label">Furnizor</div>
+        <div class="block-title">${escapeHtml(sup.name || '')}</div>
+        ${sup.regCom ? `Reg. com.: ${escapeHtml(sup.regCom)}<br />` : ''}
+        CIF: ${escapeHtml(sup.cui || '—')}<br />
+        Adresă: ${escapeHtml(sup.address || '—')}<br />
+        ${sup.ibanRon ? `IBAN(RON) ${escapeHtml(sup.ibanRon)}<br />` : ''}
+        ${sup.bankName ? `Bancă: ${escapeHtml(sup.bankName)}` : ''}
+      </div>
+      <div class="party">
+        <div class="party-label">Client</div>
+        <div class="block-title">${escapeHtml(cl.name || '—')}</div>
+        ${cl.regCom ? `Reg. com.: ${escapeHtml(cl.regCom)}<br />` : ''}
+        CIF: ${cl.cui ? escapeHtml(cl.cui) : '—'}<br />
+        Adresă: ${escapeHtml(cl.address || '—')}<br />
+        ${cl.county ? `Județ: ${escapeHtml(cl.county)}` : ''}
+      </div>
     </div>
 
     <table class="grid">
@@ -277,6 +305,98 @@ function buildGuestOrderProformaHtml(order, company, opts) {
   return buildProformaHtml(mapGuestResidentialOrderToProforma(order, company, opts))
 }
 
+/**
+ * Multi-line residential order (Prisma `ResidentialOrder` + `lines`).
+ * @param {object} order
+ * @param {object} company
+ * @param {object} [opts]
+ */
+function mapResidentialOrderToProforma(order, company, opts = {}) {
+  const accounts = Array.isArray(company?.bankAccounts)
+    ? [...company.bankAccounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : []
+  const ibanRonRow =
+    accounts.find((a) => /RON/i.test(String(a.iban || '')) || /RON/i.test(String(a.bankName || ''))) || accounts[0]
+  const ibanEurRow = accounts.find((a) => /EUR/i.test(String(a.iban || '')) || /EUR/i.test(String(a.bankName || '')))
+
+  const d = order.createdAt ? new Date(order.createdAt) : new Date()
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const dateStr = `${dd}/${mm}/${yyyy}`
+
+  const series = opts.proformaSeries || process.env.BATERINO_PROFORMA_SERIA || 'BAT'
+  const number = opts.proformaNumber || order.orderNumber || order.id
+
+  const clientName = `${order.lastName || ''} ${order.firstName || ''}`.trim()
+  const clientAddress = [order.billAddress, order.billCity, order.billPostal].filter(Boolean).join(', ')
+
+  const supplier = {
+    name: company?.name || 'Baterino SRL',
+    regCom: opts.supplierRegCom || process.env.BATERINO_REG_COM || '',
+    cui:
+      company?.cui && String(company.cui).trim()
+        ? `RO${String(company.cui).replace(/^RO/i, '').trim()}`
+        : '—',
+    address: company?.address || '',
+    ibanRon: ibanRonRow?.iban || '',
+    bankName: ibanRonRow?.bankName || '',
+    ibanEur: ibanEurRow?.iban || '',
+    bankEur: ibanEurRow?.bankName || '',
+    email: opts.supplierEmail || process.env.BATERINO_OFFICE_EMAIL || '',
+    web: opts.supplierWeb || process.env.BATERINO_WEB || '',
+    capitalSocial: opts.supplierCapital || process.env.BATERINO_CAPITAL_SOCIAL || '',
+  }
+
+  const client = {
+    name: clientName,
+    regCom: '',
+    cui: '',
+    address: clientAddress,
+    county: order.billCounty || '',
+  }
+
+  const orderLines = Array.isArray(order.lines) ? order.lines : []
+  const lines = orderLines.map((L, idx) => {
+    const vatRate = numDecimal(L.vatPercent) || 21
+    const qty = Math.max(1, parseInt(String(L.quantity), 10) || 1)
+    let lineIncl = numDecimal(L.lineTotalInclVat)
+    if (!lineIncl || lineIncl <= 0) lineIncl = numDecimal(L.unitPriceInclVat) * qty
+    const unitIncl = qty > 0 ? lineIncl / qty : numDecimal(L.unitPriceInclVat)
+    const unitExcl = unitIncl > 0 ? unitIncl / (1 + vatRate / 100) : 0
+    const lineExcl = unitExcl * qty
+    const lineVat = Math.max(0, lineIncl - lineExcl)
+    return {
+      index: idx + 1,
+      name: L.productTitle || 'Produs',
+      um: 'buc',
+      qty,
+      unitPriceExcl: unitExcl,
+      lineTotalExcl: lineExcl,
+      lineVat,
+    }
+  })
+
+  const headerVat = orderLines.length > 0 ? numDecimal(orderLines[0].vatPercent) || 21 : 21
+
+  return {
+    series,
+    number,
+    dateStr,
+    vatRatePercent: headerVat,
+    supplier,
+    client,
+    lines,
+    paymentDueStr: dateStr,
+    note: `Referință comandă: ${order.orderNumber}. Email: ${order.email}. Tel: +40 ${order.phone}`,
+    preparedBy: '—',
+  }
+}
+
+function buildResidentialOrderProformaHtml(order, company, opts) {
+  return buildProformaHtml(mapResidentialOrderToProforma(order, company, opts))
+}
+
 /** Dummy data for local preview — same shape as SmartBill-style proformas. */
 function buildSampleProformaPreviewHtml() {
   return buildProformaHtml({
@@ -326,5 +446,7 @@ module.exports = {
   buildProformaHtml,
   mapGuestResidentialOrderToProforma,
   buildGuestOrderProformaHtml,
+  mapResidentialOrderToProforma,
+  buildResidentialOrderProformaHtml,
   buildSampleProformaPreviewHtml,
 }
