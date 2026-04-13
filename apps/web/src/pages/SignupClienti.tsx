@@ -3,17 +3,28 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import AuthLayout from '../components/AuthLayout'
 import GoogleSignupButton from '../components/GoogleSignupButton'
 import PasswordInput from '../components/PasswordInput'
-import SignupVerifyCode from '../components/SignupVerifyCode'
-import type { UserType } from '../components/SignupVerifyCode'
+import SignupPendingEmail, { type SignupUserType } from '../components/SignupPendingEmail'
 import { signup, checkApiHealth } from '../lib/api'
+
+function safeSignupNextParam(raw: string | null): string | undefined {
+  if (!raw) return undefined
+  try {
+    const decoded = decodeURIComponent(raw.trim())
+    if (!decoded.startsWith('/') || decoded.startsWith('//')) return undefined
+    return decoded
+  } catch {
+    return undefined
+  }
+}
 
 export default function SignupClienti() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
+  const nextPath = safeSignupNextParam(searchParams.get('next'))
   const [step, setStep] = useState<1 | 2>(1)
-  const [tab, setTab] = useState<UserType>(tabParam === 'partener' ? 'partener' : 'client')
+  const [tab, setTab] = useState<SignupUserType>(tabParam === 'partener' ? 'partener' : 'client')
 
   useEffect(() => {
     if (tabParam === 'partener') setTab('partener')
@@ -21,26 +32,31 @@ export default function SignupClienti() {
   }, [tabParam])
 
   useEffect(() => {
-    const st = location.state as { guestCheckoutSignup?: boolean; email?: string } | null
+    const st = location.state as { guestCheckoutSignup?: boolean; email?: string; verificationSent?: boolean } | null
     if (st?.guestCheckoutSignup && st.email) {
       const em = String(st.email).trim().toLowerCase()
       if (em) {
         setEmail(em)
         setEmailInput(em)
         setTab('client')
+        setVerificationSent(st.verificationSent !== false)
         setStep(2)
       }
-      navigate('/signup/clienti?tab=client', { replace: true, state: null })
+      const n = searchParams.get('next')
+      const qs = new URLSearchParams({ tab: 'client' })
+      if (n) qs.set('next', n)
+      navigate({ pathname: '/signup/clienti', search: `?${qs.toString()}` }, { replace: true, state: null })
     }
-  }, [location.state, navigate])
+  }, [location.state, navigate, searchParams])
   const [email, setEmail] = useState('')
   const [emailInput, setEmailInput] = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
   const [agreed, setAgreed] = useState(false)
-  const [errors, setErrors] = useState<{ password?: string; confirm?: string; submit?: string }>({})
+  const [errors, setErrors] = useState<{ password?: string; submit?: string }>({})
   const [loading, setLoading] = useState(false)
   const [apiOk, setApiOk] = useState<boolean | null>(null)
+  /** false = cont creat dar email de confirmare probabil netrimis */
+  const [verificationSent, setVerificationSent] = useState(true)
 
   useEffect(() => {
     checkApiHealth().then(setApiOk)
@@ -76,15 +92,15 @@ export default function SignupClienti() {
 
   async function handleStep1Submit(e: React.FormEvent) {
     e.preventDefault()
-    const newErrors: { password?: string; confirm?: string; submit?: string } = {}
+    const newErrors: { password?: string; submit?: string } = {}
     if (password.length < 8) newErrors.password = 'Parola trebuie să aibă cel puțin 8 caractere.'
-    if (password !== confirm) newErrors.confirm = 'Parolele nu coincid.'
     if (Object.keys(newErrors).length) { setErrors(newErrors); return }
     setErrors({})
     setLoading(true)
     try {
-      await signup(emailInput, password, tab)
+      const out = await signup(emailInput, password, tab, nextPath)
       setEmail(emailInput)
+      setVerificationSent(out.verificationSent !== false)
       setStep(2)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Eroare la înregistrare.'
@@ -92,14 +108,6 @@ export default function SignupClienti() {
       setErrors({ submit: msg })
     } finally {
       setLoading(false)
-    }
-  }
-
-  function handleVerifySuccess(userType: UserType) {
-    if (userType === 'client') {
-      navigate('/')
-    } else {
-      navigate('/signup/parteneri/profil')
     }
   }
 
@@ -178,20 +186,6 @@ export default function SignupClienti() {
               />
               {errors.password && <p className={errorClass}>{errors.password}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">
-                Confirmă parola <span className="text-red-500">*</span>
-              </label>
-              <PasswordInput
-                placeholder="Repetă parola"
-                value={confirm}
-                onChange={setConfirm}
-                hasError={!!errors.confirm}
-                autoComplete="new-password"
-              />
-              {errors.confirm && <p className={errorClass}>{errors.confirm}</p>}
-            </div>
-
             {/* Terms */}
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -240,11 +234,12 @@ export default function SignupClienti() {
           </p>
         </>
       ) : (
-        <SignupVerifyCode
+        <SignupPendingEmail
           email={email}
           userType={tab}
+          nextPath={nextPath}
+          verificationSent={verificationSent}
           onBack={() => setStep(1)}
-          onSuccess={handleVerifySuccess}
         />
       )}
     </AuthLayout>

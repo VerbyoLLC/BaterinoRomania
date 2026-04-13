@@ -519,9 +519,13 @@ export default function GuestCheckout() {
     setAuthLoading(true)
     try {
       const emailNorm = authEmail.trim().toLowerCase()
-      await apiSignup(emailNorm, authPassword, 'client')
-      navigate('/signup/clienti?tab=client', {
-        state: { guestCheckoutSignup: true, email: emailNorm },
+      const signupOut = await apiSignup(emailNorm, authPassword, 'client', returnToCheckout)
+      navigate(`/signup/clienti?tab=client&next=${loginNext}`, {
+        state: {
+          guestCheckoutSignup: true,
+          email: emailNorm,
+          verificationSent: signupOut.verificationSent !== false,
+        },
       })
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : tr.authErrorGeneric)

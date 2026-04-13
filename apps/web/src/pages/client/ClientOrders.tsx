@@ -5,6 +5,7 @@ import {
   cancelClientOrder,
   downloadClientOrderInvoice,
   downloadClientOrderProforma,
+  getAuthEmail,
   getClientOrders,
   getProductCardImageUrl,
   type ClientOrderRow,
@@ -227,9 +228,11 @@ export default function ClientOrders() {
               o.orderTotalInclVat != null && o.orderTotalInclVat !== ''
                 ? `${o.orderTotalInclVat} ${o.currency}`
                 : '—'
+            const clientEmail = (getAuthEmail() ?? '').trim() || '—'
             const orderHelpWhatsappText = tr.whatsappHelpPrefill
               .replace(/{orderNumber}/g, String(o.orderNumber ?? '').trim())
               .replace(/{orderDate}/g, formatDate(o.createdAt, lang))
+              .replace(/{clientEmail}/g, clientEmail)
             const orderHelpWhatsappHref = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(orderHelpWhatsappText)}`
 
             return (

@@ -450,13 +450,33 @@ app.post('/api/auth/signup', async (req, res) => {
     })
 
     const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
-    await sendSignupVerificationLink(email, verifyUrl, role)
+    let verificationSent = false
+    if (isMailConfigured()) {
+      try {
+        await sendSignupVerificationLink(email, verifyUrl, role)
+        verificationSent = true
+      } catch (mailErr) {
+        console.error('[Signup] User created but verification email failed:', user.id, user.email, mailErr)
+      }
+    } else {
+      console.warn('[Signup] User created (mail not configured). Verify URL:', verifyUrl)
+    }
 
-    console.log('[Signup] User created:', user.id, user.email, isMailConfigured() ? '(email sent)' : '(SMTP not configured)')
+    console.log(
+      '[Signup] User created:',
+      user.id,
+      user.email,
+      !isMailConfigured() ? '(no mail)' : verificationSent ? '(email sent)' : '(email failed)',
+    )
 
     return res.status(201).json({
-      message: 'Cont creat. Verifică emailul pentru linkul de confirmare.',
+      message: verificationSent
+        ? 'Cont creat. Verifică emailul pentru linkul de confirmare.'
+        : isMailConfigured()
+          ? 'Cont creat. Nu am putut trimite acum emailul de confirmare (server de mail). Folosește „Retrimite linkul” pe pagina următoare după ce corectezi SMTP sau Resend.'
+          : 'Cont creat. Emailul de confirmare nu este configurat pe server; folosește linkul din jurnalul API sau configurează Resend/SMTP.',
       email: user.email,
+      verificationSent,
     })
   } catch (err) {
     console.error('Signup error:', err)
@@ -487,14 +507,22 @@ app.post('/api/auth/resend-code', async (req, res) => {
 
     const verificationToken = crypto.randomBytes(32).toString('hex')
     const verificationCodeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
+    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
+
+    try {
+      await sendSignupVerificationLink(email, verifyUrl, user.role)
+    } catch (mailErr) {
+      console.error('[Resend] Verification email failed:', mailErr)
+      return res.status(503).json({
+        error:
+          'Nu am putut trimite emailul. Verifică setările Resend sau SMTP (ex.: parolă SMTP, port) și încearcă din nou.',
+      })
+    }
 
     await prisma.user.update({
       where: { id: user.id },
       data: { verificationCode: verificationToken, verificationCodeExpiresAt },
     })
-
-    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
-    await sendSignupVerificationLink(email, verifyUrl, user.role)
 
     return res.json({ message: 'Link de confirmare retrimis.' })
   } catch (err) {
@@ -940,6 +968,32 @@ app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async
     }
     console.error('Client change-email error:', err)
     res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.delete('/api/client/account', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const currentPassword = body.currentPassword
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Parola curentă este obligatorie pentru ștergerea contului.' })
+    }
+    const userId = req.userId
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, password: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const valid = await bcrypt.compare(String(currentPassword), user.password)
+    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
+
+    await sendAccountDeletedEmail(user.email)
+
+    await prisma.user.delete({ where: { id: userId } })
+    return res.json({ message: 'Cont șters.' })
+  } catch (err) {
+    console.error('Client delete account error:', err)
+    res.status(500).json({ error: 'Eroare la ștergerea contului.' })
   }
 })
 
@@ -1545,6 +1599,31 @@ const adminClientsHandler = async (req, res) => {
 }
 app.get('/api/admin/clients', authMiddleware, adminAuthMiddleware, adminClientsHandler)
 app.get('/admin/clients', authMiddleware, adminAuthMiddleware, adminClientsHandler)
+
+/** Șterge un cont client. Doar JWT rol `admin` (după adminAuthMiddleware). Fără email — testare din panoul admin. */
+async function adminDeleteClientHandler(req, res) {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Acces restricționat. Doar administratorii pot șterge conturi client.' })
+    }
+    const userId = String(req.params.userId || '').trim()
+    if (!userId) return res.status(400).json({ error: 'ID utilizator lipsă.' })
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    })
+    if (!user || user.role !== 'client') {
+      return res.status(404).json({ error: 'Client negăsit sau utilizatorul nu este cont client.' })
+    }
+    await prisma.user.delete({ where: { id: userId } })
+    return res.json({ ok: true, message: 'Cont șters.' })
+  } catch (err) {
+    console.error('Admin delete client error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergerea contului.' })
+  }
+}
+app.delete('/api/admin/clients/:userId', authMiddleware, adminAuthMiddleware, adminDeleteClientHandler)
+app.delete('/admin/clients/:userId', authMiddleware, adminAuthMiddleware, adminDeleteClientHandler)
 
 // ── Admin: telefoane pe departament ─────────────────────────────────────
 const DEPARTMENT_PHONE_KEYS = ['general', 'rezidential', 'industrial', 'medical', 'maritim']
