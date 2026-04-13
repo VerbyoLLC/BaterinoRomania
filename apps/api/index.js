@@ -8,7 +8,16 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
-const { sendVerificationCode, sendPasswordResetEmail, sendAccountDeletedEmail, sendInquiryNotification, sendInquiryConfirmation, isMailConfigured, getMailProvider, getMailFrom } = require('./lib/mail.js')
+const {
+  sendSignupVerificationLink,
+  sendPasswordResetEmail,
+  sendAccountDeletedEmail,
+  sendInquiryNotification,
+  sendInquiryConfirmation,
+  isMailConfigured,
+  getMailProvider,
+  getMailFrom,
+} = require('./lib/mail.js')
 const {
   uploadToR2,
   generateKey,
@@ -378,6 +387,29 @@ function clientAuthMiddleware(req, res, next) {
   next()
 }
 
+/** Internal path only (open after email verify). */
+function safeSignupNext(raw) {
+  if (raw == null || typeof raw !== 'string') return ''
+  let s = raw.trim()
+  try {
+    s = decodeURIComponent(s)
+  } catch {
+    return ''
+  }
+  if (!s.startsWith('/') || s.startsWith('//')) return ''
+  if (s.includes('\n') || s.includes('\r')) return ''
+  return s.slice(0, 512)
+}
+
+function buildSignupVerifyUrl(token, nextPath) {
+  const base = String(process.env.FRONTEND_URL || 'https://baterino.ro').replace(/\/$/, '')
+  const u = new URL('/signup/verify-email', `${base}/`)
+  u.searchParams.set('token', token)
+  const n = safeSignupNext(nextPath)
+  if (n) u.searchParams.set('next', n)
+  return u.toString()
+}
+
 // ── Auth: Signup (step 1) ─────────────────────────────────────────────
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -385,6 +417,7 @@ app.post('/api/auth/signup', async (req, res) => {
     const email = String(body.email || '').trim().toLowerCase()
     const password = body.password
     const role = body.role
+    const nextPath = safeSignupNext(body.next)
 
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'Email, parolă și rol sunt obligatorii.' })
@@ -403,25 +436,26 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const verificationCode = String(Math.floor(1000 + Math.random() * 9000))
-    const verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    const verificationCodeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
 
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         role,
-        verificationCode,
+        verificationCode: verificationToken,
         verificationCodeExpiresAt,
       },
     })
 
-    await sendVerificationCode(email, verificationCode, role)
+    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
+    await sendSignupVerificationLink(email, verifyUrl, role)
 
     console.log('[Signup] User created:', user.id, user.email, isMailConfigured() ? '(email sent)' : '(SMTP not configured)')
 
     return res.status(201).json({
-      message: 'Cont creat. Verifică emailul pentru cod.',
+      message: 'Cont creat. Verifică emailul pentru linkul de confirmare.',
       email: user.email,
     })
   } catch (err) {
@@ -436,6 +470,7 @@ app.post('/api/auth/resend-code', async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
+    const nextPath = safeSignupNext(body.next)
 
     if (!email) {
       return res.status(400).json({ error: 'Email este obligatoriu.' })
@@ -446,24 +481,71 @@ app.post('/api/auth/resend-code', async (req, res) => {
       return res.status(404).json({ error: 'Contul nu a fost găsit.' })
     }
 
-    const verificationCode = String(Math.floor(1000 + Math.random() * 9000))
-    const verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
+    if (!user.verificationCode) {
+      return res.status(400).json({ error: 'Contul este deja verificat.' })
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    const verificationCodeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { verificationCode, verificationCodeExpiresAt },
+      data: { verificationCode: verificationToken, verificationCodeExpiresAt },
     })
 
-    await sendVerificationCode(email, verificationCode, user.role)
+    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
+    await sendSignupVerificationLink(email, verifyUrl, user.role)
 
-    return res.json({ message: 'Cod retrimis.' })
+    return res.json({ message: 'Link de confirmare retrimis.' })
   } catch (err) {
     console.error('Resend error:', err)
-    res.status(500).json({ error: 'Eroare la retrimiterea codului.' })
+    res.status(500).json({ error: 'Eroare la retrimiterea emailului.' })
   }
 })
 
-// ── Auth: Verify code (step 2) ────────────────────────────────────────
+// ── Auth: Verify email (magic link token from signup) ───────────────────
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim()
+    if (!token || token.length < 32) {
+      return res.status(400).json({ error: 'Link invalid.' })
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { verificationCode: token },
+    })
+
+    if (!user) {
+      return res.status(400).json({ error: 'Link invalid sau deja folosit.' })
+    }
+
+    if (!user.verificationCodeExpiresAt || new Date() > user.verificationCodeExpiresAt) {
+      return res.status(400).json({
+        error: 'Link expirat. Cere un link nou din pagina de înregistrare.',
+      })
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { verificationCode: null, verificationCodeExpiresAt: null },
+    })
+
+    const jwtToken = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+    return res.json({
+      token: jwtToken,
+      user: { id: user.id, email: user.email, role: user.role },
+    })
+  } catch (err) {
+    console.error('Verify-email error:', err)
+    res.status(500).json({ error: 'Eroare la verificare.' })
+  }
+})
+
+// ── Auth: Verify code (legacy 4-digit; kept for compatibility) ─────────
 app.post('/api/auth/verify', async (req, res) => {
   try {
     const body = req.body || {}
@@ -1335,7 +1417,8 @@ function proformaPreviewHandler(req, res) {
   if (process.env.NODE_ENV === 'production' && !enabledInProd) {
     return res.status(403).json({
       error: 'Proforma preview is off in production.',
-      hint: 'Set BATERINO_DEBUG_PROFORMA=1 on this API, or run the API locally and open http://localhost:3001/api/debug/proforma-preview',
+      hint:
+        'Set BATERINO_DEBUG_PROFORMA=1 on this API, or run locally and open GET /api/proforma-template (or /api/debug/proforma-preview) on the API port (e.g. http://localhost:3001/api/proforma-template).',
     })
   }
   try {
@@ -1349,6 +1432,8 @@ function proformaPreviewHandler(req, res) {
 }
 app.get('/api/debug/proforma-preview', proformaPreviewHandler)
 app.get('/debug/proforma-preview', proformaPreviewHandler)
+/** Same HTML sample as debug route — easier URL to remember for template checks. */
+app.get('/api/proforma-template', proformaPreviewHandler)
 
 // ── Admin: list inquiries (messages) ───────────────────────────────────
 app.get('/api/admin/inquiries', authMiddleware, adminAuthMiddleware, async (req, res) => {
@@ -1409,6 +1494,57 @@ const adminCompaniesHandler = async (req, res) => {
 }
 app.get('/api/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
 app.get('/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
+
+// ── Admin: list B2C clients (users with role client) ───────────────────
+const adminClientsHandler = async (req, res) => {
+  try {
+    const rows = await prisma.user.findMany({
+      where: { role: 'client' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        referralCode: true,
+        createdAt: true,
+        updatedAt: true,
+        verificationCode: true,
+        clientProfile: {
+          select: {
+            firstName: true,
+            lastName: true,
+            phone: true,
+            billAddress: true,
+            billCounty: true,
+            billCity: true,
+            billPostal: true,
+            deliveryDifferent: true,
+            delAddress: true,
+            delCounty: true,
+            delCity: true,
+            delPostal: true,
+          },
+        },
+        _count: { select: { residentialOrders: true } },
+      },
+    })
+    const result = rows.map((u) => ({
+      id: u.id,
+      email: u.email,
+      referralCode: u.referralCode,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+      emailVerified: !u.verificationCode,
+      orderCount: u._count.residentialOrders,
+      profile: u.clientProfile,
+    }))
+    return res.json(result)
+  } catch (err) {
+    console.error('Admin clients error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcarea clienților.' })
+  }
+}
+app.get('/api/admin/clients', authMiddleware, adminAuthMiddleware, adminClientsHandler)
+app.get('/admin/clients', authMiddleware, adminAuthMiddleware, adminClientsHandler)
 
 // ── Admin: telefoane pe departament ─────────────────────────────────────
 const DEPARTMENT_PHONE_KEYS = ['general', 'rezidential', 'industrial', 'medical', 'maritim']
