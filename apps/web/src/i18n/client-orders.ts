@@ -27,7 +27,7 @@ export type ClientOrdersTranslations = {
   downloadInvoice: string
   downloadingInvoice: string
   invoicePending: string
-  /** WhatsApp CTA next to cancel; prefill uses {orderNumber} and {orderDate}. */
+  /** WhatsApp CTA next to cancel; prefill uses {orderNumber}, {orderDate}, {clientEmail}. */
   orderHelpWhatsapp: string
   whatsappHelpPrefill: string
   /** Status: de_platit */
@@ -67,7 +67,7 @@ const ro: ClientOrdersTranslations = {
   invoicePending: 'Factura în curs',
   orderHelpWhatsapp: 'Ajutor comandă',
   whatsappHelpPrefill:
-    'Aș dori ajutor pentru comanda cu numărul {orderNumber} din data de {orderDate}.',
+    'Salut. Aș dori ajutor pentru comanda cu numărul {orderNumber} din data de {orderDate}. Contul meu de client este {clientEmail}.',
   stDePlatit: 'De plătit',
   stPreluata: 'Preluată',
   stInPregatire: 'În pregătire',
@@ -104,7 +104,7 @@ const en: ClientOrdersTranslations = {
   invoicePending: 'Invoice pending',
   orderHelpWhatsapp: 'Order help',
   whatsappHelpPrefill:
-    'I would like help with order number {orderNumber} from {orderDate}.',
+    'Hi. I would like help with order number {orderNumber} from {orderDate}. My client account email is {clientEmail}.',
   stDePlatit: 'Awaiting payment',
   stPreluata: 'Received',
   stInPregatire: 'Being prepared',
@@ -140,7 +140,8 @@ const zh: ClientOrdersTranslations = {
   downloadingInvoice: '正在下载…',
   invoicePending: '发票处理中',
   orderHelpWhatsapp: '订单协助',
-  whatsappHelpPrefill: '我需要协助，订单编号为 {orderNumber}，下单日期为 {orderDate}。',
+  whatsappHelpPrefill:
+    '您好。我需要协助，订单编号为 {orderNumber}，下单日期为 {orderDate}。我的客户账户邮箱为 {clientEmail}。',
   stDePlatit: '待付款',
   stPreluata: '已接单',
   stInPregatire: '备货中',

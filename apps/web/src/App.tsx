@@ -21,6 +21,7 @@ import Viziune from './pages/Viziune'
 import Typography from './pages/Typography'
 import Login from './pages/Login'
 import SignupClienti from './pages/SignupClienti'
+import SignupVerifyEmail from './pages/SignupVerifyEmail'
 import ResetPassword from './pages/ResetPassword'
 import SignupParteneriProfil from './pages/SignupParteneriProfil'
 import SignupParteneriProfilPublic from './pages/SignupParteneriProfilPublic'
@@ -37,6 +38,7 @@ import AdminPhoneNumbers from './pages/admin/AdminPhoneNumbers'
 import AdminCurrency from './pages/admin/AdminCurrency'
 import AdminCompanyData from './pages/admin/AdminCompanyData'
 import AdminOrders from './pages/admin/AdminOrders'
+import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
@@ -79,7 +81,7 @@ export default function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="products"  element={<AdminProducts />} />
           <Route path="messages"  element={<AdminMessages />} />
-          <Route path="clients"   element={<AdminDashboard />} />
+          <Route path="clients"   element={<AdminClients />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="articles"  element={<AdminDashboard />} />
           <Route path="studii-de-caz" element={<AdminStudiiDeCaz />} />
@@ -94,6 +96,7 @@ export default function App() {
         {/* ── Auth: in instalatori-only mode, no register — redirect to login ── */}
         <Route path="/login" element={<AuthWrapper><Login /></AuthWrapper>} />
         <Route path="/signup/clienti" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupClienti /></AuthWrapper>} />
+        <Route path="/signup/verify-email" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupVerifyEmail /></AuthWrapper>} />
         <Route path="/signup/parteneri" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <Navigate to="/signup/clienti?tab=partener" replace />} />
         <Route path="/signup/parteneri/profil" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupParteneriProfil /></AuthWrapper>} />
         <Route path="/signup/parteneri/profil-public" element={INSTALATORI_ONLY ? <Navigate to="/login" replace /> : <AuthWrapper><SignupParteneriProfilPublic /></AuthWrapper>} />

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { getAuthToken, getAdminInquiriesUnreadCount } from '../../lib/api'
+import { clearAuth, getAuthRole, getAuthToken, getAdminInquiriesUnreadCount } from '../../lib/api'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconDashboard() {
@@ -264,7 +264,14 @@ export default function AdminLayout() {
   const [inventarOpen, setInventarOpen] = useState(() => pathUnderInventar(location.pathname))
 
   useEffect(() => {
-    if (!getAuthToken() && location.pathname !== '/admin/login') {
+    if (location.pathname === '/admin/login') return
+    const token = getAuthToken()
+    if (!token) {
+      navigate('/admin/login', { replace: true })
+      return
+    }
+    if (getAuthRole() !== 'admin') {
+      clearAuth()
       navigate('/admin/login', { replace: true })
     }
   }, [location.pathname, navigate])

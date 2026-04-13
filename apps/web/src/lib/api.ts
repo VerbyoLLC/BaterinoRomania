@@ -345,19 +345,31 @@ export async function checkApiHealth(): Promise<boolean> {
 
 export type AuthUser = { id: string; email: string; role: string }
 
-export async function signup(email: string, password: string, role: 'client' | 'partener') {
+export type SignupResponse = {
+  message?: string
+  email?: string
+  /** false dacă trimiterea emailului de confirmare a eșuat sau mailul nu e configurat */
+  verificationSent?: boolean
+}
+
+export async function signup(
+  email: string,
+  password: string,
+  role: 'client' | 'partener',
+  nextPath?: string,
+): Promise<SignupResponse> {
   let res: Response
   try {
     res = await fetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ email, password, role, ...(nextPath ? { next: nextPath } : {}) }),
     })
   } catch {
     throw new Error(`Nu s-a putut conecta la API (${API_BASE}). Pornește API-ul: npm run dev:api`)
   }
   const text = await res.text()
-  let data: { error?: string; debug?: string } = {}
+  let data: { error?: string; debug?: string; message?: string; email?: string; verificationSent?: boolean } = {}
   try {
     data = text ? JSON.parse(text) : {}
   } catch {
@@ -370,22 +382,22 @@ export async function signup(email: string, password: string, role: 'client' | '
   return data
 }
 
-export async function resendVerificationCode(email: string) {
+export async function resendVerificationCode(email: string, nextPath?: string) {
   const res = await fetch(`${API_BASE}/auth/resend-code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, ...(nextPath ? { next: nextPath } : {}) }),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Eroare la retrimiterea codului.')
+  if (!res.ok) throw new Error(data.error || 'Eroare la retrimiterea emailului.')
   return data
 }
 
-export async function verifyCode(email: string, code: string) {
-  const res = await fetch(`${API_BASE}/auth/verify`, {
+export async function verifyEmailToken(token: string): Promise<{ token: string; user: AuthUser }> {
+  const res = await fetch(`${API_BASE}/auth/verify-email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, code }),
+    body: JSON.stringify({ token }),
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Eroare la verificare.')
@@ -747,6 +759,18 @@ export async function deletePartnerAccount() {
   const res = await fetch(`${API_BASE}/partner/account`, {
     method: 'DELETE',
     headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la ștergerea contului.')
+  return json
+}
+
+/** Șterge definitiv contul client (necesită parola curentă). Comenzile rămân în sistem fără legătură la cont. */
+export async function deleteClientAccount(currentPassword: string) {
+  const res = await fetch(`${API_BASE}/client/account`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ currentPassword }),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la ștergerea contului.')
@@ -1214,6 +1238,69 @@ export async function markInquiryRead(id: string): Promise<void> {
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare.')
+}
+
+export type AdminClientProfile = {
+  firstName: string
+  lastName: string
+  phone: string
+  billAddress: string
+  billCounty: string
+  billCity: string
+  billPostal: string
+  deliveryDifferent: boolean
+  delAddress: string | null
+  delCounty: string | null
+  delCity: string | null
+  delPostal: string | null
+}
+
+export type AdminClientRow = {
+  id: string
+  email: string
+  referralCode: string | null
+  createdAt: string
+  updatedAt: string
+  emailVerified: boolean
+  orderCount: number
+  profile: AdminClientProfile | null
+}
+
+export async function getAdminClients(): Promise<AdminClientRow[]> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/clients`, { headers: authHeaders() })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error(json.error || `Eroare la încărcarea clienților (${res.status})`)
+  }
+  return Array.isArray(json) ? json : []
+}
+
+/** Șterge un cont client din admin (testare). */
+export async function deleteAdminClient(userId: string): Promise<void> {
+  const id = String(userId || '').trim()
+  if (!id) throw new Error('ID lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/clients/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot șterge clienți.')
+    throw new Error(json.error || `Eroare la ștergere (${res.status})`)
+  }
 }
 
 export async function getAdminCompanies(): Promise<AdminCompany[]> {

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { KeyRound, Mail, MapPin, Shield, User } from 'lucide-react'
+import { KeyRound, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
 import {
+  clearAuth,
+  deleteClientAccount,
   getClientProfile,
   postClientChangeEmail,
   postClientChangePassword,
@@ -38,6 +41,7 @@ const SETTINGS_NAV: readonly { id: string; label: string; Icon: LucideIcon }[] =
   { id: 'schimba-parola', label: 'Schimbă parola', Icon: KeyRound },
   { id: 'schimba-email', label: 'Schimbă email', Icon: Mail },
   { id: 'autentificare-doi-pasi', label: 'Autentificare în doi pași', Icon: Shield },
+  { id: 'sterge-cont', label: 'Șterge contul', Icon: Trash2 },
 ] as const
 
 function scrollToSettingsSection(id: string) {
@@ -82,6 +86,7 @@ function SettingsSection({
 }
 
 export default function ClientSettings() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -120,6 +125,13 @@ export default function ClientSettings() {
   const [emailMsg, setEmailMsg] = useState<string | null>(null)
   const [emailErr, setEmailErr] = useState<string | null>(null)
   const [emailLoading, setEmailLoading] = useState(false)
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePwd, setDeletePwd] = useState('')
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteErr, setDeleteErr] = useState('')
 
   const billCities = useMemo(() => getCitiesForCounty(billCounty), [billCounty])
   const delCities = useMemo(() => getCitiesForCounty(delCounty), [delCounty])
@@ -290,6 +302,21 @@ export default function ClientSettings() {
       setEmailErr(err instanceof Error ? err.message : 'Eroare')
     } finally {
       setEmailLoading(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== 'DELETE' || !deletePwd.trim()) return
+    setDeleting(true)
+    setDeleteErr('')
+    try {
+      await deleteClientAccount(deletePwd)
+      clearAuth()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setDeleteErr(err instanceof Error ? err.message : 'Eroare la ștergerea contului.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -801,8 +828,118 @@ export default function ClientSettings() {
           </p>
         </div>
       </SettingsSection>
+
+      <SettingsSection id="sterge-cont" title="Șterge contul" Icon={Trash2}>
+        <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
+          Ștergerea contului este definitivă. Profilul și datele de autentificare dispar; comenzile tale rămân în
+          sistem pentru facturare, fără legătură cu acest cont.
+        </p>
+        {!showDeleteConfirm ? (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="min-h-11 rounded-xl border border-red-200 bg-white px-6 text-sm font-semibold text-red-600 hover:bg-red-50 font-['Inter']"
+          >
+            Șterge contul
+          </button>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="min-h-11 rounded-xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50 font-['Inter']"
+            >
+              Anulează
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteModal(true)
+                setDeletePwd('')
+                setDeleteConfirmText('')
+                setDeleteErr('')
+              }}
+              className="min-h-11 rounded-xl bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700 font-['Inter']"
+            >
+              Continuă spre confirmare
+            </button>
+          </div>
+        )}
+      </SettingsSection>
         </div>
       </div>
+
+      {showDeleteModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            setShowDeleteModal(false)
+            setDeletePwd('')
+            setDeleteConfirmText('')
+            setDeleteErr('')
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-2 text-lg font-bold text-slate-900 font-['Inter']">Ștergere cont</h3>
+            <p className="mb-4 text-sm text-slate-600 font-['Inter']">
+              Ești pe cale să îți ștergi definitiv contul. Nu poți anula această acțiune.
+            </p>
+            <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-slate-700 font-['Inter']">
+              <li>Datele din profil și parola vor fi eliminate</li>
+              <li>Comenzile existente rămân înregistrate, fără legătură cu contul</li>
+            </ul>
+            <label className="mb-4 block">
+              <span className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">Parola curentă</span>
+              <PasswordInput
+                value={deletePwd}
+                onChange={setDeletePwd}
+                autoComplete="current-password"
+                placeholder="Parola cu care te autentifici"
+                inputClassName={passwordFieldClassName}
+              />
+            </label>
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">
+                Introdu <span className="rounded bg-slate-100 px-1 font-mono">DELETE</span> pentru a confirma
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                autoComplete="off"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-['Inter'] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+              />
+            </div>
+            {deleteErr ? <p className="mb-4 text-sm text-red-600 font-['Inter']">{deleteErr}</p> : null}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeletePwd('')
+                  setDeleteConfirmText('')
+                  setDeleteErr('')
+                }}
+                className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50 font-['Inter']"
+              >
+                Anulează
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || !deletePwd.trim() || deleting}
+                className="min-h-11 flex-1 rounded-xl bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 font-['Inter']"
+              >
+                {deleting ? 'Se șterge…' : 'Șterge definitiv'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
