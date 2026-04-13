@@ -1,11 +1,15 @@
 const nodemailer = require('nodemailer')
 const { Resend } = require('resend')
 const { getClientTemplate, getPartnerTemplate } = require('../templates/verification-email.js')
+const { getVerifyLinkTemplate } = require('../templates/signup-verify-link-email.js')
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
 
 const MAIL_FROM = process.env.MAIL_FROM || 'Baterino <noreply@baterino.ro>'
+/** From address for signup email confirmation (link). Resend: domain must be verified. */
+const VERIFICATION_MAIL_FROM =
+  process.env.VERIFICATION_MAIL_FROM || process.env.RESEND_FROM || 'Baterino <no-reply@baterino.ro>'
 const SITE_NAME = process.env.SITE_NAME || 'Baterino Romania'
 
 // Resend (HTTP API) – works on Railway Free/Hobby; SMTP is blocked on those plans
@@ -32,6 +36,37 @@ function getMailProvider() {
   if (resend) return 'Resend'
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return 'SMTP'
   return null
+}
+
+async function sendSignupVerificationLink(email, verifyUrl, role) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping signup verify link. URL:', verifyUrl)
+    return
+  }
+
+  const subject = `Confirmă contul – ${SITE_NAME}`
+  const html = getVerifyLinkTemplate({ verifyUrl, email, role })
+
+  if (resend) {
+    const { error } = await resend.emails.send({
+      from: VERIFICATION_MAIL_FROM,
+      to: email,
+      subject,
+      html,
+    })
+    if (error) {
+      console.error('[Mail] Resend signup verify error:', error)
+      throw new Error('Eroare la trimiterea emailului.')
+    }
+    return
+  }
+
+  await transporter.sendMail({
+    from: VERIFICATION_MAIL_FROM,
+    to: email,
+    subject,
+    html,
+  })
 }
 
 async function sendVerificationCode(email, code, role) {
@@ -209,6 +244,7 @@ async function sendInquiryConfirmation(inquiry) {
 }
 
 module.exports = {
+  sendSignupVerificationLink,
   sendVerificationCode,
   sendPasswordResetEmail,
   sendAccountDeletedEmail,
