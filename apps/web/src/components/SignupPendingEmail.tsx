@@ -62,9 +62,11 @@ export default function SignupPendingEmail({
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-[10px]">
           <p className="text-sm font-semibold text-amber-900 font-['Inter'] mb-1">Cont creat — email netrimis</p>
           <p className="text-xs text-amber-800 font-['Inter'] leading-5">
-            Contul tău există, dar serverul nu a putut trimite mesajul (de ex. autentificare SMTP incorectă — eroarea 535).
-            Corectează <span className="font-medium">RESEND_API_KEY</span> sau{' '}
-            <span className="font-medium">SMTP_*</span> în API, apoi apasă „Retrimite linkul”.
+            Contul tău este activ, dar mesajul cu linkul de confirmare nu a putut fi trimis. De obicei înseamnă că
+            serverul de mail (ex. SiteGround) a respins autentificarea (eroare 535: parolă sau utilizator greșit, sau
+            port/SSL nepotrivit: încearcă 465 cu SSL sau 587 cu STARTTLS). Dacă întreții site-ul, verifică în panoul de
+            hosting datele SMTP și că adresa „De la” din API coincide cu{' '}
+            <span className="font-medium">contul de email autentificat</span>, apoi apasă „Retrimite linkul”.
           </p>
         </div>
       ) : null}
@@ -84,8 +86,13 @@ export default function SignupPendingEmail({
         )}
       </p>
       <p className="text-gray-500 text-xs font-['Inter'] leading-5 mb-8">
-        Mesajul vine de la <span className="text-gray-700 font-medium">no-reply@baterino.ro</span> (sau adresa setată
-        în API). Linkul este valabil 48 de ore.
+        {verificationSent ? (
+          <>
+            Mesajul vine de la adresa de expeditor setată pe server. Linkul este valabil 48 de ore.
+          </>
+        ) : (
+          <>După repararea trimiterii, linkul din email va fi valabil 48 de ore.</>
+        )}
       </p>
 
       {error ? (

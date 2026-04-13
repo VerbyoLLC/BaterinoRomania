@@ -17,6 +17,8 @@ const {
   isMailConfigured,
   getMailProvider,
   getMailFrom,
+  getMailDebugInfo,
+  verifySmtpConnection,
 } = require('./lib/mail.js')
 const {
   uploadToR2,
@@ -1449,7 +1451,16 @@ app.get('/api/debug/mail', async (req, res) => {
     const provider = getMailProvider()
     const configured = isMailConfigured()
     const from = getMailFrom()
-    const out = { configured, provider, from: from ? String(from).replace(/<[^>]+>/, '<***>') : null }
+    const out = {
+      configured,
+      provider,
+      from: from ? String(from).replace(/<[^>]+>/, '<***>') : null,
+      ...getMailDebugInfo(),
+    }
+
+    if (req.query.verify === '1' || req.query.verify === 'true') {
+      out.smtpVerify = await verifySmtpConnection()
+    }
 
     const testTo = req.query.test || req.query.to
     if (testTo && configured) {
