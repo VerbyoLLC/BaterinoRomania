@@ -4,7 +4,15 @@ function baseStyles() {
   return "font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#1a1a1a;line-height:1.6;max-width:480px;margin:0 auto"
 }
 
-function getAccountDeletedTemplate({ email }) {
+function getAccountDeletedTemplate({ email, role = 'partener' }) {
+  const isClient = role === 'client'
+  const intro = isClient
+    ? `Contul tău de client pe ${SITE_NAME} a fost șters conform solicitării tale.`
+    : `Contul tău de partener pe ${SITE_NAME} a fost șters conform solicitării tale.`
+  const closing = isClient
+    ? 'Dacă dorești să comanzi din nou ca client Baterino, poți crea un cont nou oricând.'
+    : 'Dacă dorești să devii din nou partener Baterino, poți crea un cont nou oricând.'
+
   return `
 <!DOCTYPE html>
 <html>
@@ -19,14 +27,14 @@ function getAccountDeletedTemplate({ email }) {
       Contul tău a fost șters
     </h1>
     <p style="margin: 0 0 24px; color: #555;">
-      Contul tău de partener pe ${SITE_NAME} a fost șters conform solicitării tale.
+      ${intro}
     </p>
     <ul style="margin: 0 0 24px; padding-left: 20px; color: #555;">
       <li>Toate datele personale au fost șterse permanent</li>
       <li>Nu vei mai primi niciun fel de corespondență din partea noastră</li>
     </ul>
     <p style="margin: 0; font-size: 14px; color: #64748b;">
-      Dacă dorești să devii din nou partener Baterino, poți crea un cont nou oricând.
+      ${closing}
     </p>
     <p style="margin: 24px 0 0; font-size: 12px; color: #94a3b8;">
       Trimis la: ${email}

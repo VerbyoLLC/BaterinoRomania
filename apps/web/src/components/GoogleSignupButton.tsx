@@ -3,14 +3,149 @@ type Props = {
   /** Optional; defaults to checkout-style button */
   className?: string
   disabled?: boolean
+  onToken: (idToken: string) => Promise<void>
+  onError?: (message: string) => void
 }
 
 const defaultClassName =
   'flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold font-[\'Inter\'] text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50'
 
-export default function GoogleSignupButton({ label, className, disabled }: Props) {
+const GOOGLE_SCRIPT_ID = 'google-identity-services'
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (opts: Record<string, unknown>) => void
+          prompt: (momentListener?: (notification: any) => void) => void
+        }
+      }
+    }
+  }
+}
+
+function loadGoogleSdk(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve()
+      return
+    }
+    const existing = document.getElementById(GOOGLE_SCRIPT_ID) as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Nu am putut încărca Google Identity Services.')), {
+        once: true,
+      })
+      return
+    }
+    const s = document.createElement('script')
+    s.id = GOOGLE_SCRIPT_ID
+    s.src = 'https://accounts.google.com/gsi/client'
+    s.async = true
+    s.defer = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('Nu am putut încărca Google Identity Services.'))
+    document.head.appendChild(s)
+  })
+}
+
+export default function GoogleSignupButton({ label, className, disabled, onToken, onError }: Props) {
+  async function handleClick() {
+    const clientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim()
+    if (!clientId) {
+      throw new Error('VITE_GOOGLE_CLIENT_ID lipsește în frontend.')
+    }
+    await loadGoogleSdk()
+    await new Promise<void>((resolve, reject) => {
+      const api = window.google?.accounts?.id
+      if (!api) {
+        reject(new Error('Google Identity Services nu este disponibil.'))
+        return
+      }
+      let done = false
+      const timeout = window.setTimeout(() => {
+        if (done) return
+        done = true
+        reject(new Error('Nu ai selectat un cont Google.'))
+      }, 30000)
+      api.initialize({
+        client_id: clientId,
+        ux_mode: 'popup',
+        context: 'signin',
+        auto_select: false,
+        use_fedcm_for_prompt: true,
+        itp_support: true,
+        callback: async (resp: { credential?: string }) => {
+          if (done) return
+          done = true
+          window.clearTimeout(timeout)
+          const credential = String(resp?.credential || '').trim()
+          if (!credential) {
+            reject(new Error('Google nu a returnat un token valid.'))
+            return
+          }
+          try {
+            await onToken(credential)
+            resolve()
+          } catch (err) {
+            reject(err instanceof Error ? err : new Error('Autentificarea cu Google a eșuat.'))
+          }
+        },
+      })
+      api.prompt((notification: any) => {
+        if (done) return
+        // Prompt could not be displayed (popup blocked, browser policy, origin mismatch, etc.)
+        if (typeof notification?.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
+          done = true
+          window.clearTimeout(timeout)
+          const reason =
+            typeof notification?.getNotDisplayedReason === 'function'
+              ? String(notification.getNotDisplayedReason() || '').trim()
+              : ''
+          reject(
+            new Error(
+              reason
+                ? `Google Sign-In nu a putut fi afișat (${reason}).`
+                : 'Google Sign-In nu a putut fi afișat în acest browser.',
+            ),
+          )
+          return
+        }
+        // Google skipped prompt (user not eligible in current context / browser state)
+        if (typeof notification?.isSkippedMoment === 'function' && notification.isSkippedMoment()) {
+          done = true
+          window.clearTimeout(timeout)
+          reject(new Error('Google Sign-In nu este disponibil momentan. Încearcă din nou.'))
+          return
+        }
+        // User explicitly closed/cancelled the chooser.
+        if (typeof notification?.isDismissedMoment === 'function' && notification.isDismissedMoment()) {
+          const reason =
+            typeof notification?.getDismissedReason === 'function'
+              ? String(notification.getDismissedReason() || '').trim()
+              : ''
+          if (reason === 'credential_returned') return
+          done = true
+          window.clearTimeout(timeout)
+          reject(new Error('Autentificare Google anulată.'))
+        }
+      })
+    })
+  }
+
   return (
-    <button type="button" disabled={disabled} className={className ?? defaultClassName}>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => {
+        void handleClick().catch((err) => {
+          const msg = err instanceof Error ? err.message : 'Autentificarea cu Google a eșuat.'
+          onError?.(msg)
+        })
+      }}
+      className={className ?? defaultClassName}
+    >
       <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
         <path
           fill="#4285F4"

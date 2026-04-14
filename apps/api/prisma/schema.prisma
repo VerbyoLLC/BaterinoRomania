@@ -13,7 +13,10 @@ datasource db {
 model User {
   id                        String    @id @default(cuid())
   email                     String    @unique
-  password                  String
+  /** Null pentru conturi create doar cu Google (GIS + ID token). */
+  password                  String?
+  /** Subject Google (sub) din ID token; unic când e setat. */
+  googleSub                 String?   @unique
   role                      String    // "client" | "partener"
   /** Cod personal de recomandare (clienți B2C); unic, generat la primul acces la profil. */
   referralCode              String?   @unique

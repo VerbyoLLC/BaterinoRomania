@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'prisma', 'index.js'))
 const {
-  sendSignupVerificationLink,
+  sendVerificationCode,
   sendPasswordResetEmail,
   sendAccountDeletedEmail,
   sendInquiryNotification,
@@ -20,6 +20,7 @@ const {
   getMailDebugInfo,
   verifySmtpConnection,
 } = require('./lib/mail.js')
+const { verifyGoogleIdToken } = require('./lib/google-id-token.js')
 const {
   uploadToR2,
   generateKey,
@@ -403,13 +404,34 @@ function safeSignupNext(raw) {
   return s.slice(0, 512)
 }
 
-function buildSignupVerifyUrl(token, nextPath) {
-  const base = String(process.env.FRONTEND_URL || 'https://baterino.ro').replace(/\/$/, '')
-  const u = new URL('/signup/verify-email', `${base}/`)
-  u.searchParams.set('token', token)
-  const n = safeSignupNext(nextPath)
-  if (n) u.searchParams.set('next', n)
-  return u.toString()
+/** Cod numeric 4 cifre (leading zeros) pentru verificare email la înregistrare. */
+function randomSignupVerificationCode() {
+  return String(crypto.randomInt(0, 10000)).padStart(4, '0')
+}
+
+const SIGNUP_VERIFICATION_CODE_TTL_MS = 15 * 60 * 1000
+
+async function buildGoogleAuthPayload(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, role: true },
+  })
+  if (!user) throw new Error('Utilizator negăsit după autentificare Google.')
+  let needsPartnerProfile = false
+  if (user.role === 'partener') {
+    const p = await prisma.partner.findUnique({ where: { userId }, select: { id: true } })
+    needsPartnerProfile = !p
+  }
+  const token = jwt.sign(
+    { userId: user.id, email: user.email, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '7d' },
+  )
+  return {
+    token,
+    user: { id: user.id, email: user.email, role: user.role },
+    needsPartnerProfile,
+  }
 }
 
 // ── Auth: Signup (step 1) ─────────────────────────────────────────────
@@ -438,45 +460,44 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const verificationToken = crypto.randomBytes(32).toString('hex')
-    const verificationCodeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
+    const verificationCode = randomSignupVerificationCode()
+    const verificationCodeExpiresAt = new Date(Date.now() + SIGNUP_VERIFICATION_CODE_TTL_MS)
 
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         role,
-        verificationCode: verificationToken,
+        verificationCode,
         verificationCodeExpiresAt,
       },
     })
 
-    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
     let verificationSent = false
     if (isMailConfigured()) {
       try {
-        await sendSignupVerificationLink(email, verifyUrl, role)
+        await sendVerificationCode(email, verificationCode, role)
         verificationSent = true
       } catch (mailErr) {
         console.error('[Signup] User created but verification email failed:', user.id, user.email, mailErr)
       }
     } else {
-      console.warn('[Signup] User created (mail not configured). Verify URL:', verifyUrl)
+      console.warn('[Signup] User created (mail not configured). User must use resend after mail is configured.')
     }
 
     console.log(
       '[Signup] User created:',
       user.id,
       user.email,
-      !isMailConfigured() ? '(no mail)' : verificationSent ? '(email sent)' : '(email failed)',
+      !isMailConfigured() ? '(no mail)' : verificationSent ? '(code email sent)' : '(email failed)',
     )
 
     return res.status(201).json({
       message: verificationSent
-        ? 'Cont creat. Verifică emailul pentru linkul de confirmare.'
+        ? 'Cont creat. Verifică emailul pentru codul de 4 cifre.'
         : isMailConfigured()
-          ? 'Cont creat. Nu am putut trimite acum emailul de confirmare (server de mail). Folosește „Retrimite linkul” pe pagina următoare după ce corectezi SMTP sau Resend.'
-          : 'Cont creat. Emailul de confirmare nu este configurat pe server; folosește linkul din jurnalul API sau configurează Resend/SMTP.',
+          ? 'Cont creat. Nu am putut trimite acum emailul cu codul (server de mail). Folosește „Retrimite codul” după ce repari SMTP/Resend.'
+          : 'Cont creat. Emailul nu este configurat pe server; configurează SMTP sau Resend, apoi retrimite codul.',
       email: user.email,
       verificationSent,
     })
@@ -507,14 +528,13 @@ app.post('/api/auth/resend-code', async (req, res) => {
       return res.status(400).json({ error: 'Contul este deja verificat.' })
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex')
-    const verificationCodeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
-    const verifyUrl = buildSignupVerifyUrl(verificationToken, nextPath)
+    const verificationCode = randomSignupVerificationCode()
+    const verificationCodeExpiresAt = new Date(Date.now() + SIGNUP_VERIFICATION_CODE_TTL_MS)
 
     try {
-      await sendSignupVerificationLink(email, verifyUrl, user.role)
+      await sendVerificationCode(email, verificationCode, user.role)
     } catch (mailErr) {
-      console.error('[Resend] Verification email failed:', mailErr)
+      console.error('[Resend] Verification code email failed:', mailErr)
       return res.status(503).json({
         error:
           'Nu am putut trimite emailul. Verifică setările Resend sau SMTP (ex.: parolă SMTP, port) și încearcă din nou.',
@@ -523,17 +543,17 @@ app.post('/api/auth/resend-code', async (req, res) => {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { verificationCode: verificationToken, verificationCodeExpiresAt },
+      data: { verificationCode, verificationCodeExpiresAt },
     })
 
-    return res.json({ message: 'Link de confirmare retrimis.' })
+    return res.json({ message: 'Cod de verificare retrimis.' })
   } catch (err) {
     console.error('Resend error:', err)
     res.status(500).json({ error: 'Eroare la retrimiterea emailului.' })
   }
 })
 
-// ── Auth: Verify email (magic link token from signup) ───────────────────
+// ── Auth: Verify email (magic link token — doar conturi vechi cu token lung în DB) ──
 app.post('/api/auth/verify-email', async (req, res) => {
   try {
     const token = String(req.body?.token || '').trim()
@@ -575,15 +595,15 @@ app.post('/api/auth/verify-email', async (req, res) => {
   }
 })
 
-// ── Auth: Verify code (legacy 4-digit; kept for compatibility) ─────────
+// ── Auth: Verify code (4 cifre — înregistrare client și partener) ─────────
 app.post('/api/auth/verify', async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
-    const code = body.code
+    const codeDigits = String(body.code ?? '').replace(/\D/g, '').slice(0, 4)
 
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email și cod sunt obligatorii.' })
+    if (!email || codeDigits.length !== 4) {
+      return res.status(400).json({ error: 'Email și cod din 4 cifre sunt obligatorii.' })
     }
 
     const user = await prisma.user.findUnique({
@@ -594,14 +614,14 @@ app.post('/api/auth/verify', async (req, res) => {
     }
 
     if (!user.verificationCode) {
-      return res.status(400).json({ error: 'Cod expirat. Te rugăm să te înregistrezi din nou.' })
+      return res.status(400).json({ error: 'Contul este deja verificat sau codul a expirat. Te rugăm să te înregistrezi din nou.' })
     }
 
-    if (new Date() > user.verificationCodeExpiresAt) {
+    if (!user.verificationCodeExpiresAt || new Date() > user.verificationCodeExpiresAt) {
       return res.status(400).json({ error: 'Cod expirat. Te rugăm să ceri un cod nou.' })
     }
 
-    if (code !== user.verificationCode) {
+    if (codeDigits !== String(user.verificationCode)) {
       return res.status(400).json({ error: 'Cod incorect.' })
     }
 
@@ -723,6 +743,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Email sau parolă incorectă.' })
     }
 
+    if (!user.password) {
+      return res.status(401).json({ error: 'Acest cont folosește Conectează-te cu Google.' })
+    }
+
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) {
       return res.status(401).json({ error: 'Email sau parolă incorectă.' })
@@ -737,6 +761,85 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err)
     res.status(500).json({ error: 'Eroare la autentificare.' })
+  }
+})
+
+// ── Auth: Google (GIS / FedCM — ID token de la frontend) ────────────────
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const idToken = String(body.idToken || '').trim()
+    const role = body.role
+
+    if (!idToken) {
+      return res.status(400).json({ error: 'Token Google lipsă.' })
+    }
+
+    let g
+    try {
+      g = await verifyGoogleIdToken(idToken)
+    } catch (e) {
+      if (e?.code === 'GOOGLE_NOT_CONFIGURED') {
+        return res.status(503).json({ error: 'Autentificarea Google nu este configurată pe server (GOOGLE_CLIENT_ID).' })
+      }
+      if (e?.code === 'EMAIL_NOT_VERIFIED') {
+        return res.status(400).json({ error: 'Emailul Google nu este verificat. Verifică contul Google și încearcă din nou.' })
+      }
+      console.error('[Auth Google] verify:', e?.message || e)
+      return res.status(401).json({ error: 'Token Google invalid sau expirat.' })
+    }
+
+    const { sub, email } = g
+    if (!email) {
+      return res.status(400).json({ error: 'Google nu a returnat adresa de email.' })
+    }
+
+    let user = await prisma.user.findUnique({ where: { googleSub: sub } })
+    if (!user) {
+      user = await prisma.user.findUnique({ where: { email } })
+    }
+
+    if (user) {
+      if (user.googleSub && user.googleSub !== sub) {
+        return res.status(409).json({ error: 'Acest email este deja asociat cu un alt cont Google.' })
+      }
+      const data = {}
+      if (!user.googleSub) data.googleSub = sub
+      if (user.verificationCode != null || user.verificationCodeExpiresAt != null) {
+        data.verificationCode = null
+        data.verificationCodeExpiresAt = null
+      }
+      if (Object.keys(data).length) {
+        user = await prisma.user.update({ where: { id: user.id }, data })
+      }
+      const out = await buildGoogleAuthPayload(user.id)
+      return res.json(out)
+    }
+
+    if (!role || !['client', 'partener'].includes(role)) {
+      return res.status(400).json({
+        error: 'Pentru înregistrare cu Google alege Client sau Partener (tab-ul de sus).',
+      })
+    }
+
+    const created = await prisma.user.create({
+      data: {
+        email,
+        password: null,
+        role,
+        googleSub: sub,
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+      },
+    })
+    const out = await buildGoogleAuthPayload(created.id)
+    return res.json(out)
+  } catch (err) {
+    console.error('Google auth error:', err)
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Există deja un cont cu acest email.' })
+    }
+    res.status(500).json({ error: 'Eroare la autentificare cu Google.' })
   }
 })
 
@@ -892,13 +995,23 @@ app.post('/api/client/change-password', authMiddleware, clientAuthMiddleware, as
     const body = req.body || {}
     const currentPassword = body.currentPassword
     const newPassword = body.newPassword
-    if (!currentPassword || !newPassword || String(newPassword).length < 8) {
+    if (!newPassword || String(newPassword).length < 8) {
       return res.status(400).json({
-        error: 'Parola curentă și parola nouă (minimum 8 caractere) sunt obligatorii.',
+        error: 'Parola nouă (minimum 8 caractere) este obligatorie.',
       })
     }
     const user = await prisma.user.findUnique({ where: { id: req.userId } })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (!user.password) {
+      const hashed = await bcrypt.hash(String(newPassword), 10)
+      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } })
+      return res.json({
+        message: 'Parola a fost setată. Poți folosi și autentificarea cu email și parolă.',
+      })
+    }
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Introdu parola curentă.' })
+    }
     const valid = await bcrypt.compare(String(currentPassword), user.password)
     if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
     const hashed = await bcrypt.hash(String(newPassword), 10)
@@ -925,6 +1038,11 @@ app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async
     }
     const user = await prisma.user.findUnique({ where: { id: req.userId } })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (!user.password) {
+      return res.status(400).json({
+        error: 'Pentru schimbarea emailului, setează mai întâi o parolă în zona „Schimbă parola”.',
+      })
+    }
     const oldEmail = String(user.email || '').trim()
     const oldNorm = oldEmail.toLowerCase()
     if (newEmailRaw === oldNorm) {
@@ -986,10 +1104,16 @@ app.delete('/api/client/account', authMiddleware, clientAuthMiddleware, async (r
       select: { email: true, password: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (!user.password) {
+      return res.status(400).json({
+        error:
+          'Cont creat cu Google: setează mai întâi o parolă în setări ca să poți confirma ștergerea cu parola curentă.',
+      })
+    }
     const valid = await bcrypt.compare(String(currentPassword), user.password)
     if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
 
-    await sendAccountDeletedEmail(user.email)
+    await sendAccountDeletedEmail(user.email, 'client')
 
     await prisma.user.delete({ where: { id: userId } })
     return res.json({ message: 'Cont șters.' })
@@ -1421,7 +1545,7 @@ app.delete('/api/partner/account', authMiddleware, async (req, res) => {
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
 
-    await sendAccountDeletedEmail(user.email)
+    await sendAccountDeletedEmail(user.email, 'partener')
 
     await prisma.$transaction(async (tx) => {
       await tx.partner.deleteMany({ where: { userId } })
