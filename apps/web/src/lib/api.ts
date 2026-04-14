@@ -404,6 +404,21 @@ export async function verifyEmailToken(token: string): Promise<{ token: string; 
   return data as { token: string; user: AuthUser }
 }
 
+/** Verificare înregistrare cu cod din 4 cifre (client / partener). */
+export async function verifySignupCode(
+  email: string,
+  code: string,
+): Promise<{ token: string; user: AuthUser }> {
+  const res = await fetch(`${API_BASE}/auth/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase(), code }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Eroare la verificare.')
+  return data as { token: string; user: AuthUser }
+}
+
 export async function requestPasswordReset(email: string) {
   const res = await fetch(`${API_BASE}/auth/forgot-password`, {
     method: 'POST',
@@ -435,6 +450,20 @@ export async function login(email: string, password: string) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Eroare la autentificare.')
   return data as { token: string; user: AuthUser }
+}
+
+export async function googleAuth(
+  idToken: string,
+  role: 'client' | 'partener',
+): Promise<{ token: string; user: AuthUser; needsPartnerProfile?: boolean }> {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, role }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Eroare la autentificare cu Google.')
+  return data as { token: string; user: AuthUser; needsPartnerProfile?: boolean }
 }
 
 export type ClientProfilePayload = {

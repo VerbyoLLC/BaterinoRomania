@@ -31,9 +31,9 @@ const SMTP_SECURE =
   SMTP_SECURE_EXPLICIT === 'true' || (SMTP_SECURE_EXPLICIT !== 'false' && SMTP_PORT === 465)
 
 /**
- * auto — SMTP dacă e complet configurat (ex. SiteGround), altfel Resend dacă există cheie
- * smtp — forțează SMTP (ignoră Resend)
- * resend — forțează Resend (ex. Railway unde SMTP e blocat)
+ * auto — Resend dacă există RESEND_API_KEY, altfel SMTP dacă e complet configurat
+ * smtp — forțează SMTP (ignoră Resend; doar dacă ai nevoie explicit de relay SMTP)
+ * resend — forțează Resend
  */
 let MAIL_DRIVER = (envTrim('MAIL_DRIVER').toLowerCase() || 'auto').replace(/[^a-z]/g, '') || 'auto'
 if (!['auto', 'smtp', 'resend'].includes(MAIL_DRIVER)) {
@@ -67,9 +67,9 @@ const transporter = nodemailer.createTransport({
 function getEffectiveMailProvider() {
   if (MAIL_DRIVER === 'smtp') return smtpConfigured ? 'smtp' : null
   if (MAIL_DRIVER === 'resend') return resendConfigured ? 'resend' : null
-  // auto: prefer SMTP (SiteGround etc.) so accidental RESEND_API_KEY does not override
-  if (smtpConfigured) return 'smtp'
+  // auto: prefer Resend (API HTTP); SMTP only if Resend is not configured
   if (resendConfigured) return 'resend'
+  if (smtpConfigured) return 'smtp'
   return null
 }
 
@@ -86,7 +86,7 @@ function getMailDebugInfo() {
   const hints = []
   if (MAIL_DRIVER === 'auto' && resendConfigured && smtpConfigured) {
     hints.push(
-      'Ai atât RESEND_API_KEY cât și SMTP setate: modul „auto” folosește SMTP. Pentru Resend setează MAIL_DRIVER=resend sau golește SMTP_*.',
+      'Ai atât RESEND_API_KEY cât și SMTP setate: modul „auto” folosește Resend. Pentru SMTP direct setează MAIL_DRIVER=smtp sau scoate RESEND_API_KEY.',
     )
   }
   if (eff === 'smtp' && SMTP_PORT === 587 && SMTP_SECURE) {
@@ -224,14 +224,14 @@ async function sendPasswordResetEmail(email, resetUrl) {
   })
 }
 
-async function sendAccountDeletedEmail(email) {
+async function sendAccountDeletedEmail(email, role = 'partener') {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping account deleted email.')
     return
   }
 
   const subject = `Contul tău a fost șters – ${SITE_NAME}`
-  const html = getAccountDeletedTemplate({ email })
+  const html = getAccountDeletedTemplate({ email, role })
 
   if (useResend()) {
     const { error } = await resend.emails.send({

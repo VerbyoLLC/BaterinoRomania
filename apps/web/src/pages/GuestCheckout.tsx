@@ -37,11 +37,13 @@ import { getGuestCheckoutTranslations } from '../i18n/guest-checkout'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import type { LangCode } from '../i18n/menu'
 import {
+  googleAuth,
   getAuthRole,
   getClientProfile,
   getProductAsGuest,
   getProductCardImageUrl,
   putClientProfile,
+  setAuthToken,
   signup as apiSignup,
   submitGuestResidentialOrder,
   type ClientProfilePayload,
@@ -527,6 +529,24 @@ export default function GuestCheckout() {
           verificationSent: signupOut.verificationSent !== false,
         },
       })
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : tr.authErrorGeneric)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  async function handleGuestGoogleToken(idToken: string) {
+    setAuthError('')
+    setAuthLoading(true)
+    try {
+      const { token, user, needsPartnerProfile } = await googleAuth(idToken, 'client')
+      setAuthToken(token)
+      if (user.role === 'partener') {
+        navigate(needsPartnerProfile ? '/signup/parteneri/profil' : '/partner', { replace: true })
+        return
+      }
+      navigate(returnToCheckout, { replace: true })
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : tr.authErrorGeneric)
     } finally {
@@ -1831,7 +1851,12 @@ export default function GuestCheckout() {
                         <div className="h-px flex-1 bg-slate-200" aria-hidden />
                       </div>
 
-                      <GoogleSignupButton label={tr.authGoogleSignup} disabled={authLoading} />
+                      <GoogleSignupButton
+                        label={tr.authGoogleSignup}
+                        disabled={authLoading}
+                        onToken={handleGuestGoogleToken}
+                        onError={(msg) => setAuthError(msg)}
+                      />
 
                       <div className="my-5 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" aria-hidden />
 

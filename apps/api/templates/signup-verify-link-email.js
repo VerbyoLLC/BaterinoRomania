@@ -44,7 +44,7 @@ function getVerifyLinkTemplate({ verifyUrl, email, role }) {
       </a>
     </div>
     <p style="margin: 0 0 12px; font-size: 13px; color: #64748b;">
-      Linkul expiră în 48 de ore. Dacă nu ai creat tu acest cont, poți ignora acest email.
+      Linkul expiră în 15 minute. Dacă nu ai creat tu acest cont, poți ignora acest email.
     </p>
     <p style="margin: 0; font-size: 12px; color: #94a3b8; word-break: break-all;">
       Dacă butonul nu merge, copiază această adresă în browser:<br/>

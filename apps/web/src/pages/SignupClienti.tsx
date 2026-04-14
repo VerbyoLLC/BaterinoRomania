@@ -4,7 +4,7 @@ import AuthLayout from '../components/AuthLayout'
 import GoogleSignupButton from '../components/GoogleSignupButton'
 import PasswordInput from '../components/PasswordInput'
 import SignupPendingEmail, { type SignupUserType } from '../components/SignupPendingEmail'
-import { signup, checkApiHealth } from '../lib/api'
+import { signup, checkApiHealth, googleAuth, setAuthToken } from '../lib/api'
 
 function safeSignupNextParam(raw: string | null): string | undefined {
   if (!raw) return undefined
@@ -105,6 +105,25 @@ export default function SignupClienti() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Eroare la înregistrare.'
       console.error('Signup error:', err)
+      setErrors({ submit: msg })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleToken(idToken: string) {
+    try {
+      setErrors({})
+      setLoading(true)
+      const { token, user, needsPartnerProfile } = await googleAuth(idToken, tab)
+      setAuthToken(token)
+      if (user.role === 'partener') {
+        navigate(needsPartnerProfile ? '/signup/parteneri/profil' : '/partner', { replace: true })
+      } else {
+        navigate(nextPath ?? '/client', { replace: true })
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Eroare la autentificare cu Google.'
       setErrors({ submit: msg })
     } finally {
       setLoading(false)
@@ -223,6 +242,9 @@ export default function SignupClienti() {
 
           <GoogleSignupButton
             label="Înregistrare cu Google"
+            disabled={loading}
+            onToken={handleGoogleToken}
+            onError={(msg) => setErrors({ submit: msg })}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-gray-300 text-sm font-semibold font-['Inter'] text-gray-700 transition-colors hover:bg-gray-50"
           />
 
