@@ -243,6 +243,47 @@ model Product {
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  /** Unități fizice înregistrate în depozit (SN + model catalog). */
+  warehouseStockUnits   WarehouseStockUnit[]
+}
+
+/** Unitate fizică în depozit: număr unic de serie legat de un produs (model) din catalog. */
+model WarehouseStockUnit {
+  id                    String   @id @default(cuid())
+  productId             String
+  product               Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  /** Număr serie unic (din QR sau introdus manual). */
+  serialNumber          String   @unique
+  /** Data intrării în depozitul Baterino — setată automat la înregistrare. */
+  warehouseReceivedAt   DateTime @default(now())
+  /** qr_scan | manual */
+  entryMethod           String
+  /** Conținut brut decodat din QR (audit). */
+  rawQrPayload          String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([productId])
+  @@index([warehouseReceivedAt])
+}
+
+/**
+ * Modele produs (referință tehnică) — admin Inventar → Modele.
+ * Tabel DB: product_models.
+ */
+model ProductModel {
+  id                   String   @id @default(cuid())
+  name                 String
+  brand                String
+  modelNumber          String   @unique
+  technicalDescription String   @db.Text
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@map("product_models")
 }
 
 /** Telefon principal și WhatsApp per departament (admin). Chei: general | rezidential | industrial | medical | maritim */
@@ -278,6 +319,8 @@ model CompanyBankAccount {
   bankName    String          @default("")
   iban        String          @default("")
   swift       String          @default("")
+  /** Monedă cont: RON | EUR | USD (afișare admin: RON / EURO / USD). */
+  currency    String          @default("RON")
   accountName String          @default("")
   sortOrder   Int             @default(0)
   createdAt   DateTime        @default(now())
