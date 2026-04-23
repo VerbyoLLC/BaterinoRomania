@@ -276,8 +276,12 @@ model ProductModel {
   id                   String   @id @default(cuid())
   name                 String
   brand                String
+  series               String   @default("")
   modelNumber          String   @unique
   technicalDescription String   @db.Text
+  /** industrial | residential */
+  usageType            String   @default("industrial")
+  imageUrl             String?  @db.Text
   sortOrder            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt

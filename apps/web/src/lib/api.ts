@@ -1080,6 +1080,176 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
   return Array.isArray(json) ? json : (json.data ?? json.products ?? [])
 }
 
+/** Cod fabrică implicit pentru SN depozit (introducere manuală: se completează câmpul fără acest prefix). */
+export const WAREHOUSE_SN_FACTORY_PREFIX = 'LJC'
+
+/** LJC + 16 cifre: tensiune (2) + capacitate (4) + lună/an producție (4) + număr lot (6). */
+export const WAREHOUSE_SN_BODY_DIGITS = 16
+
+/** Aliniat cu API: SN:…, JSON cu SN/sn/serialNumber, URL ?sn=, altfel text integral. */
+export function parseWarehouseQrSerial(raw: string): string {
+  const s = String(raw ?? '').trim()
+  if (!s) return ''
+  const prefixed = /^SN:\s*(.+)$/i.exec(s)
+  if (prefixed) return prefixed[1].trim().slice(0, 512)
+  if (s.startsWith('{')) {
+    try {
+      const j = JSON.parse(s) as Record<string, unknown>
+      const sn = j.SN ?? j.sn ?? j.serialNumber ?? j.serial
+      if (typeof sn === 'string' && sn.trim()) return sn.trim().slice(0, 512)
+    } catch {
+      // ignore
+    }
+  }
+  try {
+    const u = new URL(s)
+    const q = u.searchParams.get('SN') || u.searchParams.get('sn')
+    if (q && q.trim()) return q.trim().slice(0, 512)
+  } catch {
+    // not a URL
+  }
+  return s.slice(0, 512)
+}
+
+/** Elimină spații, majuscule; dacă lipsește prefixul fabrică, îl adaugă (implicit la manual). */
+export function normalizeWarehouseSerialNumber(raw: string): string {
+  let t = String(raw ?? '')
+    .replace(/\s/g, '')
+    .toUpperCase()
+  if (!t) return ''
+  const p = WAREHOUSE_SN_FACTORY_PREFIX
+  if (t.startsWith(p)) return p + t.slice(p.length).replace(/\s/g, '')
+  return `${p}${t}`
+}
+
+export function isValidWarehouseSerialNumber(serial: string): boolean {
+  return new RegExp(`^${WAREHOUSE_SN_FACTORY_PREFIX}\\d{${WAREHOUSE_SN_BODY_DIGITS}}$`).test(String(serial ?? ''))
+}
+
+/** Din valoarea decodificată (QR / lipire), întoarce doar cele 16 cifre după LJC când e posibil. */
+export function warehouseSerialToBodyDigits(parsed: string): string {
+  const normalized = normalizeWarehouseSerialNumber(parseWarehouseQrSerial(parsed))
+  if (isValidWarehouseSerialNumber(normalized)) return normalized.slice(WAREHOUSE_SN_FACTORY_PREFIX.length)
+  const digits = parseWarehouseQrSerial(parsed).replace(/\D/g, '')
+  if (digits.length >= WAREHOUSE_SN_BODY_DIGITS) return digits.slice(-WAREHOUSE_SN_BODY_DIGITS)
+  return digits.slice(0, WAREHOUSE_SN_BODY_DIGITS)
+}
+
+export type WarehouseStockUnitRow = {
+  id: string
+  productId: string
+  serialNumber: string
+  warehouseReceivedAt: string
+  entryMethod: 'qr_scan' | 'manual' | string
+  rawQrPayload?: string | null
+  createdAt: string
+  updatedAt: string
+  product?: { id: string; title: string; sku: string }
+}
+
+export async function getAdminWarehouseStockUnits(limit = 100): Promise<WarehouseStockUnitRow[]> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-stock-units?limit=${encodeURIComponent(String(limit))}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea stocurilor.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function createWarehouseStockUnit(payload: {
+  productId: string
+  serialNumber: string
+  entryMethod: 'qr_scan' | 'manual'
+  qrRaw?: string | null
+}): Promise<WarehouseStockUnitRow> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-stock-units`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      productId: payload.productId,
+      serialNumber: payload.serialNumber,
+      entryMethod: payload.entryMethod,
+      qrRaw: payload.qrRaw ?? undefined,
+    }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la înregistrare.')
+  }
+  return json as WarehouseStockUnitRow
+}
+
+/** Rând din tabelul DB `product_models` (modele produs / specificații). */
+export type AdminProductModelRow = {
+  id: string
+  name: string
+  brand: string
+  series: string
+  modelNumber: string
+  technicalDescription: string
+  usageType: 'industrial' | 'residential'
+  imageUrl?: string | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type UpdateAdminProductModelPayload = {
+  name: string
+  brand: string
+  series: string
+  modelNumber: string
+  technicalDescription: string
+  usageType: 'industrial' | 'residential'
+  imageUrl?: string | null
+}
+
+export async function getAdminProductModels(): Promise<AdminProductModelRow[]> {
+  const res = await fetch(`${API_BASE}/admin/product-models`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    const body = json as { error?: string; path?: string }
+    if (res.status === 404 && body.path) {
+      throw new Error(
+        `${body.error || 'Rută negăsită pe API'} — path: ${body.path}. Redeploy backend (Railway) sau setează VITE_API_URL la URL-ul API cu /api la final.`,
+      )
+    }
+    throw new Error(body.error || 'Eroare la încărcarea modelelor.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function updateAdminProductModel(
+  id: string,
+  payload: UpdateAdminProductModelPayload,
+): Promise<AdminProductModelRow> {
+  const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error((json as { error?: string }).error || 'Model negăsit.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvarea modelului.')
+  }
+  return json as AdminProductModelRow
+}
+
 /** One product for admin editor — includes nested JSON (e.g. technicalSpecsModels). */
 export async function getAdminProduct(id: string): Promise<AdminProduct> {
   const res = await fetch(`${API_BASE}/admin/products/${encodeURIComponent(id)}`, {
@@ -1430,12 +1600,25 @@ export async function saveAdminCatalogCurrency(currency: CatalogCurrencyCode): P
   return { currency: normalizeCatalogCurrencyCode(json.currency) }
 }
 
+/** Stored as RON / EUR / USD (API normalizes EURO → EUR). */
+export type CompanyBankCurrency = 'RON' | 'EUR' | 'USD'
+
 export type CompanyBankAccount = {
   id: string
   bankName: string
   iban: string
   swift: string
   accountName: string
+  currency: CompanyBankCurrency
+}
+
+function normalizeCompanyBankCurrency(raw: unknown): CompanyBankCurrency {
+  const s = String(raw ?? '')
+    .trim()
+    .toUpperCase()
+  if (s === 'USD') return 'USD'
+  if (s === 'EUR' || s === 'EURO') return 'EUR'
+  return 'RON'
 }
 
 export type AdminCompanyData = {
@@ -1453,12 +1636,15 @@ function normalizeAdminCompanyData(json: unknown): AdminCompanyData {
   const rawAccounts = Array.isArray(o.bankAccounts) ? o.bankAccounts : []
   const bankAccounts: CompanyBankAccount[] = rawAccounts.slice(0, 20).map((a) => {
     const row = a && typeof a === 'object' ? (a as Record<string, unknown>) : {}
+    const ibanRaw = row.iban ?? row.IBAN
+    const swiftRaw = row.swift ?? row.SWIFT ?? row.bic ?? row.BIC
     return {
       id: typeof row.id === 'string' && row.id.trim() ? row.id.trim() : crypto.randomUUID(),
       bankName: typeof row.bankName === 'string' ? row.bankName : '',
-      iban: typeof row.iban === 'string' ? row.iban : '',
-      swift: typeof row.swift === 'string' ? row.swift : '',
+      iban: typeof ibanRaw === 'string' ? ibanRaw : '',
+      swift: typeof swiftRaw === 'string' ? swiftRaw : '',
       accountName: typeof row.accountName === 'string' ? row.accountName : '',
+      currency: normalizeCompanyBankCurrency(row.currency),
     }
   })
   return {

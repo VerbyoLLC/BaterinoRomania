@@ -3329,8 +3329,11 @@ const listProductModelsHandler = async (req, res) => {
         id: r.id,
         name: r.name,
         brand: r.brand,
+        series: r.series || '',
         modelNumber: r.modelNumber,
         technicalDescription: r.technicalDescription,
+        usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
+        imageUrl: r.imageUrl || null,
         sortOrder: r.sortOrder,
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
         updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
@@ -3342,8 +3345,59 @@ const listProductModelsHandler = async (req, res) => {
   }
 }
 
+const updateProductModelHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID model lipsă.' })
+
+    const body = req.body || {}
+    const name = String(body.name ?? '').trim()
+    const brand = String(body.brand ?? '').trim()
+    const series = String(body.series ?? '').trim()
+    const modelNumber = String(body.modelNumber ?? '').trim()
+    const technicalDescription = String(body.technicalDescription ?? '').trim()
+    const usageType = String(body.usageType ?? 'industrial').trim().toLowerCase()
+    const imageUrlRaw = body.imageUrl == null ? '' : String(body.imageUrl).trim()
+    const imageUrl = imageUrlRaw ? imageUrlRaw.slice(0, 2000) : null
+
+    if (!name) return res.status(400).json({ error: 'Numele modelului este obligatoriu.' })
+    if (!brand) return res.status(400).json({ error: 'Brand-ul este obligatoriu.' })
+    if (!series) return res.status(400).json({ error: 'Series este obligatoriu.' })
+    if (!modelNumber) return res.status(400).json({ error: 'Model number este obligatoriu.' })
+    if (!technicalDescription) return res.status(400).json({ error: 'Specificațiile tehnice sunt obligatorii.' })
+    if (!['industrial', 'residential'].includes(usageType)) {
+      return res.status(400).json({ error: 'Tip invalid. Folosește industrial sau residential.' })
+    }
+
+    const updated = await prisma.productModel.update({
+      where: { id },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl },
+    })
+    return res.json({
+      id: updated.id,
+      name: updated.name,
+      brand: updated.brand,
+      series: updated.series || '',
+      modelNumber: updated.modelNumber,
+      technicalDescription: updated.technicalDescription,
+      usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
+      imageUrl: updated.imageUrl || null,
+      sortOrder: updated.sortOrder,
+      createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
+      updatedAt: updated.updatedAt instanceof Date ? updated.updatedAt.toISOString() : updated.updatedAt,
+    })
+  } catch (err) {
+    if (err?.code === 'P2025') return res.status(404).json({ error: 'Model negăsit.' })
+    if (err?.code === 'P2002') return res.status(409).json({ error: 'Model number există deja.' })
+    console.error('Update product model error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea modelului.' })
+  }
+}
+
 app.get('/api/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 app.get('/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
+app.patch('/api/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
+app.patch('/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
 
 function parseDecimal(val, fallback) {
   if (val === '' || val === null || val === undefined) return fallback

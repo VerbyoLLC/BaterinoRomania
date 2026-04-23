@@ -40,6 +40,8 @@ import AdminCompanyData from './pages/admin/AdminCompanyData'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
+import AdminProductModels from './pages/admin/AdminProductModels'
+import AdminStocuriAddItem from './pages/admin/AdminStocuriAddItem'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
@@ -80,12 +82,14 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="products"  element={<AdminProducts />} />
+          <Route path="product-models" element={<AdminProductModels />} />
           <Route path="messages"  element={<AdminMessages />} />
           <Route path="clients"   element={<AdminClients />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="articles"  element={<AdminDashboard />} />
           <Route path="studii-de-caz" element={<AdminStudiiDeCaz />} />
           <Route path="stocks"    element={<AdminDashboard />} />
+          <Route path="stocuri/add-item" element={<AdminStocuriAddItem />} />
           <Route path="orders"    element={<AdminOrders />} />
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="currency" element={<AdminCurrency />} />
