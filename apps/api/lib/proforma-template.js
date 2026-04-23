@@ -87,6 +87,10 @@ function buildProformaHtml(params) {
     sup.ibanEur && String(sup.ibanEur).trim()
       ? `<div class="small">IBAN(EUR) ${escapeHtml(sup.ibanEur)}${sup.bankEur ? ` ; ${escapeHtml(sup.bankEur)}` : ''}</div>`
       : ''
+  const ibanUsdLine =
+    sup.ibanUsd && String(sup.ibanUsd).trim()
+      ? `<div class="small">IBAN(USD) ${escapeHtml(sup.ibanUsd)}${sup.bankUsd ? ` ; ${escapeHtml(sup.bankUsd)}` : ''}</div>`
+      : ''
 
   return `<!DOCTYPE html>
 <html lang="ro">
@@ -97,25 +101,35 @@ function buildProformaHtml(params) {
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 24px; }
     .wrap { max-width: 800px; margin: 0 auto; }
-    .top { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+    .top { display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
     .logo-col { flex-shrink: 0; padding-top: 2px; }
     .logo-col img.logo { height: 44px; width: auto; max-width: 150px; display: block; object-fit: contain; }
-    .title-col { flex: 1; min-width: 0; }
+    .title-col { flex: 0 1 auto; min-width: 0; max-width: 58%; text-align: right; }
     h1 { font-size: 18px; letter-spacing: 0.05em; margin: 0 0 8px 0; }
     .meta { margin-bottom: 0; line-height: 1.5; }
-    .parties { display: flex; gap: 16px; align-items: stretch; margin-bottom: 16px; }
-    .party { flex: 1; min-width: 0; border: 1px solid #333; padding: 10px 12px; line-height: 1.45; }
+    .parties { display: flex; gap: 16px; align-items: stretch; justify-content: space-between; margin-bottom: 16px; }
+    .party { flex: 1; min-width: 0; background: #f7f7f7; border: 1px solid #f7f7f7; border-radius: 12px; padding: 12px 14px; line-height: 1.45; }
+    .party--client { text-align: right; }
     .party-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #444; margin-bottom: 6px; }
     .block { margin-bottom: 14px; line-height: 1.45; }
     .block-title { font-weight: 700; margin-bottom: 4px; }
-    table.grid { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10px; }
-    table.grid th, table.grid td { border: 1px solid #333; padding: 6px 5px; vertical-align: top; }
-    table.grid th { background: #f0f0f0; font-weight: 700; text-align: center; }
+    .table-wrap { margin: 16px 0; border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #d9d9d9; }
+    table.grid { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 10px; border: none; }
+    table.grid th, table.grid td { border: none; padding: 8px 6px; vertical-align: top; }
+    table.grid thead th { background: #f7f7f7; font-weight: 700; text-align: center; }
+    table.grid tbody td { background: #fff; border-bottom: 1px solid #e7e7e7; }
+    table.grid tbody tr:last-child td { border-bottom: none; }
     td.l { text-align: left; }
     td.r { text-align: right; }
     td.c { text-align: center; }
-    .totals { margin: 12px 0; text-align: right; line-height: 1.6; }
-    .totals strong { font-size: 12px; }
+    .totals { margin: 12px 0 16px auto; width: 360px; max-width: 100%; background: #f7f7f7; border-radius: 12px; padding: 10px 12px; text-align: right; line-height: 1.6; }
+    .totals-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; gap: 12px; }
+    .totals-row > :first-child { text-align: left; }
+    .totals-head { font-weight: 700; font-size: 10px; text-transform: uppercase; color: #444; margin-bottom: 2px; }
+    .totals-row strong { font-size: 12px; }
+    .totals-pay { grid-template-columns: 1fr auto; margin-top: 4px; }
+    .totals-pay strong { font-size: 24px; font-weight: 800; }
+    .spacer-row td { border-bottom: none !important; height: 18px; padding: 0; background: #fff; }
     .sign { margin-top: 32px; display: flex; gap: 24px; justify-content: space-between; }
     .sign-col { flex: 1; border-top: 1px solid #999; padding-top: 6px; min-height: 56px; font-size: 10px; color: #444; }
     .small { font-size: 10px; color: #333; margin-top: 16px; line-height: 1.45; }
@@ -143,14 +157,12 @@ function buildProformaHtml(params) {
     <div class="parties">
       <div class="party">
         <div class="party-label">Furnizor</div>
-        <div class="block-title">${escapeHtml(sup.name || '')}</div>
+        <div class="block-title">${escapeHtml(sup.name || '—')}</div>
         ${sup.regCom ? `Reg. com.: ${escapeHtml(sup.regCom)}<br />` : ''}
         CIF: ${escapeHtml(sup.cui || '—')}<br />
-        Adresă: ${escapeHtml(sup.address || '—')}<br />
-        ${sup.ibanRon ? `IBAN(RON) ${escapeHtml(sup.ibanRon)}<br />` : ''}
-        ${sup.bankName ? `Bancă: ${escapeHtml(sup.bankName)}` : ''}
+        Adresă: ${escapeHtml(sup.address || '—')}
       </div>
-      <div class="party">
+      <div class="party party--client">
         <div class="party-label">Client</div>
         <div class="block-title">${escapeHtml(cl.name || '—')}</div>
         ${cl.regCom ? `Reg. com.: ${escapeHtml(cl.regCom)}<br />` : ''}
@@ -160,6 +172,7 @@ function buildProformaHtml(params) {
       </div>
     </div>
 
+    <div class="table-wrap">
     <table class="grid">
       <thead>
         <tr>
@@ -174,12 +187,17 @@ function buildProformaHtml(params) {
       </thead>
       <tbody>
         ${lineRows}
+        <tr class="spacer-row">
+          <td colspan="7"></td>
+        </tr>
       </tbody>
     </table>
+    </div>
 
     <div class="totals">
-      Total ${escapeHtml(fmtMoney(totalVat))} &nbsp;&nbsp; ${escapeHtml(fmtMoney(totalExcl))}<br />
-      <strong>${escapeHtml(fmtMoney(totalIncl))} Total plată</strong>
+      <div class="totals-row totals-head"><span></span><span>Valoare</span><span>TVA ${escapeHtml(String(vatRatePercent))}%</span></div>
+      <div class="totals-row"><span>Total</span><span>${escapeHtml(fmtMoney(totalExcl))}</span><span>${escapeHtml(fmtMoney(totalVat))}</span></div>
+      <div class="totals-row totals-pay"><strong>Total de plată</strong><strong>${escapeHtml(fmtMoney(totalIncl))}</strong></div>
     </div>
 
     <div class="meta">Termen plată: ${escapeHtml(paymentDueStr)}</div>
@@ -199,6 +217,7 @@ function buildProformaHtml(params) {
       ${sup.capitalSocial ? `<br />Capital social: ${escapeHtml(sup.capitalSocial)}` : ''}
       ${sup.email ? `<br />Email: ${escapeHtml(sup.email)}` : ''}${sup.web ? `; Adresa web: ${escapeHtml(sup.web)}` : ''}
       ${ibanEurLine}
+      ${ibanUsdLine}
     </div>
   </div>
 </body>
@@ -208,6 +227,37 @@ function buildProformaHtml(params) {
 function numDecimal(v) {
   if (v == null || v === '') return 0
   return parseFloat(String(v).replace(/\s/g, '').replace(',', '.')) || 0
+}
+
+function accountCurrencyCode(acc) {
+  const c = String(acc?.currency ?? '')
+    .trim()
+    .toUpperCase()
+  if (c === 'EUR' || c === 'EURO') return 'EUR'
+  if (c === 'USD') return 'USD'
+  return 'RON'
+}
+
+/** Alege contul după câmpul `currency` (RON/EUR/USD), cu fallback la vechiul euristic pe IBAN. */
+function pickBankAccountByCurrency(accounts, code) {
+  const list = Array.isArray(accounts)
+    ? [...accounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : []
+  const want = String(code).toUpperCase()
+  const byField = list.find((a) => accountCurrencyCode(a) === want)
+  if (byField) return byField
+  if (want === 'RON') {
+    return (
+      list.find((a) => /RON/i.test(String(a.iban || '')) || /RON/i.test(String(a.bankName || ''))) || list[0]
+    )
+  }
+  if (want === 'EUR') {
+    return list.find((a) => /EUR/i.test(String(a.iban || '')) || /EUR/i.test(String(a.bankName || '')))
+  }
+  if (want === 'USD') {
+    return list.find((a) => /USD/i.test(String(a.iban || '')) || /USD|DOLLAR/i.test(String(a.bankName || '')))
+  }
+  return undefined
 }
 
 /**
@@ -226,9 +276,9 @@ function mapGuestResidentialOrderToProforma(order, company, opts = {}) {
   const accounts = Array.isArray(company?.bankAccounts)
     ? [...company.bankAccounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     : []
-  const ibanRonRow =
-    accounts.find((a) => /RON/i.test(String(a.iban || '')) || /RON/i.test(String(a.bankName || ''))) || accounts[0]
-  const ibanEurRow = accounts.find((a) => /EUR/i.test(String(a.iban || '')) || /EUR/i.test(String(a.bankName || '')))
+  const ibanRonRow = pickBankAccountByCurrency(accounts, 'RON') || accounts[0]
+  const ibanEurRow = pickBankAccountByCurrency(accounts, 'EUR')
+  const ibanUsdRow = pickBankAccountByCurrency(accounts, 'USD')
 
   const vatRate = numDecimal(order.vatPercent) || 21
   const qty = Math.max(1, parseInt(String(order.quantity), 10) || 1)
@@ -251,7 +301,7 @@ function mapGuestResidentialOrderToProforma(order, company, opts = {}) {
   const clientAddress = [order.billAddress, order.billCity, order.billPostal].filter(Boolean).join(', ')
 
   const supplier = {
-    name: company?.name || 'Baterino SRL',
+    name: String(company?.name ?? '').trim(),
     regCom: opts.supplierRegCom || process.env.BATERINO_REG_COM || '',
     cui:
       company?.cui && String(company.cui).trim()
@@ -262,6 +312,8 @@ function mapGuestResidentialOrderToProforma(order, company, opts = {}) {
     bankName: ibanRonRow?.bankName || '',
     ibanEur: ibanEurRow?.iban || '',
     bankEur: ibanEurRow?.bankName || '',
+    ibanUsd: ibanUsdRow?.iban || '',
+    bankUsd: ibanUsdRow?.bankName || '',
     email: opts.supplierEmail || process.env.BATERINO_OFFICE_EMAIL || '',
     web: opts.supplierWeb || process.env.BATERINO_WEB || '',
     capitalSocial: opts.supplierCapital || process.env.BATERINO_CAPITAL_SOCIAL || '',
@@ -315,9 +367,9 @@ function mapResidentialOrderToProforma(order, company, opts = {}) {
   const accounts = Array.isArray(company?.bankAccounts)
     ? [...company.bankAccounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     : []
-  const ibanRonRow =
-    accounts.find((a) => /RON/i.test(String(a.iban || '')) || /RON/i.test(String(a.bankName || ''))) || accounts[0]
-  const ibanEurRow = accounts.find((a) => /EUR/i.test(String(a.iban || '')) || /EUR/i.test(String(a.bankName || '')))
+  const ibanRonRow = pickBankAccountByCurrency(accounts, 'RON') || accounts[0]
+  const ibanEurRow = pickBankAccountByCurrency(accounts, 'EUR')
+  const ibanUsdRow = pickBankAccountByCurrency(accounts, 'USD')
 
   const d = order.createdAt ? new Date(order.createdAt) : new Date()
   const dd = String(d.getDate()).padStart(2, '0')
@@ -332,7 +384,7 @@ function mapResidentialOrderToProforma(order, company, opts = {}) {
   const clientAddress = [order.billAddress, order.billCity, order.billPostal].filter(Boolean).join(', ')
 
   const supplier = {
-    name: company?.name || 'Baterino SRL',
+    name: String(company?.name ?? '').trim(),
     regCom: opts.supplierRegCom || process.env.BATERINO_REG_COM || '',
     cui:
       company?.cui && String(company.cui).trim()
@@ -343,6 +395,8 @@ function mapResidentialOrderToProforma(order, company, opts = {}) {
     bankName: ibanRonRow?.bankName || '',
     ibanEur: ibanEurRow?.iban || '',
     bankEur: ibanEurRow?.bankName || '',
+    ibanUsd: ibanUsdRow?.iban || '',
+    bankUsd: ibanUsdRow?.bankName || '',
     email: opts.supplierEmail || process.env.BATERINO_OFFICE_EMAIL || '',
     web: opts.supplierWeb || process.env.BATERINO_WEB || '',
     capitalSocial: opts.supplierCapital || process.env.BATERINO_CAPITAL_SOCIAL || '',
@@ -397,46 +451,40 @@ function buildResidentialOrderProformaHtml(order, company, opts) {
   return buildProformaHtml(mapResidentialOrderToProforma(order, company, opts))
 }
 
-/** Dummy data for local preview — same shape as SmartBill-style proformas. */
-function buildSampleProformaPreviewHtml() {
+/**
+ * Preview HTML — furnizor din același snapshot ca Setări → Date companie (`company` din DB).
+ * Client, linie și sume rămân fictive pentru verificarea șablonului.
+ * @param {object} company - forma returnată de `readCompanyDataFromDb()` / `companyToApiShape`
+ */
+function buildSampleProformaPreviewHtml(company) {
+  const co = company && typeof company === 'object' ? company : {}
+  const fakeOrder = {
+    id: 'preview',
+    createdAt: new Date('2026-04-01T12:00:00.000Z'),
+    vatPercent: 21,
+    quantity: 1,
+    unitPriceInclVat: 58800,
+    lineTotalInclVat: 58800,
+    orderNumber: '0155',
+    lastName: 'Popescu',
+    firstName: 'Ion',
+    billAddress: 'Str. Clientului nr. 10',
+    billCity: 'București',
+    billPostal: '010101',
+    billCounty: 'București',
+    productTitle: 'Sistem stocare energie BESS (exemplu catalog)',
+    email: 'client@exemplu.ro',
+    phone: '721234567',
+  }
+  const base = mapGuestResidentialOrderToProforma(fakeOrder, co, {
+    proformaSeries: 'DIP',
+    proformaNumber: '0155',
+  })
   return buildProformaHtml({
-    series: 'DIP',
-    number: '0155',
+    ...base,
     dateStr: '01/04/2026',
-    vatRatePercent: 21,
-    supplier: {
-      name: 'Baterino SRL',
-      regCom: 'J40/12345/2020',
-      cui: 'RO12345678',
-      address: 'Str. Exemplu nr. 1, Mun. București, Sector 1',
-      ibanRon: 'RO84BTRLRONCRT0123456789',
-      bankName: 'Banca Transilvania',
-      ibanEur: 'RO34BTRLEURCRT0987654321',
-      bankEur: 'Banca Transilvania — cont EUR',
-      email: 'office@baterino.ro',
-      web: 'https://baterino.ro',
-      capitalSocial: '200 lei',
-    },
-    client: {
-      name: 'Popescu Ion',
-      regCom: '',
-      cui: '—',
-      address: 'Str. Clientului nr. 10, București, cod 010101',
-      county: 'București',
-    },
-    lines: [
-      {
-        index: 1,
-        name: 'Sistem stocare energie BESS (exemplu catalog)',
-        um: 'buc',
-        qty: 1,
-        unitPriceExcl: 48595.04,
-        lineTotalExcl: 48595.04,
-        lineVat: 10204.96,
-      },
-    ],
     paymentDueStr: '15/04/2026',
-    note: 'Previzualizare șablon — date fictive.',
+    note: 'Previzualizare șablon — client și linie exemplu; furnizor din Setări → Date companie.',
     preparedBy: '—',
   })
 }

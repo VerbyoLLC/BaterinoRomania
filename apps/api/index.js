@@ -30,11 +30,18 @@ const {
   ensureGuestOrderFolder,
   guestOrderDocumentKey,
 } = require('./lib/r2.js')
-const {
-  buildSampleProformaPreviewHtml,
-  buildGuestOrderProformaHtml,
-  buildResidentialOrderProformaHtml,
-} = require('./lib/proforma-template.js')
+const PROFORMA_TEMPLATE_MODULE_PATH = './lib/proforma-template.js'
+function getProformaTemplateLib() {
+  // Dev helper: pick up template edits instantly without API restart.
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      delete require.cache[require.resolve(PROFORMA_TEMPLATE_MODULE_PATH)]
+    } catch {
+      // ignore resolve/cache misses; fallback to regular require below
+    }
+  }
+  return require(PROFORMA_TEMPLATE_MODULE_PATH)
+}
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
@@ -1305,7 +1312,7 @@ app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddle
       if (!PROFORMA_ALLOWED_STATUSES.has(String(residential.fulfillmentStatus || 'de_platit'))) {
         return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
       }
-      html = buildResidentialOrderProformaHtml(residential, company)
+      html = getProformaTemplateLib().buildResidentialOrderProformaHtml(residential, company)
       orderNumber = residential.orderNumber
     } else {
       const legacy = await prisma.guestResidentialOrder.findFirst({
@@ -1315,7 +1322,7 @@ app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddle
       if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
         return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
       }
-      html = buildGuestOrderProformaHtml(legacy, company)
+      html = getProformaTemplateLib().buildGuestOrderProformaHtml(legacy, company)
       orderNumber = legacy.orderNumber
     }
     const safeFile = `proforma-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.html`
@@ -1601,7 +1608,7 @@ app.get('/api/debug/mail', async (req, res) => {
 })
 
 // ── Debug: HTML proforma preview (always registered; blocked in prod unless BATERINO_DEBUG_PROFORMA=1) ──
-function proformaPreviewHandler(req, res) {
+async function proformaPreviewHandler(req, res) {
   const enabledInProd = process.env.BATERINO_DEBUG_PROFORMA === '1'
   if (process.env.NODE_ENV === 'production' && !enabledInProd) {
     return res.status(403).json({
@@ -1611,8 +1618,11 @@ function proformaPreviewHandler(req, res) {
     })
   }
   try {
-    const html = buildSampleProformaPreviewHtml()
+    const company = await readCompanyDataFromDb()
+    const html = getProformaTemplateLib().buildSampleProformaPreviewHtml(company)
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('Pragma', 'no-cache')
     return res.send(html)
   } catch (err) {
     console.error('Proforma preview error:', err)
@@ -1920,6 +1930,25 @@ const DEFAULT_COMPANY_DATA = {
   bankAccounts: [],
 }
 
+function isSchemaOutOfSyncError(err) {
+  return String(err?.code || '') === 'P2022'
+}
+
+function isTransactionStartTimeoutError(err) {
+  return String(err?.code || '') === 'P2028' && /Unable to start a transaction/i.test(String(err?.message || ''))
+}
+
+/** RON | EUR | USD — valori stocate în DB; acceptă și EURO din JSON vechi. */
+function normalizeBankCurrency(raw) {
+  const s = String(raw ?? '')
+    .trim()
+    .toUpperCase()
+  if (s === 'EUR' || s === 'EURO') return 'EUR'
+  if (s === 'USD') return 'USD'
+  if (s === 'RON') return 'RON'
+  return 'RON'
+}
+
 function normalizeCompanyDataPayload(body) {
   const name = String(body?.name ?? '').trim()
   const cui = String(body?.cui ?? '').trim()
@@ -1930,12 +1959,32 @@ function normalizeCompanyDataPayload(body) {
     bankAccounts.push({
       id: String(a?.id ?? '').trim() || crypto.randomUUID(),
       bankName: String(a?.bankName ?? '').trim(),
-      iban: String(a?.iban ?? '').trim(),
-      swift: String(a?.swift ?? '').trim(),
+      iban: String(a?.iban ?? a?.IBAN ?? '').trim(),
+      swift: String(a?.swift ?? a?.SWIFT ?? a?.bic ?? a?.BIC ?? '').trim(),
+      currency: normalizeBankCurrency(a?.currency),
       accountName: String(a?.accountName ?? '').trim(),
     })
   }
   return { name, cui, address, bankAccounts }
+}
+
+async function readCompanyDataFromLegacySetting() {
+  try {
+    const row = await prisma.siteSetting.findUnique({ where: { key: COMPANY_DATA_KEY } })
+    if (!row?.value) return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+    return normalizeCompanyDataPayload(JSON.parse(row.value))
+  } catch (err) {
+    console.error('readCompanyDataFromLegacySetting:', err)
+    return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
+  }
+}
+
+async function saveCompanyDataToLegacySetting(data) {
+  await prisma.siteSetting.upsert({
+    where: { key: COMPANY_DATA_KEY },
+    create: { key: COMPANY_DATA_KEY, value: JSON.stringify(data) },
+    update: { value: JSON.stringify(data) },
+  })
 }
 
 async function ensureBaterinoCompanyRow() {
@@ -1950,6 +1999,14 @@ async function ensureBaterinoCompanyRow() {
 async function migrateCompanyDataFromSiteSettingIfNeeded() {
   const legacy = await prisma.siteSetting.findUnique({ where: { key: COMPANY_DATA_KEY } })
   if (!legacy?.value) return
+
+  /** Dacă există deja conturi în tabelele Prisma, nu suprascriem cu JSON-ul vechi (adesea fără IBAN/SWIFT). */
+  const existingAccounts = await prisma.companyBankAccount.count({ where: { companyId: COMPANY_ID } })
+  if (existingAccounts > 0) {
+    await prisma.siteSetting.deleteMany({ where: { key: COMPANY_DATA_KEY } }).catch(() => {})
+    return
+  }
+
   let data
   try {
     data = normalizeCompanyDataPayload(JSON.parse(legacy.value))
@@ -1981,6 +2038,7 @@ async function migrateCompanyDataFromSiteSettingIfNeeded() {
           bankName: a.bankName,
           iban: a.iban,
           swift: a.swift,
+          currency: a.currency,
           accountName: a.accountName,
           sortOrder: i,
         },
@@ -2000,6 +2058,7 @@ function companyToApiShape(company) {
       bankName: b.bankName,
       iban: b.iban,
       swift: b.swift,
+      currency: normalizeBankCurrency(b.currency),
       accountName: b.accountName,
     })),
   }
@@ -2018,6 +2077,9 @@ async function readCompanyDataFromDb() {
     }
     return companyToApiShape(company)
   } catch (err) {
+    if (isSchemaOutOfSyncError(err)) {
+      return await readCompanyDataFromLegacySetting()
+    }
     console.error('readCompanyDataFromDb:', err)
     return { ...DEFAULT_COMPANY_DATA, bankAccounts: [] }
   }
@@ -2036,39 +2098,52 @@ const getAdminCompanyDataHandler = async (req, res) => {
 const putAdminCompanyDataHandler = async (req, res) => {
   try {
     const data = normalizeCompanyDataPayload(req.body)
-    await prisma.$transaction(async (tx) => {
-      await tx.baterinoCompany.upsert({
-        where: { id: COMPANY_ID },
-        create: {
-          id: COMPANY_ID,
-          name: data.name || 'Baterino SRL',
-          cui: data.cui,
-          address: data.address,
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.baterinoCompany.upsert({
+            where: { id: COMPANY_ID },
+            create: {
+              id: COMPANY_ID,
+              name: data.name || 'Baterino SRL',
+              cui: data.cui,
+              address: data.address,
+            },
+            update: {
+              name: data.name,
+              cui: data.cui,
+              address: data.address,
+            },
+          })
+          await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
+          for (let i = 0; i < data.bankAccounts.length; i++) {
+            const a = data.bankAccounts[i]
+            await tx.companyBankAccount.create({
+              data: {
+                id: a.id,
+                companyId: COMPANY_ID,
+                bankName: a.bankName,
+                iban: a.iban,
+                swift: a.swift,
+                currency: a.currency,
+                accountName: a.accountName,
+                sortOrder: i,
+              },
+            })
+          }
+          await tx.siteSetting.deleteMany({ where: { key: COMPANY_DATA_KEY } })
         },
-        update: {
-          name: data.name,
-          cui: data.cui,
-          address: data.address,
-        },
-      })
-      await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
-      for (let i = 0; i < data.bankAccounts.length; i++) {
-        const a = data.bankAccounts[i]
-        await tx.companyBankAccount.create({
-          data: {
-            id: a.id,
-            companyId: COMPANY_ID,
-            bankName: a.bankName,
-            iban: a.iban,
-            swift: a.swift,
-            accountName: a.accountName,
-            sortOrder: i,
-          },
-        })
+        { maxWait: 10000, timeout: 20000 },
+      )
+    } catch (err) {
+      if (isSchemaOutOfSyncError(err) || isTransactionStartTimeoutError(err)) {
+        await saveCompanyDataToLegacySetting(data)
+        return res.json(data)
       }
-      await tx.siteSetting.deleteMany({ where: { key: COMPANY_DATA_KEY } })
-    })
-    res.json(data)
+      throw err
+    }
+    const saved = await readCompanyDataFromDb()
+    res.json(saved)
   } catch (err) {
     console.error('admin company-data put:', err)
     res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
@@ -3115,6 +3190,160 @@ const deleteProductHandler = async (req, res) => {
 }
 app.delete('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
 app.delete('/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
+
+/** Extrage numărul de serie din textul QR (SN:…, JSON, URL ?sn=) sau întreg conținutul. */
+function parseSerialFromQrPayload(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s) return ''
+  const prefixed = /^SN:\s*(.+)$/i.exec(s)
+  if (prefixed) return prefixed[1].trim().slice(0, 512)
+  if (s.startsWith('{')) {
+    try {
+      const j = JSON.parse(s)
+      const sn = j.SN ?? j.sn ?? j.serialNumber ?? j.serial
+      if (typeof sn === 'string' && sn.trim()) return sn.trim().slice(0, 512)
+    } catch {
+      // ignore
+    }
+  }
+  try {
+    const u = new URL(s)
+    const q = u.searchParams.get('SN') || u.searchParams.get('sn')
+    if (q && q.trim()) return q.trim().slice(0, 512)
+  } catch {
+    // not a URL
+  }
+  return s.slice(0, 512)
+}
+
+const WAREHOUSE_SN_FACTORY_PREFIX = 'LJC'
+const WAREHOUSE_SN_BODY_DIGITS = 16
+
+function normalizeWarehouseSerialNumber(raw) {
+  let t = String(raw ?? '')
+    .replace(/\s/g, '')
+    .toUpperCase()
+  if (!t) return ''
+  if (t.startsWith(WAREHOUSE_SN_FACTORY_PREFIX)) {
+    return WAREHOUSE_SN_FACTORY_PREFIX + t.slice(WAREHOUSE_SN_FACTORY_PREFIX.length).replace(/\s/g, '')
+  }
+  return `${WAREHOUSE_SN_FACTORY_PREFIX}${t}`
+}
+
+function isValidWarehouseSerialNumber(serial) {
+  return new RegExp(`^${WAREHOUSE_SN_FACTORY_PREFIX}\\d{${WAREHOUSE_SN_BODY_DIGITS}}$`).test(String(serial ?? ''))
+}
+
+function warehouseStockUnitToJson(row) {
+  if (!row) return row
+  return {
+    id: row.id,
+    productId: row.productId,
+    serialNumber: row.serialNumber,
+    warehouseReceivedAt:
+      row.warehouseReceivedAt instanceof Date ? row.warehouseReceivedAt.toISOString() : row.warehouseReceivedAt,
+    entryMethod: row.entryMethod,
+    rawQrPayload: row.rawQrPayload,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    product: row.product
+      ? { id: row.product.id, title: row.product.title, sku: row.product.sku }
+      : undefined,
+  }
+}
+
+const listWarehouseStockUnitsHandler = async (req, res) => {
+  try {
+    const take = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100))
+    const rows = await prisma.warehouseStockUnit.findMany({
+      orderBy: { warehouseReceivedAt: 'desc' },
+      take,
+      include: { product: { select: { id: true, title: true, sku: true } } },
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(warehouseStockUnitToJson))
+  } catch (err) {
+    console.error('List warehouse stock units error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const createWarehouseStockUnitHandler = async (req, res) => {
+  try {
+    const body = req.body || {}
+    const productId = String(body.productId || '').trim()
+    const entryMethod = ['qr_scan', 'manual'].includes(String(body.entryMethod || '').trim())
+      ? String(body.entryMethod).trim()
+      : 'manual'
+    let serialNumber = String(body.serialNumber || '').trim()
+    const qrRaw = body.qrRaw != null ? String(body.qrRaw) : ''
+    if (!serialNumber && qrRaw) serialNumber = parseSerialFromQrPayload(qrRaw)
+    if (!productId) return res.status(400).json({ error: 'Selectează modelul (produsul).' })
+    if (!serialNumber) return res.status(400).json({ error: 'Numărul de serie lipsește.' })
+
+    serialNumber = normalizeWarehouseSerialNumber(serialNumber)
+    if (!isValidWarehouseSerialNumber(serialNumber)) {
+      return res.status(400).json({
+        error:
+          'SN invalid. Format: LJC (fabrică) + 16 cifre — tensiune 2, capacitate 4, lună/an 4, lot 6 (ex. LJC5131400325070001). La manual poți introduce doar cele 16 cifre după LJC.',
+      })
+    }
+
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } })
+    if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
+
+    const rawQrPayload = qrRaw ? qrRaw.slice(0, 4000) : null
+
+    const created = await prisma.warehouseStockUnit.create({
+      data: {
+        productId,
+        serialNumber,
+        entryMethod,
+        rawQrPayload,
+      },
+      include: { product: { select: { id: true, title: true, sku: true } } },
+    })
+    return res.status(201).json(warehouseStockUnitToJson(created))
+  } catch (err) {
+    if (err?.code === 'P2002') {
+      return res.status(409).json({ error: 'Acest număr de serie este deja înregistrat.' })
+    }
+    console.error('Create warehouse stock unit error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la înregistrare.' })
+  }
+}
+
+app.get('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, listWarehouseStockUnitsHandler)
+app.get('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, listWarehouseStockUnitsHandler)
+app.post('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
+app.post('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
+
+const listProductModelsHandler = async (req, res) => {
+  try {
+    const rows = await prisma.productModel.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { modelNumber: 'asc' }],
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        brand: r.brand,
+        modelNumber: r.modelNumber,
+        technicalDescription: r.technicalDescription,
+        sortOrder: r.sortOrder,
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
+      })),
+    )
+  } catch (err) {
+    console.error('List product models error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea modelelor.' })
+  }
+}
+
+app.get('/api/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
+app.get('/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 
 function parseDecimal(val, fallback) {
   if (val === '' || val === null || val === undefined) return fallback
