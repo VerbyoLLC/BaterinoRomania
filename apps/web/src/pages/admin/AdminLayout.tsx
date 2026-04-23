@@ -83,6 +83,13 @@ function IconStocks() {
     </svg>
   )
 }
+function IconAddItem() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  )
+}
 function IconInventar() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -90,6 +97,17 @@ function IconInventar() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
+    </svg>
+  )
+}
+function IconModele() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 3L2 8l10 5 10-5-10-5zM2 13l10 5 10-5M2 18l10 5 10-5"
       />
     </svg>
   )
@@ -187,7 +205,8 @@ type NavGroupItem = {
 const SETARI_PATHS = ['/admin/currency', '/admin/company-data', '/admin/phone-numbers'] as const
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
-const INVENTAR_PATHS = ['/admin/products', '/admin/stocks'] as const
+const INVENTAR_PATHS = ['/admin/products', '/admin/stocks', '/admin/product-models'] as const
+const STOCURI_PATHS = ['/admin/stocuri'] as const
 
 const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
   { kind: 'link', to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
@@ -201,7 +220,15 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
     children: [
       { to: '/admin/products', label: 'Produse', icon: <IconProducts /> },
       { to: '/admin/stocks', label: 'Stocuri', icon: <IconStocks /> },
+      { to: '/admin/product-models', label: 'Modele', icon: <IconModele /> },
     ],
+  },
+  {
+    kind: 'group',
+    id: 'stocuri',
+    label: 'Stocuri',
+    icon: <IconStocks />,
+    children: [{ to: '/admin/stocuri/add-item', label: 'Add Item', icon: <IconAddItem /> }],
   },
   {
     kind: 'group',
@@ -253,6 +280,10 @@ function pathUnderInventar(pathname: string) {
   return INVENTAR_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
+function pathUnderStocuri(pathname: string) {
+  return STOCURI_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -262,6 +293,7 @@ export default function AdminLayout() {
   const [parteneriOpen, setParteneriOpen] = useState(() => pathUnderParteneri(location.pathname))
   const [mediaOpen, setMediaOpen] = useState(() => pathUnderMedia(location.pathname))
   const [inventarOpen, setInventarOpen] = useState(() => pathUnderInventar(location.pathname))
+  const [stocuriOpen, setStocuriOpen] = useState(() => pathUnderStocuri(location.pathname))
 
   useEffect(() => {
     if (location.pathname === '/admin/login') return
@@ -293,6 +325,7 @@ export default function AdminLayout() {
     if (pathUnderParteneri(location.pathname)) setParteneriOpen(true)
     if (pathUnderMedia(location.pathname)) setMediaOpen(true)
     if (pathUnderInventar(location.pathname)) setInventarOpen(true)
+    if (pathUnderStocuri(location.pathname)) setStocuriOpen(true)
   }, [location.pathname])
 
   return (
@@ -366,7 +399,9 @@ export default function AdminLayout() {
                       ? mediaOpen
                       : item.id === 'inventar'
                         ? inventarOpen
-                        : false
+                        : item.id === 'stocuri'
+                          ? stocuriOpen
+                          : false
               const setGroupOpen =
                 item.id === 'setari'
                   ? setSetariOpen
@@ -376,7 +411,9 @@ export default function AdminLayout() {
                       ? setMediaOpen
                       : item.id === 'inventar'
                         ? setInventarOpen
-                        : () => {}
+                        : item.id === 'stocuri'
+                          ? setStocuriOpen
+                          : () => {}
               return (
                 <div key={item.id} className="flex flex-col gap-0.5">
                   <button
