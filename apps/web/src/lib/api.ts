@@ -1162,7 +1162,10 @@ export async function getAdminWarehouseStockUnits(limit = 100): Promise<Warehous
 }
 
 export async function createWarehouseStockUnit(payload: {
-  productId: string
+  /** Catalog product id (legacy). */
+  productId?: string
+  /** Row id from admin Modele (`product_models`); API resolves catalog product by SKU = modelNumber. */
+  productModelId?: string
   serialNumber: string
   entryMethod: 'qr_scan' | 'manual'
   qrRaw?: string | null
@@ -1171,7 +1174,8 @@ export async function createWarehouseStockUnit(payload: {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
-      productId: payload.productId,
+      ...(payload.productId ? { productId: payload.productId } : {}),
+      ...(payload.productModelId ? { productModelId: payload.productModelId } : {}),
       serialNumber: payload.serialNumber,
       entryMethod: payload.entryMethod,
       qrRaw: payload.qrRaw ?? undefined,
@@ -1196,6 +1200,8 @@ export type AdminProductModelRow = {
   technicalDescription: string
   usageType: 'industrial' | 'residential'
   imageUrl?: string | null
+  /** When true, model is listed in Stocuri → Add Item. */
+  availableForStock: boolean
   sortOrder: number
   createdAt: string
   updatedAt: string
@@ -1209,6 +1215,7 @@ export type UpdateAdminProductModelPayload = {
   technicalDescription: string
   usageType: 'industrial' | 'residential'
   imageUrl?: string | null
+  availableForStock: boolean
 }
 
 export async function getAdminProductModels(): Promise<AdminProductModelRow[]> {
@@ -1228,7 +1235,11 @@ export async function getAdminProductModels(): Promise<AdminProductModelRow[]> {
     }
     throw new Error(body.error || 'Eroare la încărcarea modelelor.')
   }
-  return Array.isArray(json) ? json : []
+  const list = Array.isArray(json) ? json : []
+  return list.map((row: AdminProductModelRow) => ({
+    ...row,
+    availableForStock: row.availableForStock !== false,
+  }))
 }
 
 export async function updateAdminProductModel(
@@ -1247,7 +1258,28 @@ export async function updateAdminProductModel(
     if (res.status === 404) throw new Error((json as { error?: string }).error || 'Model negăsit.')
     throw new Error((json as { error?: string }).error || 'Eroare la salvarea modelului.')
   }
-  return json as AdminProductModelRow
+  const row = json as AdminProductModelRow
+  return { ...row, availableForStock: row.availableForStock !== false }
+}
+
+export async function patchAdminProductModelAvailableForStock(
+  id: string,
+  availableForStock: boolean,
+): Promise<AdminProductModelRow> {
+  const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}/available-for-stock`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ availableForStock }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error((json as { error?: string }).error || 'Model negăsit.')
+    throw new Error((json as { error?: string }).error || 'Eroare la actualizarea disponibilității.')
+  }
+  const row = json as AdminProductModelRow
+  return { ...row, availableForStock: row.availableForStock !== false }
 }
 
 /** One product for admin editor — includes nested JSON (e.g. technicalSpecsModels). */

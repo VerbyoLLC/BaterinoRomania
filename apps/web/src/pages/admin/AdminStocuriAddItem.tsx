@@ -5,13 +5,13 @@ import {
   WAREHOUSE_SN_BODY_DIGITS,
   WAREHOUSE_SN_FACTORY_PREFIX,
   createWarehouseStockUnit,
-  getAdminProducts,
+  getAdminProductModels,
   getAdminWarehouseStockUnits,
   getAuthToken,
   isValidWarehouseSerialNumber,
   normalizeWarehouseSerialNumber,
   warehouseSerialToBodyDigits,
-  type AdminProduct,
+  type AdminProductModelRow,
   type WarehouseStockUnitRow,
 } from '../../lib/api'
 
@@ -45,12 +45,13 @@ export default function AdminStocuriAddItem() {
   const streamRef = useRef<MediaStream | null>(null)
   const scanRafRef = useRef<number>(0)
 
-  const [products, setProducts] = useState<AdminProduct[]>([])
+  const [productModels, setProductModels] = useState<AdminProductModelRow[]>([])
   const [units, setUnits] = useState<WarehouseStockUnitRow[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
 
-  const [productId, setProductId] = useState('')
+  /** Row id from `product_models` (Inventar → Modele). */
+  const [productModelId, setProductModelId] = useState('')
   /** Doar cele 16 cifre după prefixul fix LJC; scanarea QR sau introducerea manuală completează același câmp. */
   const [serialBody, setSerialBody] = useState('')
   /** Ultimul text brut decodat din QR (cameră) — trimis la API pentru audit când entryMethod e qr_scan. */
@@ -73,8 +74,8 @@ export default function AdminStocuriAddItem() {
     setListError(null)
     setLoading(true)
     try {
-      const [p, u] = await Promise.all([getAdminProducts(), getAdminWarehouseStockUnits(80)])
-      setProducts(Array.isArray(p) ? p : [])
+      const [m, u] = await Promise.all([getAdminProductModels(), getAdminWarehouseStockUnits(80)])
+      setProductModels(Array.isArray(m) ? m : [])
       setUnits(u)
     } catch (e) {
       setListError(e instanceof Error ? e.message : 'Eroare la încărcare.')
@@ -90,6 +91,14 @@ export default function AdminStocuriAddItem() {
     }
     loadAll()
   }, [navigate, loadAll])
+
+  useEffect(() => {
+    if (!productModelId) return
+    const stillListed = productModels.some(
+      (m) => m.id === productModelId && m.availableForStock !== false,
+    )
+    if (!stillListed) setProductModelId('')
+  }, [productModels, productModelId])
 
   const stopScanner = useCallback(() => {
     if (scanRafRef.current) cancelAnimationFrame(scanRafRef.current)
@@ -199,10 +208,10 @@ export default function AdminStocuriAddItem() {
     e.preventDefault()
     setFormError(null)
     setFormOk(false)
-    const pid = productId.trim()
+    const mid = productModelId.trim()
     const digits = serialBody.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
-    if (!pid) {
-      setFormError('Selectează modelul.')
+    if (!mid) {
+      setFormError('Selectează modelul din listă (Modele).')
       return
     }
     if (digits.length !== WAREHOUSE_SN_BODY_DIGITS) {
@@ -219,7 +228,7 @@ export default function AdminStocuriAddItem() {
     setSubmitting(true)
     try {
       await createWarehouseStockUnit({
-        productId: pid,
+        productModelId: mid,
         serialNumber: fullSerial,
         entryMethod,
         qrRaw: entryMethod === 'qr_scan' ? lastDecodedQrRaw : null,
@@ -237,9 +246,11 @@ export default function AdminStocuriAddItem() {
     }
   }
 
-  const sortedProducts = [...products].sort((a, b) =>
-    String(a.title || '').localeCompare(String(b.title || ''), 'ro', { sensitivity: 'base' }),
-  )
+  const sortedModels = [...productModels]
+    .filter((m) => m.availableForStock !== false)
+    .sort((a, b) =>
+      String(a.modelNumber || '').localeCompare(String(b.modelNumber || ''), 'ro', { sensitivity: 'base' }),
+    )
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-4xl">
@@ -322,7 +333,7 @@ export default function AdminStocuriAddItem() {
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Add Item</h1>
       <p className="text-gray-500 text-sm font-['Inter'] mb-8">
         Scanează codul QR sau folosește cutia pentru introducerea manuală a SN-ului, verifică numărul de serie, alege
-        modelul din catalog, apoi înregistrează. Data intrării în depozit se salvează automat.
+        modelul din lista Modele, apoi înregistrează. Data intrării în depozit se salvează automat.
       </p>
 
       {listError && (
@@ -505,29 +516,37 @@ export default function AdminStocuriAddItem() {
           </div>
 
           <div>
-            <label htmlFor="warehouse-product" className="block text-sm font-semibold text-slate-800 font-['Inter'] mb-1.5">
-              Model (produs catalog)
+            <label htmlFor="warehouse-product-model" className="block text-sm font-semibold text-slate-800 font-['Inter'] mb-1.5">
+              Model (din Modele)
             </label>
             <select
-              id="warehouse-product"
-              value={productId}
+              id="warehouse-product-model"
+              value={productModelId}
               disabled={loading}
               onChange={(e) => {
-                setProductId(e.target.value)
+                setProductModelId(e.target.value)
                 setFormOk(false)
               }}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-['Inter'] text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
             >
               <option value="">— Selectează —</option>
-              {sortedProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title} ({p.sku})
+              {sortedModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.modelNumber}
+                  {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                  {m.brand ? ` [${m.brand}]` : ''}
                 </option>
               ))}
             </select>
-            {!loading && products.length === 0 && (
+            {!loading && productModels.length === 0 && (
               <p className="mt-2 text-sm text-amber-800 font-['Inter']">
-                Nu există produse în catalog. Adaugă mai întâi produse din Inventar → Produse.
+                Nu există rânduri în tabelul Modele. Adaugă modele din Inventar → Modele.
+              </p>
+            )}
+            {!loading && productModels.length > 0 && (
+              <p className="mt-2 text-xs text-slate-500 font-['Inter'] leading-relaxed">
+                Înregistrarea în depozit folosește produsul din catalog cu același <span className="font-medium">SKU</span> ca{' '}
+                <span className="font-medium">numărul modelului</span> din Modele (ex. SKU produs = TR4000WX).
               </p>
             )}
           </div>
@@ -546,7 +565,9 @@ export default function AdminStocuriAddItem() {
           <button
             type="submit"
             disabled={
-              submitting || !productId || serialBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
+              submitting ||
+              !productModelId ||
+              serialBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
             }
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none min-w-[160px]"
           >

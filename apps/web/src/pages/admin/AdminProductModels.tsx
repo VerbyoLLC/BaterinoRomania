@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getAdminProductModels,
   getAuthToken,
+  patchAdminProductModelAvailableForStock,
   uploadAdminFile,
   updateAdminProductModel,
   type AdminProductModelRow,
@@ -68,6 +69,7 @@ export default function AdminProductModels() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [uploadTargetRowId, setUploadTargetRowId] = useState<string | null>(null)
   const [uploadingRowId, setUploadingRowId] = useState<string | null>(null)
+  const [availabilitySavingId, setAvailabilitySavingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const load = useCallback(() => {
@@ -113,9 +115,23 @@ export default function AdminProductModels() {
         technicalDescription: base.technicalDescription,
         usageType: base.usageType,
         imageUrl: base.imageUrl ?? null,
+        availableForStock: base.availableForStock !== false,
       }
       return { ...prev, [rowId]: { ...current, [key]: value } }
     })
+  }
+
+  const patchAvailability = async (rowId: string, next: boolean) => {
+    setAvailabilitySavingId(rowId)
+    setError(null)
+    try {
+      const updated = await patchAdminProductModelAvailableForStock(rowId, next)
+      setRows((prev) => prev.map((r) => (r.id === rowId ? updated : r)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Eroare la actualizarea disponibilității.')
+    } finally {
+      setAvailabilitySavingId(null)
+    }
   }
 
   const saveRow = async (rowId: string, payload: ProductModelDraft) => {
@@ -152,6 +168,7 @@ export default function AdminProductModels() {
       technicalDescription: composed,
       usageType: drawerRow.usageType,
       imageUrl: drawerRow.imageUrl ?? null,
+      availableForStock: drawerRow.availableForStock !== false,
     }
     await saveRow(drawerRow.id, payload)
     setDrawerModelId(null)
@@ -161,6 +178,12 @@ export default function AdminProductModels() {
     setUploadTargetRowId(rowId)
     fileInputRef.current?.click()
   }
+
+  const inputCellClass =
+    'w-full min-w-0 h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20'
+
+  const btnGhost =
+    'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40'
 
   const onImageSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -195,65 +218,92 @@ export default function AdminProductModels() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden ring-1 ring-slate-900/[0.04]">
         {loading ? (
           <p className="p-8 text-sm text-gray-500 font-['Inter']">Se încarcă…</p>
         ) : rows.length === 0 ? (
           <p className="p-8 text-sm text-gray-500 font-['Inter']">Nu există înregistrări. Rulează migrarea API.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm font-['Inter'] min-w-[1220px]">
+            <table className="w-full min-w-[60rem] table-fixed border-collapse text-left text-sm font-['Inter']">
               <thead>
-                <tr className="border-b border-gray-200 bg-slate-50 text-slate-600">
-                  <th className="px-4 py-3 font-semibold w-[13%]">Name</th>
-                  <th className="px-4 py-3 font-semibold w-[10%]">Brand</th>
-                  <th className="px-4 py-3 font-semibold w-[10%]">Series</th>
-                  <th className="px-4 py-3 font-semibold w-[12%]">Model number</th>
-                  <th className="px-4 py-3 font-semibold w-[10%]">Energy</th>
-                  <th className="px-4 py-3 font-semibold w-[12%]">Type</th>
-                  <th className="px-4 py-3 font-semibold w-[12%]">Specifications</th>
-                  <th className="px-4 py-3 font-semibold w-[13%]">Image</th>
-                  <th className="px-4 py-3 font-semibold w-[8%]">Actions</th>
+                <tr className="border-b border-slate-200 bg-gradient-to-b from-slate-100 to-slate-50/90">
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[12%]">
+                    Name
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[9%]">
+                    Brand
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8%]">
+                    Series
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[11%]">
+                    Model
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
+                    Energy
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
+                    Type
+                  </th>
+                  <th className="px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.25rem] text-center">
+                    Available
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.5rem] text-center">
+                    Specs
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8.25rem] text-center">
+                    Image
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.5rem] text-center">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {rowsWithDraft.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-100 align-top last:border-0 hover:bg-slate-50/60">
-                    <td className="px-4 py-3">
+              <tbody className="divide-y divide-slate-100">
+                {rowsWithDraft.map((row, idx) => (
+                  <tr
+                    key={row.id}
+                    className={`align-middle transition-colors hover:bg-sky-50/40 ${idx % 2 === 1 ? 'bg-slate-50/35' : 'bg-white'}`}
+                  >
+                    <td className="px-3 py-2.5">
                       <input
                         value={row.name}
                         onChange={(e) => setDraftField(row.id, 'name', e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        className={`${inputCellClass} font-semibold text-slate-900`}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <input
                         value={row.brand}
                         onChange={(e) => setDraftField(row.id, 'brand', e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                        className={inputCellClass}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <input
                         value={row.series}
                         onChange={(e) => setDraftField(row.id, 'series', e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
-                        placeholder="Series"
+                        className={inputCellClass}
+                        placeholder="—"
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <input
                         value={row.modelNumber}
                         onChange={(e) => setDraftField(row.id, 'modelNumber', e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-800"
+                        className={`${inputCellClass} font-mono text-[13px]`}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <td className="px-3 py-2.5">
+                      <span
+                        className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-sm font-medium tabular-nums leading-snug text-slate-800 break-words"
+                        title={getEnergyValue(row.technicalDescription)}
+                      >
                         {getEnergyValue(row.technicalDescription)}
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <select
                         value={row.usageType}
                         onChange={(e) =>
@@ -263,42 +313,71 @@ export default function AdminProductModels() {
                             e.target.value === 'residential' ? 'residential' : 'industrial',
                           )
                         }
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                        className={`${inputCellClass} cursor-pointer pr-7 text-sm`}
                       >
                         <option value="industrial">Industrial</option>
                         <option value="residential">Residential</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2.5 text-center">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={row.availableForStock !== false}
+                        aria-busy={availabilitySavingId === row.id}
+                        disabled={availabilitySavingId === row.id}
+                        title={
+                          row.availableForStock !== false
+                            ? 'În stoc — apare la Stocuri → Add Item'
+                            : 'Indisponibil — ascuns din Add Item'
+                        }
+                        onClick={() => void patchAvailability(row.id, !(row.availableForStock !== false))}
+                        className={`relative mx-auto h-7 w-[2.75rem] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
+                          row.availableForStock !== false ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                            row.availableForStock !== false ? 'translate-x-[1.15rem]' : 'translate-x-0'
+                          }`}
+                        />
+                        <span className="sr-only">
+                          {row.availableForStock !== false ? 'Disponibil pentru stoc' : 'Indisponibil pentru stoc'}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="px-2 py-2.5 text-center">
                       <button
                         type="button"
                         onClick={() => openSpecsDrawer(row)}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                        className={btnGhost}
                       >
                         View
                       </button>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-center justify-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1">
                         <button
                           type="button"
                           onClick={() => triggerUpload(row.id)}
                           disabled={uploadingRowId === row.id}
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                          title={uploadingRowId === row.id ? 'Se încarcă…' : 'Încarcă imagine'}
+                          className={btnGhost}
                         >
-                          {uploadingRowId === row.id ? 'Uploading...' : 'Upload'}
+                          Upload
                         </button>
                         <button
                           type="button"
                           onClick={() => row.imageUrl && setPreviewImageUrl(row.imageUrl)}
                           disabled={!row.imageUrl}
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-40"
+                          title={row.imageUrl ? 'Vezi imaginea' : 'Nicio imagine'}
+                          className={btnGhost}
                         >
                           View
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2.5 text-center">
                       <button
                         type="button"
                         onClick={() =>
@@ -310,12 +389,14 @@ export default function AdminProductModels() {
                             technicalDescription: row.technicalDescription,
                             usageType: row.usageType,
                             imageUrl: row.imageUrl ?? null,
+                            availableForStock: row.availableForStock !== false,
                           })
                         }
                         disabled={savingId === row.id}
-                        className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                        title={savingId === row.id ? 'Se salvează…' : 'Salvează rândul'}
+                        className="inline-flex h-9 min-w-[4.5rem] items-center justify-center rounded-md bg-slate-900 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50"
                       >
-                        {savingId === row.id ? 'Saving...' : 'Save'}
+                        Save
                       </button>
                     </td>
                   </tr>
