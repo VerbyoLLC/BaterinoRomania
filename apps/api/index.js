@@ -3271,14 +3271,14 @@ const listWarehouseStockUnitsHandler = async (req, res) => {
 const createWarehouseStockUnitHandler = async (req, res) => {
   try {
     const body = req.body || {}
-    const productId = String(body.productId || '').trim()
+    let productId = String(body.productId || '').trim()
+    const productModelId = String(body.productModelId || '').trim()
     const entryMethod = ['qr_scan', 'manual'].includes(String(body.entryMethod || '').trim())
       ? String(body.entryMethod).trim()
       : 'manual'
     let serialNumber = String(body.serialNumber || '').trim()
     const qrRaw = body.qrRaw != null ? String(body.qrRaw) : ''
     if (!serialNumber && qrRaw) serialNumber = parseSerialFromQrPayload(qrRaw)
-    if (!productId) return res.status(400).json({ error: 'Selectează modelul (produsul).' })
     if (!serialNumber) return res.status(400).json({ error: 'Numărul de serie lipsește.' })
 
     serialNumber = normalizeWarehouseSerialNumber(serialNumber)
@@ -3288,6 +3288,25 @@ const createWarehouseStockUnitHandler = async (req, res) => {
           'SN invalid. Format: LJC (fabrică) + 16 cifre — tensiune 2, capacitate 4, lună/an 4, lot 6 (ex. LJC5131400325070001). La manual poți introduce doar cele 16 cifre după LJC.',
       })
     }
+
+    if (!productId && productModelId) {
+      const pm = await prisma.productModel.findUnique({
+        where: { id: productModelId },
+        select: { modelNumber: true },
+      })
+      if (!pm) return res.status(404).json({ error: 'Model negăsit în tabelul Modele.' })
+      const sku = String(pm.modelNumber || '').trim()
+      if (!sku) return res.status(400).json({ error: 'Modelul selectat nu are număr de model (SKU) setat.' })
+      const prod = await prisma.product.findUnique({ where: { sku }, select: { id: true } })
+      if (!prod) {
+        return res.status(400).json({
+          error: `Nu există produs în catalog cu SKU „${sku}”. În Inventar → Produse, creează un produs cu SKU identic cu numărul modelului din Modele (ex. ${sku}).`,
+        })
+      }
+      productId = prod.id
+    }
+
+    if (!productId) return res.status(400).json({ error: 'Selectează modelul din listă.' })
 
     const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } })
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
@@ -3334,6 +3353,7 @@ const listProductModelsHandler = async (req, res) => {
         technicalDescription: r.technicalDescription,
         usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
         imageUrl: r.imageUrl || null,
+        availableForStock: r.availableForStock !== false,
         sortOrder: r.sortOrder,
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
         updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
@@ -3359,6 +3379,7 @@ const updateProductModelHandler = async (req, res) => {
     const usageType = String(body.usageType ?? 'industrial').trim().toLowerCase()
     const imageUrlRaw = body.imageUrl == null ? '' : String(body.imageUrl).trim()
     const imageUrl = imageUrlRaw ? imageUrlRaw.slice(0, 2000) : null
+    const availableForStock = body.availableForStock === false ? false : true
 
     if (!name) return res.status(400).json({ error: 'Numele modelului este obligatoriu.' })
     if (!brand) return res.status(400).json({ error: 'Brand-ul este obligatoriu.' })
@@ -3371,7 +3392,7 @@ const updateProductModelHandler = async (req, res) => {
 
     const updated = await prisma.productModel.update({
       where: { id },
-      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl, availableForStock },
     })
     return res.json({
       id: updated.id,
@@ -3382,6 +3403,7 @@ const updateProductModelHandler = async (req, res) => {
       technicalDescription: updated.technicalDescription,
       usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
       imageUrl: updated.imageUrl || null,
+      availableForStock: updated.availableForStock !== false,
       sortOrder: updated.sortOrder,
       createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
       updatedAt: updated.updatedAt instanceof Date ? updated.updatedAt.toISOString() : updated.updatedAt,
@@ -3394,10 +3416,55 @@ const updateProductModelHandler = async (req, res) => {
   }
 }
 
+const patchProductModelAvailableForStockHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID model lipsă.' })
+    const body = req.body || {}
+    if (typeof body.availableForStock !== 'boolean') {
+      return res.status(400).json({ error: 'Parametrul „availableForStock” (boolean) este obligatoriu.' })
+    }
+    const updated = await prisma.productModel.update({
+      where: { id },
+      data: { availableForStock: body.availableForStock },
+    })
+    return res.json({
+      id: updated.id,
+      name: updated.name,
+      brand: updated.brand,
+      series: updated.series || '',
+      modelNumber: updated.modelNumber,
+      technicalDescription: updated.technicalDescription,
+      usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
+      imageUrl: updated.imageUrl || null,
+      availableForStock: updated.availableForStock !== false,
+      sortOrder: updated.sortOrder,
+      createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
+      updatedAt: updated.updatedAt instanceof Date ? updated.updatedAt.toISOString() : updated.updatedAt,
+    })
+  } catch (err) {
+    if (err?.code === 'P2025') return res.status(404).json({ error: 'Model negăsit.' })
+    console.error('Patch product model availability error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+}
+
 app.get('/api/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 app.get('/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 app.patch('/api/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
 app.patch('/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
+app.patch(
+  '/api/admin/product-models/:id/available-for-stock',
+  authMiddleware,
+  adminAuthMiddleware,
+  patchProductModelAvailableForStockHandler,
+)
+app.patch(
+  '/admin/product-models/:id/available-for-stock',
+  authMiddleware,
+  adminAuthMiddleware,
+  patchProductModelAvailableForStockHandler,
+)
 
 function parseDecimal(val, fallback) {
   if (val === '' || val === null || val === undefined) return fallback

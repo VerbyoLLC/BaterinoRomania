@@ -282,11 +282,14 @@ model ProductModel {
   /** industrial | residential */
   usageType            String   @default("industrial")
   imageUrl             String?  @db.Text
+  /** When true, model appears in Stocuri → Add Item model dropdown. */
+  availableForStock  Boolean  @default(true)
   sortOrder            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@index([sortOrder])
+  @@index([availableForStock])
   @@map("product_models")
 }
 
