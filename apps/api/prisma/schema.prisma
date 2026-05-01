@@ -269,24 +269,35 @@ model WarehouseStockUnit {
   @@index([warehouseReceivedAt])
 }
 
+/** Locație fizică / etapă logistică pentru rândul din Stocuri → Lista. */
+enum WarehouseSavedItemLocation {
+  depozit
+  distribuitor
+  client_final
+  service
+}
+
 /** Rânduri dedicate pentru lista salvată din Stocuri → Lista. */
 model WarehouseSavedItem {
-  id                   String              @id @default(cuid())
+  id                   String                     @id @default(cuid())
   /** Număr de item în depozit, incrementat automat (0001, 0002, ... pentru afișare). */
-  itemNumber           Int                 @unique @default(autoincrement())
-  warehouseStockUnitId String              @unique
-  warehouseStockUnit   WarehouseStockUnit  @relation(fields: [warehouseStockUnitId], references: [id], onDelete: Cascade)
+  itemNumber           Int                        @unique @default(autoincrement())
+  warehouseStockUnitId String                     @unique
+  warehouseStockUnit   WarehouseStockUnit         @relation(fields: [warehouseStockUnitId], references: [id], onDelete: Cascade)
   modelNumber          String
-  serialNumber         String              @unique
+  serialNumber         String                     @unique
   /** Formatted as MM/YYYY and derived from SN when record is created. */
-  producedOn           String              @default("")
-  warehouseIn          DateTime            @default(now())
+  producedOn           String                     @default("")
+  warehouseIn          DateTime                   @default(now())
+  /** La intrare în depozit se setează automat `depozit`; poate fi actualizat ulterior. */
+  location             WarehouseSavedItemLocation @default(depozit)
   distributor          String?
   client               String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
 
   @@index([warehouseIn])
+  @@index([location])
 }
 
 /**

@@ -3283,6 +3283,7 @@ function warehouseSavedItemToJson(row) {
     serialNumber: row.serialNumber,
     producedOn: row.producedOn || '',
     warehouseIn: row.warehouseIn instanceof Date ? row.warehouseIn.toISOString() : row.warehouseIn,
+    location: row.location || 'depozit',
     distributor: row.distributor || null,
     client: row.client || null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
@@ -3318,6 +3319,25 @@ const listWarehouseSavedItemsHandler = async (req, res) => {
   } catch (err) {
     console.error('List warehouse saved items error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcarea listei de stocuri.' })
+  }
+}
+
+/** Șterge unitatea din depozit (rând lista + stock unit). Doar rol admin (adminAuthMiddleware). */
+const deleteWarehouseSavedItemHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const saved = await prisma.warehouseSavedItem.findUnique({
+      where: { id },
+      select: { warehouseStockUnitId: true },
+    })
+    if (!saved) return res.status(404).json({ error: 'Înregistrarea nu există.' })
+    await prisma.warehouseStockUnit.delete({ where: { id: saved.warehouseStockUnitId } })
+    res.set('Cache-Control', 'no-store')
+    return res.status(204).end()
+  } catch (err) {
+    console.error('Delete warehouse saved item error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
   }
 }
 
@@ -3397,6 +3417,7 @@ const createWarehouseStockUnitHandler = async (req, res) => {
           serialNumber,
           producedOn,
           warehouseIn: stockUnit.warehouseReceivedAt,
+          location: 'depozit',
         },
       })
       return stockUnit
@@ -3419,6 +3440,8 @@ app.post('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware
 app.post('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
 app.get('/api/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
 app.get('/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
+app.delete('/api/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
+app.delete('/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 
 const listProductModelsHandler = async (req, res) => {
   try {
