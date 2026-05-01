@@ -6,10 +6,12 @@ import {
   uploadAdminFile,
   getAdminProducts,
   getAdminProduct,
+  getAdminProductModels,
   getAdminReducerePrograms,
   updateProductStatus,
   deleteProduct,
   normalizeProductReducereProgramIds,
+  type AdminProductModelRow,
   type AdminProduct,
   type CreateProductPayload,
   type ReducereProgramRow,
@@ -95,6 +97,9 @@ export default function AdminProducts() {
   const [adminReducerPrograms, setAdminReducerPrograms] = useState<ReducereProgramRow[]>([])
   const [reducereProgramsLoadError, setReducereProgramsLoadError] = useState<string | null>(null)
   const [reducereProgramIds, setReducereProgramIds] = useState<string[]>([])
+  const [productModels, setProductModels] = useState<AdminProductModelRow[]>([])
+  const [productModelsLoadError, setProductModelsLoadError] = useState<string | null>(null)
+  const [selectedProductModelId, setSelectedProductModelId] = useState('')
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
   const [seoOgImagePhoto, setSeoOgImagePhoto] = useState<{
@@ -165,6 +170,46 @@ export default function AdminProducts() {
     }
   }, [panelOpen])
 
+  useEffect(() => {
+    if (!panelOpen) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await getAdminProductModels()
+        if (!cancelled) {
+          setProductModels(Array.isArray(list) ? list : [])
+          setProductModelsLoadError(null)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setProductModels([])
+          setProductModelsLoadError(e instanceof Error ? e.message : 'Eroare la încărcarea modelelor.')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [panelOpen])
+
+  useEffect(() => {
+    const selected = productModels.find((m) => m.id === selectedProductModelId)
+    if (!selected) return
+    const neededUsage = tipProdus === 'industrial' ? 'industrial' : 'residential'
+    if (selected.usageType !== neededUsage) setSelectedProductModelId('')
+  }, [productModels, selectedProductModelId, tipProdus])
+
+  useEffect(() => {
+    if (!panelOpen || selectedProductModelId) return
+    const skuValue = String(sku || '').trim()
+    if (!skuValue) return
+    const neededUsage = tipProdus === 'industrial' ? 'industrial' : 'residential'
+    const match = productModels.find(
+      (m) => m.usageType === neededUsage && String(m.modelNumber || '').trim().toUpperCase() === skuValue.toUpperCase(),
+    )
+    if (match) setSelectedProductModelId(match.id)
+  }, [panelOpen, selectedProductModelId, sku, productModels, tipProdus])
+
   const sortedActiveReducerePrograms = useMemo(
     () =>
       [...adminReducerPrograms]
@@ -172,6 +217,15 @@ export default function AdminProducts() {
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     [adminReducerPrograms],
   )
+
+  const filteredProductModels = useMemo(() => {
+    const neededUsage = tipProdus === 'industrial' ? 'industrial' : 'residential'
+    return [...productModels]
+      .filter((m) => m.usageType === neededUsage)
+      .sort((a, b) =>
+        String(a.modelNumber || '').localeCompare(String(b.modelNumber || ''), 'ro', { sensitivity: 'base' }),
+      )
+  }, [productModels, tipProdus])
 
   const parseUnitValue = (s: string | null | undefined, _unit: string): string => {
     if (!s) return ''
@@ -193,6 +247,7 @@ export default function AdminProducts() {
   const handleEditClick = async (p: AdminProduct) => {
     setEditingProductId(p.id)
     setSaveError(null)
+    setSelectedProductModelId('')
     let row: AdminProduct = p
     try {
       row = await getAdminProduct(p.id)
@@ -355,6 +410,7 @@ export default function AdminProducts() {
     setPricePresentation('simple')
     setCatalogStockStatus('in_stock')
     setReducereProgramIds([])
+    setSelectedProductModelId('')
     setSeoTitle('')
     setSeoDescription('')
     setSeoOgImagePhoto((prev) => {
@@ -1324,6 +1380,42 @@ export default function AdminProducts() {
                     <option value="">Selectează brand</option>
                     <option value="Lithtech">Lithtech</option>
                   </select>
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="product-model" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                    Model
+                  </label>
+                  <select
+                    id="product-model"
+                    value={selectedProductModelId}
+                    onChange={(e) => {
+                      const nextId = e.target.value
+                      setSelectedProductModelId(nextId)
+                      const selected = filteredProductModels.find((m) => m.id === nextId)
+                      if (!selected) return
+                      setSku(String(selected.modelNumber || '').trim())
+                      if (!String(brand || '').trim() && String(selected.brand || '').trim()) {
+                        setBrand(String(selected.brand).trim())
+                      }
+                    }}
+                    className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white"
+                  >
+                    <option value="">Selectează model</option>
+                    {filteredProductModels.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.modelNumber}
+                        {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {productModelsLoadError && (
+                    <p className="mt-2 text-xs text-red-600 font-['Inter']">{productModelsLoadError}</p>
+                  )}
+                  {!productModelsLoadError && filteredProductModels.length === 0 && (
+                    <p className="mt-2 text-xs text-gray-500 font-['Inter']">
+                      Nu există modele pentru template-ul {tipProdus === 'industrial' ? 'industrial' : 'rezidențial'}.
+                    </p>
+                  )}
                 </div>
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere produs</h3>
                 <div className="flex flex-col gap-4">

@@ -3234,6 +3234,21 @@ function isValidWarehouseSerialNumber(serial) {
   return new RegExp(`^${WAREHOUSE_SN_FACTORY_PREFIX}\\d{${WAREHOUSE_SN_BODY_DIGITS}}$`).test(String(serial ?? ''))
 }
 
+/** 16 cifre după LJC: tensiune (2) · capacitate (4) · lună/an MMYY (4) · lot (6). Ex. 5131400325070043 → 03/2025. */
+function deriveProducedOnFromSerial(serialNumber) {
+  let digits = String(serialNumber ?? '').replace(/\D/g, '')
+  if (digits.length > WAREHOUSE_SN_BODY_DIGITS) {
+    digits = digits.slice(-WAREHOUSE_SN_BODY_DIGITS)
+  }
+  if (digits.length < WAREHOUSE_SN_BODY_DIGITS) return ''
+  const month = digits.slice(6, 8)
+  const year = digits.slice(8, 10)
+  if (!/^\d{2}$/.test(month) || !/^\d{2}$/.test(year)) return ''
+  const m = parseInt(month, 10)
+  if (m < 1 || m > 12) return ''
+  return `${month}/20${year}`
+}
+
 function warehouseStockUnitToJson(row) {
   if (!row) return row
   return {
@@ -3252,6 +3267,29 @@ function warehouseStockUnitToJson(row) {
   }
 }
 
+function warehouseSavedItemToJson(row) {
+  if (!row) return row
+  const parsedItemNumber =
+    typeof row.itemNumber === 'number'
+      ? row.itemNumber
+      : typeof row.itemNumber === 'string'
+        ? parseInt(row.itemNumber, 10)
+        : null
+  return {
+    id: row.id,
+    itemNumber: Number.isFinite(parsedItemNumber) ? parsedItemNumber : null,
+    warehouseStockUnitId: row.warehouseStockUnitId,
+    modelNumber: row.modelNumber,
+    serialNumber: row.serialNumber,
+    producedOn: row.producedOn || '',
+    warehouseIn: row.warehouseIn instanceof Date ? row.warehouseIn.toISOString() : row.warehouseIn,
+    distributor: row.distributor || null,
+    client: row.client || null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  }
+}
+
 const listWarehouseStockUnitsHandler = async (req, res) => {
   try {
     const take = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100))
@@ -3265,6 +3303,21 @@ const listWarehouseStockUnitsHandler = async (req, res) => {
   } catch (err) {
     console.error('List warehouse stock units error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+
+const listWarehouseSavedItemsHandler = async (req, res) => {
+  try {
+    const take = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '200'), 10) || 200))
+    const rows = await prisma.warehouseSavedItem.findMany({
+      orderBy: { warehouseIn: 'desc' },
+      take,
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(warehouseSavedItemToJson))
+  } catch (err) {
+    console.error('List warehouse saved items error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea listei de stocuri.' })
   }
 }
 
@@ -3289,6 +3342,17 @@ const createWarehouseStockUnitHandler = async (req, res) => {
       })
     }
 
+    const existingBySn = await prisma.warehouseStockUnit.findUnique({
+      where: { serialNumber },
+      select: { id: true },
+    })
+    if (existingBySn) {
+      return res.status(409).json({
+        error: `Acest număr de serie (${serialNumber}) este deja înregistrat în depozit.`,
+      })
+    }
+
+    let resolvedModelNumber = ''
     if (!productId && productModelId) {
       const pm = await prisma.productModel.findUnique({
         where: { id: productModelId },
@@ -3297,6 +3361,7 @@ const createWarehouseStockUnitHandler = async (req, res) => {
       if (!pm) return res.status(404).json({ error: 'Model negăsit în tabelul Modele.' })
       const sku = String(pm.modelNumber || '').trim()
       if (!sku) return res.status(400).json({ error: 'Modelul selectat nu are număr de model (SKU) setat.' })
+      resolvedModelNumber = sku
       const prod = await prisma.product.findUnique({ where: { sku }, select: { id: true } })
       if (!prod) {
         return res.status(400).json({
@@ -3308,24 +3373,40 @@ const createWarehouseStockUnitHandler = async (req, res) => {
 
     if (!productId) return res.status(400).json({ error: 'Selectează modelul din listă.' })
 
-    const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } })
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true, sku: true } })
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
+    if (!resolvedModelNumber) resolvedModelNumber = String(product.sku || '').trim()
 
     const rawQrPayload = qrRaw ? qrRaw.slice(0, 4000) : null
+    const producedOn = deriveProducedOnFromSerial(serialNumber)
 
-    const created = await prisma.warehouseStockUnit.create({
-      data: {
-        productId,
-        serialNumber,
-        entryMethod,
-        rawQrPayload,
-      },
-      include: { product: { select: { id: true, title: true, sku: true } } },
+    const created = await prisma.$transaction(async (tx) => {
+      const stockUnit = await tx.warehouseStockUnit.create({
+        data: {
+          productId,
+          serialNumber,
+          entryMethod,
+          rawQrPayload,
+        },
+        include: { product: { select: { id: true, title: true, sku: true } } },
+      })
+      await tx.warehouseSavedItem.create({
+        data: {
+          warehouseStockUnitId: stockUnit.id,
+          modelNumber: resolvedModelNumber || String(stockUnit.product?.sku || '').trim(),
+          serialNumber,
+          producedOn,
+          warehouseIn: stockUnit.warehouseReceivedAt,
+        },
+      })
+      return stockUnit
     })
     return res.status(201).json(warehouseStockUnitToJson(created))
   } catch (err) {
     if (err?.code === 'P2002') {
-      return res.status(409).json({ error: 'Acest număr de serie este deja înregistrat.' })
+      return res.status(409).json({
+        error: 'Acest număr de serie este deja înregistrat în depozit (conflict unicitate).',
+      })
     }
     console.error('Create warehouse stock unit error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la înregistrare.' })
@@ -3336,6 +3417,8 @@ app.get('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware,
 app.get('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, listWarehouseStockUnitsHandler)
 app.post('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
 app.post('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
+app.get('/api/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
+app.get('/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
 
 const listProductModelsHandler = async (req, res) => {
   try {

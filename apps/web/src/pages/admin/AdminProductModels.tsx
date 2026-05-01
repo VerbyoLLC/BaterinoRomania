@@ -205,7 +205,7 @@ export default function AdminProductModels() {
   }
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-6xl">
+    <div className="w-full max-w-none p-6 sm:p-8 lg:p-10">
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-1">Modele</h1>
       <p className="text-gray-500 text-sm font-['Inter'] mb-6">
         Product Models — modele produs cu specificații tehnice (tabel <span className="font-mono">product_models</span>

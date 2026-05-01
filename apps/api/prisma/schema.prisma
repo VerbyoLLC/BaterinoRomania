@@ -261,11 +261,32 @@ model WarehouseStockUnit {
   entryMethod           String
   /** Conținut brut decodat din QR (audit). */
   rawQrPayload          String?  @db.Text
+  savedItem             WarehouseSavedItem?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   @@index([productId])
   @@index([warehouseReceivedAt])
+}
+
+/** Rânduri dedicate pentru lista salvată din Stocuri → Lista. */
+model WarehouseSavedItem {
+  id                   String              @id @default(cuid())
+  /** Număr de item în depozit, incrementat automat (0001, 0002, ... pentru afișare). */
+  itemNumber           Int                 @unique @default(autoincrement())
+  warehouseStockUnitId String              @unique
+  warehouseStockUnit   WarehouseStockUnit  @relation(fields: [warehouseStockUnitId], references: [id], onDelete: Cascade)
+  modelNumber          String
+  serialNumber         String              @unique
+  /** Formatted as MM/YYYY and derived from SN when record is created. */
+  producedOn           String              @default("")
+  warehouseIn          DateTime            @default(now())
+  distributor          String?
+  client               String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([warehouseIn])
 }
 
 /**

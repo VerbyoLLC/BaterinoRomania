@@ -1147,6 +1147,20 @@ export type WarehouseStockUnitRow = {
   product?: { id: string; title: string; sku: string }
 }
 
+export type WarehouseSavedItemRow = {
+  id: string
+  itemNumber: number | null
+  warehouseStockUnitId: string
+  modelNumber: string
+  serialNumber: string
+  producedOn: string
+  warehouseIn: string
+  distributor?: string | null
+  client?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export async function getAdminWarehouseStockUnits(limit = 100): Promise<WarehouseStockUnitRow[]> {
   const res = await fetch(`${API_BASE}/admin/warehouse-stock-units?limit=${encodeURIComponent(String(limit))}`, {
     headers: authHeaders(),
@@ -1159,6 +1173,20 @@ export async function getAdminWarehouseStockUnits(limit = 100): Promise<Warehous
     throw new Error((json as { error?: string }).error || 'Eroare la încărcarea stocurilor.')
   }
   return Array.isArray(json) ? json : []
+}
+
+export async function getAdminWarehouseSavedItems(limit = 200): Promise<WarehouseSavedItemRow[]> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-saved-items?limit=${encodeURIComponent(String(limit))}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea listei de stocuri.')
+  }
+  return Array.isArray(json) ? (json as WarehouseSavedItemRow[]) : []
 }
 
 export async function createWarehouseStockUnit(payload: {
@@ -1185,6 +1213,12 @@ export async function createWarehouseStockUnit(payload: {
   if (!res.ok) {
     if (res.status === 401) throw new Error('Sesiune expirată.')
     if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 409) {
+      throw new Error(
+        (json as { error?: string }).error ||
+          'Acest număr de serie (SN) există deja în depozit. Folosește un alt SN sau verifică în Stocuri → Lista.',
+      )
+    }
     throw new Error((json as { error?: string }).error || 'Eroare la înregistrare.')
   }
   return json as WarehouseStockUnitRow

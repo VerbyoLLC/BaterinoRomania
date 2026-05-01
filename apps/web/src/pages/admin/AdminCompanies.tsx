@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { getAdminCompanies, getAuthToken, testApiDb, suspendAdminCompany, approveAdminCompany, updateAdminCompanyDiscount, isPublicProfileComplete, type AdminCompany } from '../../lib/api'
 
@@ -30,7 +31,9 @@ export default function AdminCompanies() {
   const [sortBy, setSortBy] = useState<keyof AdminCompany | 'user' | ''>('')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [editingDiscount, setEditingDiscount] = useState<Record<string, string>>({})
-  const actionRef = useRef<HTMLDivElement>(null)
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const actionMenuRef = useRef<HTMLDivElement>(null)
+  const [actionMenuPos, setActionMenuPos] = useState<{ top: number; left: number } | null>(null)
 
   const pendingCompanies = companies.filter((c) => !c.isApproved)
   const approvedCompanies = companies.filter((c) => c.isApproved)
@@ -88,15 +91,41 @@ export default function AdminCompanies() {
     loadCompanies()
   }, [navigate])
 
+  useLayoutEffect(() => {
+    if (!actionOpenId) {
+      setActionMenuPos(null)
+      return
+    }
+    const MENU_W = 160
+    const update = () => {
+      const btn = actionButtonRefs.current[actionOpenId]
+      if (!btn) return
+      const r = btn.getBoundingClientRect()
+      setActionMenuPos({
+        top: r.bottom + 4,
+        left: Math.min(Math.max(8, r.right - MENU_W), window.innerWidth - MENU_W - 8),
+      })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [actionOpenId])
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (actionRef.current && !actionRef.current.contains(e.target as Node)) {
-        setActionOpenId(null)
-      }
+      const t = e.target as Node
+      if (actionMenuRef.current?.contains(t)) return
+      const btn = actionOpenId ? actionButtonRefs.current[actionOpenId] : null
+      if (btn?.contains(t)) return
+      setActionOpenId(null)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [actionOpenId])
 
   const handleViewDetails = (c: AdminCompany) => {
     setDetailCompany(c)
@@ -117,6 +146,7 @@ export default function AdminCompanies() {
 
   const handleSuspend = async (c: AdminCompany) => {
     setActionOpenId(null)
+    setActionMenuPos(null)
     setSuspendingId(c.id)
     try {
       const updated = await suspendAdminCompany(c.id, !c.isSuspended)
@@ -483,29 +513,22 @@ export default function AdminCompanies() {
                             >
                               Detalii
                             </button>
-                            <div className="relative" ref={actionOpenId === c.id ? actionRef : undefined}>
+                            <div className="relative">
                               <button
                                 type="button"
+                                ref={(el) => {
+                                  actionButtonRefs.current[c.id] = el
+                                }}
                                 onClick={() => setActionOpenId(actionOpenId === c.id ? null : c.id)}
                                 className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-1"
+                                aria-expanded={actionOpenId === c.id}
+                                aria-haspopup="menu"
                               >
                                 Acțiuni
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                               </button>
-                              {actionOpenId === c.id && (
-                                <div className="absolute right-0 top-full mt-1 py-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSuspend(c)}
-                                    disabled={suspendingId === c.id}
-                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-                                  >
-                                    {c.isSuspended ? 'Unsuspend' : 'Suspendă'}
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -660,6 +683,34 @@ export default function AdminCompanies() {
           aria-hidden
         />
       )}
+
+      {actionOpenId &&
+        actionMenuPos &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={actionMenuRef}
+            className="fixed z-[200] w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+            style={{ top: actionMenuPos.top, left: actionMenuPos.left }}
+            role="menu"
+          >
+            {(() => {
+              const c = companies.find((x) => x.id === actionOpenId)
+              if (!c) return null
+              return (
+                <button
+                  type="button"
+                  onClick={() => void handleSuspend(c)}
+                  disabled={suspendingId === c.id}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {c.isSuspended ? 'Unsuspend' : 'Suspendă'}
+                </button>
+              )
+            })()}
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

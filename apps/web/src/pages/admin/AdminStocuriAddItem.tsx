@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import jsQR from 'jsqr'
 import { Camera, CameraOff, Keyboard, Loader2 } from 'lucide-react'
 import {
   WAREHOUSE_SN_BODY_DIGITS,
   WAREHOUSE_SN_FACTORY_PREFIX,
   createWarehouseStockUnit,
   getAdminProductModels,
-  getAdminWarehouseStockUnits,
   getAuthToken,
   isValidWarehouseSerialNumber,
   normalizeWarehouseSerialNumber,
   warehouseSerialToBodyDigits,
   type AdminProductModelRow,
-  type WarehouseStockUnitRow,
 } from '../../lib/api'
 
 type BarcodeDetectorLike = {
@@ -26,17 +25,43 @@ function getBarcodeDetectorCtor(): (new (opts: { formats: string[] }) => Barcode
   return C ?? null
 }
 
-function formatRoDate(iso: string) {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    return new Intl.DateTimeFormat('ro-RO', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(d)
-  } catch {
-    return iso
+/** Camera + QR decode works in most modern browsers; native BarcodeDetector is optional (Chrome/Edge). */
+function canUseBrowserCamera(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return Boolean(navigator.mediaDevices?.getUserMedia)
+}
+
+const JSQR_MAX_FRAME_EDGE = 640
+const JSQR_FRAME_SKIP = 2
+
+function decodeQrFromVideoWithJsQR(video: HTMLVideoElement, canvas: HTMLCanvasElement): string | null {
+  const vw = video.videoWidth
+  const vh = video.videoHeight
+  if (vw < 16 || vh < 16) return null
+  let cw = vw
+  let ch = vh
+  const maxEdge = Math.max(vw, vh)
+  if (maxEdge > JSQR_MAX_FRAME_EDGE) {
+    const scale = JSQR_MAX_FRAME_EDGE / maxEdge
+    cw = Math.round(vw * scale)
+    ch = Math.round(vh * scale)
   }
+  canvas.width = cw
+  canvas.height = ch
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.drawImage(video, 0, 0, cw, ch)
+  const imageData = ctx.getImageData(0, 0, cw, ch)
+  const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' })
+  const data = result?.data?.trim()
+  return data || null
+}
+
+function formatWarehouseSerialDisplay(prefix: string, serialBody: string) {
+  const digits = String(serialBody ?? '').replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
+  if (!digits) return ''
+  const groups = digits.match(/.{1,4}/g) ?? []
+  return `${prefix} - ${groups.join(' - ')}`
 }
 
 export default function AdminStocuriAddItem() {
@@ -44,9 +69,10 @@ export default function AdminStocuriAddItem() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanRafRef = useRef<number>(0)
+  const scanCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const jsQrFrameRef = useRef(0)
 
   const [productModels, setProductModels] = useState<AdminProductModelRow[]>([])
-  const [units, setUnits] = useState<WarehouseStockUnitRow[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
 
@@ -68,15 +94,14 @@ export default function AdminStocuriAddItem() {
   const [formError, setFormError] = useState<string | null>(null)
   const [formOk, setFormOk] = useState(false)
 
-  const detectorSupported = typeof window !== 'undefined' && Boolean(getBarcodeDetectorCtor())
+  const cameraSupported = typeof window !== 'undefined' && canUseBrowserCamera()
 
   const loadAll = useCallback(async () => {
     setListError(null)
     setLoading(true)
     try {
-      const [m, u] = await Promise.all([getAdminProductModels(), getAdminWarehouseStockUnits(80)])
+      const m = await getAdminProductModels()
       setProductModels(Array.isArray(m) ? m : [])
-      setUnits(u)
     } catch (e) {
       setListError(e instanceof Error ? e.message : 'Eroare la încărcare.')
     } finally {
@@ -158,9 +183,8 @@ export default function AdminStocuriAddItem() {
   }, [])
 
   const startScanner = useCallback(async () => {
-    const BarcodeDetector = getBarcodeDetectorCtor()
-    if (!BarcodeDetector) {
-      setScanError('Scanarea QR din browser nu e disponibilă aici. Introdu numărul de serie manual în secțiunea de mai jos.')
+    if (!canUseBrowserCamera()) {
+      setScanError('Camera nu e disponibilă în acest browser (lipsește getUserMedia). Folosește introducerea manuală a SN-ului.')
       return
     }
     setScanError(null)
@@ -178,20 +202,38 @@ export default function AdminStocuriAddItem() {
       video.srcObject = stream
       await video.play()
       setScanning(true)
-      const detector = new BarcodeDetector({ formats: ['qr_code'] })
+
+      const BarcodeDetector = getBarcodeDetectorCtor()
+      const detector = BarcodeDetector ? new BarcodeDetector({ formats: ['qr_code'] }) : null
+      if (!scanCanvasRef.current) scanCanvasRef.current = document.createElement('canvas')
+      const canvas = scanCanvasRef.current
+      jsQrFrameRef.current = 0
 
       const tick = async () => {
-        if (!videoRef.current || !streamRef.current) return
+        const v = videoRef.current
+        if (!v || !streamRef.current) return
         try {
-          const codes = await detector.detect(videoRef.current)
-          const first = codes.find((c) => c.rawValue && String(c.rawValue).trim())
-          if (first?.rawValue) {
-            applyDecodedQr(String(first.rawValue))
-            stopScanner()
-            return
+          if (detector) {
+            const codes = await detector.detect(v)
+            const first = codes.find((c) => c.rawValue && String(c.rawValue).trim())
+            if (first?.rawValue) {
+              applyDecodedQr(String(first.rawValue))
+              stopScanner()
+              return
+            }
+          } else {
+            jsQrFrameRef.current += 1
+            if (jsQrFrameRef.current % JSQR_FRAME_SKIP === 0) {
+              const raw = decodeQrFromVideoWithJsQR(v, canvas)
+              if (raw) {
+                applyDecodedQr(raw)
+                stopScanner()
+                return
+              }
+            }
           }
         } catch {
-          // ignore transient detect errors
+          // ignore transient decode errors
         }
         scanRafRef.current = requestAnimationFrame(() => {
           void tick()
@@ -199,7 +241,7 @@ export default function AdminStocuriAddItem() {
       }
       void tick()
     } catch {
-      setScanError('Nu am putut porni camera. Verifică permisiunile sau completează SN-ul manual mai jos.')
+      setScanError('Nu am putut porni camera. Verifică permisiunile (HTTPS sau localhost), sau completează SN-ul manual mai jos.')
       setScanning(false)
     }
   }, [applyDecodedQr, stopScanner])
@@ -237,8 +279,6 @@ export default function AdminStocuriAddItem() {
       setSerialBody('')
       setLastDecodedQrRaw(null)
       setEntryMethod('manual')
-      const u = await getAdminWarehouseStockUnits(80)
-      setUnits(u)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Eroare la înregistrare.')
     } finally {
@@ -360,7 +400,7 @@ export default function AdminStocuriAddItem() {
               aria-hidden={!scanning}
             />
             {!scanning ? (
-              detectorSupported ? (
+              cameraSupported ? (
                 <>
                   <button
                     type="button"
@@ -374,8 +414,8 @@ export default function AdminStocuriAddItem() {
                     <span className="text-sm font-semibold text-slate-800 font-['Inter']">Pornește camera</span>
                   </button>
                   <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                    Apasă pe zona de mai sus, acordă accesul la cameră și ține codul QR în cadru. Necesită Chrome sau
-                    Edge (Barcode Detector).
+                    Apasă mai sus, acordă accesul la cameră și ține codul QR în cadru. În Chrome/Edge se folosește
+                    scanarea nativă; în celelalte browsere compatibile, QR-ul e citit cu decodare software (jsQR).
                   </p>
                 </>
               ) : (
@@ -390,8 +430,8 @@ export default function AdminStocuriAddItem() {
                     <span className="text-sm font-semibold text-slate-500 font-['Inter']">Camera indisponibilă</span>
                   </div>
                   <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                    Camera pentru QR nu e disponibilă în acest browser. Folosește Chrome sau Edge, sau cutia din
-                    dreapta pentru introducerea manuală a SN-ului.
+                    Acest browser nu expune camera (getUserMedia). Folosește un browser actualizat pe HTTPS sau
+                    localhost, sau introducerea manuală a SN-ului în dreapta.
                   </p>
                 </>
               )
@@ -460,62 +500,60 @@ export default function AdminStocuriAddItem() {
         </div>
         </div>
 
-        {/* Card detalii: cod QR / SN apoi model */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-5">
+        {/* Detalii: cod QR / SN apoi model */}
+        <div className="space-y-5">
           <h2 className="text-base font-bold text-slate-900 font-['Inter'] pb-1 border-b border-gray-100">
             Detalii unitate
           </h2>
 
-          <div>
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+            <div className="mb-1.5">
               <span className="text-sm font-semibold text-slate-800 font-['Inter']" id="warehouse-sn-label">
                 Cod QR / număr serie
               </span>
-              <button
-                type="button"
-                onClick={openManualSnModal}
-                className="text-xs font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-900 font-['Inter']"
-              >
-                Modifică SN
-              </button>
             </div>
             <div
-              className="flex rounded-xl border border-gray-200 bg-slate-50 shadow-inner overflow-hidden"
+              className="w-full rounded-xl border-2 border-dashed border-slate-300 px-3 py-3"
               aria-describedby="warehouse-sn-hint"
             >
-              <span
-                className="flex items-center px-3 py-2.5 bg-slate-100/90 text-slate-600 font-mono text-sm font-semibold border-r border-gray-200 shrink-0 select-none"
-                aria-hidden
-              >
-                {WAREHOUSE_SN_FACTORY_PREFIX}
-              </span>
               <div
                 id="warehouse-sn-body"
                 role="status"
                 aria-live="polite"
                 aria-labelledby="warehouse-sn-label"
-                className="flex min-h-[42px] min-w-0 flex-1 items-center px-3 py-2.5 text-sm font-mono text-slate-800 tabular-nums"
+                className="flex min-h-[58px] w-full items-center justify-center text-center text-[2rem] leading-none font-mono font-bold text-slate-900 tabular-nums tracking-wide whitespace-nowrap overflow-x-auto"
               >
                 {serialBody.replace(/\D/g, '').length > 0 ? (
-                  serialBody.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
+                  formatWarehouseSerialDisplay(WAREHOUSE_SN_FACTORY_PREFIX, serialBody)
                 ) : (
-                  <span className="text-slate-400">— setează prin scanare sau introducere manuală —</span>
+                  <span className="text-sm font-normal tracking-normal text-slate-400">— setează prin scanare sau introducere manuală —</span>
                 )}
               </div>
+            </div>
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={openManualSnModal}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/50 font-['Inter']"
+              >
+                Modifică SN
+              </button>
             </div>
             <p id="warehouse-sn-hint" className="mt-1.5 text-xs text-gray-500 font-['Inter'] leading-relaxed">
               Aici este doar afișare: nu se tastează direct. Folosește scanarea QR sau cutia „Enter Manually the SN”,
               apoi <span className="font-medium text-slate-600">Modifică SN</span> dacă trebuie corectat. Format:{' '}
               <span className="font-medium text-slate-600">{WAREHOUSE_SN_FACTORY_PREFIX}</span> +{' '}
               <span className="font-medium text-slate-600">{WAREHOUSE_SN_BODY_DIGITS} cifre</span> (tensiune 2 ·
-              capacitate 4 · lună/an 4 · lot 6). Exemplu: <code className="text-slate-700">LJC5131400325070001</code>.
+              capacitate 4 · lună/an 4 · lot 6). Exemplu: <code className="text-slate-700">LJC5131400325070043</code>{' '}
+              (cifrele 7–10 după LJC = <span className="font-mono">0325</span> → produs în{' '}
+              <span className="font-mono">03/2025</span>).
             </p>
             <p className="mt-0.5 text-xs text-slate-400 font-mono font-['Inter']">
               {serialBody.replace(/\D/g, '').length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
             </p>
           </div>
 
-          <div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
             <label htmlFor="warehouse-product-model" className="block text-sm font-semibold text-slate-800 font-['Inter'] mb-1.5">
               Model (din Modele)
             </label>
@@ -583,37 +621,6 @@ export default function AdminStocuriAddItem() {
         </div>
       </form>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-        <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-4">Ultimele înregistrări</h2>
-        {loading ? (
-          <p className="text-sm text-gray-500 font-['Inter']">Se încarcă…</p>
-        ) : units.length === 0 ? (
-          <p className="text-sm text-gray-500 font-['Inter']">Încă nu există unități înregistrate.</p>
-        ) : (
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <table className="w-full text-sm font-['Inter'] text-left min-w-[520px]">
-              <thead>
-                <tr className="border-b border-gray-200 text-slate-500">
-                  <th className="py-2 pr-3 font-medium">SN</th>
-                  <th className="py-2 pr-3 font-medium">Model</th>
-                  <th className="py-2 pr-3 font-medium">Intrare depozit</th>
-                  <th className="py-2 font-medium">Metodă</th>
-                </tr>
-              </thead>
-              <tbody>
-                {units.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-100 text-slate-800">
-                    <td className="py-2.5 pr-3 font-mono text-xs sm:text-sm">{row.serialNumber}</td>
-                    <td className="py-2.5 pr-3">{row.product?.title ?? '—'}</td>
-                    <td className="py-2.5 pr-3 whitespace-nowrap">{formatRoDate(row.warehouseReceivedAt)}</td>
-                    <td className="py-2.5">{row.entryMethod === 'qr_scan' ? 'QR' : 'Manual'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

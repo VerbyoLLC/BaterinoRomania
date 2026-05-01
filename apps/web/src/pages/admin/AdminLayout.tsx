@@ -90,6 +90,13 @@ function IconAddItem() {
     </svg>
   )
 }
+function IconLista() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  )
+}
 function IconInventar() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -205,7 +212,7 @@ type NavGroupItem = {
 const SETARI_PATHS = ['/admin/currency', '/admin/company-data', '/admin/phone-numbers'] as const
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
-const INVENTAR_PATHS = ['/admin/products', '/admin/stocks', '/admin/product-models'] as const
+const INVENTAR_PATHS = ['/admin/products', '/admin/product-models'] as const
 const STOCURI_PATHS = ['/admin/stocuri'] as const
 
 const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
@@ -219,7 +226,6 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
     icon: <IconInventar />,
     children: [
       { to: '/admin/products', label: 'Produse', icon: <IconProducts /> },
-      { to: '/admin/stocks', label: 'Stocuri', icon: <IconStocks /> },
       { to: '/admin/product-models', label: 'Modele', icon: <IconModele /> },
     ],
   },
@@ -228,7 +234,10 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
     id: 'stocuri',
     label: 'Stocuri',
     icon: <IconStocks />,
-    children: [{ to: '/admin/stocuri/add-item', label: 'Add Item', icon: <IconAddItem /> }],
+    children: [
+      { to: '/admin/stocuri/add-item', label: 'Add Item', icon: <IconAddItem /> },
+      { to: '/admin/stocuri/lista', label: 'Lista', icon: <IconLista /> },
+    ],
   },
   {
     kind: 'group',
