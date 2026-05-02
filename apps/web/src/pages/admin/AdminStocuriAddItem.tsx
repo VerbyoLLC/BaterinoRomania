@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
-import { Camera, CameraOff, Keyboard, Loader2 } from 'lucide-react'
+import { Camera, CameraOff, Keyboard, Loader2, QrCode } from 'lucide-react'
 import {
   WAREHOUSE_SN_BODY_DIGITS,
   WAREHOUSE_SN_FACTORY_PREFIX,
@@ -64,6 +64,20 @@ function formatWarehouseSerialDisplay(prefix: string, serialBody: string) {
   return `${prefix} - ${groups.join(' - ')}`
 }
 
+function useMediaQueryMdUp() {
+  const [mdUp, setMdUp] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const onChange = () => setMdUp(mq.matches)
+    setMdUp(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return mdUp
+}
+
 export default function AdminStocuriAddItem() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -91,7 +105,9 @@ export default function AdminStocuriAddItem() {
   const [modalSnBody, setModalSnBody] = useState('')
   const [modalError, setModalError] = useState<string | null>(null)
   const modalSnInputRef = useRef<HTMLInputElement>(null)
+  const manualMobileSnInputRef = useRef<HTMLInputElement>(null)
   const [submitting, setSubmitting] = useState(false)
+  const isMdUp = useMediaQueryMdUp()
   const [formError, setFormError] = useState<string | null>(null)
   const [formOk, setFormOk] = useState(false)
 
@@ -147,9 +163,12 @@ export default function AdminStocuriAddItem() {
 
   useEffect(() => {
     if (!manualSnModalOpen) return
-    const id = window.setTimeout(() => modalSnInputRef.current?.focus(), 50)
+    const id = window.setTimeout(() => {
+      if (isMdUp) modalSnInputRef.current?.focus()
+      else manualMobileSnInputRef.current?.focus()
+    }, 50)
     return () => window.clearTimeout(id)
-  }, [manualSnModalOpen])
+  }, [manualSnModalOpen, isMdUp])
 
   useEffect(() => {
     if (!manualSnModalOpen) return
@@ -173,9 +192,6 @@ export default function AdminStocuriAddItem() {
     setFormError(null)
     setFormOk(false)
     setManualSnModalOpen(false)
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
-      setQrSaveModalOpen(true)
-    }
   }
 
   const applyDecodedQr = useCallback((raw: string) => {
@@ -279,20 +295,32 @@ export default function AdminStocuriAddItem() {
     }
   }, [scanning, applyDecodedQr, stopScanner])
 
-  const submitWarehouseItem = async () => {
+  const submitWarehouseItem = async (override?: {
+    serialDigits?: string
+    productModelId?: string
+    entryMethod?: 'manual' | 'qr_scan'
+    qrRaw?: string | null
+  }): Promise<boolean> => {
     setFormError(null)
     setFormOk(false)
-    const mid = productModelId.trim()
-    const digits = serialBody.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
+    const mid = (override?.productModelId ?? productModelId).trim()
+    const digits = (override?.serialDigits ?? serialBody.replace(/\D/g, '')).slice(0, WAREHOUSE_SN_BODY_DIGITS)
+    const em = override?.entryMethod ?? entryMethod
+    const qrRaw =
+      override && Object.prototype.hasOwnProperty.call(override, 'qrRaw')
+        ? override.qrRaw ?? null
+        : em === 'qr_scan'
+          ? lastDecodedQrRaw
+          : null
     if (!mid) {
       setFormError('Selectează modelul din listă (Modele).')
-      return
+      return false
     }
     if (digits.length !== WAREHOUSE_SN_BODY_DIGITS) {
       setFormError(
         `Introdu exact ${WAREHOUSE_SN_BODY_DIGITS} cifre după ${WAREHOUSE_SN_FACTORY_PREFIX}: tensiune (2) + capacitate (4) + lună/an (4) + lot (6).`,
       )
-      return
+      return false
     }
     const fullSerial = normalizeWarehouseSerialNumber(`${WAREHOUSE_SN_FACTORY_PREFIX}${digits}`)
     if (!isValidWarehouseSerialNumber(fullSerial)) {
@@ -304,8 +332,8 @@ export default function AdminStocuriAddItem() {
       await createWarehouseStockUnit({
         productModelId: mid,
         serialNumber: fullSerial,
-        entryMethod,
-        qrRaw: entryMethod === 'qr_scan' ? lastDecodedQrRaw : null,
+        entryMethod: em,
+        qrRaw,
       })
       setFormOk(true)
       setSerialBody('')
@@ -318,6 +346,30 @@ export default function AdminStocuriAddItem() {
       return false
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const saveManualMobileSheet = async () => {
+    setModalError(null)
+    setFormError(null)
+    const d = modalSnBody.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
+    if (d.length !== WAREHOUSE_SN_BODY_DIGITS) {
+      setModalError(`Introdu exact ${WAREHOUSE_SN_BODY_DIGITS} cifre.`)
+      return
+    }
+    if (!productModelId.trim()) {
+      setModalError('Selectează modelul din listă (Modele).')
+      return
+    }
+    const ok = await submitWarehouseItem({
+      serialDigits: d,
+      productModelId: productModelId.trim(),
+      entryMethod: 'manual',
+      qrRaw: null,
+    })
+    if (ok) {
+      setManualSnModalOpen(false)
+      setModalSnBody('')
     }
   }
 
@@ -334,7 +386,132 @@ export default function AdminStocuriAddItem() {
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-4xl">
-      {manualSnModalOpen && (
+      {manualSnModalOpen && !isMdUp && (
+        <div className="fixed inset-0 z-50 md:hidden" role="presentation">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setManualSnModalOpen(false)}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 max-h-[min(92dvh,900px)] overflow-y-auto rounded-t-3xl border border-slate-200 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl animate-slide-up-from-bottom"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manual-mobile-sheet-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-slate-300" />
+            <h2 id="manual-mobile-sheet-title" className="text-lg font-bold text-slate-900 font-['Inter']">
+              Introducere manuală
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter'] leading-relaxed">
+              Prefixul <span className="font-mono font-semibold">{WAREHOUSE_SN_FACTORY_PREFIX}</span> este fix. Introdu
+              cele {WAREHOUSE_SN_BODY_DIGITS} cifre, alege modelul, apoi salvează.
+            </p>
+            <div className="mt-5">
+              <span className="mb-1.5 block text-xs font-medium text-slate-600 font-['Inter']">Număr serie</span>
+              <label htmlFor="modal-sn-digits-mobile" className="sr-only">
+                Cifre după {WAREHOUSE_SN_FACTORY_PREFIX}
+              </label>
+              <div className="flex rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-slate-400">
+                <span
+                  className="flex items-center px-3 py-2.5 bg-slate-100 text-slate-700 font-mono text-sm font-semibold border-r border-gray-300 shrink-0"
+                  aria-hidden
+                >
+                  {WAREHOUSE_SN_FACTORY_PREFIX}
+                </span>
+                <input
+                  ref={manualMobileSnInputRef}
+                  id="modal-sn-digits-mobile"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={modalSnBody}
+                  maxLength={WAREHOUSE_SN_BODY_DIGITS}
+                  onChange={(e) => {
+                    setModalSnBody(e.target.value.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS))
+                    setModalError(null)
+                  }}
+                  placeholder="5131400325070001"
+                  className="min-w-0 flex-1 border-0 px-3 py-2.5 text-sm font-mono text-slate-900 focus:outline-none focus:ring-0"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400 font-mono font-['Inter']">
+                {modalSnBody.replace(/\D/g, '').length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
+              </p>
+            </div>
+
+            <label htmlFor="warehouse-product-model-manual-mobile" className="mt-5 block text-sm font-semibold text-slate-800 font-['Inter']">
+              Model (din Modele)
+            </label>
+            <select
+              id="warehouse-product-model-manual-mobile"
+              value={productModelId}
+              disabled={loading}
+              onChange={(e) => {
+                setProductModelId(e.target.value)
+                setFormOk(false)
+                setModalError(null)
+              }}
+              className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-['Inter'] text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+            >
+              <option value="">— Selectează —</option>
+              {sortedModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.modelNumber}
+                  {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                  {m.brand ? ` [${m.brand}]` : ''}
+                </option>
+              ))}
+            </select>
+            {!loading && productModels.length === 0 && (
+              <p className="mt-2 text-sm text-amber-800 font-['Inter']">
+                Nu există modele în Inventar → Modele.
+              </p>
+            )}
+
+            {modalError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 font-['Inter']">
+                {modalError}
+              </p>
+            )}
+            {formError && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 font-['Inter']">
+                {formError}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void saveManualMobileSheet()}
+              disabled={
+                submitting ||
+                !productModelId ||
+                modalSnBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
+              }
+              className="mt-5 inline-flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Se salvează…
+                </>
+              ) : (
+                'Salvează în depozit'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setManualSnModalOpen(false)}
+              className="mt-3 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 font-['Inter']"
+            >
+              Anulează
+            </button>
+          </div>
+        </div>
+      )}
+
+      {manualSnModalOpen && isMdUp && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
           role="presentation"
@@ -501,10 +678,12 @@ export default function AdminStocuriAddItem() {
             <div className="relative aspect-[4/3] w-full max-h-[min(55vh,420px)] sm:max-h-[min(50vh,480px)]">
               <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
               <div
-                className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-8"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 py-5 sm:p-8"
                 aria-hidden
               >
-                <div className="aspect-square w-[min(72vw,280px)] max-h-[min(52vh,280px)] max-w-full rounded-xl border-2 border-dashed border-white/95" />
+                <div className="flex aspect-square w-[min(52vw,188px)] max-h-[min(30vh,188px)] max-w-full items-center justify-center rounded-xl border-2 border-dashed border-white/90 sm:w-[min(70vw,280px)] sm:max-h-[min(50vh,280px)]">
+                  <QrCode className="h-9 w-9 shrink-0 text-white/70 sm:h-12 sm:w-12" strokeWidth={1.75} />
+                </div>
               </div>
             </div>
             <div className="flex justify-center border-t border-slate-800 bg-slate-950 px-4 py-3">
