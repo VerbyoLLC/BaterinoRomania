@@ -1147,6 +1147,13 @@ export type WarehouseStockUnitRow = {
   product?: { id: string; title: string; sku: string }
 }
 
+/** Valori API pentru coloana Locație (Stocuri → Lista). */
+export type WarehouseSavedItemLocation =
+  | 'depozit'
+  | 'distribuitor'
+  | 'client_final'
+  | 'service'
+
 export type WarehouseSavedItemRow = {
   id: string
   itemNumber: number | null
@@ -1155,6 +1162,7 @@ export type WarehouseSavedItemRow = {
   serialNumber: string
   producedOn: string
   warehouseIn: string
+  location?: WarehouseSavedItemLocation | string | null
   distributor?: string | null
   client?: string | null
   createdAt: string
@@ -1187,6 +1195,19 @@ export async function getAdminWarehouseSavedItems(limit = 200): Promise<Warehous
     throw new Error((json as { error?: string }).error || 'Eroare la încărcarea listei de stocuri.')
   }
   return Array.isArray(json) ? (json as WarehouseSavedItemRow[]) : []
+}
+
+export async function deleteAdminWarehouseSavedItem(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-saved-items/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (res.status === 204) return
+  const json = await res.json().catch(() => ({}))
+  if (res.status === 401) throw new Error('Sesiune expirată.')
+  if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot șterge înregistrări din depozit.')
+  if (res.status === 404) throw new Error((json as { error?: string }).error || 'Înregistrarea nu există.')
+  throw new Error((json as { error?: string }).error || 'Eroare la ștergere.')
 }
 
 export async function createWarehouseStockUnit(payload: {

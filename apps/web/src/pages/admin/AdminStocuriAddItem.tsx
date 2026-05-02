@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import { Camera, CameraOff, Keyboard, Loader2 } from 'lucide-react'
@@ -87,6 +87,7 @@ export default function AdminStocuriAddItem() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [manualSnModalOpen, setManualSnModalOpen] = useState(false)
+  const [qrSaveModalOpen, setQrSaveModalOpen] = useState(false)
   const [modalSnBody, setModalSnBody] = useState('')
   const [modalError, setModalError] = useState<string | null>(null)
   const modalSnInputRef = useRef<HTMLInputElement>(null)
@@ -172,12 +173,16 @@ export default function AdminStocuriAddItem() {
     setFormError(null)
     setFormOk(false)
     setManualSnModalOpen(false)
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+      setQrSaveModalOpen(true)
+    }
   }
 
   const applyDecodedQr = useCallback((raw: string) => {
     setLastDecodedQrRaw(raw)
     setSerialBody(warehouseSerialToBodyDigits(raw))
     setEntryMethod('qr_scan')
+    setQrSaveModalOpen(true)
     setFormError(null)
     setFormOk(false)
   }, [])
@@ -194,22 +199,45 @@ export default function AdminStocuriAddItem() {
         audio: false,
       })
       streamRef.current = stream
-      const video = videoRef.current
-      if (!video) {
-        stream.getTracks().forEach((t) => t.stop())
+      /** `<video>` is only mounted when `scanning` is true; flip state first, then attach in useLayoutEffect. */
+      setScanning(true)
+    } catch {
+      setScanError('Nu am putut porni camera. Verifică permisiunile (HTTPS sau localhost), sau completează SN-ul manual mai jos.')
+      setScanning(false)
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!scanning) return
+    const stream = streamRef.current
+    const video = videoRef.current
+    if (!stream || !video) return
+
+    let cancelled = false
+
+    const BarcodeDetector = getBarcodeDetectorCtor()
+    const detector = BarcodeDetector ? new BarcodeDetector({ formats: ['qr_code'] }) : null
+    if (!scanCanvasRef.current) scanCanvasRef.current = document.createElement('canvas')
+    const canvas = scanCanvasRef.current
+    jsQrFrameRef.current = 0
+
+    ;(async () => {
+      video.srcObject = stream
+      try {
+        await video.play()
+      } catch {
+        if (!cancelled) {
+          setScanError('Nu am putut reda fluxul camerei. Încearcă din nou sau folosește introducerea manuală.')
+          stopScanner()
+        }
         return
       }
-      video.srcObject = stream
-      await video.play()
-      setScanning(true)
-
-      const BarcodeDetector = getBarcodeDetectorCtor()
-      const detector = BarcodeDetector ? new BarcodeDetector({ formats: ['qr_code'] }) : null
-      if (!scanCanvasRef.current) scanCanvasRef.current = document.createElement('canvas')
-      const canvas = scanCanvasRef.current
-      jsQrFrameRef.current = 0
+      if (cancelled) return
 
       const tick = async () => {
+        if (cancelled) return
         const v = videoRef.current
         if (!v || !streamRef.current) return
         try {
@@ -240,14 +268,18 @@ export default function AdminStocuriAddItem() {
         })
       }
       void tick()
-    } catch {
-      setScanError('Nu am putut porni camera. Verifică permisiunile (HTTPS sau localhost), sau completează SN-ul manual mai jos.')
-      setScanning(false)
-    }
-  }, [applyDecodedQr, stopScanner])
+    })()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    return () => {
+      cancelled = true
+      if (scanRafRef.current) {
+        cancelAnimationFrame(scanRafRef.current)
+        scanRafRef.current = 0
+      }
+    }
+  }, [scanning, applyDecodedQr, stopScanner])
+
+  const submitWarehouseItem = async () => {
     setFormError(null)
     setFormOk(false)
     const mid = productModelId.trim()
@@ -265,7 +297,7 @@ export default function AdminStocuriAddItem() {
     const fullSerial = normalizeWarehouseSerialNumber(`${WAREHOUSE_SN_FACTORY_PREFIX}${digits}`)
     if (!isValidWarehouseSerialNumber(fullSerial)) {
       setFormError('SN invalid. Verifică că toate cele 16 caractere după LJC sunt cifre.')
-      return
+      return false
     }
     setSubmitting(true)
     try {
@@ -279,11 +311,19 @@ export default function AdminStocuriAddItem() {
       setSerialBody('')
       setLastDecodedQrRaw(null)
       setEntryMethod('manual')
+      setQrSaveModalOpen(false)
+      return true
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Eroare la înregistrare.')
+      return false
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitWarehouseItem()
   }
 
   const sortedModels = [...productModels]
@@ -370,6 +410,76 @@ export default function AdminStocuriAddItem() {
         </div>
       )}
 
+      {qrSaveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40" role="presentation" onClick={() => setQrSaveModalOpen(false)}>
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-slate-200 bg-white p-5 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-save-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300" />
+            <h2 id="qr-save-modal-title" className="text-lg font-bold text-slate-900 font-['Inter']">
+              Cod QR detectat
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter']">Număr serie</p>
+            <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center font-mono text-sm font-semibold text-slate-900">
+              {formatWarehouseSerialDisplay(WAREHOUSE_SN_FACTORY_PREFIX, serialBody) || '—'}
+            </div>
+
+            <label htmlFor="warehouse-product-model-modal" className="mt-4 block text-sm font-semibold text-slate-800 font-['Inter']">
+              Model (din Modele)
+            </label>
+            <select
+              id="warehouse-product-model-modal"
+              value={productModelId}
+              disabled={loading}
+              onChange={(e) => {
+                setProductModelId(e.target.value)
+                setFormOk(false)
+              }}
+              className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-['Inter'] text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+            >
+              <option value="">— Selectează —</option>
+              {sortedModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.modelNumber}
+                  {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                  {m.brand ? ` [${m.brand}]` : ''}
+                </option>
+              ))}
+            </select>
+
+            {formError && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
+                {formError}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void submitWarehouseItem()}
+              disabled={
+                submitting ||
+                !productModelId ||
+                serialBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
+              }
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Se salvează…
+                </>
+              ) : (
+                'Salvează'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Add Item</h1>
       <p className="text-gray-500 text-sm font-['Inter'] mb-8">
         Scanează codul QR sau folosește cutia pentru introducerea manuală a SN-ului, verifică numărul de serie, alege
@@ -383,129 +493,71 @@ export default function AdminStocuriAddItem() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6 mb-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:items-stretch">
-        {/* Scanare QR — același șablon: titlu centrat, zonă pictogramă (dashed), descriere */}
-        <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-          <h2 className="mb-4 text-center text-base font-bold text-slate-900 font-['Inter']">Scanare cod QR</h2>
-          <div className={scanning ? 'overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-inner' : ''}>
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className={
-                scanning
-                  ? 'aspect-[4/3] w-full max-h-[min(55vh,420px)] object-cover sm:aspect-video'
-                  : 'sr-only'
-              }
-              aria-hidden={!scanning}
-            />
-            {!scanning ? (
-              cameraSupported ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => void startScanner()}
-                    disabled={loading}
-                    className="group flex w-full min-h-[200px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-10 transition-colors hover:border-sky-300 hover:bg-sky-50/40 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:min-h-[220px]"
-                  >
-                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-600 text-white shadow-md transition-transform group-hover:scale-105 group-hover:bg-sky-700 group-active:scale-95">
-                      <Camera className="h-8 w-8" strokeWidth={1.5} aria-hidden />
-                    </span>
-                    <span className="text-sm font-semibold text-slate-800 font-['Inter']">Pornește camera</span>
-                  </button>
-                  <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                    Apasă mai sus, acordă accesul la cameră și ține codul QR în cadru. În Chrome/Edge se folosește
-                    scanarea nativă; în celelalte browsere compatibile, QR-ul e citit cu decodare software (jsQR).
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div
-                    className="flex min-h-[200px] w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-10 sm:min-h-[220px]"
-                    aria-disabled
-                  >
-                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-sky-400 shadow-inner">
-                      <Camera className="h-8 w-8" strokeWidth={1.5} aria-hidden />
-                    </span>
-                    <span className="text-sm font-semibold text-slate-500 font-['Inter']">Camera indisponibilă</span>
-                  </div>
-                  <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                    Acest browser nu expune camera (getUserMedia). Folosește un browser actualizat pe HTTPS sau
-                    localhost, sau introducerea manuală a SN-ului în dreapta.
-                  </p>
-                </>
-              )
-            ) : (
-              <div className="flex justify-center border-t border-slate-800 bg-slate-950 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={stopScanner}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-5 py-2.5 text-sm font-medium text-white font-['Inter'] hover:bg-slate-700"
-                >
-                  <CameraOff className="h-4 w-4" aria-hidden />
-                  Oprește camera
-                </button>
+        {scanning && (
+          <div
+            className="animate-warehouse-camera-reveal overflow-hidden rounded-2xl border border-slate-900 bg-black shadow-inner shadow-slate-900/25 ring-1 ring-white/10"
+            aria-live="polite"
+          >
+            <div className="relative aspect-[4/3] w-full max-h-[min(55vh,420px)] sm:max-h-[min(50vh,480px)]">
+              <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+              <div
+                className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-8"
+                aria-hidden
+              >
+                <div className="aspect-square w-[min(72vw,280px)] max-h-[min(52vh,280px)] max-w-full rounded-xl border-2 border-dashed border-white/95" />
               </div>
-            )}
-          </div>
-          {scanning && (
-            <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter']">
-              Ține codul QR clar în fața camerei până la citire.
-            </p>
-          )}
-          {scanError && (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
-              {scanError}
-            </p>
-          )}
-        </div>
-
-        {/* Introducere manuală SN — același șablon: titlu, pictogramă (dashed), descriere */}
-        <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-          <h2 className="mb-4 text-center text-base font-bold text-slate-900 font-['Inter']">Introducere manuală SN</h2>
-          {!scanning ? (
-            <>
+            </div>
+            <div className="flex justify-center border-t border-slate-800 bg-slate-950 px-4 py-3">
               <button
                 type="button"
-                onClick={openManualSnModal}
-                className="group flex min-h-[200px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-10 transition-colors hover:border-slate-400 hover:bg-slate-100/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 sm:min-h-[220px]"
+                onClick={stopScanner}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-5 py-2.5 text-sm font-medium text-white font-['Inter'] hover:bg-slate-700"
               >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-white shadow-md transition-transform group-hover:scale-105 group-hover:bg-slate-800 group-active:scale-95">
-                  <Keyboard className="h-8 w-8" strokeWidth={1.5} aria-hidden />
-                </span>
-                <span className="text-sm font-semibold text-slate-800 font-['Inter']">Enter Manually the SN</span>
+                <CameraOff className="h-4 w-4" aria-hidden />
+                Oprește camera
               </button>
-              <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                Deschide formularul în care prefixul{' '}
-                <span className="font-mono font-medium text-slate-700">{WAREHOUSE_SN_FACTORY_PREFIX}</span> este fix;
-                introduci doar cele {WAREHOUSE_SN_BODY_DIGITS} cifre (tensiune, capacitate, lună/an, lot).
-              </p>
-            </>
-          ) : (
-            <>
-              <div
-                className="flex min-h-[200px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-10 sm:min-h-[220px]"
-                aria-disabled
-              >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-slate-400 shadow-inner">
-                  <Keyboard className="h-8 w-8" strokeWidth={1.5} aria-hidden />
-                </span>
-                <span className="text-sm font-semibold text-slate-500 font-['Inter']">Oprește camera mai întâi</span>
-              </div>
-              <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 font-['Inter'] px-1">
-                Oprește camera pentru a folosi introducerea manuală.
-              </p>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => void startScanner()}
+            disabled={loading || !cameraSupported}
+            className="group flex min-h-[140px] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm disabled:opacity-50"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-600 text-white">
+              <Camera className="h-6 w-6" strokeWidth={1.6} aria-hidden />
+            </span>
+            <span className="text-center text-sm font-semibold text-slate-800 font-['Inter']">Scanare cod QR</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openManualSnModal}
+            disabled={scanning}
+            className="group flex min-h-[140px] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm disabled:opacity-50"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white">
+              <Keyboard className="h-6 w-6" strokeWidth={1.6} aria-hidden />
+            </span>
+            <span className="text-center text-sm font-semibold text-slate-800 font-['Inter']">Enter manually</span>
+          </button>
         </div>
 
-        {/* Detalii: cod QR / SN apoi model */}
-        <div className="space-y-5">
-          <h2 className="text-base font-bold text-slate-900 font-['Inter'] pb-1 border-b border-gray-100">
-            Detalii unitate
-          </h2>
+        {scanError && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
+            {scanError}
+          </p>
+        )}
 
+        {/* Detalii: pe mobil fără titlu / SN / model (foaie modală); pe md+ formular complet */}
+        <h2 className="hidden md:block text-base font-bold text-slate-900 font-['Inter'] pb-1 border-b border-gray-100">
+          Detalii unitate
+        </h2>
+
+        <div className="hidden md:block space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
             <div className="mb-1.5">
               <span className="text-sm font-semibold text-slate-800 font-['Inter']" id="warehouse-sn-label">
@@ -588,37 +640,37 @@ export default function AdminStocuriAddItem() {
               </p>
             )}
           </div>
-
-          {formError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
-              {formError}
-            </div>
-          )}
-          {formOk && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 font-['Inter']">
-              Unitatea a fost înregistrată. Data intrării în depozit a fost salvată automat.
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={
-              submitting ||
-              !productModelId ||
-              serialBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none min-w-[160px]"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                Se salvează…
-              </>
-            ) : (
-              'Înregistrează în depozit'
-            )}
-          </button>
         </div>
+
+        {formError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
+            {formError}
+          </div>
+        )}
+        {formOk && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 font-['Inter']">
+            Unitatea a fost înregistrată. Data intrării în depozit a fost salvată automat.
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={
+            submitting ||
+            !productModelId ||
+            serialBody.replace(/\D/g, '').length !== WAREHOUSE_SN_BODY_DIGITS
+          }
+          className="hidden md:inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none min-w-[160px]"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+              Se salvează…
+            </>
+          ) : (
+            'Înregistrează în depozit'
+          )}
+        </button>
       </form>
 
     </div>
