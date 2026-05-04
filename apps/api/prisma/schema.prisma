@@ -13,11 +13,15 @@ datasource db {
 model User {
   id                        String    @id @default(cuid())
   email                     String    @unique
+  /** Prenume / nume / telefon afișate în panoul admin (Detalii cont); opțional pentru toate rolurile. */
+  firstName                 String    @default("")
+  lastName                  String    @default("")
+  phone                     String    @default("")
   /** Null pentru conturi create doar cu Google (GIS + ID token). */
   password                  String?
   /** Subject Google (sub) din ID token; unic când e setat. */
   googleSub                 String?   @unique
-  role                      String    // "client" | "partener"
+  role                      String    // "client" | "partener" | "admin" | "sales_agent"
   /** Cod personal de recomandare (clienți B2C); unic, generat la primul acces la profil. */
   referralCode              String?   @unique
   verificationCode          String?
@@ -29,6 +33,7 @@ model User {
   partner                   Partner?
   clientProfile             ClientProfile?
   residentialOrders         ResidentialOrder[]
+  salesAgentProfile         SalesAgent? @relation("UserSalesAgent")
 }
 
 /** Profil livrare/facturare pentru conturi client (1:1 User). */
@@ -77,6 +82,8 @@ model ResidentialOrder {
   fulfillmentStatus String   @default("de_platit")
   /** Factură PDF încărcată de admin când comanda trece în „în pregătire”; URL public R2. */
   clientInvoiceUrl  String?
+  /** Proforma PDF încărcată de admin (R2). */
+  proformaUrl       String?
   createdAt         DateTime @default(now())
 
   lines             ResidentialOrderLine[]
@@ -112,6 +119,11 @@ model Partner {
   companyName           String
   cui                   String
   address               String?
+  /** Sediu social (înregistrare): strada și numărul */
+  companyStreet         String?
+  companyCity           String?
+  companyCounty         String?
+  companyPostalCode     String?
   tradeRegisterNumber   String?
   activityTypes         String   // "instalator,distribuitor,integrator,altul" (comma-separated)
   contactFirstName      String
@@ -135,10 +147,17 @@ model Partner {
   isPublic              Boolean  @default(true)
   isSuspended           Boolean  @default(false)
   isApproved            Boolean  @default(false)  // aprobat de admin
+  /** Setat când s-a trimis emailul „cerere primită / în așteptare” (un singur mesaj per cont). */
+  applicationReceivedEmailSentAt DateTime?
   partnerDiscountPercent Float?   // reducere % acordată de admin (ex: 10 = 10% off)
+  /** Agent de vânzări atribuit (SalesAgent.id). */
+  assignedSalesAgentId  String?
+  assignedSalesAgent    SalesAgent? @relation("PartnerAssignedSalesAgent", fields: [assignedSalesAgentId], references: [id], onDelete: SetNull)
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  @@index([assignedSalesAgentId])
 }
 
 model ReducereProgram {
@@ -399,10 +418,31 @@ model GuestResidentialOrder {
   /** de_platit | preluata | in_pregatire | in_curs_livrare | livrata | anulata */
   fulfillmentStatus String   @default("de_platit")
   clientInvoiceUrl  String?
+  proformaUrl       String?
   createdAt    DateTime @default(now())
 
   @@index([email])
   @@index([orderSource])
   @@index([createdAt])
   @@index([fulfillmentStatus])
+}
+
+/** Agenți de vânzări / teren — admin Setări → Agenți; opțional legat de cont User (rol sales_agent). */
+model SalesAgent {
+  id        String   @id @default(cuid())
+  lastName  String   @default("")
+  firstName String   @default("")
+  phone     String   @default("")
+  whatsapp  String   @default("")
+  email     String   @default("")
+  /** Program (ex. L–V 9–17). */
+  program   String   @default("")
+  county    String   @default("")
+  city      String   @default("")
+  sector    String   @default("")
+  userId    String?  @unique
+  user      User?    @relation("UserSalesAgent", fields: [userId], references: [id], onDelete: SetNull)
+  partners  Partner[] @relation("PartnerAssignedSalesAgent")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

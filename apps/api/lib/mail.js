@@ -6,6 +6,19 @@ const { getPasswordResetTemplate } = require('../templates/password-reset-email.
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
 
+/** Reîncarcă modulul la fiecare trimitere — evită cache-ul Node `require` (altfel rămâne textul vechi până la restart API). */
+function getPartnerApplicationReceivedTemplateRender() {
+  const resolved = require.resolve('../templates/partner-application-received-email.js')
+  delete require.cache[resolved]
+  return require(resolved).getPartnerApplicationReceivedTemplate
+}
+
+function getPartnerAccountApprovedTemplateRender() {
+  const resolved = require.resolve('../templates/partner-account-approved-email.js')
+  delete require.cache[resolved]
+  return require(resolved).getPartnerAccountApprovedTemplate
+}
+
 function envTrim(name, fallback = '') {
   const v = process.env[name]
   if (v == null || v === '') return fallback
@@ -297,6 +310,92 @@ async function sendInquiryNotification(inquiry) {
   }
 }
 
+/**
+ * Partener: după completarea formularului (activități + contact), înainte de aprobare admin.
+ * @returns {Promise<boolean>} true dacă mesajul a fost trimis (sau s-a încercat trimiterea reușită)
+ */
+async function sendPartnerApplicationReceivedEmail(email, { contactFirstName, companyName } = {}) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping partner application received email.')
+    return false
+  }
+
+  const subject = `Am primit cererea ta de parteneriat – ${SITE_NAME}`
+  const getPartnerApplicationReceivedTemplate = getPartnerApplicationReceivedTemplateRender()
+  const html = getPartnerApplicationReceivedTemplate({ contactFirstName, companyName })
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend partner application received error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Partner application received error:', err?.message)
+    return false
+  }
+}
+
+const PARTNER_LOGIN_URL = envTrim('PARTNER_LOGIN_URL') || 'https://app.baterino.com/login'
+
+/**
+ * Partener: după aprobarea contului de către echipa Baterino (prima aprobare).
+ * @returns {Promise<boolean>} true dacă trimiterea a reușit
+ */
+async function sendPartnerAccountApprovedEmail(email) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping partner account approved email.')
+    return false
+  }
+
+  const subject = `Contul tău de partener a fost aprobat – ${SITE_NAME}`
+  const getPartnerAccountApprovedTemplate = getPartnerAccountApprovedTemplateRender()
+  const html = getPartnerAccountApprovedTemplate({ loginUrl: PARTNER_LOGIN_URL })
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend partner account approved error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Partner account approved error:', err?.message)
+    return false
+  }
+}
+
 async function sendInquiryConfirmation(inquiry) {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
@@ -338,6 +437,8 @@ module.exports = {
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,
+  sendPartnerApplicationReceivedEmail,
+  sendPartnerAccountApprovedEmail,
   isMailConfigured,
   getMailProvider,
   getMailFrom,
