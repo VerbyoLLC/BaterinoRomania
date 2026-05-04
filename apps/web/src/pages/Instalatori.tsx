@@ -92,6 +92,9 @@ export default function Instalatori() {
   const { language } = useLanguage()
   const tr = getInstallatoriTranslations(language.code)
 
+  if (getAuthRole() === 'sales_agent') {
+    return <Navigate to="/sales-agent" replace />
+  }
   if (getAuthRole() === 'client') {
     return <Navigate to={INSTALATORI_ONLY ? '/client' : '/produse'} replace />
   }

@@ -1,9 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useState, useRef } from 'react'
+import { Link, useSearchParams, useNavigate, type NavigateFunction } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
 import GoogleSignupButton from '../components/GoogleSignupButton'
 import PasswordInput from '../components/PasswordInput'
-import { googleAuth, login as apiLogin, setAuthToken } from '../lib/api'
+import {
+  googleAuth,
+  getPartnerPostLoginPath,
+  login as apiLogin,
+  setAuthToken,
+  type AuthUser,
+} from '../lib/api'
 import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 function safeInternalNext(raw: string | null): string | undefined {
@@ -17,24 +23,54 @@ function safeInternalNext(raw: string | null): string | undefined {
   }
 }
 
+type PartnerGoogleOnboarding = { needsPartnerProfile: boolean; partnerSignupPath?: string }
+
+function navigateAfterLogin(
+  navigate: NavigateFunction,
+  user: AuthUser,
+  nextPath: string | undefined,
+  partnerGoogle?: PartnerGoogleOnboarding,
+) {
+  if (user.role === 'admin') {
+    const dest =
+      nextPath && nextPath.startsWith('/admin') && nextPath !== '/admin/login' ? nextPath : '/admin'
+    navigate(dest)
+    return
+  }
+  if (user.role === 'sales_agent') {
+    const dest =
+      nextPath && nextPath.startsWith('/sales-agent') ? nextPath : '/sales-agent'
+    navigate(dest)
+    return
+  }
+  if (user.role === 'partener') {
+    if (partnerGoogle?.needsPartnerProfile) {
+      navigate(partnerGoogle.partnerSignupPath ?? '/signup/parteneri/profil')
+    } else {
+      navigate('/partner')
+    }
+    return
+  }
+  if (user.role === 'client') {
+    navigate(nextPath ?? '/client')
+    return
+  }
+  navigate(nextPath ?? '/')
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
-  const tabParam = searchParams.get('tab')
-  const initialTab = INSTALATORI_ONLY ? 'partener' : (tabParam === 'partener' ? 'partener' : 'client')
-  const [tab, setTab] = useState<'client' | 'partener'>(initialTab)
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const submitRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (INSTALATORI_ONLY) setTab('partener')
-    else if (tabParam === 'partener') setTab('partener')
-    else if (tabParam === 'client') setTab('client')
-  }, [tabParam])
+  /** Rol implicit pentru conturi Google noi: site instalatori → partener, altfel client. */
+  const googleSignupRole = INSTALATORI_ONLY ? 'partener' : 'client'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,12 +80,14 @@ export default function Login() {
       const { token, user } = await apiLogin(email, password)
       setAuthToken(token)
       if (user.role === 'partener') {
-        navigate('/partner')
-      } else if (user.role === 'client') {
-        navigate(nextPath ?? '/client')
-      } else {
-        navigate(nextPath ?? '/')
+        navigate(await getPartnerPostLoginPath())
+        return
       }
+      if (user.role === 'sales_agent') {
+        navigate(nextPath && nextPath.startsWith('/sales-agent') ? nextPath : '/sales-agent')
+        return
+      }
+      navigateAfterLogin(navigate, user, nextPath)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eroare la autentificare.')
     } finally {
@@ -61,13 +99,19 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { token, user, needsPartnerProfile } = await googleAuth(idToken, tab)
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(
+        idToken,
+        googleSignupRole,
+      )
       setAuthToken(token)
-      if (user.role === 'partener') {
-        navigate(needsPartnerProfile ? '/signup/parteneri/profil' : '/partner')
-      } else {
-        navigate(nextPath ?? '/client')
-      }
+      navigateAfterLogin(
+        navigate,
+        user,
+        nextPath,
+        needsPartnerProfile
+          ? { needsPartnerProfile: true, partnerSignupPath }
+          : undefined,
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eroare la autentificare cu Google.')
     } finally {
@@ -75,10 +119,7 @@ export default function Login() {
     }
   }
 
-  const image =
-    tab === 'client'
-      ? '/images/login/login-client.jpg'
-      : '/images/login/login-partner.jpg'
+  const image = INSTALATORI_ONLY ? '/images/login/login-partner.jpg' : '/images/login/login-client.jpg'
 
   const clientLeftContent = (
     <div className="w-[384px] h-[192px] relative">
@@ -111,31 +152,12 @@ export default function Login() {
       image={image}
       supertitle="BINE AI REVENIT"
       title="CONT BATERINO"
-      leftContent={tab === 'client' ? clientLeftContent : partnerLeftContent}
+      leftContent={INSTALATORI_ONLY ? partnerLeftContent : clientLeftContent}
     >
       <h2 className="text-black text-xl sm:text-2xl font-extrabold font-['Inter'] mb-4 sm:mb-6">
-        {tab === 'client' ? 'Autentificare Cont Client' : 'Autentificare Cont Partener'}
+        Autentificare
       </h2>
 
-      {/* Tab switcher */}
-      <div className="flex gap-1 mb-6 sm:mb-8 p-1 bg-gray-100 rounded-[10px]">
-        {(['client', 'partener'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`flex-1 min-h-[40px] h-9 rounded-[8px] text-sm font-bold font-['Inter'] transition-colors capitalize ${
-              tab === t
-                ? 'bg-white text-black shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t === 'client' ? 'Client' : 'Partener'}
-          </button>
-        ))}
-      </div>
-
-      {/* Form */}
       <form className="flex flex-col gap-3 sm:gap-4" onSubmit={handleSubmit}>
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-[10px]">
@@ -207,11 +229,8 @@ export default function Login() {
       {!INSTALATORI_ONLY && (
         <p className="text-center text-sm font-['Inter'] text-gray-500 mt-4 sm:mt-6">
           Nu ai cont?{' '}
-          <Link
-            to={tab === 'client' ? '/signup/clienti' : '/signup/clienti?tab=partener'}
-            className="text-black font-semibold hover:underline"
-          >
-            {tab === 'client' ? 'Creează cont client' : 'Creează cont partener'}
+          <Link to="/signup/clienti" className="text-black font-semibold hover:underline">
+            Creează cont
           </Link>
         </p>
       )}

@@ -90,7 +90,7 @@ export default function AdminStocuriAddItem() {
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
 
-  /** Row id from `product_models` (Inventar → Modele). */
+  /** Row id from `product_models` (Magazin → Modele). */
   const [productModelId, setProductModelId] = useState('')
   /** Doar cele 16 cifre după prefixul fix LJC; scanarea QR sau introducerea manuală completează același câmp. */
   const [serialBody, setSerialBody] = useState('')
@@ -466,7 +466,7 @@ export default function AdminStocuriAddItem() {
             </select>
             {!loading && productModels.length === 0 && (
               <p className="mt-2 text-sm text-amber-800 font-['Inter']">
-                Nu există modele în Inventar → Modele.
+                Nu există modele în Magazin → Modele.
               </p>
             )}
 
@@ -809,7 +809,7 @@ export default function AdminStocuriAddItem() {
             </select>
             {!loading && productModels.length === 0 && (
               <p className="mt-2 text-sm text-amber-800 font-['Inter']">
-                Nu există rânduri în tabelul Modele. Adaugă modele din Inventar → Modele.
+                Nu există rânduri în tabelul Modele. Adaugă modele din Magazin → Modele.
               </p>
             )}
             {!loading && productModels.length > 0 && (

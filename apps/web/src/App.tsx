@@ -37,6 +37,9 @@ import AdminMessages from './pages/admin/AdminMessages'
 import AdminPhoneNumbers from './pages/admin/AdminPhoneNumbers'
 import AdminCurrency from './pages/admin/AdminCurrency'
 import AdminCompanyData from './pages/admin/AdminCompanyData'
+import AdminAgents from './pages/admin/AdminAgents'
+import AdminChangePassword from './pages/admin/AdminChangePassword'
+import AdminAccountDetails from './pages/admin/AdminAccountDetails'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
@@ -58,6 +61,8 @@ import PartnerProducts from './pages/partner/PartnerProducts'
 import PartnerOrders from './pages/partner/PartnerOrders'
 import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
+import SalesAgentLayout from './pages/sales-agent/SalesAgentLayout'
+import SalesAgentDashboard from './pages/sales-agent/SalesAgentDashboard'
 import { INSTALATORI_ONLY } from './lib/siteMode'
 import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
 import { CartProvider } from './contexts/CartContext'
@@ -94,9 +99,12 @@ export default function App() {
           <Route path="stocuri/lista" element={<AdminStocuriLista />} />
           <Route path="orders"    element={<AdminOrders />} />
           <Route path="discounts" element={<AdminDiscounts />} />
+          <Route path="change-password" element={<AdminChangePassword />} />
+          <Route path="account" element={<AdminAccountDetails />} />
           <Route path="currency" element={<AdminCurrency />} />
           <Route path="company-data" element={<AdminCompanyData />} />
           <Route path="phone-numbers" element={<AdminPhoneNumbers />} />
+          <Route path="agents" element={<AdminAgents />} />
         </Route>
 
         {/* ── Auth: in instalatori-only mode, no register — redirect to login ── */}
@@ -118,6 +126,10 @@ export default function App() {
           <Route path="comenzi" element={<PartnerOrders />} />
           <Route path="servicii" element={<PartnerService />} />
           <Route path="suport" element={<PartnerSupport />} />
+        </Route>
+
+        <Route path="/sales-agent" element={<LanguageProvider><SalesAgentLayout /></LanguageProvider>}>
+          <Route index element={<SalesAgentDashboard />} />
         </Route>
 
         {/* ── QR code links ── */}

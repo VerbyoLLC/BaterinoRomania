@@ -454,8 +454,13 @@ export async function login(email: string, password: string) {
 
 export async function googleAuth(
   idToken: string,
-  role: 'client' | 'partener',
-): Promise<{ token: string; user: AuthUser; needsPartnerProfile?: boolean }> {
+  role: 'client' | 'partener' = 'client',
+): Promise<{
+  token: string
+  user: AuthUser
+  needsPartnerProfile?: boolean
+  partnerSignupPath?: string
+}> {
   const res = await fetch(`${API_BASE}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -463,7 +468,12 @@ export async function googleAuth(
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Eroare la autentificare cu Google.')
-  return data as { token: string; user: AuthUser; needsPartnerProfile?: boolean }
+  return data as {
+    token: string
+    user: AuthUser
+    needsPartnerProfile?: boolean
+    partnerSignupPath?: string
+  }
 }
 
 export type ClientProfilePayload = {
@@ -545,6 +555,51 @@ export async function postClientChangePassword(currentPassword: string, newPassw
   }
 }
 
+export async function postAdminChangePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/change-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error((json as { error?: string }).error || 'Parolă incorectă.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+}
+
+export type AdminAccountDto = {
+  email: string
+  role: string
+  firstName: string
+  lastName: string
+  phone: string
+}
+
+export async function getAdminAccount(): Promise<AdminAccountDto> {
+  const res = await fetch(`${API_BASE}/admin/account`, {
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((json as { error?: string }).error || 'Eroare la încărcarea contului.')
+  return json as AdminAccountDto
+}
+
+export async function patchAdminAccount(payload: {
+  firstName: string
+  lastName: string
+  phone: string
+}): Promise<AdminAccountDto> {
+  const res = await fetch(`${API_BASE}/admin/account`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((json as { error?: string }).error || 'Eroare la salvare.')
+  return json as AdminAccountDto
+}
+
 export async function postClientChangeEmail(
   newEmail: string,
   currentPassword: string,
@@ -613,6 +668,8 @@ export type ClientOrderRow = {
   orderTotalInclVat?: string | null
   /** Factură PDF încărcată de admin (comenzi în „în pregătire” și ulterior). */
   clientHasInvoice?: boolean
+  /** Proforma PDF încărcată de admin (opțional). */
+  proformaUrl?: string | null
 }
 
 export async function getClientOrders(): Promise<ClientOrderRow[]> {
@@ -694,13 +751,13 @@ export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
 }
 
-export function getAuthRole(): 'admin' | 'client' | 'partener' | null {
+export function getAuthRole(): 'admin' | 'client' | 'partener' | 'sales_agent' | null {
   const token = getAuthToken()
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1])) as { role?: string }
     const r = payload.role
-    if (r === 'admin' || r === 'client' || r === 'partener') return r
+    if (r === 'admin' || r === 'client' || r === 'partener' || r === 'sales_agent') return r
     return null
   } catch {
     return null
@@ -742,6 +799,11 @@ export type PartnerProfile = {
   companyName?: string
   cui?: string
   address?: string
+  /** Sediu social — adresă înregistrare */
+  companyStreet?: string
+  companyCity?: string
+  companyCounty?: string
+  companyPostalCode?: string
   tradeRegisterNumber?: string
   activityTypes?: string[]
   contactFirstName?: string
@@ -775,13 +837,59 @@ export async function savePartnerProfile(data: PartnerProfile) {
   return json
 }
 
-export async function getPartnerProfile() {
+/** Agent de vânzări atribuit partenerului — inclus în GET /partner/profile când există. */
+export type PartnerAssignedSalesAgent = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  whatsapp: string
+}
+
+/** GET /partner/profile — profil partener + flag-uri și agent atribuit. */
+export type PartnerProfileGetResponse = PartnerProfile & {
+  id?: string
+  userId?: string
+  isSuspended?: boolean
+  assignedSalesAgentId?: string | null
+  assignedSalesAgent?: PartnerAssignedSalesAgent | null
+  partnerDiscountPercent?: number | null
+}
+
+export async function getPartnerProfile(): Promise<PartnerProfileGetResponse> {
   const res = await fetch(`${API_BASE}/partner/profile`, {
     headers: authHeaders(),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la citirea profilului.')
-  return json
+  return json as PartnerProfileGetResponse
+}
+
+/** După login cu parolă: unde merge un partener (onboarding vs dashboard). Necesită token deja setat. */
+export async function getPartnerPostLoginPath(): Promise<string> {
+  try {
+    const p = (await getPartnerProfile()) as {
+      companyName?: string | null
+      cui?: string | null
+      activityTypes?: string | null
+      contactFirstName?: string | null
+      phone?: string | null
+    }
+    if (!String(p.companyName || '').trim() || !String(p.cui || '').trim()) {
+      return '/signup/parteneri/profil'
+    }
+    if (
+      !String(p.activityTypes || '').trim() ||
+      !String(p.contactFirstName || '').trim() ||
+      !String(p.phone || '').trim()
+    ) {
+      return '/signup/parteneri/profil-public'
+    }
+    return '/partner'
+  } catch {
+    return '/signup/parteneri/profil'
+  }
 }
 
 export async function deletePartnerAccount() {
@@ -812,6 +920,10 @@ export type AdminCompany = {
   companyName: string
   cui: string
   address: string | null
+  companyStreet: string | null
+  companyCity: string | null
+  companyCounty: string | null
+  companyPostalCode: string | null
   tradeRegisterNumber: string | null
   activityTypes: string
   contactFirstName: string
@@ -834,14 +946,25 @@ export type AdminCompany = {
   isSuspended: boolean
   isApproved: boolean
   partnerDiscountPercent: number | null
+  /** SalesAgent.id — agent de vânzări atribuit la aprobare. */
+  assignedSalesAgentId?: string | null
   createdAt: string
   user: { email: string }
 }
 
-export async function approveAdminCompany(id: string): Promise<AdminCompany> {
-  const res = await fetch(`${API_BASE}/admin/companies/${id}/approve`, {
+export type ApproveAdminCompanyPayload = {
+  partnerDiscountPercent?: number | null
+  assignedSalesAgentId?: string | null
+}
+
+export async function approveAdminCompany(
+  id: string,
+  payload?: ApproveAdminCompanyPayload,
+): Promise<AdminCompany> {
+  const res = await fetch(`${API_BASE}/admin/companies/${encodeURIComponent(id)}/approve`, {
     method: 'PATCH',
     headers: authHeaders(),
+    body: JSON.stringify(payload ?? {}),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la aprobare.')
@@ -880,6 +1003,16 @@ export async function suspendAdminCompany(id: string, suspended: boolean): Promi
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
   return json
+}
+
+/** Șterge definitiv partenerul aprobat și contul utilizator din baza de date. */
+export async function deleteApprovedAdminCompany(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/companies/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la ștergere.')
 }
 
 /** Test conexiune API + Prisma (fără auth). Pentru diagnostic. */
@@ -1448,6 +1581,8 @@ export type AdminGuestResidentialOrderRow = {
   lineCount?: number
   orderTotalInclVat?: string | null
   clientInvoiceUrl?: string | null
+  /** Proforma PDF încărcată de admin (R2). */
+  proformaUrl?: string | null
 }
 
 export async function getAdminGuestResidentialOrders(): Promise<AdminGuestResidentialOrderRow[]> {
@@ -1474,13 +1609,15 @@ export async function patchAdminOrderFulfillmentStatus(
   orderId: string,
   fulfillmentStatus: OrderFulfillmentStatus | string,
   clientInvoice?: File | null,
-): Promise<{ clientInvoiceUrl?: string | null }> {
+  proforma?: File | null,
+): Promise<{ clientInvoiceUrl?: string | null; proformaUrl?: string | null }> {
   const token = getAuthToken()
   let res: Response
-  if (clientInvoice) {
+  if (clientInvoice || proforma) {
     const fd = new FormData()
     fd.append('fulfillmentStatus', fulfillmentStatus)
-    fd.append('clientInvoice', clientInvoice)
+    if (clientInvoice) fd.append('clientInvoice', clientInvoice)
+    if (proforma) fd.append('proforma', proforma)
     const h: Record<string, string> = {}
     if (token) h['Authorization'] = `Bearer ${token}`
     res = await fetch(`${API_BASE}/admin/orders/${encodeURIComponent(orderId)}`, {
@@ -1498,9 +1635,10 @@ export async function patchAdminOrderFulfillmentStatus(
   const json = (await res.json().catch(() => ({}))) as {
     error?: string
     clientInvoiceUrl?: string | null
+    proformaUrl?: string | null
   }
   if (!res.ok) throw new Error(json.error || 'Eroare la actualizarea statusului.')
-  return { clientInvoiceUrl: json.clientInvoiceUrl }
+  return { clientInvoiceUrl: json.clientInvoiceUrl, proformaUrl: json.proformaUrl }
 }
 
 export async function getAdminInquiries(): Promise<AdminInquiry[]> {
@@ -1568,6 +1706,132 @@ export async function getAdminClients(): Promise<AdminClientRow[]> {
   return Array.isArray(json) ? json : []
 }
 
+export type AdminSalesAgent = {
+  id: string
+  lastName: string
+  firstName: string
+  phone: string
+  whatsapp: string
+  email: string
+  program: string
+  county: string
+  city: string
+  sector: string
+  userId?: string | null
+  /** Număr parteneri cu assignedSalesAgentId = acest agent. */
+  partnerCount?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminAgentPartnerCompany = {
+  id: string
+  companyName: string
+  companyCounty: string | null
+  companyCity: string | null
+  cui: string
+  /** Email cont utilizator (companie). */
+  companyEmail: string
+  /** Comenzi rezidențiale plasate cu acest cont. */
+  orderCount: number
+}
+
+export type SalesAgentMeResponse = {
+  user: {
+    id: string
+    email: string
+    role: string
+    firstName: string
+    lastName: string
+    phone: string
+  }
+  agent: AdminSalesAgent | null
+}
+
+export async function getSalesAgentMe(): Promise<SalesAgentMeResponse> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/sales-agent/me`, { headers: authHeaders() })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || `Eroare la încărcarea profilului (${res.status})`)
+  }
+  return json as SalesAgentMeResponse
+}
+
+export async function getAdminAgents(): Promise<AdminSalesAgent[]> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents`, { headers: authHeaders() })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error(json.error || `Eroare la încărcarea agenților (${res.status})`)
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function getAdminAgentPartners(agentId: string): Promise<AdminAgentPartnerCompany[]> {
+  const id = String(agentId || '').trim()
+  if (!id) throw new Error('ID agent lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents/${encodeURIComponent(id)}/partners`, {
+      headers: authHeaders(),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la încărcarea partenerilor (${res.status})`)
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export type CreateAdminAgentPayload = {
+  lastName: string
+  firstName: string
+  phone: string
+  whatsapp: string
+  email: string
+  program: string
+  county: string
+  city: string
+  sector: string
+}
+
+export async function createAdminAgent(payload: CreateAdminAgentPayload): Promise<AdminSalesAgent> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la crearea agentului (${res.status})`)
+  }
+  return json as AdminSalesAgent
+}
+
 /** Șterge un cont client din admin (testare). */
 export async function deleteAdminClient(userId: string): Promise<void> {
   const id = String(userId || '').trim()
@@ -1587,6 +1851,26 @@ export async function deleteAdminClient(userId: string): Promise<void> {
     if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot șterge clienți.')
     throw new Error(json.error || `Eroare la ștergere (${res.status})`)
   }
+}
+
+export async function getAdminCompany(id: string): Promise<AdminCompany> {
+  const pid = String(id || '').trim()
+  if (!pid) throw new Error('ID companie lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/companies/${encodeURIComponent(pid)}`, {
+      headers: authHeaders(),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la încărcarea companiei (${res.status})`)
+  }
+  return json as AdminCompany
 }
 
 export async function getAdminCompanies(): Promise<AdminCompany[]> {

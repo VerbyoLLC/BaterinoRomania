@@ -87,7 +87,7 @@ export default function Header() {
   const headerRef = useRef<HTMLElement>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { itemCount } = useCart()
-  const [authRole, setAuthRole] = useState<'admin' | 'client' | 'partener' | null>(() =>
+  const [authRole, setAuthRole] = useState<'admin' | 'client' | 'partener' | 'sales_agent' | null>(() =>
     typeof window !== 'undefined' ? getAuthRole() : null,
   )
   const [authEmail, setAuthEmail] = useState<string | null>(() =>

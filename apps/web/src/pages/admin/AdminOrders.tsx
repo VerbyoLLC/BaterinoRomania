@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   getAdminGuestResidentialOrders,
   patchAdminOrderFulfillmentStatus,
@@ -48,17 +48,63 @@ function hasInvoiceUrl(o: AdminGuestResidentialOrderRow): boolean {
   return Boolean(o.clientInvoiceUrl && String(o.clientInvoiceUrl).trim())
 }
 
+function hasProformaUrl(o: AdminGuestResidentialOrderRow): boolean {
+  return Boolean(o.proformaUrl && String(o.proformaUrl).trim())
+}
+
+function normalizeStatus(o: AdminGuestResidentialOrderRow): string {
+  const stRaw = String(o.fulfillmentStatus || 'de_platit')
+  return FULFILLMENT_OPTIONS.some((x) => x.value === stRaw) ? stRaw : 'de_platit'
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<AdminGuestResidentialOrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [patchingId, setPatchingId] = useState<string | null>(null)
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null)
   const [invoiceModal, setInvoiceModal] = useState<{
     order: AdminGuestResidentialOrderRow
     previousStatus: string
   } | null>(null)
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false)
+  const [docUploading, setDocUploading] = useState<'proforma' | 'invoice' | null>(null)
+
+  const detailOrder = detailOrderId ? orders.find((r) => r.id === detailOrderId) ?? null : null
+
+  const handleFulfillmentChange = useCallback(
+    async (o: AdminGuestResidentialOrderRow, next: string) => {
+      const prev = normalizeStatus(o)
+      if (next === 'in_pregatire' && prev !== 'in_pregatire' && !hasInvoiceUrl(o)) {
+        setInvoiceModal({ order: o, previousStatus: prev })
+        return
+      }
+      setPatchingId(o.id)
+      setOrders((rows) => rows.map((r) => (r.id === o.id ? { ...r, fulfillmentStatus: next } : r)))
+      try {
+        const out = await patchAdminOrderFulfillmentStatus(o.id, next)
+        setOrders((rows) =>
+          rows.map((r) =>
+            r.id === o.id
+              ? {
+                  ...r,
+                  fulfillmentStatus: next,
+                  ...(out.clientInvoiceUrl !== undefined ? { clientInvoiceUrl: out.clientInvoiceUrl } : {}),
+                  ...(out.proformaUrl !== undefined ? { proformaUrl: out.proformaUrl } : {}),
+                }
+              : r,
+          ),
+        )
+      } catch (err) {
+        setOrders((rows) => rows.map((r) => (r.id === o.id ? { ...r, fulfillmentStatus: prev } : r)))
+        window.alert(err instanceof Error ? err.message : 'Nu s-a putut salva statusul.')
+      } finally {
+        setPatchingId(null)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -91,7 +137,7 @@ export default function AdminOrders() {
     }
     setInvoiceSubmitting(true)
     try {
-      const { clientInvoiceUrl } = await patchAdminOrderFulfillmentStatus(
+      const out = await patchAdminOrderFulfillmentStatus(
         invoiceModal.order.id,
         'in_pregatire',
         invoiceFile,
@@ -102,7 +148,8 @@ export default function AdminOrders() {
             ? {
                 ...r,
                 fulfillmentStatus: 'in_pregatire',
-                clientInvoiceUrl: clientInvoiceUrl ?? r.clientInvoiceUrl ?? null,
+                clientInvoiceUrl: out.clientInvoiceUrl ?? r.clientInvoiceUrl ?? null,
+                proformaUrl: out.proformaUrl ?? r.proformaUrl ?? null,
               }
             : r,
         ),
@@ -139,6 +186,328 @@ export default function AdminOrders() {
 
   return (
     <div className="flex flex-col h-full min-h-0 p-4 sm:p-6 lg:p-8">
+      {detailOrder ? (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={() => setDetailOrderId(null)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-labelledby="order-detail-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <h2 id="order-detail-title" className="text-lg font-bold text-slate-900 font-['Inter'] shrink-0">
+                Detalii comandă
+              </h2>
+              <div className="flex flex-wrap items-center justify-end gap-3 min-w-0 sm:ml-auto">
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="detail-fulfillment"
+                    className="text-xs font-semibold text-slate-600 font-['Inter'] whitespace-nowrap"
+                  >
+                    Status comandă
+                  </label>
+                  <select
+                    id="detail-fulfillment"
+                    className="min-w-[11rem] max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
+                    value={normalizeStatus(detailOrder)}
+                    disabled={patchingId === detailOrder.id}
+                    onChange={(e) => void handleFulfillmentChange(detailOrder, e.target.value)}
+                  >
+                    {FULFILLMENT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 font-['Inter'] shrink-0"
+                  onClick={() => setDetailOrderId(null)}
+                >
+                  Închide
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm font-['Inter']">
+              {/* 1. Număr comandă, dată, sursă */}
+              <section
+                className="rounded-xl bg-[#f7f7f7] p-4 space-y-3"
+                aria-label="Identificare comandă"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Număr comandă</p>
+                  <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900">{detailOrder.orderNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Data</p>
+                  <p className="mt-0.5 text-slate-900">{formatDateTime(detailOrder.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sursă</p>
+                  <p className="mt-1">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${orderSourceLabel(detailOrder.orderSource).className}`}
+                    >
+                      {orderSourceLabel(detailOrder.orderSource).label}
+                    </span>
+                  </p>
+                </div>
+              </section>
+
+              {/* 2. Client */}
+              <section className="rounded-xl bg-[#f7f7f7] p-4 space-y-3" aria-label="Date client">
+                <p className="text-sm font-semibold text-slate-800 pb-1">Client</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nume</p>
+                  <p className="mt-0.5 text-slate-900">
+                    {`${detailOrder.lastName} ${detailOrder.firstName}`.trim() || '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Telefon</p>
+                  <p className="mt-0.5 text-slate-900">{formatPhoneDigits(detailOrder.phone)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</p>
+                  <p className="mt-0.5 text-slate-900 break-all">{detailOrder.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adresă facturare</p>
+                  <p className="mt-0.5 text-slate-800 whitespace-pre-wrap">
+                    {[
+                      detailOrder.billAddress,
+                      [detailOrder.billPostal, detailOrder.billCity].filter(Boolean).join(' '),
+                      detailOrder.billCounty,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adresă livrare</p>
+                  <p className="mt-0.5 text-slate-800 whitespace-pre-wrap">
+                    {detailOrder.deliveryDifferent
+                      ? [
+                          detailOrder.delAddress,
+                          [detailOrder.delPostal, detailOrder.delCity].filter(Boolean).join(' '),
+                          detailOrder.delCounty,
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || '—'
+                      : 'La fel ca adresa de facturare'}
+                  </p>
+                </div>
+              </section>
+
+              {/* Facturi: proforma + factură */}
+              <section className="rounded-xl bg-[#f7f7f7] p-4 space-y-4" aria-label="Facturi">
+                <p className="text-sm font-semibold text-slate-800">Facturi</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proforma</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    {hasProformaUrl(detailOrder) ? (
+                      <span className="text-emerald-700 font-semibold text-sm">Încărcată ✓</span>
+                    ) : (
+                      <span className="text-slate-400 text-sm">—</span>
+                    )}
+                    {detailOrder.proformaUrl ? (
+                      <a
+                        href={detailOrder.proformaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-sky-700 hover:underline"
+                      >
+                        Deschide PDF
+                      </a>
+                    ) : null}
+                    <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
+                      {docUploading === 'proforma' ? 'Se încarcă…' : 'Încarcă PDF'}
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        className="sr-only"
+                        disabled={docUploading !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0]
+                          e.target.value = ''
+                          if (!f || !detailOrder) return
+                          setDocUploading('proforma')
+                          void (async () => {
+                            try {
+                              const out = await patchAdminOrderFulfillmentStatus(
+                                detailOrder.id,
+                                normalizeStatus(detailOrder),
+                                undefined,
+                                f,
+                              )
+                              setOrders((rows) =>
+                                rows.map((r) =>
+                                  r.id === detailOrder.id
+                                    ? {
+                                        ...r,
+                                        proformaUrl: out.proformaUrl ?? r.proformaUrl ?? null,
+                                        clientInvoiceUrl: out.clientInvoiceUrl ?? r.clientInvoiceUrl ?? null,
+                                      }
+                                    : r,
+                                ),
+                              )
+                            } catch (err) {
+                              window.alert(err instanceof Error ? err.message : 'Încărcarea a eșuat.')
+                            } finally {
+                              setDocUploading(null)
+                            }
+                          })()
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Factură</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    {hasInvoiceUrl(detailOrder) ? (
+                      <span className="text-emerald-700 font-semibold text-sm">Încărcată ✓</span>
+                    ) : (
+                      <span className="text-slate-400 text-sm">—</span>
+                    )}
+                    {detailOrder.clientInvoiceUrl ? (
+                      <a
+                        href={detailOrder.clientInvoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-sky-700 hover:underline"
+                      >
+                        Deschide PDF
+                      </a>
+                    ) : null}
+                    {!hasInvoiceUrl(detailOrder) && normalizeStatus(detailOrder) === 'in_pregatire' ? (
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-amber-800 underline-offset-2 hover:underline"
+                        onClick={() =>
+                          setInvoiceModal({
+                            order: detailOrder,
+                            previousStatus: normalizeStatus(detailOrder),
+                          })
+                        }
+                      >
+                        Încarcă (pas obligatoriu)
+                      </button>
+                    ) : null}
+                    <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
+                      {docUploading === 'invoice' ? 'Se încarcă…' : 'Încarcă / înlocuiește PDF'}
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        className="sr-only"
+                        disabled={docUploading !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0]
+                          e.target.value = ''
+                          if (!f || !detailOrder) return
+                          setDocUploading('invoice')
+                          void (async () => {
+                            try {
+                              const out = await patchAdminOrderFulfillmentStatus(
+                                detailOrder.id,
+                                normalizeStatus(detailOrder),
+                                f,
+                              )
+                              setOrders((rows) =>
+                                rows.map((r) =>
+                                  r.id === detailOrder.id
+                                    ? {
+                                        ...r,
+                                        clientInvoiceUrl: out.clientInvoiceUrl ?? r.clientInvoiceUrl ?? null,
+                                        proformaUrl: out.proformaUrl ?? r.proformaUrl ?? null,
+                                      }
+                                    : r,
+                                ),
+                              )
+                            } catch (err) {
+                              window.alert(err instanceof Error ? err.message : 'Încărcarea a eșuat.')
+                            } finally {
+                              setDocUploading(null)
+                            }
+                          })()
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              {/* 3. Detalii comandă (linii, total) */}
+              <section
+                className="rounded-xl bg-[#f7f7f7] p-4 space-y-4"
+                aria-label="Detalii comandă"
+              >
+                <p className="text-sm font-semibold text-slate-800">Detalii comandă</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Linii comandă</p>
+                  {detailOrder.lines && detailOrder.lines.length > 0 ? (
+                    <div className="overflow-x-auto rounded-lg border border-slate-200/80 bg-white">
+                      <table className="w-full text-left text-xs font-['Inter']">
+                        <thead className="bg-white border-b border-slate-200">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold text-slate-700">Produs</th>
+                            <th className="px-3 py-2 font-semibold text-slate-700 text-right">Cant.</th>
+                            <th className="px-3 py-2 font-semibold text-slate-700 text-right">Preț u. cu TVA</th>
+                            <th className="px-3 py-2 font-semibold text-slate-700 text-right">Total cu TVA</th>
+                            <th className="px-3 py-2 font-semibold text-slate-700 text-right">TVA %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {detailOrder.lines.map((L) => (
+                            <tr key={L.id}>
+                              <td className="px-3 py-2 text-slate-900">
+                                <span className="line-clamp-3">{L.productTitle}</span>
+                                {L.productSlug ? (
+                                  <span className="block text-[11px] text-slate-500 font-mono mt-0.5">{L.productSlug}</span>
+                                ) : null}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums">{L.quantity}</td>
+                              <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
+                                {formatMoney(L.unitPriceInclVat, detailOrder.currency)}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">
+                                {formatMoney(L.lineTotalInclVat, detailOrder.currency)}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums text-slate-600 whitespace-nowrap">
+                                {L.vatPercent != null ? `${L.vatPercent}%` : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium text-slate-900">{detailOrder.productTitle}</span>
+                      {detailOrder.productSlug ? (
+                        <span className="block text-xs text-slate-500 font-mono mt-0.5">{detailOrder.productSlug}</span>
+                      ) : null}
+                    </p>
+                  )}
+                  <p className="mt-3 text-right text-sm font-['Inter']">
+                    <span className="text-slate-500">Total comandă cu TVA: </span>
+                    <span className="font-semibold text-slate-900">
+                      {formatMoney(detailOrder.orderTotalInclVat ?? detailOrder.lineTotalInclVat, detailOrder.currency)}
+                    </span>
+                  </p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {invoiceModal ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
@@ -206,7 +575,7 @@ export default function AdminOrders() {
           <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">Nu există comenzi încă.</div>
         ) : (
           <div className="overflow-auto flex-1">
-            <table className="min-w-[1320px] w-full text-left text-sm font-['Inter']">
+            <table className="min-w-[960px] w-full text-left text-sm font-['Inter']">
               <thead className="sticky top-0 z-10 bg-slate-100 border-b border-gray-200">
                 <tr>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Data</th>
@@ -214,24 +583,22 @@ export default function AdminOrders() {
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap min-w-[11rem]">
                     Status comandă
                   </th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Factură</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Sursă</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Client</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Email</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Telefon</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 min-w-[200px]">Produs</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">Cant.</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">Preț u. cu TVA</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">Total cu TVA</th>
-                  <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">TVA %</th>
+                  <th className="px-3 py-3 font-semibold text-slate-700 min-w-[180px]">Produs</th>
+                  <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">
+                    Total cu TVA
+                  </th>
+                  <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap text-center">Detalii</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {orders.map((o) => {
                   const src = orderSourceLabel(o.orderSource)
                   const name = `${o.lastName} ${o.firstName}`.trim() || '—'
-                  const stRaw = String(o.fulfillmentStatus || 'de_platit')
-                  const st = FULFILLMENT_OPTIONS.some((x) => x.value === stRaw) ? stRaw : 'de_platit'
+                  const st = normalizeStatus(o)
+                  const totalIncl = o.orderTotalInclVat ?? o.lineTotalInclVat
                   return (
                     <tr key={o.id} className="hover:bg-slate-50/80 align-top">
                       <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{formatDateTime(o.createdAt)}</td>
@@ -243,47 +610,7 @@ export default function AdminOrders() {
                           className="max-w-[11rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-900 disabled:opacity-50"
                           value={st}
                           disabled={patchingId === o.id}
-                          onChange={async (e) => {
-                            const next = e.target.value
-                            const prev = st
-                            if (
-                              next === 'in_pregatire' &&
-                              prev !== 'in_pregatire' &&
-                              !hasInvoiceUrl(o)
-                            ) {
-                              setInvoiceModal({ order: o, previousStatus: prev })
-                              return
-                            }
-                            setPatchingId(o.id)
-                            setOrders((rows) =>
-                              rows.map((r) => (r.id === o.id ? { ...r, fulfillmentStatus: next } : r)),
-                            )
-                            try {
-                              const out = await patchAdminOrderFulfillmentStatus(o.id, next)
-                              setOrders((rows) =>
-                                rows.map((r) =>
-                                  r.id === o.id
-                                    ? {
-                                        ...r,
-                                        fulfillmentStatus: next,
-                                        ...(out.clientInvoiceUrl !== undefined
-                                          ? { clientInvoiceUrl: out.clientInvoiceUrl }
-                                          : {}),
-                                      }
-                                    : r,
-                                ),
-                              )
-                            } catch (err) {
-                              setOrders((rows) =>
-                                rows.map((r) => (r.id === o.id ? { ...r, fulfillmentStatus: prev } : r)),
-                              )
-                              window.alert(
-                                err instanceof Error ? err.message : 'Nu s-a putut salva statusul.',
-                              )
-                            } finally {
-                              setPatchingId(null)
-                            }
-                          }}
+                          onChange={(e) => void handleFulfillmentChange(o, e.target.value)}
                         >
                           {FULFILLMENT_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -291,24 +618,6 @@ export default function AdminOrders() {
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
-                        {hasInvoiceUrl(o) ? (
-                          <span className="text-emerald-700 font-semibold" title="Încărcată">
-                            ✓
-                          </span>
-                        ) : st === 'in_pregatire' ? (
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-sky-700 underline-offset-2 hover:underline disabled:opacity-50"
-                            disabled={patchingId === o.id}
-                            onClick={() => setInvoiceModal({ order: o, previousStatus: st })}
-                          >
-                            Încarcă
-                          </button>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${src.className}`}>
@@ -320,8 +629,7 @@ export default function AdminOrders() {
                           {name}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-700 max-w-[180px] break-all">{o.email}</td>
-                      <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">{formatPhoneDigits(o.phone)}</td>
+                      <td className="px-3 py-2.5 text-slate-700 max-w-[200px] break-all">{o.email}</td>
                       <td className="px-3 py-2.5 text-slate-800">
                         <span className="line-clamp-2" title={o.productTitle}>
                           {o.productTitle}
@@ -330,15 +638,17 @@ export default function AdminOrders() {
                           <span className="block text-xs text-slate-500 mt-0.5 font-mono">{o.productSlug}</span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-800">{o.quantity}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-800 whitespace-nowrap">
-                        {formatMoney(o.unitPriceInclVat, o.currency)}
-                      </td>
                       <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900 whitespace-nowrap">
-                        {formatMoney(o.lineTotalInclVat, o.currency)}
+                        {formatMoney(totalIncl, o.currency)}
                       </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-600 whitespace-nowrap">
-                        {o.vatPercent != null ? `${o.vatPercent}%` : '—'}
+                      <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                          onClick={() => setDetailOrderId(o.id)}
+                        >
+                          Vezi
+                        </button>
                       </td>
                     </tr>
                   )

@@ -17,7 +17,16 @@ export default function ClientOutlet() {
     }
     const role = getAuthRole()
     if (role !== 'client') {
-      navigate(role === 'partener' ? '/partner' : role === 'admin' ? '/' : '/login', { replace: true })
+      navigate(
+        role === 'partener'
+          ? '/partner'
+          : role === 'sales_agent'
+            ? '/sales-agent'
+            : role === 'admin'
+              ? '/'
+              : '/login',
+        { replace: true },
+      )
     }
   }, [location.pathname, location.search, navigate])
 

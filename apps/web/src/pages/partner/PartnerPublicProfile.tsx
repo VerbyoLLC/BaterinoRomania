@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, type ComponentProps } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getPartnerProfile, savePartnerProfile, getAuthToken } from '../../lib/api'
+import { sanitizeRoPostalCode, sanitizeStreetLine } from '../../lib/formInputSanitize'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 
 const SERVICII_OPTIONS = [
@@ -26,6 +27,10 @@ type PartnerData = {
   companyName?: string
   cui?: string
   address?: string
+  companyStreet?: string | null
+  companyCity?: string | null
+  companyCounty?: string | null
+  companyPostalCode?: string | null
   tradeRegisterNumber?: string
   activityTypes?: string
   contactFirstName?: string
@@ -47,13 +52,15 @@ type PartnerData = {
   isPublic?: boolean
 }
 
-function Field({ label, type = 'text', placeholder, value, onChange, required }: {
+function Field({ label, type = 'text', placeholder, value, onChange, required, maxLength, inputMode }: {
   label: string
   type?: string
   placeholder: string
   value: string
   onChange: (v: string) => void
   required?: boolean
+  maxLength?: number
+  inputMode?: ComponentProps<'input'>['inputMode']
 }) {
   return (
     <div>
@@ -62,6 +69,8 @@ function Field({ label, type = 'text', placeholder, value, onChange, required }:
         type={type}
         placeholder={placeholder}
         value={value}
+        maxLength={maxLength}
+        inputMode={inputMode}
         onChange={(e) => onChange(e.target.value)}
         className="w-full h-11 px-4 border border-gray-300 rounded-[10px] text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
       />
@@ -69,21 +78,23 @@ function Field({ label, type = 'text', placeholder, value, onChange, required }:
   )
 }
 
-function SelectField({ label, options, value, onChange, placeholder, required }: {
+function SelectField({ label, options, value, onChange, placeholder, required, disabled }: {
   label: string
   options: string[]
   value: string
   onChange: (v: string) => void
   placeholder?: string
   required?: boolean
+  disabled?: boolean
 }) {
   return (
     <div>
       <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-11 px-4 border border-gray-300 rounded-[10px] text-sm font-['Inter'] text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+        className="w-full h-11 px-4 border border-gray-300 rounded-[10px] text-sm font-['Inter'] text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-50"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => (
@@ -115,7 +126,10 @@ export default function PartnerPublicProfile() {
   // Form state (mirrors profile)
   const [companyName, setCompanyName] = useState('')
   const [cui, setCui] = useState('')
-  const [address, setAddress] = useState('')
+  const [companyStreet, setCompanyStreet] = useState('')
+  const [companyCity, setCompanyCity] = useState('')
+  const [companyCounty, setCompanyCounty] = useState('')
+  const [companyPostalCode, setCompanyPostalCode] = useState('')
   const [tradeRegisterNumber, setTradeRegisterNumber] = useState('')
   const [activities, setActivities] = useState<ActivityType[]>([])
   const [contactFirstName, setContactFirstName] = useState('')
@@ -145,7 +159,10 @@ export default function PartnerPublicProfile() {
         const p = data as PartnerData
         setCompanyName(p.companyName ?? '')
         setCui(p.cui ?? '')
-        setAddress(p.address ?? '')
+        setCompanyStreet(p.companyStreet ?? '')
+        setCompanyCity(p.companyCity ?? '')
+        setCompanyCounty(p.companyCounty ?? '')
+        setCompanyPostalCode(p.companyPostalCode ?? '')
         setTradeRegisterNumber(p.tradeRegisterNumber ?? '')
         setActivities(p.activityTypes ? (p.activityTypes.split(',') as ActivityType[]) : [])
         setContactFirstName(p.contactFirstName ?? '')
@@ -180,11 +197,26 @@ export default function PartnerPublicProfile() {
   }
 
   const citiesForCounty = useMemo(() => getCitiesForCounty(county), [county])
+  const citiesForCompanyCounty = useMemo(() => getCitiesForCounty(companyCounty), [companyCounty])
 
   function handleCountyChange(newCounty: string) {
     setCounty(newCounty)
+    if (!newCounty.trim()) {
+      setCity('')
+      return
+    }
     const cities = getCitiesForCounty(newCounty)
     if (city && !cities.includes(city)) setCity('')
+  }
+
+  function handleCompanyCountyChange(newCounty: string) {
+    setCompanyCounty(newCounty)
+    if (!newCounty.trim()) {
+      setCompanyCity('')
+      return
+    }
+    const cities = getCitiesForCounty(newCounty)
+    if (companyCity && !cities.includes(companyCity)) setCompanyCity('')
   }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -246,13 +278,32 @@ export default function PartnerPublicProfile() {
       setSaveError('Completează toate câmpurile obligatorii: denumire firmă, CUI, contact și tip activitate.')
       return
     }
+    const cpCheck = companyPostalCode.trim()
+    const zipCheck = zipCode.trim()
+    if (cpCheck && !/^\d{6}$/.test(cpCheck)) {
+      setSaveError('Codul poștal (sediu) trebuie să aibă exact 6 cifre.')
+      return
+    }
+    if (zipCheck && !/^\d{6}$/.test(zipCheck)) {
+      setSaveError('Codul poștal (adresă publică) trebuie să aibă exact 6 cifre.')
+      return
+    }
     setSaveError('')
     setSaving(true)
     try {
+      const cs = companyStreet.trim()
+      const ccity = companyCity.trim()
+      const ccounty = companyCounty.trim()
+      const cp = companyPostalCode.trim()
+      const legacyAddress = [cs, ccity, ccounty, cp].filter(Boolean).join(', ')
       const updated = await savePartnerProfile({
         companyName: companyName.trim(),
         cui: cui.trim(),
-        address: address.trim() || undefined,
+        address: legacyAddress || undefined,
+        companyStreet: cs || undefined,
+        companyCity: ccity || undefined,
+        companyCounty: ccounty || undefined,
+        companyPostalCode: cp || undefined,
         tradeRegisterNumber: tradeRegisterNumber.trim() || undefined,
         activityTypes: activities,
         contactFirstName: contactFirstName.trim(),
@@ -292,6 +343,12 @@ export default function PartnerPublicProfile() {
     const descriptionTrimmed = description.trim()
     const publicPhoneTrimmed = publicPhone.trim()
 
+    const zipTrimmed = zipCode.trim()
+    if (zipTrimmed && !/^\d{6}$/.test(zipTrimmed)) {
+      setSaveError('Codul poștal trebuie să aibă exact 6 cifre (sau lasă gol).')
+      return
+    }
+
     if (!publicNameTrimmed || !streetTrimmed || !countyTrimmed || !cityTrimmed || !descriptionTrimmed || servicii.length === 0 || !publicPhoneTrimmed) {
       const missing: string[] = []
       if (!publicNameTrimmed) missing.push('Nume public')
@@ -312,7 +369,7 @@ export default function PartnerPublicProfile() {
         street: streetTrimmed,
         county: countyTrimmed,
         city: cityTrimmed,
-        zipCode: zipCode.trim() || undefined,
+        zipCode: zipTrimmed || undefined,
         description: descriptionTrimmed,
         services: servicii.length ? servicii : undefined,
         publicPhone: publicPhoneTrimmed,
@@ -408,7 +465,28 @@ export default function PartnerPublicProfile() {
                 <Field label="Denumire firmă" placeholder="S.C. Firma SRL" value={companyName} onChange={setCompanyName} />
                 <Field label="CUI / CIF" placeholder="RO12345678" value={cui} onChange={setCui} />
               </div>
-              <Field label="Adresă" placeholder="Strada, Nr., Oraș" value={address} onChange={setAddress} />
+              <p className="text-xs font-semibold font-['Inter'] text-gray-600 uppercase tracking-wide">
+                Adresă sediu social
+              </p>
+              <Field label="Stradă și număr" placeholder="ex: Str Exemplu nr 10" value={companyStreet} onChange={(v) => setCompanyStreet(sanitizeStreetLine(v))} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <SelectField
+                  label="Județ"
+                  options={[...ROMANIAN_COUNTIES]}
+                  value={companyCounty}
+                  onChange={handleCompanyCountyChange}
+                  placeholder="Selectează"
+                />
+                <SelectField
+                  label="Oraș"
+                  options={citiesForCompanyCounty}
+                  value={companyCity}
+                  onChange={setCompanyCity}
+                  placeholder="Selectează orașul"
+                  disabled={!companyCounty}
+                />
+              </div>
+              <Field label="Cod poștal" placeholder="010001" value={companyPostalCode} onChange={(v) => setCompanyPostalCode(sanitizeRoPostalCode(v))} maxLength={6} inputMode="numeric" />
               <Field label="Nr. Registrul Comerțului" placeholder="J00/000/2020" value={tradeRegisterNumber} onChange={setTradeRegisterNumber} />
               <div>
                 <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Tip activitate</label>
@@ -447,11 +525,18 @@ export default function PartnerPublicProfile() {
             <h3 className="text-lg font-bold font-['Inter'] text-slate-900 mb-4">Profil public (pasul 2)</h3>
             <div className="flex flex-col gap-4">
               <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} />
-              <Field label="Stradă" placeholder="ex: Str. Exemplu nr. 1" value={street} onChange={setStreet} />
+              <Field label="Stradă" placeholder="ex: Str Exemplu nr 1" value={street} onChange={(v) => setStreet(sanitizeStreetLine(v))} />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează" />
-                <SelectField label="Oraș" options={citiesForCounty} value={city} onChange={setCity} placeholder={county ? 'Selectează' : 'Selectează mai întâi județul'} />
-                <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={setZipCode} />
+                <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează județul" />
+                <SelectField
+                  label="Oraș"
+                  options={citiesForCounty}
+                  value={city}
+                  onChange={setCity}
+                  placeholder="Selectează orașul"
+                  disabled={!county}
+                />
+                <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={(v) => setZipCode(sanitizeRoPostalCode(v))} maxLength={6} inputMode="numeric" />
               </div>
               <div>
                 <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">Descriere</label>
@@ -683,7 +768,10 @@ export default function PartnerPublicProfile() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">
               <div><dt className="text-gray-500 font-['Inter']">Denumire</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyName)}</dd></div>
               <div><dt className="text-gray-500 font-['Inter']">CUI</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.cui)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Adresă</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.address)}</dd></div>
+              <div><dt className="text-gray-500 font-['Inter']">Stradă și nr.</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyStreet)}</dd></div>
+              <div><dt className="text-gray-500 font-['Inter']">Oraș</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyCity)}</dd></div>
+              <div><dt className="text-gray-500 font-['Inter']">Județ</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyCounty)}</dd></div>
+              <div><dt className="text-gray-500 font-['Inter']">Cod poștal</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyPostalCode)}</dd></div>
               <div><dt className="text-gray-500 font-['Inter']">Reg. Com.</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.tradeRegisterNumber)}</dd></div>
               <div><dt className="text-gray-500 font-['Inter']">Activitate</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.activityTypes) !== '—' ? profile?.activityTypes?.split(',').map(a => ACTIVITY_OPTIONS.find(o => o.id === a)?.label || a).join(', ') : '—'}</dd></div>
               <div><dt className="text-gray-500 font-['Inter']">Contact</dt><dd className="font-['Inter'] text-slate-900">{[profile?.contactFirstName, profile?.contactLastName].filter(Boolean).join(' ') || '—'}</dd></div>
@@ -726,11 +814,19 @@ export default function PartnerPublicProfile() {
               <p className="text-sm text-red-600 font-['Inter']">{saveError}</p>
             )}
             <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} required />
-            <Field label="Stradă" placeholder="ex: Str. Exemplu nr. 1" value={street} onChange={setStreet} required />
+            <Field label="Stradă" placeholder="ex: Str Exemplu nr 1" value={street} onChange={(v) => setStreet(sanitizeStreetLine(v))} required />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează" required />
-              <SelectField label="Oraș" options={citiesForCounty} value={city} onChange={setCity} placeholder={county ? 'Selectează' : 'Selectează mai întâi județul'} required />
-              <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={setZipCode} />
+              <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează județul" required />
+              <SelectField
+                label="Oraș"
+                options={citiesForCounty}
+                value={city}
+                onChange={setCity}
+                placeholder="Selectează orașul"
+                required
+                disabled={!county}
+              />
+              <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={(v) => setZipCode(sanitizeRoPostalCode(v))} maxLength={6} inputMode="numeric" />
             </div>
             <div>
               <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">Descriere <span className="text-red-500">*</span></label>

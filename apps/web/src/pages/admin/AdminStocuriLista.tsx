@@ -82,6 +82,23 @@ export default function AdminStocuriLista() {
     return [...s].sort((a, b) => a.localeCompare(b, 'ro', { sensitivity: 'base' }))
   }, [rows])
 
+  /** Baterii aflate în Depozit, grupate pe model (indiferent de filtrele listei). */
+  const depozitStockByModel = useMemo(() => {
+    const counts = new Map<string, number>()
+    let total = 0
+    for (const r of rows) {
+      const loc = String(r.location ?? 'depozit').trim() as WarehouseSavedItemLocation
+      if (loc !== 'depozit') continue
+      total += 1
+      const model = String(r.modelNumber ?? '').trim() || '—'
+      counts.set(model, (counts.get(model) ?? 0) + 1)
+    }
+    const byModel = [...counts.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0], 'ro', { sensitivity: 'base' }),
+    )
+    return { total, byModel }
+  }, [rows])
+
   const filteredRows = useMemo(() => {
     const distQ = searchDistributor.trim().toLowerCase()
     const clientQ = searchClient.trim().toLowerCase()
@@ -228,6 +245,48 @@ export default function AdminStocuriLista() {
       )}
 
       {!loading && rows.length > 0 && (
+        <>
+        <div className="mb-4 rounded-xl border border-slate-200 bg-[#f7f7f7] px-3 py-2 shadow-sm sm:px-4">
+          <div
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-['Inter']"
+            role="group"
+            aria-label="Rezumat stocuri Depozit"
+          >
+            <span className="shrink-0 font-bold text-slate-900">Total Stocuri</span>
+            <span className="text-slate-300 select-none" aria-hidden>
+              |
+            </span>
+            <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
+              <span className="text-lg font-bold leading-none text-slate-900">{depozitStockByModel.total}</span>
+              <span className="text-xs font-medium text-slate-600">
+                {depozitStockByModel.total === 1 ? 'item' : 'iteme'}
+              </span>
+            </span>
+            {depozitStockByModel.byModel.length > 0 ? (
+              <>
+                <span className="text-slate-300 select-none" aria-hidden>
+                  |
+                </span>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-700">
+                  {depozitStockByModel.byModel.map(([model, count], i) => (
+                    <span key={model} className="inline-flex max-w-full items-center gap-1">
+                      {i > 0 ? (
+                        <span className="text-slate-300 select-none" aria-hidden>
+                          ·
+                        </span>
+                      ) : null}
+                      <span className="min-w-0 truncate font-medium text-slate-800" title={model}>
+                        {model}
+                      </span>
+                      <span className="shrink-0 tabular-nums font-semibold text-slate-900">{count}</span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+
         <div className="mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5">
             <button
@@ -334,6 +393,7 @@ export default function AdminStocuriLista() {
             </div>
           )}
         </div>
+        </>
       )}
 
       {isAdmin && selectedIds.size > 0 && (

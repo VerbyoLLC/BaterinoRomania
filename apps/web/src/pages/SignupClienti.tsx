@@ -115,10 +115,12 @@ export default function SignupClienti() {
     try {
       setErrors({})
       setLoading(true)
-      const { token, user, needsPartnerProfile } = await googleAuth(idToken, tab)
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, tab)
       setAuthToken(token)
       if (user.role === 'partener') {
-        navigate(needsPartnerProfile ? '/signup/parteneri/profil' : '/partner', { replace: true })
+        navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
+          replace: true,
+        })
       } else {
         navigate(nextPath ?? '/client', { replace: true })
       }

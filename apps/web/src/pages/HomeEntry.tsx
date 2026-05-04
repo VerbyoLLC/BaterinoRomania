@@ -5,6 +5,9 @@ import { INSTALATORI_ONLY } from '../lib/siteMode'
 
 /** Full site: logged-in clients use the catalog as home instead of the marketing page. */
 export default function HomeEntry() {
+  if (getAuthRole() === 'sales_agent') {
+    return <Navigate to="/sales-agent" replace />
+  }
   if (!INSTALATORI_ONLY && getAuthRole() === 'client') {
     return <Navigate to="/produse" replace />
   }

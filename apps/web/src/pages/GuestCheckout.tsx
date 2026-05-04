@@ -332,6 +332,10 @@ export default function GuestCheckout() {
       navigate('/partner', { replace: true })
       return
     }
+    if (role === 'sales_agent') {
+      navigate('/sales-agent', { replace: true })
+      return
+    }
     if (role === 'admin') {
       navigate('/', { replace: true })
       return
@@ -540,10 +544,12 @@ export default function GuestCheckout() {
     setAuthError('')
     setAuthLoading(true)
     try {
-      const { token, user, needsPartnerProfile } = await googleAuth(idToken, 'client')
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, 'client')
       setAuthToken(token)
       if (user.role === 'partener') {
-        navigate(needsPartnerProfile ? '/signup/parteneri/profil' : '/partner', { replace: true })
+        navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
+          replace: true,
+        })
         return
       }
       navigate(returnToCheckout, { replace: true })

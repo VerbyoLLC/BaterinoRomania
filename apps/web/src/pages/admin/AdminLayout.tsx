@@ -1,6 +1,31 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { clearAuth, getAuthRole, getAuthToken, getAdminInquiriesUnreadCount } from '../../lib/api'
+import {
+  clearAuth,
+  getAuthEmail,
+  getAuthRole,
+  getAuthToken,
+  getAdminAccount,
+  getAdminInquiriesUnreadCount,
+} from '../../lib/api'
+
+function formatSidebarName(
+  firstName: string,
+  lastName: string,
+  email: string | null,
+): string {
+  const n = [firstName, lastName]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+  if (n) return n
+  if (email) {
+    const local = email.split('@')[0]?.trim()
+    if (local) return local
+  }
+  return '—'
+}
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconDashboard() {
@@ -159,6 +184,28 @@ function IconSettings() {
     </svg>
   )
 }
+function IconLockPassword() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+      />
+    </svg>
+  )
+}
+function IconAccountDetails() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  )
+}
 function IconCurrency() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -173,6 +220,17 @@ function IconCompanyData() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+      />
+    </svg>
+  )
+}
+function IconAgents() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"
       />
     </svg>
   )
@@ -209,7 +267,14 @@ type NavGroupItem = {
   children: { to: string; label: string; icon: ReactNode }[]
 }
 
-const SETARI_PATHS = ['/admin/currency', '/admin/company-data', '/admin/phone-numbers'] as const
+const SETARI_PATHS = [
+  '/admin/change-password',
+  '/admin/account',
+  '/admin/currency',
+  '/admin/company-data',
+  '/admin/phone-numbers',
+  '/admin/agents',
+] as const
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
 const INVENTAR_PATHS = ['/admin/products', '/admin/product-models'] as const
@@ -222,7 +287,7 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
   {
     kind: 'group',
     id: 'inventar',
-    label: 'Inventar',
+    label: 'Magazin',
     icon: <IconInventar />,
     children: [
       { to: '/admin/products', label: 'Produse', icon: <IconProducts /> },
@@ -266,9 +331,12 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
     label: 'Setări',
     icon: <IconSettings />,
     children: [
+      { to: '/admin/change-password', label: 'Schimbă parola', icon: <IconLockPassword /> },
+      { to: '/admin/account', label: 'Detalii cont', icon: <IconAccountDetails /> },
       { to: '/admin/currency', label: 'Currency', icon: <IconCurrency /> },
       { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
       { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
+      { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },
     ],
   },
 ]
@@ -296,6 +364,13 @@ function pathUnderStocuri(pathname: string) {
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const authEmail = getAuthEmail()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+
+  const displayName = formatSidebarName(firstName, lastName, authEmail)
+  const avatarLetter = (displayName !== '—' ? displayName[0] : authEmail?.trim()?.[0] ?? 'A').toUpperCase()
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [setariOpen, setSetariOpen] = useState(() => pathUnderSetari(location.pathname))
@@ -337,6 +412,29 @@ export default function AdminLayout() {
     if (pathUnderStocuri(location.pathname)) setStocuriOpen(true)
   }, [location.pathname])
 
+  const loadSidebarAccount = useCallback(() => {
+    if (location.pathname === '/admin/login' || !getAuthToken() || getAuthRole() !== 'admin') return
+    getAdminAccount()
+      .then((a) => {
+        setFirstName(a.firstName)
+        setLastName(a.lastName)
+      })
+      .catch(() => {
+        setFirstName('')
+        setLastName('')
+      })
+  }, [location.pathname])
+
+  useEffect(() => {
+    loadSidebarAccount()
+  }, [loadSidebarAccount])
+
+  useEffect(() => {
+    const onUpdated = () => loadSidebarAccount()
+    window.addEventListener('admin-account-updated', onUpdated)
+    return () => window.removeEventListener('admin-account-updated', onUpdated)
+  }, [loadSidebarAccount])
+
   return (
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
 
@@ -361,7 +459,7 @@ export default function AdminLayout() {
               className="h-7 w-auto object-contain"
             />
             <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
-              Admin
+              ADMIN
             </span>
           </a>
 
@@ -468,18 +566,20 @@ export default function AdminLayout() {
 
           {/* User + Logout */}
           <div className="pt-6 border-t border-slate-700/50 flex flex-col gap-1">
-            <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex items-start gap-3 px-4 py-3">
               <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                A
+                {avatarLetter}
               </div>
-              <div className="min-w-0">
-                <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Admin</p>
-                <p className="text-slate-400 text-xs font-['Inter'] truncate">AdminTest</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-semibold font-['Inter'] truncate">{displayName}</p>
+                <p className="text-slate-500 text-xs font-['Inter'] truncate mt-0.5" title={authEmail ?? undefined}>
+                  {authEmail ?? '—'}
+                </p>
               </div>
             </div>
             <button
               onClick={() => {
-                localStorage.removeItem('auth_token')
+                clearAuth()
                 navigate('/admin/login')
               }}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left"
