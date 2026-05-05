@@ -1,5 +1,25 @@
 const { OAuth2Client } = require('google-auth-library')
 
+/** Decode JWT payload (same claims verifyIdToken uses); helps if library payload omits optional fields. */
+function decodeJwtPayload(idToken) {
+  try {
+    const parts = String(idToken).split('.')
+    if (parts.length < 2) return {}
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+  } catch {
+    return {}
+  }
+}
+
+function firstNonEmptyString(...vals) {
+  for (const v of vals) {
+    if (v == null) continue
+    const s = String(v).trim()
+    if (s) return s
+  }
+  return undefined
+}
+
 function googleClientIds() {
   const raw = String(process.env.GOOGLE_CLIENT_ID || '').trim()
   if (!raw) return []
@@ -28,17 +48,37 @@ async function verifyGoogleIdToken(idToken) {
     err.code = 'INVALID_PAYLOAD'
     throw err
   }
-  if (p.email_verified !== true) {
+  const verifiedOk =
+    p.email_verified === true ||
+    p.email_verified === 'true' ||
+    p.email_verified === 1
+  if (!verifiedOk) {
     const err = new Error('Google email not verified')
     err.code = 'EMAIL_NOT_VERIFIED'
     throw err
   }
+
+  const raw = decodeJwtPayload(idToken)
+  const givenName = firstNonEmptyString(
+    p.given_name,
+    p.givenName,
+    raw.given_name,
+    raw.givenName,
+  )
+  const familyName = firstNonEmptyString(
+    p.family_name,
+    p.familyName,
+    raw.family_name,
+    raw.familyName,
+  )
+  const name = firstNonEmptyString(p.name, raw.name)
+
   return {
     sub: String(p.sub),
     email: String(p.email).trim().toLowerCase(),
-    name: p.name ? String(p.name) : undefined,
-    givenName: p.given_name ? String(p.given_name) : undefined,
-    familyName: p.family_name ? String(p.family_name) : undefined,
+    name,
+    givenName,
+    familyName,
   }
 }
 

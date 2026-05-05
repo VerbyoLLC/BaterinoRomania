@@ -243,21 +243,31 @@ function stripControlChars(s) {
 /** Nume / prenume: litere Unicode, spațiu, cratimă, apostrof. */
 function sanitizeGuestOrderPersonName(value) {
   const s = stripControlChars(value ?? '')
-  return s.replace(/[^\p{L}\s]/gu, '').replace(/\s+/g, ' ').trim()
+  return s.replace(/[^\p{L}\s'\-]/gu, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Nume din token Google — mai permisiv decât guest checkout (poate include cifre rare, semne diacritice combinate).
+ * Strict guest sanitization golește prea ușor claim-urile reale din JWT.
+ */
+function sanitizeOAuthPersonName(value) {
+  const s = stripControlChars(value ?? '')
+  return s.replace(/[^\p{L}\p{M}\p{N}\s'\-]/gu, '').replace(/\s+/g, ' ').trim()
 }
 
 /** Prenume + nume din claim-uri Google (given_name / family_name / name). */
 function namesFromGoogleClaims(g) {
-  let firstName = sanitizeGuestOrderPersonName(g.givenName || '')
-  let lastName = sanitizeGuestOrderPersonName(g.familyName || '')
+  const clean = (v) => sanitizeOAuthPersonName(v || '')
+  let firstName = clean(g.givenName)
+  let lastName = clean(g.familyName)
   if (!firstName && !lastName && g.name) {
     const raw = String(g.name).trim()
     const parts = raw.split(/\s+/).filter(Boolean)
     if (parts.length >= 2) {
-      firstName = sanitizeGuestOrderPersonName(parts[0])
-      lastName = sanitizeGuestOrderPersonName(parts.slice(1).join(' '))
+      firstName = clean(parts[0])
+      lastName = clean(parts.slice(1).join(' '))
     } else if (parts.length === 1) {
-      firstName = sanitizeGuestOrderPersonName(parts[0])
+      firstName = clean(parts[0])
     }
   }
   return { firstName, lastName }
@@ -906,7 +916,15 @@ app.post('/api/auth/google', async (req, res) => {
         (googleNames.firstName || googleNames.lastName)
       ) {
         const prof = await prisma.clientProfile.findUnique({ where: { userId: user.id } })
-        if (prof) {
+        if (!prof) {
+          await prisma.clientProfile.create({
+            data: {
+              userId: user.id,
+              firstName: googleNames.firstName || '',
+              lastName: googleNames.lastName || '',
+            },
+          })
+        } else {
           const pData = {}
           if (!String(prof.firstName || '').trim() && googleNames.firstName) {
             pData.firstName = googleNames.firstName
