@@ -1,19 +1,212 @@
 import { useState, useEffect } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { Percent, Truck, Headphones, Store, UserCheck, RefreshCw, Check } from 'lucide-react'
 import { getPartnerProfile } from '../../lib/api'
 
-function IconClock() {
-  return (
-    <svg className="w-8 h-8 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="12" cy="12" r="10" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-    </svg>
-  )
-}
+const PENDING_PARTNER_ADVANTAGES: { Icon: LucideIcon; title: string; subtitle: string }[] = [
+  {
+    Icon: Truck,
+    title: 'Livrare și logistică',
+    subtitle:
+      'Ne ocupăm de întregul lanț logistic, de la depozit până la clientul final. Tu te concentrezi pe clienți — noi gestionăm transportul.',
+  },
+  {
+    Icon: Headphones,
+    title: 'Suport tehnic și comercial',
+    subtitle:
+      'Ai acces la o echipă dedicată pentru orice întrebare legată de produse, specificații tehnice sau soluții personalizate.',
+  },
+  {
+    Icon: Store,
+    title: 'Vizibilitate în fața clienților',
+    subtitle:
+      'Profilul tău apare pe platforma Baterino, conectându-te direct cu clienți din zona ta care caută instalatori verificați.',
+  },
+  {
+    Icon: UserCheck,
+    title: 'Responsabilitate client final',
+    subtitle:
+      'Gestionăm after-sale-ul direct cu clientul final — reclamații, garanții și suport post-instalare — astfel reputația ta rămâne intactă.',
+  },
+  {
+    Icon: RefreshCw,
+    title: 'Baterino SWAP',
+    subtitle:
+      'În cazul unei defecțiuni, înlocuim bateria rapid și fără birocrație. Clientul tău nu rămâne fără soluție.',
+  },
+  {
+    Icon: Percent,
+    title: 'Prețuri și reduceri pentru parteneri',
+    subtitle:
+      'Prețuri preferențiale, marje clare și o strategie construită împreună — ca să fii competitiv și profitabil la fiecare proiect.',
+  },
+]
+
+const APPROVAL_TIMELINE_STEPS = [
+  'Deschidere cont partener',
+  'Dezbatere parteneriat și strategie',
+  'Semnarea contractului',
+  'Aprobare cont partener',
+] as const
+
+/** Pas activ în timpul așteptării aprobării (index 0-based): dezbatere parteneriat. */
+const APPROVAL_TIMELINE_CURRENT_INDEX = 1
+
 function IconAlert() {
   return (
     <svg className="w-8 h-8 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
+  )
+}
+
+function PartnerApprovalTimelineSkeleton() {
+  return (
+    <div
+      className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/90 px-5 py-6 sm:px-6 shadow-[0_1px_3px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.04] animate-pulse"
+      aria-hidden
+    >
+      <div className="flex items-start justify-between gap-1 sm:gap-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex flex-1 flex-col items-center gap-2 min-w-0">
+            <div className="h-10 w-10 rounded-full bg-slate-200" />
+            <div className="h-3 w-full max-w-[5.5rem] bg-slate-200/90 rounded mx-auto" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PartnerApprovalTimeline() {
+  return (
+    <div className="mb-6 rounded-2xl border border-slate-200/95 bg-white px-5 py-6 sm:px-7 shadow-[0_1px_3px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.05]">
+      {/* Accent stripe */}
+      <div className="pointer-events-none mb-5 h-1 w-full max-w-xs rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-sky-500 sm:mb-6" aria-hidden />
+
+      {/* Desktop / tablet: horizontal */}
+      <ol
+        className="hidden sm:flex sm:items-start sm:w-full"
+        aria-label="Etape aprobare cont partener"
+      >
+        {APPROVAL_TIMELINE_STEPS.map((label, i) => {
+          const isComplete = i < APPROVAL_TIMELINE_CURRENT_INDEX
+          const isCurrent = i === APPROVAL_TIMELINE_CURRENT_INDEX
+          return (
+            <li key={label} className="flex flex-1 min-w-0 items-start last:flex-[0_0_auto]">
+              <div className="flex flex-1 min-w-0 flex-col items-center text-center">
+                <TimelineStepMarker index={i} isComplete={isComplete} isCurrent={isCurrent} />
+                <span
+                  className={`mt-3 text-xs font-['Inter'] leading-tight sm:text-[13px] px-0.5 ${
+                    isCurrent
+                      ? 'font-semibold text-indigo-950'
+                      : isComplete
+                        ? 'font-medium text-slate-700'
+                        : 'font-medium text-slate-500'
+                  }`}
+                >
+                  {label}
+                </span>
+              </div>
+              {i < APPROVAL_TIMELINE_STEPS.length - 1 && (
+                <div
+                  className={`mx-1.5 mt-[22px] h-[3px] min-w-[0.5rem] flex-1 rounded-full ${
+                    i < APPROVAL_TIMELINE_CURRENT_INDEX ? 'bg-indigo-400' : 'bg-slate-200'
+                  }`}
+                  aria-hidden
+                />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+
+      {/* Mobile: vertical */}
+      <ol className="sm:hidden space-y-0 font-['Inter']" aria-label="Etape aprobare cont partener">
+        {APPROVAL_TIMELINE_STEPS.map((label, i) => {
+          const isComplete = i < APPROVAL_TIMELINE_CURRENT_INDEX
+          const isCurrent = i === APPROVAL_TIMELINE_CURRENT_INDEX
+          const isLast = i === APPROVAL_TIMELINE_STEPS.length - 1
+          return (
+            <li key={label} className="flex gap-3.5">
+              <div className="flex flex-col items-center">
+                <TimelineStepMarker index={i} isComplete={isComplete} isCurrent={isCurrent} />
+                {!isLast && (
+                  <div
+                    className={`w-[3px] flex-1 min-h-[1.25rem] my-1.5 rounded-full ${
+                      i < APPROVAL_TIMELINE_CURRENT_INDEX ? 'bg-indigo-400' : 'bg-slate-200'
+                    }`}
+                    aria-hidden
+                  />
+                )}
+              </div>
+              <div
+                className={`pb-5 pt-2 text-sm leading-snug ${
+                  isCurrent ? 'font-semibold text-indigo-950' : isComplete ? 'font-medium text-slate-700' : 'font-medium text-slate-500'
+                }`}
+              >
+                {label}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+function TimelineStepMarker({
+  index,
+  isComplete,
+  isCurrent,
+}: {
+  index: number
+  isComplete: boolean
+  isCurrent: boolean
+}) {
+  if (isComplete) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
+        <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+        <span className="sr-only">Finalizat</span>
+      </div>
+    )
+  }
+  if (isCurrent) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-sm font-bold text-indigo-700 shadow-sm ring-2 ring-indigo-500 ring-offset-2 ring-offset-white">
+        {index + 1}
+        <span className="sr-only">În curs</span>
+      </div>
+    )
+  }
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-400">
+      {index + 1}
+      <span className="sr-only">Urmează</span>
+    </div>
+  )
+}
+
+function PartnerAdvantageBoxesSkeleton() {
+  return (
+    <section className="mb-8" aria-busy="true" aria-label="Se încarcă avantajele">
+      <div className="h-7 w-72 max-w-full bg-gray-200 rounded-md animate-pulse mb-4" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col gap-1.5 bg-gray-100/80 animate-pulse"
+          >
+            <div className="h-10 w-10 rounded-xl bg-gray-300/90" />
+            <div className="h-5 w-4/5 max-w-[14rem] bg-gray-300/90 rounded" />
+            <div className="h-3.5 w-full bg-gray-200 rounded" />
+            <div className="h-3.5 w-full bg-gray-200 rounded" />
+            <div className="h-3.5 w-11/12 bg-gray-200 rounded" />
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -57,27 +250,17 @@ export default function PartnerDashboard() {
   }, [])
 
   return (
-    <div className="pt-2 px-6 pb-6 sm:pt-4 sm:px-8 sm:pb-8 lg:pt-6 lg:px-10 lg:pb-10 max-w-4xl">
-      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">
+    <div className="pt-2 px-6 pb-6 sm:pt-4 sm:px-8 sm:pb-8 lg:pt-6 lg:px-10 lg:pb-10 max-w-5xl w-full">
+      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-6">
         Dashboard
       </h1>
-      <p className="text-gray-500 text-sm font-['Inter'] mb-6">
-        Prezentare generală a contului tău de partener Baterino.
-      </p>
 
-      {/* Status box loading skeleton */}
+      {/* Status + advantages loading skeletons */}
       {loading && (
-        <div
-          className="mb-6 rounded-2xl border border-gray-200/80 pt-2 pb-5 px-5 sm:pt-3 sm:pb-6 sm:px-6 shadow-sm flex items-center gap-4 bg-gray-100/80 animate-pulse"
-          aria-busy="true"
-          aria-label="Se încarcă statusul contului"
-        >
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-300" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="h-5 w-3/4 max-w-xs bg-gray-300 rounded" />
-            <div className="h-4 w-full max-w-sm bg-gray-200 rounded" />
-          </div>
-        </div>
+        <>
+          <PartnerApprovalTimelineSkeleton />
+          <PartnerAdvantageBoxesSkeleton />
+        </>
       )}
 
       {/* Suspended banner */}
@@ -99,24 +282,37 @@ export default function PartnerDashboard() {
           </div>
         </div>
       )}
-      {/* Pending approval banner */}
+      {/* Pending approval timeline + advantages */}
       {!loading && !isSuspended && pendingApproval === true && (
-        <div
-          className="mb-6 rounded-2xl border border-amber-200/80 pt-2 pb-5 px-5 sm:pt-3 sm:pb-6 sm:px-6 shadow-sm flex items-center gap-4"
-          style={{ background: 'linear-gradient(to right, #FFFDF5, #FEF9C3)' }}
-        >
-          <div className="flex-shrink-0">
-            <IconClock />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold font-['Inter'] text-slate-900">
-              Contul tău este în curs de aprobare.
-            </h3>
-            <p className="text-gray-600 text-sm font-['Inter'] mt-1">
-              Datele tale sunt în curs de verificare. În caz că avem nelămuriri, te vom contacta pe telefon sau email.
-            </p>
-          </div>
-        </div>
+        <>
+          <PartnerApprovalTimeline />
+
+          <section className="mb-8" aria-labelledby="pending-partner-advantages-heading">
+            <h2
+              id="pending-partner-advantages-heading"
+              className="text-lg font-bold font-['Inter'] text-slate-900 mb-4"
+            >
+              Avantajele parteneriatului Baterino
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PENDING_PARTNER_ADVANTAGES.map(({ Icon, title, subtitle }) => (
+                <div
+                  key={title}
+                  className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col gap-1.5"
+                >
+                  <div
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100/80"
+                    aria-hidden
+                  >
+                    <Icon className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-base font-bold font-['Inter'] text-slate-900 leading-tight">{title}</h3>
+                  <p className="text-sm font-['Inter'] text-gray-600 leading-snug">{subtitle}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       {/* Approved welcome box */}
@@ -158,36 +354,40 @@ export default function PartnerDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Produse</p>
-          <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Comenzi</p>
-          <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Produse în service</p>
-          <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-3">Statistici profil public</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-gray-500 text-xs font-['Inter'] mb-0.5">Vizualizări</p>
-              <p className="text-xl font-bold font-['Inter'] text-slate-900">0</p>
+      {!loading && pendingApproval !== true && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Produse</p>
+              <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
             </div>
-            <div>
-              <p className="text-gray-500 text-xs font-['Inter'] mb-0.5">Click-uri</p>
-              <p className="text-xl font-bold font-['Inter'] text-slate-900">0</p>
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Comenzi</p>
+              <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-1">Produse în service</p>
+              <p className="text-2xl font-bold font-['Inter'] text-slate-900">0</p>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-gray-500 text-sm font-['Inter'] font-bold mb-3">Statistici profil public</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-500 text-xs font-['Inter'] mb-0.5">Vizualizări</p>
+                  <p className="text-xl font-bold font-['Inter'] text-slate-900">0</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs font-['Inter'] mb-0.5">Click-uri</p>
+                  <p className="text-xl font-bold font-['Inter'] text-slate-900">0</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

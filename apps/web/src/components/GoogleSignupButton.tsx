@@ -63,6 +63,9 @@ export default function GoogleSignupButton({ label, className, disabled, onToken
         reject(new Error('Google Identity Services nu este disponibil.'))
         return
       }
+      /** FedCM on localhost often surfaces `unregistered_origin` even when URIs are set; classic GIS prompt is more reliable. */
+      const useFedCm =
+        window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
       let done = false
       const timeout = window.setTimeout(() => {
         if (done) return
@@ -74,7 +77,7 @@ export default function GoogleSignupButton({ label, className, disabled, onToken
         ux_mode: 'popup',
         context: 'signin',
         auto_select: false,
-        use_fedcm_for_prompt: true,
+        use_fedcm_for_prompt: useFedCm,
         itp_support: true,
         callback: async (resp: { credential?: string }) => {
           if (done) return
@@ -103,13 +106,14 @@ export default function GoogleSignupButton({ label, className, disabled, onToken
             typeof notification?.getNotDisplayedReason === 'function'
               ? String(notification.getNotDisplayedReason() || '').trim()
               : ''
-          reject(
-            new Error(
-              reason
-                ? `Google Sign-In nu a putut fi afișat (${reason}).`
-                : 'Google Sign-In nu a putut fi afișat în acest browser.',
-            ),
-          )
+          const origin = typeof window !== 'undefined' ? window.location.origin : ''
+          let detail = reason
+            ? `Google Sign-In nu a putut fi afișat (${reason}).`
+            : 'Google Sign-In nu a putut fi afișat în acest browser.'
+          if (reason === 'unregistered_origin' && origin) {
+            detail += ` În Google Cloud Console → Credentials → același OAuth client ca VITE_GOOGLE_CLIENT_ID → Authorized JavaScript origins, adaugă exact: ${origin} (fără slash la final), salvează, așteaptă câteva minute și repornește dev serverul.`
+          }
+          reject(new Error(detail))
           return
         }
         // Google skipped prompt (user not eligible in current context / browser state)

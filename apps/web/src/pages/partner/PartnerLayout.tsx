@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { getAuthEmail, getPartnerProfile } from '../../lib/api'
 
@@ -60,6 +60,13 @@ function IconLogout() {
     </svg>
   )
 }
+function IconLock() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  )
+}
 
 const NAV_MAIN = [
   { to: '/partner', label: 'Dashboard', icon: <IconDashboard />, end: true },
@@ -74,25 +81,98 @@ const NAV_BOTTOM = [
   { to: '/partner/suport', label: 'Suport', icon: <IconSupport />, end: false },
 ]
 
+function NavItemLoader({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl animate-pulse"
+          aria-hidden
+        >
+          <div className="w-5 h-5 rounded-md bg-slate-700/90 flex-shrink-0" />
+          <div className="h-4 flex-1 max-w-[8.5rem] rounded-md bg-slate-700/70" />
+        </div>
+      ))}
+    </>
+  )
+}
+
+/** Locked row: tooltip is anchored to the lock control on the right. */
+function InactiveNavRow({
+  tooltip,
+  icon,
+  label,
+}: {
+  tooltip: string
+  icon: ReactNode
+  label: string
+}) {
+  return (
+    <span className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-500 opacity-60">
+      {icon}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <button
+        type="button"
+        tabIndex={0}
+        aria-label={tooltip}
+        className="group/lock relative ml-auto inline-flex flex-shrink-0 cursor-help items-center justify-center rounded-md p-1 text-slate-400 outline-none pointer-events-auto hover:text-slate-300 focus-visible:ring-2 focus-visible:ring-white/35"
+        onClick={(e) => e.preventDefault()}
+      >
+        <IconLock />
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute right-0 bottom-full z-[200] mb-1.5 w-max max-w-[min(14rem,calc(100vw-2rem))] rounded-lg bg-slate-800 px-3 py-2 text-left text-xs font-medium leading-snug text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity duration-150 group-hover/lock:opacity-100 group-focus-visible/lock:opacity-100"
+        >
+          {tooltip}
+        </span>
+      </button>
+    </span>
+  )
+}
+
 export default function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
+  /** null = încărcare; false = în așteptare aprobare admin */
+  const [isApproved, setIsApproved] = useState<boolean | null>(null)
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   useEffect(() => {
     getPartnerProfile()
-      .then((p: { isSuspended?: boolean }) => setIsSuspended(p?.isSuspended === true))
-      .catch(() => setIsSuspended(null))
+      .then((p: { isSuspended?: boolean; isApproved?: boolean }) => {
+        setIsSuspended(p?.isSuspended === true)
+        setIsApproved(p?.isApproved !== false)
+      })
+      .catch(() => {
+        setIsSuspended(null)
+        setIsApproved(null)
+      })
+      .finally(() => setProfileLoaded(true))
   }, [])
+
+  const pendingReview = isApproved === false && isSuspended !== true
 
   const allowedWhenSuspended = (path: string) =>
     path === '/partner' || path.startsWith('/partner/setari') || path.startsWith('/partner/suport')
+
+  const allowedWhenPendingReview = (path: string) =>
+    path === '/partner' ||
+    path.startsWith('/partner/setari') ||
+    path.startsWith('/partner/suport')
+
   useEffect(() => {
+    if (isSuspended === null || isApproved === null) return
     if (isSuspended && !allowedWhenSuspended(location.pathname)) {
       navigate('/partner', { replace: true })
+      return
     }
-  }, [isSuspended, location.pathname, navigate])
+    if (pendingReview && !allowedWhenPendingReview(location.pathname)) {
+      navigate('/partner', { replace: true })
+    }
+  }, [isSuspended, isApproved, pendingReview, location.pathname, navigate])
 
   return (
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
@@ -123,59 +203,79 @@ export default function PartnerLayout() {
           </a>
 
           {/* Nav */}
-          <nav className="flex-1 flex flex-col gap-1">
-            {NAV_MAIN.map((item) => {
-              const isDashboard = item.to === '/partner' && item.end
-              const disabledWhenSuspended = isSuspended && !isDashboard
-              if (disabledWhenSuspended) {
-                return (
-                  <span
+          <nav
+            className="flex-1 flex flex-col gap-1"
+            aria-busy={!profileLoaded}
+            aria-label={!profileLoaded ? 'Se încarcă meniul' : undefined}
+          >
+            {!profileLoaded ? (
+              <>
+                <NavItemLoader count={NAV_MAIN.length} />
+                <div className="flex-1 min-h-[1rem]" />
+                <NavItemLoader count={NAV_BOTTOM.length} />
+              </>
+            ) : (
+              <>
+                {NAV_MAIN.map((item) => {
+                  const isDashboard = item.to === '/partner' && item.end
+                  const disabledWhenSuspended = isSuspended === true && !isDashboard
+                  const disabledWhenPending = pendingReview && !isDashboard
+                  const navDisabled = disabledWhenPending || disabledWhenSuspended
+                  if (navDisabled) {
+                    const inactiveTitle = disabledWhenPending
+                      ? 'Disponibil dupa aprobare'
+                      : disabledWhenSuspended
+                        ? 'Indisponibil — cont suspendat'
+                        : ''
+                    return (
+                      <InactiveNavRow
+                        key={item.to}
+                        tooltip={inactiveTitle}
+                        icon={item.icon}
+                        label={item.label}
+                      />
+                    )
+                  }
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+                          isActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                        }`
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  )
+                })}
+                <div className="flex-1 min-h-[1rem]" />
+                {NAV_BOTTOM.map((item) => (
+                  <NavLink
                     key={item.to}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-500 opacity-60 cursor-not-allowed"
+                    to={item.to}
+                    end={item.end}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-white/10 text-white'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                      }`
+                    }
                   >
                     {item.icon}
                     {item.label}
-                  </span>
-                )
-              }
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                      isActive
-                        ? 'bg-white/10 text-white'
-                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                    }`
-                  }
-                >
-                  {item.icon}
-                  {item.label}
-                </NavLink>
-              )
-            })}
-            <div className="flex-1 min-h-[1rem]" />
-            {NAV_BOTTOM.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`
-                }
-              >
-                {item.icon}
-                {item.label}
-              </NavLink>
-            ))}
+                  </NavLink>
+                ))}
+              </>
+            )}
           </nav>
 
           {/* User + Logout */}

@@ -851,6 +851,7 @@ export type PartnerAssignedSalesAgent = {
 export type PartnerProfileGetResponse = PartnerProfile & {
   id?: string
   userId?: string
+  isApproved?: boolean
   isSuspended?: boolean
   assignedSalesAgentId?: string | null
   assignedSalesAgent?: PartnerAssignedSalesAgent | null

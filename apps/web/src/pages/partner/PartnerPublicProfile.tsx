@@ -15,14 +15,6 @@ const SERVICII_OPTIONS = [
   { id: 'consultanta', label: 'Consultanță energetică' },
 ]
 
-type ActivityType = 'instalator' | 'distribuitor' | 'integrator' | 'altul'
-const ACTIVITY_OPTIONS: { id: ActivityType; label: string }[] = [
-  { id: 'instalator', label: 'Instalator' },
-  { id: 'distribuitor', label: 'Distribuitor' },
-  { id: 'integrator', label: 'Integrator sisteme' },
-  { id: 'altul', label: 'Altul' },
-]
-
 type PartnerData = {
   companyName?: string
   cui?: string
@@ -116,25 +108,13 @@ export default function PartnerPublicProfile() {
   const [error, setError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
   const [isEditingPublic, setIsEditingPublic] = useState(false)
   const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
   const [photoUploading, setPhotoUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Form state (mirrors profile)
-  const [companyName, setCompanyName] = useState('')
-  const [cui, setCui] = useState('')
-  const [companyStreet, setCompanyStreet] = useState('')
-  const [companyCity, setCompanyCity] = useState('')
-  const [companyCounty, setCompanyCounty] = useState('')
-  const [companyPostalCode, setCompanyPostalCode] = useState('')
-  const [tradeRegisterNumber, setTradeRegisterNumber] = useState('')
-  const [activities, setActivities] = useState<ActivityType[]>([])
-  const [contactFirstName, setContactFirstName] = useState('')
-  const [contactLastName, setContactLastName] = useState('')
-  const [phone, setPhone] = useState('')
+  // Form state (public profile — legal / firmă: Setări → Detalii firmă)
   const [publicName, setPublicName] = useState('')
   const [street, setStreet] = useState('')
   const [county, setCounty] = useState('')
@@ -157,17 +137,6 @@ export default function PartnerPublicProfile() {
       .then((data) => {
         setProfile(data as PartnerData)
         const p = data as PartnerData
-        setCompanyName(p.companyName ?? '')
-        setCui(p.cui ?? '')
-        setCompanyStreet(p.companyStreet ?? '')
-        setCompanyCity(p.companyCity ?? '')
-        setCompanyCounty(p.companyCounty ?? '')
-        setCompanyPostalCode(p.companyPostalCode ?? '')
-        setTradeRegisterNumber(p.tradeRegisterNumber ?? '')
-        setActivities(p.activityTypes ? (p.activityTypes.split(',') as ActivityType[]) : [])
-        setContactFirstName(p.contactFirstName ?? '')
-        setContactLastName(p.contactLastName ?? '')
-        setPhone(p.phone ?? '')
         setPublicName(p.publicName ?? '')
         setStreet(p.street ?? '')
         setCounty(p.county ?? '')
@@ -186,18 +155,11 @@ export default function PartnerPublicProfile() {
       .finally(() => setLoading(false))
   }, [navigate])
 
-  function toggleActivity(id: ActivityType) {
-    setActivities((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    )
-  }
-
   function toggleServiciu(id: string) {
     setServicii((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]))
   }
 
   const citiesForCounty = useMemo(() => getCitiesForCounty(county), [county])
-  const citiesForCompanyCounty = useMemo(() => getCitiesForCounty(companyCounty), [companyCounty])
 
   function handleCountyChange(newCounty: string) {
     setCounty(newCounty)
@@ -207,16 +169,6 @@ export default function PartnerPublicProfile() {
     }
     const cities = getCitiesForCounty(newCounty)
     if (city && !cities.includes(city)) setCity('')
-  }
-
-  function handleCompanyCountyChange(newCounty: string) {
-    setCompanyCounty(newCounty)
-    if (!newCounty.trim()) {
-      setCompanyCity('')
-      return
-    }
-    const cities = getCitiesForCounty(newCounty)
-    if (companyCity && !cities.includes(companyCity)) setCompanyCity('')
   }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -267,66 +219,6 @@ export default function PartnerPublicProfile() {
       setIsPublic(newVal)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Eroare la actualizare.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!companyName.trim() || !cui.trim() || !contactFirstName.trim() || !contactLastName.trim() || !phone.trim() || activities.length === 0) {
-      setSaveError('Completează toate câmpurile obligatorii: denumire firmă, CUI, contact și tip activitate.')
-      return
-    }
-    const cpCheck = companyPostalCode.trim()
-    const zipCheck = zipCode.trim()
-    if (cpCheck && !/^\d{6}$/.test(cpCheck)) {
-      setSaveError('Codul poștal (sediu) trebuie să aibă exact 6 cifre.')
-      return
-    }
-    if (zipCheck && !/^\d{6}$/.test(zipCheck)) {
-      setSaveError('Codul poștal (adresă publică) trebuie să aibă exact 6 cifre.')
-      return
-    }
-    setSaveError('')
-    setSaving(true)
-    try {
-      const cs = companyStreet.trim()
-      const ccity = companyCity.trim()
-      const ccounty = companyCounty.trim()
-      const cp = companyPostalCode.trim()
-      const legacyAddress = [cs, ccity, ccounty, cp].filter(Boolean).join(', ')
-      const updated = await savePartnerProfile({
-        companyName: companyName.trim(),
-        cui: cui.trim(),
-        address: legacyAddress || undefined,
-        companyStreet: cs || undefined,
-        companyCity: ccity || undefined,
-        companyCounty: ccounty || undefined,
-        companyPostalCode: cp || undefined,
-        tradeRegisterNumber: tradeRegisterNumber.trim() || undefined,
-        activityTypes: activities,
-        contactFirstName: contactFirstName.trim(),
-        contactLastName: contactLastName.trim(),
-        phone: phone.trim(),
-        publicName: publicName.trim() || undefined,
-        street: street.trim() || undefined,
-        county: county || undefined,
-        city: city || undefined,
-        zipCode: zipCode.trim() || undefined,
-        description: description.trim() || undefined,
-        services: servicii.length ? servicii : undefined,
-        publicPhone: publicPhone.trim() || undefined,
-        whatsapp: whatsapp.trim() || undefined,
-        website: website.trim() || undefined,
-        facebookUrl: facebookUrl.trim() || undefined,
-        linkedinUrl: linkedinUrl.trim() || undefined,
-        isPublic,
-      })
-      setProfile(updated as PartnerData)
-      setIsEditing(false)
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Eroare la salvare.')
     } finally {
       setSaving(false)
     }
@@ -449,149 +341,6 @@ export default function PartnerPublicProfile() {
           Informațiile afișate utilizatorilor care caută companii de instalare pe site-ul Baterino.
         </p>
 
-        {isEditing ? (
-        <form onSubmit={handleSave} className="flex flex-col gap-6">
-          {saveError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-[10px]">
-              <p className="text-sm font-['Inter'] text-red-600">{saveError}</p>
-            </div>
-          )}
-
-          {/* Legal (Step 1) */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-            <h3 className="text-lg font-bold font-['Inter'] text-slate-900 mb-4">Date firma (pasul 1)</h3>
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Denumire firmă" placeholder="S.C. Firma SRL" value={companyName} onChange={setCompanyName} />
-                <Field label="CUI / CIF" placeholder="RO12345678" value={cui} onChange={setCui} />
-              </div>
-              <p className="text-xs font-semibold font-['Inter'] text-gray-600 uppercase tracking-wide">
-                Adresă sediu social
-              </p>
-              <Field label="Stradă și număr" placeholder="ex: Str Exemplu nr 10" value={companyStreet} onChange={(v) => setCompanyStreet(sanitizeStreetLine(v))} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <SelectField
-                  label="Județ"
-                  options={[...ROMANIAN_COUNTIES]}
-                  value={companyCounty}
-                  onChange={handleCompanyCountyChange}
-                  placeholder="Selectează"
-                />
-                <SelectField
-                  label="Oraș"
-                  options={citiesForCompanyCounty}
-                  value={companyCity}
-                  onChange={setCompanyCity}
-                  placeholder="Selectează orașul"
-                  disabled={!companyCounty}
-                />
-              </div>
-              <Field label="Cod poștal" placeholder="010001" value={companyPostalCode} onChange={(v) => setCompanyPostalCode(sanitizeRoPostalCode(v))} maxLength={6} inputMode="numeric" />
-              <Field label="Nr. Registrul Comerțului" placeholder="J00/000/2020" value={tradeRegisterNumber} onChange={setTradeRegisterNumber} />
-              <div>
-                <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Tip activitate</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {ACTIVITY_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => toggleActivity(opt.id)}
-                      className={`h-9 px-3 rounded-[8px] border text-sm font-['Inter'] font-medium transition-colors flex items-center justify-center gap-1.5 ${
-                        activities.includes(opt.id)
-                          ? 'bg-slate-900 border-slate-900 text-white'
-                          : 'border-gray-300 text-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      {activities.includes(opt.id) && (
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Prenume contact" placeholder="Ion" value={contactFirstName} onChange={setContactFirstName} />
-                <Field label="Nume contact" placeholder="Popescu" value={contactLastName} onChange={setContactLastName} />
-              </div>
-              <Field label="Telefon" type="tel" placeholder="+40 7XX XXX XXX" value={phone} onChange={setPhone} />
-            </div>
-          </div>
-
-          {/* Public (Step 2) */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-            <h3 className="text-lg font-bold font-['Inter'] text-slate-900 mb-4">Profil public (pasul 2)</h3>
-            <div className="flex flex-col gap-4">
-              <Field label="Nume public" placeholder="ex: Solar Pro SRL" value={publicName} onChange={setPublicName} />
-              <Field label="Stradă" placeholder="ex: Str Exemplu nr 1" value={street} onChange={(v) => setStreet(sanitizeStreetLine(v))} />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <SelectField label="Județ" options={[...ROMANIAN_COUNTIES]} value={county} onChange={handleCountyChange} placeholder="Selectează județul" />
-                <SelectField
-                  label="Oraș"
-                  options={citiesForCounty}
-                  value={city}
-                  onChange={setCity}
-                  placeholder="Selectează orașul"
-                  disabled={!county}
-                />
-                <Field label="Cod poștal" placeholder="010001" value={zipCode} onChange={(v) => setZipCode(sanitizeRoPostalCode(v))} maxLength={6} inputMode="numeric" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-1">Descriere</label>
-                <textarea
-                  placeholder="Descrierea companiei tale..."
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-[10px] text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 resize-y"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Servicii oferite</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {SERVICII_OPTIONS.map((opt) => (
-                    <label key={opt.id} className="flex items-center gap-3 cursor-pointer p-3 rounded-[8px] border border-gray-200 hover:border-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={servicii.includes(opt.id)}
-                        onChange={() => toggleServiciu(opt.id)}
-                        className="w-4 h-4 rounded border-gray-300 accent-slate-900"
-                      />
-                      <span className="text-sm font-['Inter'] text-gray-800">{opt.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Telefon pentru clienți" type="tel" placeholder="+40 7XX XXX XXX" value={publicPhone} onChange={setPublicPhone} />
-                <Field label="WhatsApp" type="tel" placeholder="+40 7XX XXX XXX" value={whatsapp} onChange={setWhatsapp} />
-              </div>
-              <Field label="Website" type="url" placeholder="https://www.exemplu.ro" value={website} onChange={setWebsite} />
-              <Field label="Facebook" type="url" placeholder="https://facebook.com/..." value={facebookUrl} onChange={setFacebookUrl} />
-              <Field label="LinkedIn" type="url" placeholder="https://linkedin.com/company/..." value={linkedinUrl} onChange={setLinkedinUrl} />
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="h-11 px-6 bg-slate-900 rounded-[10px] text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 disabled:opacity-50"
-            >
-              {saving ? 'Se salvează...' : 'Salvează'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="h-11 px-6 border border-gray-300 rounded-[10px] text-gray-700 text-sm font-semibold font-['Inter'] hover:bg-gray-50"
-            >
-              Anulează
-            </button>
-          </div>
-        </form>
-      ) : (
         <>
           {/* Top box: Profilul este Public / nu este public / Completează profilul */}
           {(() => {
@@ -743,48 +492,10 @@ export default function PartnerPublicProfile() {
             </dl>
           </div>
 
-          {/* Date firmă - under Profil Public */}
-          <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm relative">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h3 className="text-lg font-bold font-['Inter'] text-slate-900">
-                Date firmă <span className="font-normal text-gray-500 text-sm">(Vizibile doar pentru Echipa Baterino)</span>
-              </h3>
-              <div className="relative group">
-                <button
-                  type="button"
-                  disabled
-                  className="flex items-center gap-2 h-10 px-4 rounded-[10px] text-sm font-bold font-['Inter'] bg-gray-200 text-gray-500 cursor-not-allowed"
-                >
-                  Editează
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs font-['Inter'] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 max-w-[220px] text-center">
-                  Contact Baterino Team to change the company details
-                </div>
-              </div>
-            </div>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-              <div><dt className="text-gray-500 font-['Inter']">Denumire</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyName)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">CUI</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.cui)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Stradă și nr.</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyStreet)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Oraș</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyCity)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Județ</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyCounty)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Cod poștal</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.companyPostalCode)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Reg. Com.</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.tradeRegisterNumber)}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Activitate</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.activityTypes) !== '—' ? profile?.activityTypes?.split(',').map(a => ACTIVITY_OPTIONS.find(o => o.id === a)?.label || a).join(', ') : '—'}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Contact</dt><dd className="font-['Inter'] text-slate-900">{[profile?.contactFirstName, profile?.contactLastName].filter(Boolean).join(' ') || '—'}</dd></div>
-              <div><dt className="text-gray-500 font-['Inter']">Telefon</dt><dd className="font-['Inter'] text-slate-900">{displayValue(profile?.phone)}</dd></div>
-            </dl>
-          </div>
-
         </>
-      )}
       </div>
 
       {/* Right: edit panel slides in from left, extends to page end (only in view mode) */}
-      {!isEditing && (
       <div
         className={`flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out border-l border-gray-200 bg-white ${
           panelOpen ? 'flex-1 min-w-[20rem] overflow-y-auto' : 'w-0'
@@ -880,7 +591,6 @@ export default function PartnerPublicProfile() {
           </form>
         </div>
       </div>
-      )}
     </div>
   )
 }
