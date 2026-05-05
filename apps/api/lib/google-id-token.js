@@ -8,7 +8,7 @@ function googleClientIds() {
 
 /**
  * Verifies a Google Sign-In ID token (JWT) from GIS FedCM / One Tap / button.
- * @returns {{ sub: string, email: string, name?: string }}
+ * @returns {{ sub: string, email: string, name?: string, givenName?: string, familyName?: string }}
  */
 async function verifyGoogleIdToken(idToken) {
   const audience = googleClientIds()
@@ -37,6 +37,8 @@ async function verifyGoogleIdToken(idToken) {
     sub: String(p.sub),
     email: String(p.email).trim().toLowerCase(),
     name: p.name ? String(p.name) : undefined,
+    givenName: p.given_name ? String(p.given_name) : undefined,
+    familyName: p.family_name ? String(p.family_name) : undefined,
   }
 }
 

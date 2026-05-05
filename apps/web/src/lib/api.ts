@@ -452,22 +452,39 @@ export async function login(email: string, password: string) {
   return data as { token: string; user: AuthUser }
 }
 
+export type GoogleAuthOptions = {
+  /** Obligatoriu la crearea unui cont nou cu Google (semnal explicit din UI). */
+  acceptedTerms?: boolean
+}
+
 export async function googleAuth(
   idToken: string,
   role: 'client' | 'partener' = 'client',
+  options?: GoogleAuthOptions,
 ): Promise<{
   token: string
   user: AuthUser
   needsPartnerProfile?: boolean
   partnerSignupPath?: string
 }> {
+  const payload: Record<string, unknown> = { idToken, role }
+  if (options?.acceptedTerms === true) {
+    payload.acceptedTerms = true
+  }
   const res = await fetch(`${API_BASE}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, role }),
+    body: JSON.stringify(payload),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Eroare la autentificare cu Google.')
+  if (!res.ok) {
+    const err = new Error(
+      (data as { error?: string }).error || 'Eroare la autentificare cu Google.',
+    ) as Error & { apiCode?: string }
+    const code = (data as { code?: string }).code
+    if (code) err.apiCode = code
+    throw err
+  }
   return data as {
     token: string
     user: AuthUser
@@ -498,6 +515,8 @@ export type ClientProfileSaveSection = 'personal' | 'address'
 export async function getClientProfile(): Promise<{
   email: string
   referralCode: string | null
+  /** False when the account uses Google sign-in only (no local password). */
+  hasPassword: boolean
   profile: ClientProfileDto | null
 }> {
   const res = await fetch(`${API_BASE}/client/profile`, { headers: authHeaders(), cache: 'no-store' })
@@ -507,7 +526,12 @@ export async function getClientProfile(): Promise<{
     if (res.status === 403) throw new Error('Acces restricționat.')
     throw new Error((json as { error?: string }).error || 'Eroare.')
   }
-  return json as { email: string; referralCode: string | null; profile: ClientProfileDto | null }
+  return json as {
+    email: string
+    referralCode: string | null
+    hasPassword: boolean
+    profile: ClientProfileDto | null
+  }
 }
 
 export async function putClientProfile(
@@ -903,12 +927,16 @@ export async function deletePartnerAccount() {
   return json
 }
 
-/** Șterge definitiv contul client (necesită parola curentă). Comenzile rămân în sistem fără legătură la cont. */
-export async function deleteClientAccount(currentPassword: string) {
+/** Șterge definitiv contul client. Parola e necesară doar dacă există parolă locală (nu cont doar Google). */
+export async function deleteClientAccount(currentPassword?: string) {
+  const body =
+    currentPassword !== undefined && currentPassword !== ''
+      ? { currentPassword }
+      : {}
   const res = await fetch(`${API_BASE}/client/account`, {
     method: 'DELETE',
     headers: authHeaders(),
-    body: JSON.stringify({ currentPassword }),
+    body: JSON.stringify(body),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la ștergerea contului.')

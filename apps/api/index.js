@@ -246,6 +246,23 @@ function sanitizeGuestOrderPersonName(value) {
   return s.replace(/[^\p{L}\s]/gu, '').replace(/\s+/g, ' ').trim()
 }
 
+/** Prenume + nume din claim-uri Google (given_name / family_name / name). */
+function namesFromGoogleClaims(g) {
+  let firstName = sanitizeGuestOrderPersonName(g.givenName || '')
+  let lastName = sanitizeGuestOrderPersonName(g.familyName || '')
+  if (!firstName && !lastName && g.name) {
+    const raw = String(g.name).trim()
+    const parts = raw.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) {
+      firstName = sanitizeGuestOrderPersonName(parts[0])
+      lastName = sanitizeGuestOrderPersonName(parts.slice(1).join(' '))
+    } else if (parts.length === 1) {
+      firstName = sanitizeGuestOrderPersonName(parts[0])
+    }
+  }
+  return { firstName, lastName }
+}
+
 /** Adresă, județ, localitate: litere, cifre, punctuație limitată (fără ghilimele / caractere tip injection). */
 function sanitizeGuestOrderText(value) {
   const s = stripControlChars(value ?? '')
@@ -849,6 +866,12 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(400).json({ error: 'Google nu a returnat adresa de email.' })
     }
 
+    const googleNames = namesFromGoogleClaims({
+      givenName: g.givenName,
+      familyName: g.familyName,
+      name: g.name,
+    })
+
     let user = await prisma.user.findUnique({ where: { googleSub: sub } })
     if (!user) {
       user = await prisma.user.findUnique({ where: { email } })
@@ -864,11 +887,49 @@ app.post('/api/auth/google', async (req, res) => {
         data.verificationCode = null
         data.verificationCodeExpiresAt = null
       }
+      if (
+        user.role === 'client' &&
+        (googleNames.firstName || googleNames.lastName)
+      ) {
+        if (!String(user.firstName || '').trim() && googleNames.firstName) {
+          data.firstName = googleNames.firstName
+        }
+        if (!String(user.lastName || '').trim() && googleNames.lastName) {
+          data.lastName = googleNames.lastName
+        }
+      }
       if (Object.keys(data).length) {
         user = await prisma.user.update({ where: { id: user.id }, data })
       }
+      if (
+        user.role === 'client' &&
+        (googleNames.firstName || googleNames.lastName)
+      ) {
+        const prof = await prisma.clientProfile.findUnique({ where: { userId: user.id } })
+        if (prof) {
+          const pData = {}
+          if (!String(prof.firstName || '').trim() && googleNames.firstName) {
+            pData.firstName = googleNames.firstName
+          }
+          if (!String(prof.lastName || '').trim() && googleNames.lastName) {
+            pData.lastName = googleNames.lastName
+          }
+          if (Object.keys(pData).length) {
+            await prisma.clientProfile.update({ where: { userId: user.id }, data: pData })
+          }
+        }
+      }
       const out = await buildGoogleAuthPayload(user.id)
       return res.json(out)
+    }
+
+    const acceptedTerms = body.acceptedTerms === true
+    if (!acceptedTerms) {
+      return res.status(400).json({
+        error:
+          'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a crea contul cu Google.',
+        code: 'GOOGLE_TERMS_REQUIRED',
+      })
     }
 
     const effectiveRole =
@@ -882,6 +943,18 @@ app.post('/api/auth/google', async (req, res) => {
         googleSub: sub,
         verificationCode: null,
         verificationCodeExpiresAt: null,
+        firstName: googleNames.firstName,
+        lastName: googleNames.lastName,
+        ...(effectiveRole === 'client'
+          ? {
+              clientProfile: {
+                create: {
+                  firstName: googleNames.firstName,
+                  lastName: googleNames.lastName,
+                },
+              },
+            }
+          : {}),
       },
     })
     const out = await buildGoogleAuthPayload(created.id)
@@ -916,34 +989,57 @@ async function ensureUserReferralCode(userId) {
   return null
 }
 
+/** Preferă numele din ClientProfile; dacă lipsește sau e gol, folosește User (ex. înregistrare Google). */
+function pickProfileOrUserName(profileVal, userVal) {
+  const p = String(profileVal ?? '').trim()
+  if (p) return p
+  return String(userVal ?? '').trim()
+}
+
 app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { email: true },
+      select: { email: true, password: true, firstName: true, lastName: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
     const referralCode = await ensureUserReferralCode(req.userId)
     const profile = await prisma.clientProfile.findUnique({ where: { userId: req.userId } })
+    const profileDto = profile
+      ? {
+          firstName: pickProfileOrUserName(profile.firstName, user.firstName),
+          lastName: pickProfileOrUserName(profile.lastName, user.lastName),
+          phone: profile.phone,
+          billAddress: profile.billAddress,
+          billCounty: profile.billCounty,
+          billCity: profile.billCity,
+          billPostal: profile.billPostal,
+          deliveryDifferent: profile.deliveryDifferent,
+          delAddress: profile.delAddress,
+          delCounty: profile.delCounty,
+          delCity: profile.delCity,
+          delPostal: profile.delPostal,
+        }
+      : {
+          firstName: String(user.firstName || '').trim(),
+          lastName: String(user.lastName || '').trim(),
+          phone: '',
+          billAddress: '',
+          billCounty: '',
+          billCity: '',
+          billPostal: '',
+          deliveryDifferent: false,
+          delAddress: null,
+          delCounty: null,
+          delCity: null,
+          delPostal: null,
+        }
     return res.json({
       email: user.email,
       referralCode,
-      profile: profile
-        ? {
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-            phone: profile.phone,
-            billAddress: profile.billAddress,
-            billCounty: profile.billCounty,
-            billCity: profile.billCity,
-            billPostal: profile.billPostal,
-            deliveryDifferent: profile.deliveryDifferent,
-            delAddress: profile.delAddress,
-            delCounty: profile.delCounty,
-            delCity: profile.delCity,
-            delPostal: profile.delPostal,
-          }
-        : null,
+      /** False pentru conturi create cu Google fără parolă locală (password null în DB). */
+      hasPassword: Boolean(user.password),
+      profile: profileDto,
     })
   } catch (err) {
     console.error('Client profile GET error:', err)
@@ -1228,23 +1324,19 @@ app.delete('/api/client/account', authMiddleware, clientAuthMiddleware, async (r
   try {
     const body = req.body || {}
     const currentPassword = body.currentPassword
-    if (!currentPassword) {
-      return res.status(400).json({ error: 'Parola curentă este obligatorie pentru ștergerea contului.' })
-    }
     const userId = req.userId
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, password: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
-    if (!user.password) {
-      return res.status(400).json({
-        error:
-          'Cont creat cu Google: setează mai întâi o parolă în setări ca să poți confirma ștergerea cu parola curentă.',
-      })
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Parola curentă este obligatorie pentru ștergerea contului.' })
+      }
+      const valid = await bcrypt.compare(String(currentPassword), user.password)
+      if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
     }
-    const valid = await bcrypt.compare(String(currentPassword), user.password)
-    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
 
     await sendAccountDeletedEmail(user.email, 'client')
 

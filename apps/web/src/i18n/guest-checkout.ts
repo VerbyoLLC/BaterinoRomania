@@ -100,6 +100,13 @@ export type GuestCheckoutTranslations = {
   authSignupLink: string
   authDividerOr: string
   authGoogleSignup: string
+  /** Checkbox before Google signup — fragments around `/termeni-si-conditii` and `/politica-confidentialitate`. */
+  authTermsLead: string
+  authTermsLinkTerms: string
+  authTermsMiddle: string
+  authTermsLinkPrivacy: string
+  /** Shown if Google signup is attempted without accepting terms (defensive). */
+  authTermsRequiredError: string
   missingSlugTitle: string
   missingSlugBody: string
   /** No slug and empty cart on `/comanda` */
@@ -241,6 +248,12 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authSignupLink: 'Autentifică-te',
     authDividerOr: 'sau',
     authGoogleSignup: 'Înregistrare cu Google',
+    authTermsLead: 'Sunt de acord cu ',
+    authTermsLinkTerms: 'Termenii și Condițiile',
+    authTermsMiddle: ' și ',
+    authTermsLinkPrivacy: 'Politica de Confidențialitate',
+    authTermsRequiredError:
+      'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a continua cu Google.',
     missingSlugTitle: 'Lipsește produsul',
     missingSlugBody: 'Nu s-a putut identifica produsul. Alege un produs din catalog.',
     emptyCheckoutTitle: 'Nu există produse de comandat',
@@ -366,6 +379,12 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authSignupLink: 'Sign in',
     authDividerOr: 'or',
     authGoogleSignup: 'Continue with Google',
+    authTermsLead: 'I agree to the ',
+    authTermsLinkTerms: 'Terms & Conditions',
+    authTermsMiddle: ' and ',
+    authTermsLinkPrivacy: 'Privacy Policy',
+    authTermsRequiredError:
+      'Please accept the Terms & Conditions and Privacy Policy to continue with Google.',
     missingSlugTitle: 'Missing product',
     missingSlugBody: 'We could not tell which product to order. Pick one from the catalogue.',
     emptyCheckoutTitle: 'Nothing to checkout',
@@ -486,6 +505,11 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authSignupLink: '登录',
     authDividerOr: '或',
     authGoogleSignup: '使用 Google 注册',
+    authTermsLead: '我同意',
+    authTermsLinkTerms: '条款与条件',
+    authTermsMiddle: '以及',
+    authTermsLinkPrivacy: '隐私政策',
+    authTermsRequiredError: '使用 Google 注册前请先同意条款与条件及隐私政策。',
     missingSlugTitle: '缺少商品',
     missingSlugBody: '无法识别要下单的商品，请从目录中选择。',
     emptyCheckoutTitle: '没有可结算的商品',

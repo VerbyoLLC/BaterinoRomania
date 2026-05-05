@@ -233,18 +233,22 @@ export default function AdminCompanies() {
   const handleConfirmApprove = async () => {
     if (!approveModalCompany) return
     const discRaw = approveDiscount.trim()
-    let partnerDiscountPercent: number | null
     if (discRaw === '') {
-      partnerDiscountPercent = null
-    } else {
-      const num = parseFloat(discRaw)
-      if (Number.isNaN(num) || num < 0.5 || num > 60) {
-        setApproveModalError('Reducerea trebuie să fie între 0,5 și 60 sau goală.')
-        return
-      }
-      partnerDiscountPercent = num
+      setApproveModalError('Reducerea este obligatorie.')
+      return
     }
-    const assignedSalesAgentId = approveAgentId.trim() === '' ? null : approveAgentId.trim()
+    const num = parseFloat(discRaw)
+    if (Number.isNaN(num) || num < 0.5 || num > 60) {
+      setApproveModalError('Reducerea trebuie să fie între 0,5 și 60.')
+      return
+    }
+    const partnerDiscountPercent = num
+
+    const assignedSalesAgentId = approveAgentId.trim()
+    if (!assignedSalesAgentId) {
+      setApproveModalError('Agentul de vânzări este obligatoriu.')
+      return
+    }
 
     setApproveModalError('')
     setApprovingId(approveModalCompany.id)
@@ -967,28 +971,30 @@ export default function AdminCompanies() {
             </p>
             <div className="mt-4 space-y-4">
               <label className="block text-sm font-medium text-slate-700 font-['Inter']">
-                Reducere % (față de catalog)
+                Reducere % (față de catalog) <span className="text-red-500">*</span>
                 <input
                   type="number"
                   min={0.5}
                   max={60}
                   step={0.5}
-                  placeholder="Gol = fără reducere"
+                  placeholder="Ex: 10"
                   value={approveDiscount}
                   onChange={(e) => setApproveDiscount(e.target.value)}
                   disabled={Boolean(approvingId)}
+                  required
                   className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-900/15"
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700 font-['Inter']">
-                Agent de vânzări
+                Agent de vânzări <span className="text-red-500">*</span>
                 <select
                   value={approveAgentId}
                   onChange={(e) => setApproveAgentId(e.target.value)}
                   disabled={Boolean(approvingId)}
+                  required
                   className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/15"
                 >
-                  <option value="">— Fără agent —</option>
+                  <option value="">— Selectează agentul —</option>
                   {salesAgents.map((a) => (
                     <option key={a.id} value={a.id}>
                       {[a.firstName, a.lastName].filter(Boolean).join(' ').trim() || a.email || a.id}

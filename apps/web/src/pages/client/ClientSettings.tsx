@@ -128,6 +128,8 @@ export default function ClientSettings() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  /** null = încă nu s-a încărcat profilul; false = cont doar Google (fără parolă locală). */
+  const [accountHasPassword, setAccountHasPassword] = useState<boolean | null>(null)
   const [deletePwd, setDeletePwd] = useState('')
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
@@ -156,9 +158,10 @@ export default function ClientSettings() {
   useEffect(() => {
     let c = false
     getClientProfile()
-      .then(({ email: em, profile }) => {
+      .then(({ email: em, profile, hasPassword }) => {
         if (c) return
         setEmail(em)
+        setAccountHasPassword(hasPassword ?? true)
         if (profile) {
           setFirstName(profile.firstName || '')
           setLastName(profile.lastName || '')
@@ -306,11 +309,12 @@ export default function ClientSettings() {
   }
 
   async function handleDeleteAccount() {
-    if (deleteConfirmText !== 'DELETE' || !deletePwd.trim()) return
+    if (deleteConfirmText !== 'DELETE') return
+    if (accountHasPassword && !deletePwd.trim()) return
     setDeleting(true)
     setDeleteErr('')
     try {
-      await deleteClientAccount(deletePwd)
+      await deleteClientAccount(accountHasPassword ? deletePwd : undefined)
       clearAuth()
       navigate('/login', { replace: true })
     } catch (err) {
@@ -888,19 +892,30 @@ export default function ClientSettings() {
               Ești pe cale să îți ștergi definitiv contul. Nu poți anula această acțiune.
             </p>
             <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-slate-700 font-['Inter']">
-              <li>Datele din profil și parola vor fi eliminate</li>
+              <li>
+                {accountHasPassword === false
+                  ? 'Datele din profil și legătura cu Google vor fi eliminate'
+                  : 'Datele din profil și parola vor fi eliminate'}
+              </li>
               <li>Comenzile existente rămân înregistrate, fără legătură cu contul</li>
             </ul>
-            <label className="mb-4 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">Parola curentă</span>
-              <PasswordInput
-                value={deletePwd}
-                onChange={setDeletePwd}
-                autoComplete="current-password"
-                placeholder="Parola cu care te autentifici"
-                inputClassName={passwordFieldClassName}
-              />
-            </label>
+            {accountHasPassword === false ? (
+              <p className="mb-4 text-sm text-slate-600 font-['Inter']">
+                Te-ai înregistrat cu Google; nu este nevoie de parolă — confirmă mai jos cu textul cerut.
+              </p>
+            ) : null}
+            {accountHasPassword !== false ? (
+              <label className="mb-4 block">
+                <span className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">Parola curentă</span>
+                <PasswordInput
+                  value={deletePwd}
+                  onChange={setDeletePwd}
+                  autoComplete="current-password"
+                  placeholder="Parola cu care te autentifici"
+                  inputClassName={passwordFieldClassName}
+                />
+              </label>
+            ) : null}
             <div className="mb-4">
               <label className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">
                 Introdu <span className="rounded bg-slate-100 px-1 font-mono">DELETE</span> pentru a confirma
@@ -931,7 +946,12 @@ export default function ClientSettings() {
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText !== 'DELETE' || !deletePwd.trim() || deleting}
+                disabled={
+                  deleteConfirmText !== 'DELETE' ||
+                  deleting ||
+                  accountHasPassword === null ||
+                  (accountHasPassword === true && !deletePwd.trim())
+                }
                 className="min-h-11 flex-1 rounded-xl bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 font-['Inter']"
               >
                 {deleting ? 'Se șterge…' : 'Șterge definitiv'}

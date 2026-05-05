@@ -52,6 +52,8 @@ export default function SignupClienti() {
   const [emailInput, setEmailInput] = useState('')
   const [password, setPassword] = useState('')
   const [agreed, setAgreed] = useState(false)
+  /** După click pe Google fără bifă — chenar roșu + mesaj la checkbox. */
+  const [termsAckMissing, setTermsAckMissing] = useState(false)
   const [errors, setErrors] = useState<{ password?: string; submit?: string }>({})
   const [loading, setLoading] = useState(false)
   const [apiOk, setApiOk] = useState<boolean | null>(null)
@@ -113,9 +115,12 @@ export default function SignupClienti() {
 
   async function handleGoogleToken(idToken: string) {
     try {
+      setTermsAckMissing(false)
       setErrors({})
       setLoading(true)
-      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, tab)
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, tab, {
+        acceptedTerms: true,
+      })
       setAuthToken(token)
       if (user.role === 'partener') {
         navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
@@ -208,24 +213,47 @@ export default function SignupClienti() {
               {errors.password && <p className={errorClass}>{errors.password}</p>}
             </div>
             {/* Terms */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-slate-900 flex-shrink-0"
-              />
-              <span className="text-sm font-['Inter'] text-gray-600 leading-5">
-                Sunt de acord cu{' '}
-                <Link to="/termeni-si-conditii" className="text-black font-semibold hover:underline">
-                  Termenii și Condițiile
-                </Link>{' '}
-                și{' '}
-                <Link to="/politica-confidentialitate" className="text-black font-semibold hover:underline">
-                  Politica de Confidențialitate
-                </Link>
-              </span>
-            </label>
+            <div
+              className={`rounded-[10px] p-3 transition-colors ${
+                termsAckMissing
+                  ? 'border-2 border-red-500 bg-red-50/80'
+                  : 'border border-transparent'
+              }`}
+            >
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    setAgreed(on)
+                    if (on) {
+                      setTermsAckMissing(false)
+                      setErrors((prev) => {
+                        if (!prev.submit) return prev
+                        const next = { ...prev }
+                        delete next.submit
+                        return next
+                      })
+                    }
+                  }}
+                  aria-invalid={termsAckMissing}
+                  className={`mt-0.5 h-4 w-4 flex-shrink-0 rounded accent-slate-900 ${
+                    termsAckMissing ? 'border-red-600 ring-2 ring-red-200' : 'border-gray-300'
+                  }`}
+                />
+                <span className="text-sm font-['Inter'] leading-5 text-gray-600">
+                  Sunt de acord cu{' '}
+                  <Link to="/termeni-si-conditii" className="font-semibold text-black hover:underline">
+                    Termenii și Condițiile
+                  </Link>{' '}
+                  și{' '}
+                  <Link to="/politica-confidentialitate" className="font-semibold text-black hover:underline">
+                    Politica de Confidențialitate
+                  </Link>
+                </span>
+              </label>
+            </div>
 
             <button
               type="submit"
@@ -245,6 +273,14 @@ export default function SignupClienti() {
           <GoogleSignupButton
             label="Înregistrare cu Google"
             disabled={loading}
+            beforePopup={() => {
+              if (agreed) {
+                setTermsAckMissing(false)
+                return true
+              }
+              setTermsAckMissing(true)
+              return false
+            }}
             onToken={handleGoogleToken}
             onError={(msg) => setErrors({ submit: msg })}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-gray-300 text-sm font-semibold font-['Inter'] text-gray-700 transition-colors hover:bg-gray-50"

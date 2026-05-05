@@ -249,6 +249,8 @@ export default function GuestCheckout() {
 
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
+  const [authTermsAgreed, setAuthTermsAgreed] = useState(false)
+  const [authTermsHighlight, setAuthTermsHighlight] = useState(false)
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
 
@@ -542,9 +544,12 @@ export default function GuestCheckout() {
 
   async function handleGuestGoogleToken(idToken: string) {
     setAuthError('')
+    setAuthTermsHighlight(false)
     setAuthLoading(true)
     try {
-      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, 'client')
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, 'client', {
+        acceptedTerms: true,
+      })
       setAuthToken(token)
       if (user.role === 'partener') {
         navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
@@ -1857,9 +1862,62 @@ export default function GuestCheckout() {
                         <div className="h-px flex-1 bg-slate-200" aria-hidden />
                       </div>
 
+                      <div
+                        className={`mb-4 rounded-xl p-3 transition-colors ${
+                          authTermsHighlight
+                            ? 'border-2 border-red-500 bg-red-50/80'
+                            : 'border border-transparent'
+                        }`}
+                      >
+                        <label className="flex cursor-pointer items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={authTermsAgreed}
+                            onChange={(e) => {
+                              const on = e.target.checked
+                              setAuthTermsAgreed(on)
+                              if (on) {
+                                setAuthTermsHighlight(false)
+                                setAuthError('')
+                              }
+                            }}
+                            aria-invalid={authTermsHighlight}
+                            className={`mt-0.5 h-4 w-4 shrink-0 rounded text-slate-900 focus:ring-2 focus:ring-slate-900/20 ${
+                              authTermsHighlight
+                                ? 'border-red-600 ring-2 ring-red-200'
+                                : 'border-slate-300'
+                            }`}
+                          />
+                          <span className="text-sm leading-snug text-slate-700 font-['Inter']">
+                            {tr.authTermsLead}
+                            <Link
+                              to="/termeni-si-conditii"
+                              className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+                            >
+                              {tr.authTermsLinkTerms}
+                            </Link>
+                            {tr.authTermsMiddle}
+                            <Link
+                              to="/politica-confidentialitate"
+                              className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+                            >
+                              {tr.authTermsLinkPrivacy}
+                            </Link>
+                          </span>
+                        </label>
+                      </div>
+
                       <GoogleSignupButton
                         label={tr.authGoogleSignup}
                         disabled={authLoading}
+                        beforePopup={() => {
+                          if (authTermsAgreed) {
+                            setAuthTermsHighlight(false)
+                            return true
+                          }
+                          setAuthTermsHighlight(true)
+                          return false
+                        }}
                         onToken={handleGuestGoogleToken}
                         onError={(msg) => setAuthError(msg)}
                       />
