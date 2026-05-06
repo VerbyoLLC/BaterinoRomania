@@ -18,6 +18,29 @@ function escapeHtmlAttr(s) {
   return escapeHtml(s).replace(/'/g, '&#39;')
 }
 
+/** Rând beneficiu: layout pe &lt;table&gt; + icon PNG (Outlook nu suportă bine flex și Unicode ✓). */
+function benefitRow(iconSrc, title, bodyHtml) {
+  const ic = escapeHtmlAttr(iconSrc)
+  const t = escapeHtml(title)
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:16px;border-collapse:separate;border-spacing:0;">
+  <tr>
+    <td style="background:#f7f7f7;border-radius:10px;border-left:3px solid #1a1a2e;padding:0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        <tr>
+          <td width="48" valign="middle" style="padding:14px 8px 14px 14px;">
+            <img src="${ic}" width="28" height="28" alt="" style="display:block;border:0;width:28px;height:28px;" />
+          </td>
+          <td valign="top" style="padding:14px 16px 14px 4px;">
+            <div class="benefit-title">${t}</div>
+            <div class="benefit-desc">${bodyHtml}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`
+}
+
 /**
  * Email către prieten: cod recomandare trimis în numele clientului.
  * @param {{ senderName: string, referralCode: string, registerUrl: string, assetBaseUrl: string }} p
@@ -32,8 +55,12 @@ function getReferralInviteTemplate({
   const code = escapeHtml(referralCode)
   const url = escapeHtmlAttr(registerUrl)
   const safeSite = escapeHtml(SITE_NAME)
+  // Path fără spații — unii clienți de email tratează prost %20 în URL; fișier duplicat în web/public/images/email/
   const logoSrc = escapeHtmlAttr(
-    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/programe%20reduceri/baterino-white-logo.png`,
+    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/baterino-white-logo.png`,
+  )
+  const iconCheckSrc = escapeHtmlAttr(
+    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/benefit-check.png`,
   )
 
   return `
@@ -210,24 +237,6 @@ function getReferralInviteTemplate({
       margin-top: 36px;
     }
 
-    .benefit-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 16px;
-      padding: 16px;
-      background: #f7f7f7;
-      border-radius: 10px;
-      border-left: 3px solid #1a1a2e;
-    }
-
-    .benefit-icon {
-      font-size: 18px;
-      margin-top: 1px;
-      flex-shrink: 0;
-      color: #1a1a2e;
-    }
-
     .benefit-title {
       font-size: 14px;
       font-weight: 600;
@@ -344,48 +353,12 @@ function getReferralInviteTemplate({
       <div class="section-heading">De ce să cumperi de la Baterino?</div>
 
       <div class="benefits">
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Produse certificate</div>
-            <div class="benefit-desc">Baterii LiFePO<sub>4</sub> testate și omologate, cu BMS integrat și protecție completă.</div>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Garanție 10 ani</div>
-            <div class="benefit-desc">Una dintre cele mai lungi garanții din industrie, pentru liniștea ta pe termen lung.</div>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Livrare în toată România</div>
-            <div class="benefit-desc">Logistică coordonată, fără bătăi de cap.</div>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Suport tehnic dedicat</div>
-            <div class="benefit-desc">Echipă disponibilă pentru întrebări despre instalare, compatibilitate și utilizare.</div>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Prețuri accesibile</div>
-            <div class="benefit-desc">Cel mai bun raport calitate-preț de pe piața românească.</div>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">✓</div>
-          <div>
-            <div class="benefit-title">Programul Baterino SWAP</div>
-            <div class="benefit-desc">În caz de defecțiune tehnică, înlocuim bateria rapid, fără birocrație.</div>
-          </div>
-        </div>
+        ${benefitRow(iconCheckSrc, 'Produse certificate', 'Baterii LiFePO<sub>4</sub> testate și omologate, cu BMS integrat și protecție completă.')}
+        ${benefitRow(iconCheckSrc, 'Garanție 10 ani', 'Una dintre cele mai lungi garanții din industrie, pentru liniștea ta pe termen lung.')}
+        ${benefitRow(iconCheckSrc, 'Livrare în toată România', 'Logistică coordonată, fără bătăi de cap.')}
+        ${benefitRow(iconCheckSrc, 'Suport tehnic dedicat', 'Echipă disponibilă pentru întrebări despre instalare, compatibilitate și utilizare.')}
+        ${benefitRow(iconCheckSrc, 'Prețuri accesibile', 'Cel mai bun raport calitate-preț de pe piața românească.')}
+        ${benefitRow(iconCheckSrc, 'Programul Baterino SWAP', 'În caz de defecțiune tehnică, înlocuim bateria rapid, fără birocrație.')}
       </div>
 
       <div class="cta-block">

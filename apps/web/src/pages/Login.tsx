@@ -52,7 +52,7 @@ function navigateAfterLogin(
     return
   }
   if (user.role === 'client') {
-    navigate(nextPath ?? '/client')
+    navigate(nextPath ?? '/produse')
     return
   }
   navigate(nextPath ?? '/')

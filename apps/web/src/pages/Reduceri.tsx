@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
-import { getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
+import { getAuthToken, getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 import { ReduceriProgramCard } from '../components/reduceri/ReduceriProgramCard'
@@ -42,6 +42,20 @@ export default function Reduceri() {
   const { language } = useLanguage()
   const tr = getReduceriTranslations(language.code)
   const [apiPrograms, setApiPrograms] = useState<ReducereProgram[] | null>(null)
+  const [loggedIn, setLoggedIn] = useState(() =>
+    typeof window !== 'undefined' ? Boolean(getAuthToken()) : false,
+  )
+
+  useEffect(() => {
+    const sync = () => setLoggedIn(Boolean(getAuthToken()))
+    sync()
+    window.addEventListener('baterino-auth-change', sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener('baterino-auth-change', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -87,28 +101,30 @@ export default function Reduceri() {
         <div className="flex flex-col md:hidden mb-10">
           {programs.map((program, i) => (
             <div key={`${program.programLabel}-${i}`}>
-              <ReduceriProgramCard program={program} />
+              <ReduceriProgramCard program={program} hideCta={loggedIn} />
               <hr className="border-gray-200 my-10" />
             </div>
           ))}
           <HowToApply title={tr.howTitle} steps={tr.howSteps} />
-          <Link
-            to="/login"
-            className="w-full h-14 mt-6 bg-slate-900 rounded-[10px] inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
-          >
-            {programs[0]?.ctaLabel ?? tr.programs[0].ctaLabel}
-          </Link>
+          {!loggedIn ? (
+            <Link
+              to="/login"
+              className="w-full h-14 mt-6 bg-slate-900 rounded-[10px] inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
+            >
+              {programs[0]?.ctaLabel ?? tr.programs[0].ctaLabel}
+            </Link>
+          ) : null}
         </div>
 
         {four ? (
           <>
             <div className="hidden md:grid md:grid-cols-3 gap-6 mb-14 items-stretch">
               {[p1, p2, p3].map((program, i) => (
-                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} />
+                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} hideCta={loggedIn} />
               ))}
             </div>
             <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16 lg:mb-20 items-start">
-              <ReduceriProgramCard program={p4} />
+              <ReduceriProgramCard program={p4} hideCta={loggedIn} />
               <HowToApply title={tr.howTitle} steps={tr.howSteps} />
             </div>
           </>
@@ -116,7 +132,7 @@ export default function Reduceri() {
           <>
             <div className="hidden md:grid md:grid-cols-3 gap-6 mb-10 items-stretch">
               {programs.map((program, i) => (
-                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} />
+                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} hideCta={loggedIn} />
               ))}
             </div>
             <div className="hidden md:max-w-xl md:mx-auto md:block mb-16 lg:mb-20">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { KeyRound, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
+import { KeyRound, Loader2, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
 import {
   clearAuth,
   deleteClientAccount,
@@ -58,6 +58,64 @@ type AddressFieldKey =
   | 'delCity'
   | 'delPostal'
 
+/** Skeleton rows while GET /client/profile is in flight (same geometry as inputs). */
+function ClientProfilePersonalFieldsSkeleton() {
+  const bar = 'h-12 w-full rounded-xl bg-slate-100 animate-pulse'
+  const label = 'mb-2 h-3.5 w-28 max-w-[40%] rounded bg-slate-200/90 animate-pulse'
+  return (
+    <div className="space-y-4" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Se încarcă datele profilului…</span>
+      <div>
+        <div className={label} aria-hidden />
+        <div className={bar} aria-hidden />
+        <div className="mt-2 h-3 w-64 max-w-full rounded bg-slate-100 animate-pulse" aria-hidden />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <div className={`${label} w-14`} aria-hidden />
+          <div className={bar} aria-hidden />
+        </div>
+        <div>
+          <div className={`${label} w-20`} aria-hidden />
+          <div className={bar} aria-hidden />
+        </div>
+      </div>
+      <div>
+        <div className={`${label} w-16`} aria-hidden />
+        <div className="mb-2 h-3 w-52 max-w-full rounded bg-slate-100 animate-pulse" aria-hidden />
+        <div className={bar} aria-hidden />
+      </div>
+      <div className="h-11 w-52 max-w-full rounded-xl bg-slate-200/80 animate-pulse" aria-hidden />
+    </div>
+  )
+}
+
+function ClientProfileAddressFieldsSkeleton() {
+  const bar = 'h-12 w-full rounded-xl bg-slate-100 animate-pulse'
+  const label = 'mb-2 h-3.5 w-24 rounded bg-slate-200/90 animate-pulse'
+  return (
+    <div className="space-y-4" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Se încarcă adresa…</span>
+      <div className="space-y-2">
+        <div className="h-4 w-full max-w-md rounded bg-slate-100 animate-pulse" aria-hidden />
+        <div className="h-4 w-4/5 max-w-lg rounded bg-slate-100 animate-pulse" aria-hidden />
+      </div>
+      <div className="h-3 w-40 rounded bg-slate-200/80 animate-pulse" aria-hidden />
+      {[1, 2, 3, 4].map((k) => (
+        <div key={k}>
+          <div className={label} aria-hidden />
+          <div className={bar} aria-hidden />
+        </div>
+      ))}
+      <div className="flex items-center gap-2 pt-2">
+        <div className="h-4 w-4 shrink-0 rounded border border-slate-200 bg-slate-100 animate-pulse" aria-hidden />
+        <div className="h-4 w-56 max-w-[70%] rounded bg-slate-100 animate-pulse" aria-hidden />
+      </div>
+      <div className="h-11 w-44 max-w-full rounded-xl bg-slate-200/80 animate-pulse" aria-hidden />
+    </div>
+  )
+}
+
 function SettingsSection({
   id,
   title,
@@ -102,6 +160,8 @@ export default function ClientSettings() {
   const [delPostal, setDelPostal] = useState('')
 
   const [loadError, setLoadError] = useState<string | null>(null)
+  /** True until primul GET /client/profile se termină (succes sau eroare). */
+  const [profileLoading, setProfileLoading] = useState(true)
   const [savingPersonal, setSavingPersonal] = useState(false)
   const [savingAddress, setSavingAddress] = useState(false)
   const [personalSaveMsg, setPersonalSaveMsg] = useState<string | null>(null)
@@ -180,6 +240,9 @@ export default function ClientSettings() {
       .catch((e) => {
         if (!c) setLoadError(e instanceof Error ? e.message : 'Eroare')
       })
+      .finally(() => {
+        if (!c) setProfileLoading(false)
+      })
     return () => {
       c = true
     }
@@ -187,6 +250,7 @@ export default function ClientSettings() {
 
   async function handleSavePersonal(e: React.FormEvent) {
     e.preventDefault()
+    if (profileLoading) return
     setSavingPersonal(true)
     setPersonalSaveMsg(null)
     setAddressSaveMsg(null)
@@ -225,6 +289,7 @@ export default function ClientSettings() {
 
   async function handleSaveAddress(e: React.FormEvent) {
     e.preventDefault()
+    if (profileLoading) return
     setSavingAddress(true)
     setAddressSaveMsg(null)
     setPersonalSaveMsg(null)
@@ -310,11 +375,11 @@ export default function ClientSettings() {
 
   async function handleDeleteAccount() {
     if (deleteConfirmText !== 'DELETE') return
-    if (accountHasPassword && !deletePwd.trim()) return
+    if (accountHasPassword === true && !deletePwd.trim()) return
     setDeleting(true)
     setDeleteErr('')
     try {
-      await deleteClientAccount(accountHasPassword ? deletePwd : undefined)
+      await deleteClientAccount(accountHasPassword === true ? deletePwd : undefined)
       clearAuth()
       navigate('/login', { replace: true })
     } catch (err) {
@@ -366,108 +431,123 @@ export default function ClientSettings() {
         <div className="min-w-0 flex-1">
       <SettingsSection id="date-personale" title="Date personale" Icon={User}>
         <form onSubmit={handleSavePersonal} className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-800 font-['Inter']">Email curent</span>
-            <input
-              type="email"
-              value={email}
-              readOnly
-              autoComplete="off"
-              aria-readonly="true"
-              title="Emailul se schimbă doar din secțiunea Schimbă email"
-              className={`${inputClass} mt-1 cursor-default bg-slate-100 text-slate-600 border-slate-200 focus:border-slate-200 focus:ring-0`}
-            />
-            <span className="mt-1 block text-xs text-slate-500 font-['Inter']">
-              Emailul nu poate fi editat aici. Pentru schimbare folosește secțiunea „Schimbă email”.
-            </span>
-          </label>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-800 font-['Inter']">Nume</span>
-              <input
-                className={`${lastNameError ? inputClassError : inputClass} mt-1`}
-                value={lastName}
-                placeholder="Ex.: Popescu"
-                autoComplete="family-name"
-                aria-invalid={Boolean(lastNameError)}
-                aria-describedby={lastNameError ? 'settings-nume-err' : undefined}
-                onChange={(e) => {
-                  setLastNameError(null)
-                  setPersonalSaveMsg(null)
-                  setLastName(sanitizePersonName(e.target.value))
-                }}
-              />
-              {lastNameError ? (
-                <p id="settings-nume-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
-                  {lastNameError}
-                </p>
-              ) : null}
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-800 font-['Inter']">Prenume</span>
-              <input
-                className={`${firstNameError ? inputClassError : inputClass} mt-1`}
-                value={firstName}
-                placeholder="Ex.: Maria"
-                autoComplete="given-name"
-                aria-invalid={Boolean(firstNameError)}
-                aria-describedby={firstNameError ? 'settings-prenume-err' : undefined}
-                onChange={(e) => {
-                  setFirstNameError(null)
-                  setPersonalSaveMsg(null)
-                  setFirstName(sanitizePersonName(e.target.value))
-                }}
-              />
-              {firstNameError ? (
-                <p id="settings-prenume-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
-                  {firstNameError}
-                </p>
-              ) : null}
-            </label>
-          </div>
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-800 font-['Inter']">Telefon</span>
-            <span className="mt-1 mb-1.5 block text-xs text-slate-500 font-['Inter']">Prefix +40 (fix); introdu exact 9 cifre.</span>
-            <div
-              className={
-                phoneError
-                  ? 'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border-2 border-red-500 bg-white transition-colors focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-500/25'
-                  : phoneFieldShellClass
-              }
-            >
-              <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold tabular-nums text-slate-700">
-                +40
-              </span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                className={`${phoneInnerInputClass} mt-0`}
-                placeholder="7XX XXX XXX"
-                value={formatRoNational9Display(phone)}
-                maxLength={11}
-                aria-invalid={Boolean(phoneError)}
-                aria-describedby={phoneError ? 'settings-phone-err' : undefined}
-                onChange={(e) => {
-                  setPhoneError(null)
-                  setPersonalSaveMsg(null)
-                  setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))
-                }}
-              />
-            </div>
-            {phoneError ? (
-              <p id="settings-phone-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
-                {phoneError}
-              </p>
-            ) : null}
-          </label>
+          {profileLoading ? (
+            <ClientProfilePersonalFieldsSkeleton />
+          ) : (
+            <>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800 font-['Inter']">Email curent</span>
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  autoComplete="off"
+                  aria-readonly="true"
+                  title="Emailul se schimbă doar din secțiunea Schimbă email"
+                  className={`${inputClass} mt-1 cursor-default bg-slate-100 text-slate-600 border-slate-200 focus:border-slate-200 focus:ring-0`}
+                />
+                <span className="mt-1 block text-xs text-slate-500 font-['Inter']">
+                  Emailul nu poate fi editat aici. Pentru schimbare folosește secțiunea „Schimbă email”.
+                </span>
+              </label>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">Nume</span>
+                  <input
+                    className={`${lastNameError ? inputClassError : inputClass} mt-1`}
+                    value={lastName}
+                    placeholder="Ex.: Popescu"
+                    autoComplete="family-name"
+                    aria-invalid={Boolean(lastNameError)}
+                    aria-describedby={lastNameError ? 'settings-nume-err' : undefined}
+                    onChange={(e) => {
+                      setLastNameError(null)
+                      setPersonalSaveMsg(null)
+                      setLastName(sanitizePersonName(e.target.value))
+                    }}
+                  />
+                  {lastNameError ? (
+                    <p id="settings-nume-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
+                      {lastNameError}
+                    </p>
+                  ) : null}
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">Prenume</span>
+                  <input
+                    className={`${firstNameError ? inputClassError : inputClass} mt-1`}
+                    value={firstName}
+                    placeholder="Ex.: Maria"
+                    autoComplete="given-name"
+                    aria-invalid={Boolean(firstNameError)}
+                    aria-describedby={firstNameError ? 'settings-prenume-err' : undefined}
+                    onChange={(e) => {
+                      setFirstNameError(null)
+                      setPersonalSaveMsg(null)
+                      setFirstName(sanitizePersonName(e.target.value))
+                    }}
+                  />
+                  {firstNameError ? (
+                    <p id="settings-prenume-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
+                      {firstNameError}
+                    </p>
+                  ) : null}
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800 font-['Inter']">Telefon</span>
+                <span className="mt-1 mb-1.5 block text-xs text-slate-500 font-['Inter']">
+                  Prefix +40 (fix); introdu exact 9 cifre.
+                </span>
+                <div
+                  className={
+                    phoneError
+                      ? 'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border-2 border-red-500 bg-white transition-colors focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-500/25'
+                      : phoneFieldShellClass
+                  }
+                >
+                  <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold tabular-nums text-slate-700">
+                    +40
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    className={`${phoneInnerInputClass} mt-0`}
+                    placeholder="7XX XXX XXX"
+                    value={formatRoNational9Display(phone)}
+                    maxLength={11}
+                    aria-invalid={Boolean(phoneError)}
+                    aria-describedby={phoneError ? 'settings-phone-err' : undefined}
+                    onChange={(e) => {
+                      setPhoneError(null)
+                      setPersonalSaveMsg(null)
+                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))
+                    }}
+                  />
+                </div>
+                {phoneError ? (
+                  <p id="settings-phone-err" className="mt-1.5 text-sm text-red-600 font-['Inter']">
+                    {phoneError}
+                  </p>
+                ) : null}
+              </label>
+            </>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              disabled={savingPersonal}
-              className="min-h-11 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 font-['Inter']"
+              disabled={savingPersonal || profileLoading}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 font-['Inter']"
             >
-              {savingPersonal ? 'Se salvează…' : 'Salvează datele personale'}
+              {savingPersonal ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  Se salvează…
+                </>
+              ) : (
+                'Salvează datele personale'
+              )}
             </button>
             {personalSaveMsg ? (
               <p className="text-sm font-medium text-green-700 font-['Inter']" role="status">
@@ -483,6 +563,10 @@ export default function ClientSettings() {
 
       <SettingsSection id="adresa-livrare" title="Adresa de livrare" Icon={MapPin}>
         <form onSubmit={handleSaveAddress} className="space-y-4">
+          {profileLoading ? (
+            <ClientProfileAddressFieldsSkeleton />
+          ) : (
+            <>
           <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
             Adresa de facturare este folosită implicit pentru livrare. Bifează mai jos dacă livrarea este în altă locație.
           </p>
@@ -708,13 +792,23 @@ export default function ClientSettings() {
             </div>
           ) : null}
 
+            </>
+          )}
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              disabled={savingAddress}
-              className="min-h-11 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 font-['Inter']"
+              disabled={savingAddress || profileLoading}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 font-['Inter']"
             >
-              {savingAddress ? 'Se salvează…' : 'Salvează adresa'}
+              {savingAddress ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  Se salvează…
+                </>
+              ) : (
+                'Salvează adresa'
+              )}
             </button>
             {addressSaveMsg ? (
               <p className="text-sm font-medium text-green-700 font-['Inter']" role="status">
@@ -904,7 +998,7 @@ export default function ClientSettings() {
                 Te-ai înregistrat cu Google; nu este nevoie de parolă — confirmă mai jos cu textul cerut.
               </p>
             ) : null}
-            {accountHasPassword !== false ? (
+            {accountHasPassword === true ? (
               <label className="mb-4 block">
                 <span className="mb-2 block text-sm font-semibold text-slate-800 font-['Inter']">Parola curentă</span>
                 <PasswordInput

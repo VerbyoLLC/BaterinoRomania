@@ -515,6 +515,8 @@ export type ClientProfileSaveSection = 'personal' | 'address'
 export async function getClientProfile(): Promise<{
   email: string
   referralCode: string | null
+  referralInviteEmailsSent: number
+  referralCodeRedemptionsCount: number
   /** False when the account uses Google sign-in only (no local password). */
   hasPassword: boolean
   profile: ClientProfileDto | null
@@ -529,9 +531,75 @@ export async function getClientProfile(): Promise<{
   return json as {
     email: string
     referralCode: string | null
+    referralInviteEmailsSent: number
+    referralCodeRedemptionsCount: number
     hasPassword: boolean
     profile: ClientProfileDto | null
   }
+}
+
+/** Trimite codul de recomandare pe email către un prieten (program „Știu de la vecinu’”). */
+export async function postClientReferralInviteEmail(friendEmail: string): Promise<{
+  message: string
+  referralInviteEmailsSent?: number
+}> {
+  const res = await fetch(`${API_BASE}/client/referral/send-email`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ friendEmail: friendEmail.trim() }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) {
+      const body = json as { error?: string; path?: string }
+      throw new Error(
+        body?.error === 'Rută negăsită'
+          ? 'Serviciul de invitații nu este încă disponibil pe server (backend învechit). Redeploy API-ul (Railway) cu ultima versiune sau verifică că URL-ul API din VITE_API_URL este corect.'
+          : body?.error || 'Endpoint negăsit.',
+      )
+    }
+    throw new Error((json as { error?: string }).error || 'Eroare la trimiterea emailului.')
+  }
+  return json as { message: string; referralInviteEmailsSent?: number }
+}
+
+/** Linie coș — aliniată cu `CartLine` din CartContext. */
+export type ClientCartLine = {
+  productId: string
+  slug: string
+  title: string
+  qty: number
+  imageUrl?: string
+  reducereProgramId?: string
+  reducereDiscountPercent?: number
+}
+
+export async function getClientCart(): Promise<{ lines: ClientCartLine[] }> {
+  const res = await fetch(`${API_BASE}/client/cart`, { headers: authHeaders(), cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as { lines: ClientCartLine[] }
+}
+
+export async function putClientCart(lines: ClientCartLine[]): Promise<{ lines: ClientCartLine[] }> {
+  const res = await fetch(`${API_BASE}/client/cart`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ lines }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as { lines: ClientCartLine[] }
 }
 
 export async function putClientProfile(
@@ -802,6 +870,19 @@ export function getAuthEmail(): string | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
     return payload.email ?? null
+  } catch {
+    return null
+  }
+}
+
+/** ID utilizator din JWT (pentru coș persistent per client). */
+export function getAuthUserId(): string | null {
+  const token = getAuthToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1])) as { userId?: string }
+    const id = payload.userId
+    return typeof id === 'string' && id.trim() ? id.trim() : null
   } catch {
     return null
   }

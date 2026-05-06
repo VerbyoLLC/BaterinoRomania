@@ -127,7 +127,7 @@ export default function SignupClienti() {
           replace: true,
         })
       } else {
-        navigate(nextPath ?? '/client', { replace: true })
+        navigate(nextPath ?? '/produse', { replace: true })
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Eroare la autentificare cu Google.'

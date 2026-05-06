@@ -1,18 +1,27 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { getClientProfile } from '../../lib/api'
-import { INSTALATORI_ONLY } from '../../lib/siteMode'
+import { type FormEvent, useEffect, useState } from 'react'
+import { BadgePercent } from 'lucide-react'
+import { getClientProfile, postClientReferralInviteEmail } from '../../lib/api'
 
 export default function ClientDiscountCodes() {
   const [referralCode, setReferralCode] = useState<string | null | undefined>(undefined)
+  const [referralEmailsSent, setReferralEmailsSent] = useState<number | undefined>(undefined)
+  const [referralCodeUses, setReferralCodeUses] = useState<number | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [friendEmail, setFriendEmail] = useState('')
+  const [inviteSending, setInviteSending] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteOk, setInviteOk] = useState<string | null>(null)
 
   useEffect(() => {
     let c = false
     getClientProfile()
       .then((r) => {
-        if (!c) setReferralCode(r.referralCode ?? null)
+        if (!c) {
+          setReferralCode(r.referralCode ?? null)
+          setReferralEmailsSent(r.referralInviteEmailsSent ?? 0)
+          setReferralCodeUses(r.referralCodeRedemptionsCount ?? 0)
+        }
       })
       .catch((e) => {
         if (!c) setError(e instanceof Error ? e.message : 'Eroare')
@@ -33,61 +42,170 @@ export default function ClientDiscountCodes() {
     }
   }
 
+  function openWhatsAppShare() {
+    if (!referralCode) return
+    const text = `Salut, codul tău de 5% reducere pentru baterii LiFePO4 de pe platforma Baterino este: ${referralCode}`
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  async function sendInviteEmail(e: FormEvent) {
+    e.preventDefault()
+    if (!referralCode || inviteSending) return
+    setInviteError(null)
+    setInviteOk(null)
+    const email = friendEmail.trim()
+    if (!email) {
+      setInviteError('Introdu adresa de email.')
+      return
+    }
+    setInviteSending(true)
+    try {
+      const r = await postClientReferralInviteEmail(email)
+      setInviteOk(r.message || 'Email trimis.')
+      setFriendEmail('')
+      if (typeof r.referralInviteEmailsSent === 'number') {
+        setReferralEmailsSent(r.referralInviteEmailsSent)
+      }
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Eroare la trimitere.')
+    } finally {
+      setInviteSending(false)
+    }
+  }
+
   if (error) {
     return <p className="text-red-600 text-sm font-['Inter']">{error}</p>
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Coduri reducere</h1>
-      <p className="text-slate-600 text-sm font-['Inter'] mb-8">
-        Codul tău personal și programele de reducere disponibile pe Baterino.
+      <p className="text-slate-600 text-sm font-['Inter'] mb-6">
+        Codul tău personal de recomandare pentru clienți noi.
       </p>
 
-      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-2">Codul tău de recomandare</h2>
-        <p className="text-sm text-slate-600 font-['Inter'] mb-4">
-          Poți trimite acest cod unui client nou: acesta îl poate folosi la prima comandă, conform termenilor programului
-          de recomandare (vezi și pagina „Reduceri”).
-        </p>
-        {referralCode === undefined ? (
-          <p className="text-slate-500 text-sm font-['Inter']">Se încarcă...</p>
-        ) : referralCode ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <code className="rounded-xl bg-slate-100 px-4 py-3 text-lg font-mono font-bold tracking-wide text-slate-900">
-              {referralCode}
-            </code>
-            <button
-              type="button"
-              onClick={copyCode}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 font-['Inter'] hover:bg-slate-50"
-            >
-              {copied ? 'Copiat' : 'Copiază'}
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500 font-['Inter']">Cod indisponibil momentan. Reîncearcă mai târziu.</p>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-        <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-2">Programe dedicate</h2>
-        <p className="text-sm text-slate-600 font-['Inter'] mb-3">
-          Reduceri pentru seniori, zone rurale, coduri de la parteneri și alte campanii sunt prezentate centralizat.
-        </p>
-        {!INSTALATORI_ONLY ? (
-          <Link
-            to="/reduceri"
-            className="inline-flex text-sm font-semibold text-slate-900 font-['Inter'] underline underline-offset-2"
-          >
-            Vezi toate programele de reducere
-          </Link>
-        ) : (
-          <p className="text-sm text-slate-500 font-['Inter']">
-            Lista completă a programelor este disponibilă pe varianta extinsă a site-ului.
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,280px)] lg:items-start">
+        <div className="order-2 flex min-w-0 flex-col gap-6 lg:order-1">
+        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white px-5 pb-5 pt-1.5 shadow-sm">
+          <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-2">Codul tău de recomandare</h2>
+          <p className="text-sm text-slate-600 font-['Inter'] mb-4">
+            Împărtășește Baterino cu prietenii tăi — ei primesc o reducere, tu îi ajuți să facă o alegere mai bună.
           </p>
-        )}
-      </section>
+          {referralCode === undefined ? (
+            <p className="text-slate-500 text-sm font-['Inter']">Se încarcă...</p>
+          ) : referralCode ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <code className="rounded-xl bg-slate-100 px-4 py-3 text-lg font-mono font-bold tracking-wide text-slate-900">
+                {referralCode}
+              </code>
+              <button
+                type="button"
+                onClick={copyCode}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 font-['Inter'] hover:bg-slate-50"
+              >
+                {copied ? 'Copiat' : 'Copiază'}
+              </button>
+              <button
+                type="button"
+                onClick={openWhatsAppShare}
+                className="rounded-xl border border-emerald-600/40 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 font-['Inter'] hover:bg-emerald-100"
+              >
+                Distribuie pe WhatsApp
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 font-['Inter']">Cod indisponibil momentan. Reîncearcă mai târziu.</p>
+          )}
+
+          {referralCode !== undefined ? (
+            <div className="mt-4 border-t border-slate-200 pt-3">
+              <h3 className="text-base font-bold font-['Inter'] text-slate-900">Trimite pe email</h3>
+              <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+                Introdu adresa de email a prietenului tău și îi trimitem codul direct în inbox.
+              </p>
+              <form onSubmit={sendInviteEmail} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                <label className="min-w-0 flex-1 font-['Inter']">
+                  <span className="sr-only">Email prieten</span>
+                  <input
+                    type="email"
+                    name="friendEmail"
+                    autoComplete="email"
+                    enterKeyHint="send"
+                    value={friendEmail}
+                    onChange={(ev) => {
+                      setFriendEmail(ev.target.value)
+                      setInviteOk(null)
+                      setInviteError(null)
+                    }}
+                    disabled={!referralCode || inviteSending}
+                    placeholder="exemplu@email.com"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-slate-900/10 placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={!referralCode || inviteSending}
+                  className="shrink-0 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {inviteSending ? 'Se trimite…' : 'Trimite'}
+                </button>
+              </form>
+              {inviteError ? (
+                <p className="mt-2 text-sm text-red-600 font-['Inter']">{inviteError}</p>
+              ) : null}
+              {inviteOk ? (
+                <p className="mt-2 text-sm text-emerald-700 font-['Inter']">{inviteOk}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        <aside
+          className="rounded-2xl border border-slate-200 bg-neutral-50 px-4 py-4 shadow-sm sm:px-5 sm:py-5"
+          aria-label="Statistici recomandări"
+        >
+          {referralEmailsSent !== undefined && referralCodeUses !== undefined ? (
+            <div className="grid grid-cols-1 gap-4 divide-y divide-slate-200 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-y-0">
+              <div className="flex flex-col items-center gap-1 pt-1 text-center sm:px-3 sm:pt-0">
+                <span className="text-xs font-medium text-slate-600 font-['Inter']">Recomandări trimise</span>
+                <span className="text-xl font-bold tabular-nums text-slate-900 font-['Inter']">{referralEmailsSent}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 pt-4 text-center sm:px-3 sm:pt-0">
+                <span className="text-xs font-medium text-slate-600 font-['Inter']">Coduri folosite</span>
+                <span className="text-xl font-bold tabular-nums text-slate-900 font-['Inter']">{referralCodeUses}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 pt-4 text-center sm:px-3 sm:pt-0 sm:pb-0">
+                <span className="text-xs font-medium text-slate-600 font-['Inter']">Reduceri generate</span>
+                <span className="text-xl font-bold text-slate-900 font-['Inter']">5%</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-sm text-slate-500 font-['Inter']">Se încarcă...</p>
+          )}
+        </aside>
+        </div>
+
+        <div className="order-1 flex h-full w-full min-w-0 max-w-none flex-col lg:order-2 lg:mx-0 lg:w-full lg:justify-self-start">
+          <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-neutral-100 shadow-sm">
+            <div className="flex flex-col items-center px-4 pb-5 pt-6 sm:px-5">
+              <div
+                className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-md"
+                aria-hidden
+              >
+                <BadgePercent className="h-7 w-7" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-center text-[15px] font-bold uppercase leading-snug tracking-tight text-slate-900 font-['Inter'] sm:text-base">
+                5% REDUCERE PENTRU PRIETENI ȘI VECINI
+              </h3>
+              <p className="mt-3 text-center text-sm leading-relaxed text-slate-600 font-['Nunito_Sans']">
+                Orice persoană care folosește codul tău primește 5% reducere la prima comandă — aplicat automat, fără
+                condiții suplimentare.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

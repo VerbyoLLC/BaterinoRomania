@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, Minus, Plus } from 'lucide-react'
+import { ChevronDown, Loader2, Minus, Plus } from 'lucide-react'
 import {
   getAuthRole,
   getProductCardImageUrl,
@@ -66,6 +66,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const [discountOptions, setDiscountOptions] = useState<DiscountProgramOption[]>(() =>
     buildLocalDiscountOptions(lang),
   )
+  /** Încărcare liste programe din API (înainte afișăm select-ul ca definitiv). */
+  const [discountProgramsLoading, setDiscountProgramsLoading] = useState(true)
+  const [qtyBusy, setQtyBusy] = useState(false)
+  const qtyBusyTimerRef = useRef<number | null>(null)
   const [discountProgramId, setDiscountProgramId] = useState<string>('none')
   const [showReduceriModal, setShowReduceriModal] = useState(false)
   const [showAboutProgramModal, setShowAboutProgramModal] = useState(false)
@@ -90,6 +94,24 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     }
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (qtyBusyTimerRef.current != null) {
+        window.clearTimeout(qtyBusyTimerRef.current)
+        qtyBusyTimerRef.current = null
+      }
+    }
+  }, [])
+
+  function bumpQtyBusy() {
+    setQtyBusy(true)
+    if (qtyBusyTimerRef.current != null) window.clearTimeout(qtyBusyTimerRef.current)
+    qtyBusyTimerRef.current = window.setTimeout(() => {
+      setQtyBusy(false)
+      qtyBusyTimerRef.current = null
+    }, 280)
+  }
+
   const reducereFilterKey = useMemo(
     () => `${product.id}\n${normalizeProductReducereProgramIds(product).sort().join(',')}`,
     [product.id, product],
@@ -99,6 +121,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     setDiscountProgramId('none')
     const allowed = normalizeProductReducereProgramIds(product)
     setDiscountOptions(buildLocalDiscountOptions(lang))
+    setDiscountProgramsLoading(true)
     let cancelled = false
     getPublicReducerePrograms(lang)
       .then((rows) => {
@@ -120,6 +143,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       })
       .catch(() => {
         if (!cancelled) setDiscountOptions(allowed.length > 0 ? [] : buildLocalDiscountOptions(lang))
+      })
+      .finally(() => {
+        if (!cancelled) setDiscountProgramsLoading(false)
       })
     return () => {
       cancelled = true
@@ -194,22 +220,36 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             <span className="text-sm font-semibold uppercase leading-tight text-gray-700 sm:text-left">
               {tr.cantitateLabel}
             </span>
-            <div className="flex w-full min-h-[3.25rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3">
+            <div
+              className="flex w-full min-h-[3.25rem] items-center gap-2 rounded-xl border border-neutral-200/80 bg-gray-50 px-2 py-2 sm:w-fit sm:min-h-[2.75rem] sm:gap-1.5 sm:rounded-lg sm:border-0 sm:px-3 sm:py-3"
+              aria-busy={discountProgramsLoading || qtyBusy}
+            >
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition-colors sm:h-8 sm:w-8"
+                disabled={discountProgramsLoading || qty <= 1}
+                onClick={() => {
+                  bumpQtyBusy()
+                  setQty((q) => Math.max(1, q - 1))
+                }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:pointer-events-none sm:h-8 sm:w-8"
                 aria-label={tr.ariaQtyDecrease}
               >
                 <Minus className="h-5 w-5 sm:h-3 sm:w-3" strokeWidth={3} aria-hidden />
               </button>
-              <span className="min-w-0 flex-1 text-center text-lg font-semibold tabular-nums text-gray-900 sm:w-6 sm:flex-none sm:text-sm">
-                {qty}
+              <span className="flex min-h-[2.25rem] min-w-0 flex-1 items-center justify-center text-center text-lg font-semibold tabular-nums text-gray-900 sm:w-10 sm:flex-none sm:text-sm">
+                {discountProgramsLoading || qtyBusy ? (
+                  <Loader2 className="h-6 w-6 shrink-0 animate-spin text-slate-500 sm:h-5 sm:w-5" aria-hidden />
+                ) : (
+                  qty
+                )}
               </span>
               <button
                 type="button"
-                disabled={hasProgramDiscount && qty >= 1}
-                onClick={() => setQty((q) => Math.min(hasProgramDiscount ? 1 : 99, q + 1))}
+                disabled={discountProgramsLoading || (hasProgramDiscount && qty >= 1)}
+                onClick={() => {
+                  bumpQtyBusy()
+                  setQty((q) => Math.min(hasProgramDiscount ? 1 : 99, q + 1))
+                }}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:pointer-events-none sm:h-8 sm:w-8"
                 aria-label={tr.ariaQtyIncrease}
               >
@@ -228,8 +268,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   id="res-discount-program"
                   aria-label={tr.alegeProgramReduceri}
                   value={discountProgramId}
+                  disabled={discountProgramsLoading}
                   onChange={(e) => setDiscountProgramId(e.target.value)}
-                  className={`w-full min-h-[3.5rem] appearance-none py-3 pl-2.5 pr-11 text-sm font-medium box-border focus:outline-none focus:ring-1 focus:ring-offset-0 ${
+                  className={`w-full min-h-[3.5rem] appearance-none py-3 pl-2.5 pr-11 text-sm font-medium box-border focus:outline-none focus:ring-1 focus:ring-offset-0 disabled:cursor-wait disabled:opacity-60 ${
                     hasProgramDiscount
                       ? 'rounded-xl border border-dashed border-green-800 bg-green-50/50 text-green-950 focus:ring-green-600'
                       : 'rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-slate-900'
@@ -243,10 +284,18 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   ))}
                 </select>
                 <ChevronDown
-                  className={`pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${hasProgramDiscount ? 'text-green-900' : 'text-gray-700'}`}
+                  className={`pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${hasProgramDiscount ? 'text-green-900' : 'text-gray-700'} ${discountProgramsLoading ? 'opacity-40' : ''}`}
                   strokeWidth={2.25}
                   aria-hidden
                 />
+                {discountProgramsLoading ? (
+                  <div
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[inherit] bg-white/75 backdrop-blur-[1px]"
+                    aria-hidden
+                  >
+                    <Loader2 className="h-6 w-6 animate-spin text-slate-600" aria-hidden />
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -262,6 +311,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             <div className="sm:hidden">
               <button
                 type="button"
+                disabled={discountProgramsLoading}
                 onClick={() => {
                   setMobilePickDraftId(discountProgramId)
                   setMobileDiscountDetailId(null)
@@ -269,19 +319,24 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                 }}
                 aria-haspopup="dialog"
                 aria-expanded={mobileDiscountPickOpen}
-                className={`flex min-h-[3.75rem] w-full items-center justify-center rounded-xl border px-3 py-3 text-center text-sm font-semibold leading-snug focus:outline-none focus:ring-1 focus:ring-offset-0 ${
+                aria-busy={discountProgramsLoading}
+                className={`relative flex min-h-[3.75rem] w-full items-center justify-center rounded-xl border px-3 py-3 text-center text-sm font-semibold leading-snug focus:outline-none focus:ring-1 focus:ring-offset-0 disabled:cursor-wait disabled:opacity-70 ${
                   hasProgramDiscount && selectedDiscount
                     ? 'border border-dashed border-green-800 bg-green-50/50 text-green-950 focus:ring-green-600'
                     : 'border-2 border-neutral-500 bg-neutral-100 uppercase tracking-wide text-gray-900 focus:ring-neutral-600'
                 }`}
               >
-                {hasProgramDiscount && selectedDiscount
-                  ? formatResidentialDiscountOption(
-                      tr,
-                      selectedDiscount.programLabel,
-                      selectedDiscount.discountPercent,
-                    )
-                  : tr.alegeProgramReduceri}
+                {discountProgramsLoading ? (
+                  <Loader2 className="h-7 w-7 shrink-0 animate-spin text-slate-600" aria-hidden />
+                ) : hasProgramDiscount && selectedDiscount ? (
+                  formatResidentialDiscountOption(
+                    tr,
+                    selectedDiscount.programLabel,
+                    selectedDiscount.discountPercent,
+                  )
+                ) : (
+                  tr.alegeProgramReduceri
+                )}
               </button>
             </div>
           </div>
@@ -340,6 +395,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         {!guestWithDiscount ? (
           <button
             type="button"
+            disabled={discountProgramsLoading}
             onClick={() => {
               const s = String(product.slug || product.id || '').trim()
               if (!s) return
@@ -362,13 +418,14 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               })
               navigate('/cos')
             }}
-            className="w-full min-h-[3rem] font-bold py-3 rounded-xl text-base uppercase tracking-wide border-2 border-slate-900 text-slate-900 bg-white hover:bg-slate-50 transition-colors"
+            className="w-full min-h-[3rem] font-bold py-3 rounded-xl text-base uppercase tracking-wide border-2 border-slate-900 text-slate-900 bg-white hover:bg-slate-50 transition-colors disabled:cursor-wait disabled:opacity-50"
           >
             Adaugă în coș
           </button>
         ) : null}
         <button
           type="button"
+          disabled={discountProgramsLoading && !guestWithDiscount}
           onClick={() => {
             if (guestWithDiscount) {
               navigate('/signup/clienti')
@@ -394,7 +451,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
             window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
           }}
-          className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors ${
+          className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors disabled:cursor-wait disabled:opacity-50 ${
             hasProgramDiscount
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-gray-900 hover:bg-gray-800 text-white'
