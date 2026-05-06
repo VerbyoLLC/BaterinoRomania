@@ -5,6 +5,7 @@ const { getVerifyLinkTemplate } = require('../templates/signup-verify-link-email
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
+const { getReferralInviteTemplate } = require('../templates/referral-invite-email.js')
 
 /** Reîncarcă modulul la fiecare trimitere — evită cache-ul Node `require` (altfel rămâne textul vechi până la restart API). */
 function getPartnerApplicationReceivedTemplateRender() {
@@ -396,6 +397,48 @@ async function sendPartnerAccountApprovedEmail(email) {
   }
 }
 
+/**
+ * Trimite prietenului codul de recomandare în numele clientului.
+ * @param {{ to: string, senderName: string, referralCode: string }} params
+ */
+async function sendReferralInviteEmail({ to, senderName, referralCode }) {
+  if (!isMailConfigured()) {
+    throw new Error('Serviciul de email nu este configurat.')
+  }
+  const baseUrl = (envTrim('FRONTEND_URL') || 'https://baterino.ro').replace(/\/$/, '')
+  const registerUrl = `${baseUrl}/login`
+  const html = getReferralInviteTemplate({
+    senderName: senderName || 'Un client Baterino',
+    referralCode,
+    registerUrl,
+  })
+  const safeSubjectName = String(senderName || 'Un prieten')
+    .replace(/[\r\n\u202E\u202D]/g, ' ')
+    .slice(0, 80)
+  const subject = `${safeSubjectName} ți-a trimis codul de 5% reducere – ${SITE_NAME}`
+
+  if (useResend()) {
+    const { error } = await resend.emails.send({
+      from: RESEND_FROM,
+      to,
+      subject,
+      html,
+    })
+    if (error) {
+      console.error('[Mail] Resend referral invite error:', error)
+      throw new Error('Eroare la trimiterea emailului.')
+    }
+    return
+  }
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to,
+    subject,
+    html,
+  })
+}
+
 async function sendInquiryConfirmation(inquiry) {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
@@ -437,6 +480,7 @@ module.exports = {
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,
+  sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
   isMailConfigured,

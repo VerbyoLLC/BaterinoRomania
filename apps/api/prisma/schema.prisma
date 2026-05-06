@@ -23,11 +23,17 @@ model User {
   googleSub                 String?   @unique
   role                      String    // "client" | "partener" | "admin" | "sales_agent"
   /** Cod personal de recomandare (clienți B2C); unic, generat la primul acces la profil. */
-  referralCode              String?   @unique
+  referralCode                   String? @unique
+  /** Emailuri cu cod trimise din contul client („Trimite pe email”). */
+  referralInviteEmailsSent       Int     @default(0)
+  /** De câte ori codul tău a fost folosit la comenzi (când e urmărit în fluxul de checkout). */
+  referralCodeRedemptionsCount   Int     @default(0)
   verificationCode          String?
   verificationCodeExpiresAt DateTime?
   passwordResetToken        String?
   passwordResetExpiresAt    DateTime?
+  /** Coș B2C persistat server-side (JSON linii); folosit doar pentru role client. */
+  clientCart                Json?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   partner                   Partner?

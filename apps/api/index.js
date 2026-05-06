@@ -14,6 +14,7 @@ const {
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,
+  sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
   isMailConfigured,
@@ -1014,11 +1015,86 @@ function pickProfileOrUserName(profileVal, userVal) {
   return String(userVal ?? '').trim()
 }
 
+const MAX_CLIENT_CART_LINES = 80
+
+/** Validează / normalizează liniile coșului client (aceeași semantică ca frontend CartLine). */
+function normalizeClientCartLinesFromBody(rawLines) {
+  if (!Array.isArray(rawLines)) return []
+  const out = []
+  for (let i = 0; i < Math.min(rawLines.length, MAX_CLIENT_CART_LINES); i++) {
+    const x = rawLines[i]
+    if (!x || typeof x !== 'object') continue
+    const productId = String(x.productId ?? '').trim().slice(0, 128)
+    const slug = String(x.slug ?? '').trim().slice(0, 256)
+    const title = String(x.title ?? '').trim().slice(0, 400)
+    let qty = Math.floor(Number(x.qty))
+    if (!Number.isFinite(qty) || qty < 1) qty = 1
+    const discRaw = x.reducereDiscountPercent
+    const hasDisc = discRaw != null && Number(discRaw) > 0
+    const reducereDiscountPercent = hasDisc ? Math.min(100, Math.max(1, Number(discRaw))) : undefined
+    const reducereProgramId =
+      reducereDiscountPercent != null &&
+      x.reducereProgramId != null &&
+      String(x.reducereProgramId).trim()
+        ? String(x.reducereProgramId).trim().slice(0, 128)
+        : undefined
+    if (hasDisc) qty = 1
+    else qty = Math.min(99, qty)
+    if (!productId || !title) continue
+    const line = { productId, slug, title, qty }
+    if (typeof x.imageUrl === 'string' && x.imageUrl.trim()) {
+      line.imageUrl = x.imageUrl.trim().slice(0, 2048)
+    }
+    if (reducereProgramId) line.reducereProgramId = reducereProgramId
+    if (reducereDiscountPercent != null) line.reducereDiscountPercent = reducereDiscountPercent
+    out.push(line)
+  }
+  return out
+}
+
+app.get('/api/client/cart', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { clientCart: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    const raw = user.clientCart
+    const lines = Array.isArray(raw) ? normalizeClientCartLinesFromBody(raw) : []
+    return res.json({ lines })
+  } catch (err) {
+    console.error('Client cart GET error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.put('/api/client/cart', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const lines = normalizeClientCartLinesFromBody(body.lines)
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { clientCart: lines },
+    })
+    return res.json({ lines })
+  } catch (err) {
+    console.error('Client cart PUT error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
 app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { email: true, password: true, firstName: true, lastName: true },
+      select: {
+        email: true,
+        password: true,
+        firstName: true,
+        lastName: true,
+        referralInviteEmailsSent: true,
+        referralCodeRedemptionsCount: true,
+      },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
     const referralCode = await ensureUserReferralCode(req.userId)
@@ -1055,6 +1131,8 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
     return res.json({
       email: user.email,
       referralCode,
+      referralInviteEmailsSent: user.referralInviteEmailsSent ?? 0,
+      referralCodeRedemptionsCount: user.referralCodeRedemptionsCount ?? 0,
       /** False pentru conturi create cu Google fără parolă locală (password null în DB). */
       hasPassword: Boolean(user.password),
       profile: profileDto,
@@ -1062,6 +1140,67 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
   } catch (err) {
     console.error('Client profile GET error:', err)
     res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+/** Trimite codul de recomandare pe email către adresa introdusă (program „Știu de la vecinu’”). */
+app.post('/api/client/referral/send-email', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    if (!isMailConfigured()) {
+      return res.status(503).json({
+        error: 'Trimiterea emailurilor nu este configurată momentan. Încearcă mai târziu sau folosește „Copiază”.',
+      })
+    }
+
+    const friendEmail = String(req.body?.friendEmail ?? '')
+      .trim()
+      .toLowerCase()
+    if (!friendEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(friendEmail)) {
+      return res.status(400).json({ error: 'Introdu o adresă de email validă.' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { email: true, firstName: true, lastName: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (friendEmail === String(user.email || '').toLowerCase()) {
+      return res.status(400).json({ error: 'Nu poți trimite codul către propria adresă de email.' })
+    }
+
+    const profile = await prisma.clientProfile.findUnique({
+      where: { userId: req.userId },
+      select: { firstName: true, lastName: true },
+    })
+    const firstName = pickProfileOrUserName(profile?.firstName, user.firstName)
+    const lastName = pickProfileOrUserName(profile?.lastName, user.lastName)
+    const senderName = [firstName, lastName].filter(Boolean).join(' ').trim() || 'Client Baterino'
+
+    const referralCode = await ensureUserReferralCode(req.userId)
+    if (!referralCode) {
+      return res.status(400).json({ error: 'Codul de recomandare nu este disponibil momentan.' })
+    }
+
+    await sendReferralInviteEmail({
+      to: friendEmail,
+      senderName,
+      referralCode,
+    })
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: { referralInviteEmailsSent: { increment: 1 } },
+      select: { referralInviteEmailsSent: true },
+    })
+
+    return res.json({
+      message: 'Email trimis.',
+      referralInviteEmailsSent: updated.referralInviteEmailsSent,
+    })
+  } catch (err) {
+    console.error('Client referral send-email error:', err)
+    const msg = err instanceof Error ? err.message : 'Eroare.'
+    res.status(500).json({ error: msg })
   }
 })
 
