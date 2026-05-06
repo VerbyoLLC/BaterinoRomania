@@ -5,8 +5,6 @@ const { getVerifyLinkTemplate } = require('../templates/signup-verify-link-email
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
-const { getReferralInviteTemplate } = require('../templates/referral-invite-email.js')
-
 /** Reîncarcă modulul la fiecare trimitere — evită cache-ul Node `require` (altfel rămâne textul vechi până la restart API). */
 function getPartnerApplicationReceivedTemplateRender() {
   const resolved = require.resolve('../templates/partner-application-received-email.js')
@@ -18,6 +16,12 @@ function getPartnerAccountApprovedTemplateRender() {
   const resolved = require.resolve('../templates/partner-account-approved-email.js')
   delete require.cache[resolved]
   return require(resolved).getPartnerAccountApprovedTemplate
+}
+
+function getReferralInviteTemplateRender() {
+  const resolved = require.resolve('../templates/referral-invite-email.js')
+  delete require.cache[resolved]
+  return require(resolved).getReferralInviteTemplate
 }
 
 function envTrim(name, fallback = '') {
@@ -407,10 +411,11 @@ async function sendReferralInviteEmail({ to, senderName, referralCode }) {
   }
   const baseUrl = (envTrim('FRONTEND_URL') || 'https://baterino.ro').replace(/\/$/, '')
   const registerUrl = `${baseUrl}/login`
-  const html = getReferralInviteTemplate({
+  const html = getReferralInviteTemplateRender()({
     senderName: senderName || 'Un client Baterino',
     referralCode,
     registerUrl,
+    assetBaseUrl: baseUrl,
   })
   const safeSubjectName = String(senderName || 'Un prieten')
     .replace(/[\r\n\u202E\u202D]/g, ' ')

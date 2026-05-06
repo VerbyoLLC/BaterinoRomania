@@ -46,6 +46,18 @@ function getProformaTemplateLib() {
   return require(PROFORMA_TEMPLATE_MODULE_PATH)
 }
 
+const REFERRAL_INVITE_TEMPLATE_PATH = './templates/referral-invite-email.js'
+function getReferralInviteTemplateLib() {
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      delete require.cache[require.resolve(REFERRAL_INVITE_TEMPLATE_PATH)]
+    } catch {
+      // ignore
+    }
+  }
+  return require(REFERRAL_INVITE_TEMPLATE_PATH)
+}
+
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
 
 /** Slugify title for URL: lowercase, hyphenated, no diacritics */
@@ -2125,6 +2137,41 @@ app.get('/api/debug/proforma-preview', proformaPreviewHandler)
 app.get('/debug/proforma-preview', proformaPreviewHandler)
 /** Same HTML sample as debug route — easier URL to remember for template checks. */
 app.get('/api/proforma-template', proformaPreviewHandler)
+
+// ── Debug: referral invite email HTML preview (blocked in prod unless BATERINO_DEBUG_REFERRAL_EMAIL=1) ──
+async function referralInvitePreviewHandler(req, res) {
+  const enabledInProd = process.env.BATERINO_DEBUG_REFERRAL_EMAIL === '1'
+  if (process.env.NODE_ENV === 'production' && !enabledInProd) {
+    return res.status(403).json({
+      error: 'Referral email preview is off in production.',
+      hint:
+        'Set BATERINO_DEBUG_REFERRAL_EMAIL=1 on this API, or run locally and open GET /api/referral-invite-template on the API port. Optional query: ?sender=Name&code=BAT-XXX',
+    })
+  }
+  try {
+    const baseUrl = (process.env.FRONTEND_URL || 'https://baterino.ro').replace(/\/$/, '')
+    const senderName = req.query.sender != null ? String(req.query.sender) : 'Ion Popescu'
+    const referralCode = req.query.code != null ? String(req.query.code) : 'BAT-PREVIEW'
+    const { getReferralInviteTemplate } = getReferralInviteTemplateLib()
+    const html = getReferralInviteTemplate({
+      senderName,
+      referralCode,
+      registerUrl: `${baseUrl}/login`,
+      assetBaseUrl: baseUrl,
+    })
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('Pragma', 'no-cache')
+    return res.send(html)
+  } catch (err) {
+    console.error('Referral invite preview error:', err)
+    return res.status(500).type('text/plain').send(err?.message || String(err))
+  }
+}
+app.get('/api/debug/referral-invite-preview', referralInvitePreviewHandler)
+app.get('/debug/referral-invite-preview', referralInvitePreviewHandler)
+/** Same HTML sample as debug route — open in browser while editing templates/referral-invite-email.js */
+app.get('/api/referral-invite-template', referralInvitePreviewHandler)
 
 // ── Admin: list inquiries (messages) ───────────────────────────────────
 app.get('/api/admin/inquiries', authMiddleware, adminAuthMiddleware, async (req, res) => {
