@@ -23,7 +23,7 @@ const {
   getMailDebugInfo,
   verifySmtpConnection,
 } = require('./lib/mail.js')
-const { verifyGoogleIdToken } = require('./lib/google-id-token.js')
+const { verifyGoogleIdToken, googleClientIds, idTokenAudiences } = require('./lib/google-id-token.js')
 const {
   uploadToR2,
   generateKey,
@@ -880,6 +880,15 @@ app.post('/api/auth/google', async (req, res) => {
       if (e?.code === 'EMAIL_NOT_VERIFIED') {
         return res.status(400).json({ error: 'Emailul Google nu este verificat. Verifică contul Google și încearcă din nou.' })
       }
+      const auds = idTokenAudiences(idToken)
+      const expected = googleClientIds()
+      if (auds.length && expected.length && !auds.some((a) => expected.includes(a))) {
+        console.error('[Auth Google] audience mismatch: token aud=', auds, 'API GOOGLE_CLIENT_ID=', expected)
+        return res.status(401).json({
+          error:
+            'Google: ID-ul client din site (VITE_GOOGLE_CLIENT_ID pe Vercel) nu este același cu GOOGLE_CLIENT_ID de pe API (ex. Railway). Folosește același OAuth 2.0 Web Client ID în ambele locuri și redeploy.',
+        })
+      }
       console.error('[Auth Google] verify:', e?.message || e)
       return res.status(401).json({ error: 'Token Google invalid sau expirat.' })
     }
@@ -1213,6 +1222,45 @@ app.post('/api/client/referral/send-email', authMiddleware, clientAuthMiddleware
     console.error('Client referral send-email error:', err)
     const msg = err instanceof Error ? err.message : 'Eroare.'
     res.status(500).json({ error: msg })
+  }
+})
+
+/** Validare publică cod recomandare (folosit în modalul de programe reduceri). */
+app.post('/api/referral/validate-code', async (req, res) => {
+  try {
+    const referralCode = String(req.body?.referralCode ?? '')
+      .trim()
+      .toUpperCase()
+    if (!referralCode) {
+      return res.status(400).json({ error: 'Introdu codul de recomandare.' })
+    }
+    if (referralCode.length < 4 || referralCode.length > 64) {
+      return res.status(400).json({ error: 'Cod de recomandare invalid.' })
+    }
+
+    const owner = await prisma.user.findFirst({
+      where: {
+        role: 'client',
+        referralCode: {
+          equals: referralCode,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true },
+    })
+    if (!owner) {
+      return res.status(404).json({ error: 'Codul de recomandare nu este valid.' })
+    }
+
+    return res.json({
+      valid: true,
+      referralCode,
+      discountPercent: 5,
+      message: 'Cod valid. Poți aplica reducerea de 5%.',
+    })
+  } catch (err) {
+    console.error('Referral validate-code error:', err)
+    return res.status(500).json({ error: 'Eroare la validarea codului de recomandare.' })
   }
 })
 

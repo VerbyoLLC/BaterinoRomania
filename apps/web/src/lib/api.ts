@@ -565,6 +565,22 @@ export async function postClientReferralInviteEmail(friendEmail: string): Promis
   return json as { message: string; referralInviteEmailsSent?: number }
 }
 
+/** Validare cod recomandare (public) pentru programul „Știu de la vecinu’”. */
+export async function validateReferralCode(
+  referralCode: string,
+): Promise<{ valid: true; referralCode: string; discountPercent: number; message?: string }> {
+  const res = await fetch(`${API_BASE}/referral/validate-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ referralCode }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error((json as { error?: string }).error || 'Cod invalid sau eroare la validare.')
+  }
+  return json as { valid: true; referralCode: string; discountPercent: number; message?: string }
+}
+
 /** Linie coș — aliniată cu `CartLine` din CartContext. */
 export type ClientCartLine = {
   productId: string

@@ -90,17 +90,15 @@ function getReferralInviteTemplate({
     .header {
       background-color: #1a1a2e;
       border-radius: 16px 16px 0 0;
-      padding: 32px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 28px 40px;
     }
 
     .logo-img {
       display: block;
-      height: 36px;
+      height: auto;
+      max-height: 26px;
       width: auto;
-      max-width: 200px;
+      max-width: 112px;
     }
 
     .header-subtitle {
@@ -303,13 +301,17 @@ function getReferralInviteTemplate({
   <div class="email-wrapper">
 
     <div class="header">
-      <div>
-        <img class="logo-img" src="${logoSrc}" width="180" height="36" alt="Baterino" />
-      </div>
-      <div style="text-align:right;">
-        <div class="header-subtitle" style="color:#ffffff;opacity:1;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Programul de reducere</div>
-        <div class="header-tag" style="color:#e8a020;font-size:16px;letter-spacing:3px;text-transform:uppercase;font-weight:600;">Știu de la vecinu'</div>
-      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
+        <tr>
+          <td align="left" valign="middle" style="vertical-align:middle;padding:0;width:1%;">
+            <img class="logo-img" src="${logoSrc}" width="112" height="23" alt="Baterino" style="display:block;border:0;width:112px;max-width:112px;height:auto;max-height:26px;" />
+          </td>
+          <td align="right" valign="middle" style="vertical-align:middle;padding:0 0 0 16px;text-align:right;">
+            <div class="header-subtitle" style="color:#ffffff;opacity:1;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;text-align:right;">Programul de reducere</div>
+            <div class="header-tag" style="color:#e8a020;font-size:16px;letter-spacing:3px;text-transform:uppercase;font-weight:600;text-align:right;">Știu de la vecinu'</div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <div class="body">

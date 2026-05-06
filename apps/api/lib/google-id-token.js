@@ -26,6 +26,14 @@ function googleClientIds() {
   return [...new Set(raw.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean))]
 }
 
+/** `aud` din JWT (înainte de verificare) — pentru mesaje de diagnostic la nepotrivire cu GOOGLE_CLIENT_ID. */
+function idTokenAudiences(idToken) {
+  const raw = decodeJwtPayload(idToken).aud
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean)
+  if (raw != null && raw !== '') return [String(raw)]
+  return []
+}
+
 /**
  * Verifies a Google Sign-In ID token (JWT) from GIS FedCM / One Tap / button.
  * @returns {{ sub: string, email: string, name?: string, givenName?: string, familyName?: string }}
@@ -82,4 +90,4 @@ async function verifyGoogleIdToken(idToken) {
   }
 }
 
-module.exports = { verifyGoogleIdToken, googleClientIds }
+module.exports = { verifyGoogleIdToken, googleClientIds, idTokenAudiences }

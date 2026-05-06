@@ -2,6 +2,9 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { BadgePercent } from 'lucide-react'
 import { getClientProfile, postClientReferralInviteEmail } from '../../lib/api'
 
+/** Skeleton pulse (fără radius — setezi rounded-* pe fiecare bloc). */
+const sk = 'animate-pulse bg-slate-200/90'
+
 export default function ClientDiscountCodes() {
   const [referralCode, setReferralCode] = useState<string | null | undefined>(undefined)
   const [referralEmailsSent, setReferralEmailsSent] = useState<number | undefined>(undefined)
@@ -93,7 +96,17 @@ export default function ClientDiscountCodes() {
             Împărtășește Baterino cu prietenii tăi — ei primesc o reducere, tu îi ajuți să facă o alegere mai bună.
           </p>
           {referralCode === undefined ? (
-            <p className="text-slate-500 text-sm font-['Inter']">Se încarcă...</p>
+            <div
+              className="flex flex-wrap items-center gap-3"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="Se încarcă codul de recomandare"
+            >
+              <div className={`h-[52px] w-44 max-w-full rounded-xl ${sk}`} aria-hidden />
+              <div className={`h-10 w-[5.5rem] rounded-xl ${sk}`} aria-hidden />
+              <div className={`h-10 w-[11.5rem] max-w-full rounded-xl ${sk}`} aria-hidden />
+            </div>
           ) : referralCode ? (
             <div className="flex flex-wrap items-center gap-3">
               <code className="rounded-xl bg-slate-100 px-4 py-3 text-lg font-mono font-bold tracking-wide text-slate-900">
@@ -146,9 +159,18 @@ export default function ClientDiscountCodes() {
                 <button
                   type="submit"
                   disabled={!referralCode || inviteSending}
-                  className="shrink-0 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-busy={inviteSending}
+                  className={`inline-flex min-h-[42px] min-w-[5.5rem] shrink-0 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold font-['Inter'] disabled:cursor-not-allowed ${
+                    inviteSending
+                      ? 'animate-pulse bg-slate-500 text-transparent'
+                      : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50'
+                  }`}
                 >
-                  {inviteSending ? 'Se trimite…' : 'Trimite'}
+                  {inviteSending ? (
+                    <span className="h-3.5 w-16 rounded bg-white/35" aria-hidden />
+                  ) : (
+                    'Trimite'
+                  )}
                 </button>
               </form>
               {inviteError ? (
@@ -181,7 +203,29 @@ export default function ClientDiscountCodes() {
               </div>
             </div>
           ) : (
-            <p className="text-center text-sm text-slate-500 font-['Inter']">Se încarcă...</p>
+            <div
+              className="grid grid-cols-1 gap-4 divide-y divide-slate-200 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-y-0"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="Se încarcă statisticile"
+            >
+              {(
+                [
+                  { labelW: 'w-36', valueW: 'w-8' },
+                  { labelW: 'w-28', valueW: 'w-7' },
+                  { labelW: 'w-32', valueW: 'w-9' },
+                ] as const
+              ).map((dims, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col items-center gap-2 text-center sm:px-3 sm:pt-0 sm:pb-0 ${i === 0 ? 'pt-1' : 'pt-4'}`}
+                >
+                  <div className={`h-3 ${dims.labelW} max-w-[85%] rounded-md ${sk}`} aria-hidden />
+                  <div className={`h-7 ${dims.valueW} rounded-md ${sk}`} aria-hidden />
+                </div>
+              ))}
+            </div>
           )}
         </aside>
         </div>

@@ -17,8 +17,6 @@ import type { LangCode } from '../i18n/menu'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { useCart } from '../contexts/CartContext'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
-import ReduceriProgramsModal from './ReduceriProgramsModal'
-import ResidentialDiscountAboutModal from './ResidentialDiscountAboutModal'
 import ResidentialMobileDiscountModals from './ResidentialMobileDiscountModals'
 
 export { showResidentialClientPurchaseUI } from '../lib/residentialPublicPurchase'
@@ -71,8 +69,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const [qtyBusy, setQtyBusy] = useState(false)
   const qtyBusyTimerRef = useRef<number | null>(null)
   const [discountProgramId, setDiscountProgramId] = useState<string>('none')
-  const [showReduceriModal, setShowReduceriModal] = useState(false)
-  const [showAboutProgramModal, setShowAboutProgramModal] = useState(false)
   const [mobileDiscountPickOpen, setMobileDiscountPickOpen] = useState(false)
   const [mobileDiscountDetailId, setMobileDiscountDetailId] = useState<string | null>(null)
   const [mobilePickDraftId, setMobilePickDraftId] = useState<string>('none')
@@ -158,10 +154,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
       setDiscountProgramId('none')
     }
   }, [discountOptions, discountProgramId])
-
-  useEffect(() => {
-    if (discountProgramId === 'none') setShowAboutProgramModal(false)
-  }, [discountProgramId])
 
   const sale = num(product.salePrice)!
   const landed = num((product as { landedPrice?: string | number | null }).landedPrice)
@@ -269,7 +261,16 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   aria-label={tr.alegeProgramReduceri}
                   value={discountProgramId}
                   disabled={discountProgramsLoading}
-                  onChange={(e) => setDiscountProgramId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    if (id === 'none') {
+                      setDiscountProgramId('none')
+                      setMobileDiscountDetailId(null)
+                      return
+                    }
+                    setMobilePickDraftId(id)
+                    setMobileDiscountDetailId(id)
+                  }}
                   className={`w-full min-h-[3.5rem] appearance-none py-3 pl-2.5 pr-11 text-sm font-medium box-border focus:outline-none focus:ring-1 focus:ring-offset-0 disabled:cursor-wait disabled:opacity-60 ${
                     hasProgramDiscount
                       ? 'rounded-xl border border-dashed border-green-800 bg-green-50/50 text-green-950 focus:ring-green-600'
@@ -297,16 +298,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
                   </div>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (hasProgramDiscount && selectedDiscount) setShowAboutProgramModal(true)
-                  else setShowReduceriModal(true)
-                }}
-                className="mt-2 block w-full border-0 bg-transparent p-0 text-right font-['Inter'] text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700"
-              >
-                {hasProgramDiscount ? tr.despreProgram : tr.veziProgrameReduceri}
-              </button>
             </div>
             <div className="sm:hidden">
               <button
@@ -468,28 +459,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
           </p>
         ) : null}
       </div>
-
-      {showReduceriModal ? (
-        <ReduceriProgramsModal
-          lang={lang}
-          onClose={() => setShowReduceriModal(false)}
-          closeLabel={tr.compatibilitateClose}
-          applyMode={{
-            discountOptions: discountOptions,
-            onApply: (id) => setDiscountProgramId(id),
-            applyLabel: tr.reduceriHoverApplyBtn,
-          }}
-        />
-      ) : null}
-
-      {showAboutProgramModal && selectedDiscount ? (
-        <ResidentialDiscountAboutModal
-          lang={lang}
-          tr={tr}
-          option={selectedDiscount}
-          onClose={() => setShowAboutProgramModal(false)}
-        />
-      ) : null}
 
       <ResidentialMobileDiscountModals
         lang={lang}

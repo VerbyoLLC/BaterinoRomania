@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 import type { ProductDetailTranslations } from '../i18n/product-detail'
+import { validateReferralCode } from '../lib/api'
 
 function normProgramLabel(s: string): string {
   return s.replace(/^PROGRAMUL\s*/i, '').trim().toLowerCase()
@@ -67,6 +68,17 @@ export default function ResidentialMobileDiscountModals({
   const reduceriTr = getReduceriTranslations(lang)
   const detailOpt = detailOptionId ? discountOptions.find((o) => o.id === detailOptionId) : null
   const detailProgram = detailOpt ? fullProgramForOption(detailOpt, reduceriTr.programs) : null
+  const needsReferralCode = Boolean(detailOpt && Number(detailOpt.discountPercent) === 5)
+  const [referralDigits, setReferralDigits] = useState<string[]>(['', '', '', '', '', ''])
+  const [referralBusy, setReferralBusy] = useState(false)
+  const [referralVerified, setReferralVerified] = useState(false)
+  const [referralMessage, setReferralMessage] = useState<string | null>(null)
+  const [referralError, setReferralError] = useState<string | null>(null)
+  const referralInputRefs = useRef<Array<HTMLInputElement | null>>([])
+  const normalizedReferralInput = useMemo(
+    () => `BAT-${referralDigits.join('')}`,
+    [referralDigits],
+  )
 
   const anyOpen = pickOpen || detailOptionId != null
 
@@ -89,6 +101,17 @@ export default function ResidentialMobileDiscountModals({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [anyOpen, pickOpen, detailOptionId, onCloseDetail, onClosePick])
+
+  useEffect(() => {
+    setReferralDigits(['', '', '', '', '', ''])
+    setReferralBusy(false)
+    setReferralVerified(false)
+    setReferralMessage(null)
+    setReferralError(null)
+  }, [detailOptionId])
+
+  const hasCompleteReferralDigits = referralDigits.every((d) => /^\d$/.test(d))
+  const canApplyDetail = !needsReferralCode || hasCompleteReferralDigits
 
   const panelBase =
     'mx-auto w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[90vh] overflow-hidden flex flex-col'
@@ -179,21 +202,110 @@ export default function ResidentialMobileDiscountModals({
             <h2 id="mobile-discount-detail-title" className="m-0 text-lg font-bold text-gray-900">
               {detailProgram.title}
             </h2>
-            <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-700">
-              {detailProgram.description.split('\n\n').map((para, i) => (
+            <div className="mt-4 space-y-5 text-sm leading-relaxed text-gray-700">
+              {detailProgram.description.split(/\n+/).filter(Boolean).map((para, i) => (
                 <p key={i} className="m-0">
                   {renderBold(para)}
                 </p>
               ))}
             </div>
           </div>
-          <div className="border-t border-neutral-100 p-4">
+          <div className="border-t border-neutral-100 px-4 pt-4 pb-5">
+            {needsReferralCode ? (
+              <div className="mb-5">
+                <label htmlFor="mobile-referral-code" className="mb-2 block text-center text-xs font-semibold text-gray-700">
+                  Cod recomandare primit de la prieten
+                </label>
+                <div id="mobile-referral-code" className="flex items-center justify-center gap-2">
+                  <span className="select-none px-1 py-1 text-base font-bold tracking-wide text-gray-700">
+                    BAT-
+                  </span>
+                  <div className="flex items-center justify-center gap-2">
+                    {referralDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => {
+                          referralInputRefs.current[idx] = el
+                        }}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
+                        aria-label={`Cifra ${idx + 1} din codul de recomandare`}
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => {
+                          const onlyDigit = e.target.value.replace(/\D/g, '').slice(0, 1)
+                          const next = [...referralDigits]
+                          next[idx] = onlyDigit
+                          setReferralDigits(next)
+                          setReferralVerified(false)
+                          setReferralMessage(null)
+                          setReferralError(null)
+                          if (onlyDigit && idx < 5) referralInputRefs.current[idx + 1]?.focus()
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace' && !referralDigits[idx] && idx > 0) {
+                            referralInputRefs.current[idx - 1]?.focus()
+                          }
+                          if (e.key === 'ArrowLeft' && idx > 0) referralInputRefs.current[idx - 1]?.focus()
+                          if (e.key === 'ArrowRight' && idx < 5) referralInputRefs.current[idx + 1]?.focus()
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault()
+                          const raw = e.clipboardData.getData('text')
+                          const digits = raw.replace(/\D/g, '').slice(0, 6).split('')
+                          if (!digits.length) return
+                          const filled = ['', '', '', '', '', '']
+                          for (let i = 0; i < digits.length; i += 1) filled[i] = digits[i] || ''
+                          setReferralDigits(filled)
+                          setReferralVerified(false)
+                          setReferralMessage(null)
+                          setReferralError(null)
+                          referralInputRefs.current[Math.min(digits.length, 6) - 1]?.focus()
+                        }}
+                        className="h-12 w-11 rounded-lg border border-neutral-300 bg-white text-center text-lg font-bold tabular-nums text-gray-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    ))}
+                  </div>
+                </div>
+                {referralError ? <p className="mt-1.5 m-0 text-xs text-red-600">{referralError}</p> : null}
+                {referralMessage && referralVerified ? (
+                  <p className="mt-1.5 m-0 text-xs text-emerald-700">{referralMessage}</p>
+                ) : null}
+              </div>
+            ) : null}
             <button
               type="button"
-              onClick={onApplyDetail}
-              className="w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white uppercase tracking-wide"
+              onClick={async () => {
+                if (!needsReferralCode) {
+                  onApplyDetail()
+                  return
+                }
+                setReferralBusy(true)
+                setReferralVerified(false)
+                setReferralError(null)
+                setReferralMessage(null)
+                try {
+                  const result = await validateReferralCode(normalizedReferralInput)
+                  if (Number(result.discountPercent) !== Number(detailOpt?.discountPercent || 0)) {
+                    setReferralError(
+                      `Codul este valid, dar oferă ${result.discountPercent}% (nu ${detailOpt?.discountPercent || 0}%).`,
+                    )
+                    return
+                  }
+                  setReferralVerified(true)
+                  setReferralMessage(result.message || 'Cod valid. Reducerea poate fi aplicată.')
+                  onApplyDetail()
+                } catch (err) {
+                  setReferralError(err instanceof Error ? err.message : 'Cod invalid.')
+                } finally {
+                  setReferralBusy(false)
+                }
+              }}
+              disabled={!canApplyDetail || referralBusy}
+              className="w-full min-h-12 rounded-xl bg-slate-900 py-3 font-semibold text-white uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {tr.reduceriHoverApplyBtn}
+              {referralBusy ? 'Se verifică…' : tr.reduceriHoverApplyBtn}
             </button>
           </div>
         </div>
