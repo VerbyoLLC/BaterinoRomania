@@ -513,6 +513,7 @@ export type ClientProfileDto = ClientProfilePayload
 export type ClientProfileSaveSection = 'personal' | 'address'
 
 export async function getClientProfile(): Promise<{
+  createdAt: string
   email: string
   referralCode: string | null
   referralInviteEmailsSent: number
@@ -529,6 +530,7 @@ export async function getClientProfile(): Promise<{
     throw new Error((json as { error?: string }).error || 'Eroare.')
   }
   return json as {
+    createdAt: string
     email: string
     referralCode: string | null
     referralInviteEmailsSent: number
@@ -780,6 +782,32 @@ export type ClientOrderRow = {
   proformaUrl?: string | null
 }
 
+export type ClientPaymentBankDetails = {
+  companyName: string
+  bankAccount: string
+  bankName: string
+}
+
+export async function getClientPaymentBankDetails(): Promise<ClientPaymentBankDetails> {
+  const res = await fetch(`${API_BASE}/client/payment-bank-details`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => ({}))) as Partial<ClientPaymentBankDetails> & {
+    error?: string
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea datelor bancare.')
+  }
+  return {
+    companyName: String(json.companyName || '').trim(),
+    bankAccount: String(json.bankAccount || '').trim(),
+    bankName: String(json.bankName || '').trim(),
+  }
+}
+
 export async function getClientOrders(): Promise<ClientOrderRow[]> {
   const res = await fetch(`${API_BASE}/client/orders`, { headers: authHeaders(), cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
@@ -789,6 +817,157 @@ export async function getClientOrders(): Promise<ClientOrderRow[]> {
     throw new Error((json as { error?: string }).error || 'Eroare.')
   }
   return Array.isArray(json) ? json : []
+}
+
+export type ClientRegisteredTechnicalDoc = {
+  descriere: string
+  url: string
+}
+
+export type ClientRegisteredProductDto = {
+  savedItemId: string
+  serialNumber: string
+  modelNumber: string
+  warehouseIn: string
+  /** Indică dacă există un certificat PDF salvat şi descărcabil. URL-ul real
+   *  R2 nu este expus în UI — descărcarea se face prin endpoint autentificat
+   *  care streamează fişierul cu `Content-Disposition: attachment`. */
+  warrantyCertificateAvailable: boolean
+  /** ISO timestamp ultimei generări (null până la prima generare). */
+  warrantyCertificateGeneratedAt: string | null
+  product: {
+    id: string
+    title: string
+    slug: string
+    imageUrl: string | null
+    documenteTehnice: ClientRegisteredTechnicalDoc[]
+  } | null
+}
+
+export async function getClientRegisteredProducts(): Promise<ClientRegisteredProductDto[]> {
+  const res = await fetch(`${API_BASE}/client/registered-products`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function claimClientRegisteredProduct(body: {
+  serialNumber?: string
+  qrRaw?: string
+}): Promise<ClientRegisteredProductDto> {
+  const res = await fetch(`${API_BASE}/client/registered-products/claim`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as ClientRegisteredProductDto
+}
+
+export type ClientWarrantyCertificateResult =
+  | { ok: true; kind: 'pdf'; pdfBlob: Blob; filename: string }
+  | { ok: true; kind: 'html'; htmlBlob: Blob; filename: string }
+  | { ok: false; code: string; error: string; fields?: string[] }
+
+function filenameFromContentDisposition(headerValue: string, fallback: string): string {
+  const m = headerValue.match(/filename="([^"]+)"/i)
+  return m?.[1] || fallback
+}
+
+/**
+ * Generează certificatul de garanție și răspunde cu PDF-ul (force-download).
+ * URL-ul R2 nu este niciodată expus clientului; PDF-ul este streamuit ca blob
+ * prin acest endpoint autentificat. Se salvează intern în R2 pentru download
+ * ulterior prin `downloadClientRegisteredProductWarrantyCertificate`.
+ */
+export async function postClientRegisteredProductWarrantyCertificate(
+  savedItemId: string,
+): Promise<ClientWarrantyCertificateResult> {
+  const res = await fetch(
+    `${API_BASE}/client/registered-products/${encodeURIComponent(savedItemId)}/warranty-certificate`,
+    { method: 'POST', headers: authHeaders() },
+  )
+  const contentType = (res.headers.get('Content-Type') || '').toLowerCase()
+  const dispo = res.headers.get('Content-Disposition') || ''
+
+  if (res.ok && contentType.includes('application/pdf')) {
+    const pdfBlob = await res.blob()
+    return {
+      ok: true,
+      kind: 'pdf',
+      pdfBlob,
+      filename: filenameFromContentDisposition(dispo, `certificat-${savedItemId}.pdf`),
+    }
+  }
+
+  /* Cazul dev fără R2: răspuns HTML inline (legacy). */
+  if (res.ok && contentType.includes('text/html')) {
+    const htmlBlob = await res.blob()
+    return {
+      ok: true,
+      kind: 'html',
+      htmlBlob,
+      filename: filenameFromContentDisposition(
+        dispo,
+        `certificat-garantie-${savedItemId}.html`,
+      ),
+    }
+  }
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    code?: string
+    fields?: string[]
+  }
+  const code = String(json.code || '')
+  if (res.status === 400 && code === 'profile_incomplete') {
+    return {
+      ok: false,
+      code,
+      error: json.error || '',
+      fields: Array.isArray(json.fields) ? json.fields : undefined,
+    }
+  }
+  if (res.status === 501 && code === 'warranty_not_implemented') {
+    return { ok: false, code, error: json.error || '' }
+  }
+  throw new Error(json.error || 'Eroare.')
+}
+
+/**
+ * Descarcă PDF-ul certificatului existent din R2 prin endpoint autentificat.
+ * Răspunsul are `Content-Disposition: attachment` — browser-ul forţează salvare
+ * pe disc. URL-ul R2 nu este expus.
+ */
+export async function downloadClientRegisteredProductWarrantyCertificate(
+  savedItemId: string,
+): Promise<{ pdfBlob: Blob; filename: string }> {
+  const res = await fetch(
+    `${API_BASE}/client/registered-products/${encodeURIComponent(savedItemId)}/warranty-certificate/download`,
+    { headers: authHeaders() },
+  )
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    throw new Error(json.error || 'Nu am putut descărca certificatul.')
+  }
+  const dispo = res.headers.get('Content-Disposition') || ''
+  const pdfBlob = await res.blob()
+  return {
+    pdfBlob,
+    filename: filenameFromContentDisposition(dispo, `certificat-${savedItemId}.pdf`),
+  }
 }
 
 export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentStatus: string }> {
@@ -801,25 +980,36 @@ export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentS
   return { fulfillmentStatus: String(json.fulfillmentStatus || 'anulata') }
 }
 
-/** Descarcă HTML proformă (print → PDF din browser). */
-export async function downloadClientOrderProforma(orderId: string, orderNumber: string): Promise<void> {
+/**
+ * Generează (la nevoie) și descarcă proforma PDF.
+ *
+ * Backend-ul randează HTML→PDF, încarcă în R2 sub `Proforme/<orderId>/` cu
+ * `Content-Disposition: attachment` și întoarce JSON cu URL-ul direct R2.
+ * Browser-ul descarcă PDF-ul direct de la CDN — fără riscuri de transformare
+ * binară pe lanțul Express/CORS/compression (cauza vechilor PDF-uri „corupte”).
+ */
+export async function downloadClientOrderProforma(
+  orderId: string,
+  _orderNumber: string,
+): Promise<{ downloadUrl: string }> {
   const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/proforma`, {
     headers: authHeaders(),
   })
-  if (!res.ok) {
-    const json = (await res.json().catch(() => ({}))) as { error?: string }
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    downloadUrl?: string
+  }
+  if (!res.ok || !json.downloadUrl) {
     throw new Error(json.error || 'Nu am putut genera proforma.')
   }
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = `proforma-${orderNumber.replace(/[^\w.-]+/g, '_')}.html`
+  a.href = json.downloadUrl
   a.rel = 'noopener'
+  a.target = '_blank'
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  return { downloadUrl: json.downloadUrl }
 }
 
 /** Descarcă factura PDF (după ce comanda e în „în pregătire” și admin a încărcat factura). */
@@ -1342,7 +1532,7 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
 /** Cod fabrică implicit pentru SN depozit (introducere manuală: se completează câmpul fără acest prefix). */
 export const WAREHOUSE_SN_FACTORY_PREFIX = 'LJC'
 
-/** LJC + 16 cifre: tensiune (2) + capacitate (4) + lună/an producție (4) + număr lot (6). */
+/** LJC + 16 cifre: în corpul de 16 cifre, poz. 9–10 = an (YY), 11–12 = lună; + tensiune, capacitate, lot (aliniat cu `deriveProducedOnFromSerial` din API). */
 export const WAREHOUSE_SN_BODY_DIGITS = 16
 
 /** Aliniat cu API: SN:…, JSON cu SN/sn/serialNumber, URL ?sn=, altfel text integral. */
@@ -1424,6 +1614,14 @@ export type WarehouseSavedItemRow = {
   location?: WarehouseSavedItemLocation | string | null
   distributor?: string | null
   client?: string | null
+  /** Set when `client` matches a User id (înregistrare din cont). */
+  clientAccount?: { email: string; firstName: string; lastName: string }
+  /** Există un certificat PDF generat (descărcabil prin endpoint autentificat). */
+  warrantyCertificateAvailable?: boolean
+  /** ISO timestamp ultimei generări (null până la prima generare). */
+  warrantyCertificateGeneratedAt?: string | null
+  /** Numărul certificatului (CG-YYYY-NNNNN), `null` dacă nu este generat. */
+  warrantyCertificateNumber?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -1467,6 +1665,30 @@ export async function deleteAdminWarehouseSavedItem(id: string): Promise<void> {
   if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot șterge înregistrări din depozit.')
   if (res.status === 404) throw new Error((json as { error?: string }).error || 'Înregistrarea nu există.')
   throw new Error((json as { error?: string }).error || 'Eroare la ștergere.')
+}
+
+/**
+ * Admin: descarcă PDF-ul certificatului de garanţie pentru orice item din
+ * depozit. Răspunsul are `Content-Disposition: attachment` (force download).
+ */
+export async function downloadAdminWarehouseWarrantyCertificate(
+  id: string,
+): Promise<{ pdfBlob: Blob; filename: string }> {
+  const res = await fetch(
+    `${API_BASE}/admin/warehouse-saved-items/${encodeURIComponent(id)}/warranty-certificate/download`,
+    { headers: authHeaders() },
+  )
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Nu am putut descărca certificatul.')
+  }
+  const dispo = res.headers.get('Content-Disposition') || ''
+  const m = dispo.match(/filename="([^"]+)"/i)
+  const filename = m?.[1] || `certificat-${id}.pdf`
+  const pdfBlob = await res.blob()
+  return { pdfBlob, filename }
 }
 
 export async function createWarehouseStockUnit(payload: {
@@ -2122,12 +2344,13 @@ export type AdminCompanyData = {
   name: string
   cui: string
   address: string
+  representativeName: string
   bankAccounts: CompanyBankAccount[]
 }
 
 function normalizeAdminCompanyData(json: unknown): AdminCompanyData {
   if (!json || typeof json !== 'object') {
-    return { name: 'Baterino SRL', cui: '', address: '', bankAccounts: [] }
+    return { name: 'Baterino SRL', cui: '', address: '', representativeName: '', bankAccounts: [] }
   }
   const o = json as Record<string, unknown>
   const rawAccounts = Array.isArray(o.bankAccounts) ? o.bankAccounts : []
@@ -2148,6 +2371,7 @@ function normalizeAdminCompanyData(json: unknown): AdminCompanyData {
     name: typeof o.name === 'string' ? o.name : '',
     cui: typeof o.cui === 'string' ? o.cui : '',
     address: typeof o.address === 'string' ? o.address : '',
+    representativeName: typeof o.representativeName === 'string' ? o.representativeName : '',
     bankAccounts,
   }
 }

@@ -216,8 +216,11 @@ export default function ResidentialMobileDiscountModals({
                 <label htmlFor="mobile-referral-code" className="mb-2 block text-center text-xs font-semibold text-gray-700">
                   Cod recomandare primit de la prieten
                 </label>
-                <div id="mobile-referral-code" className="flex items-center justify-center gap-2">
-                  <span className="select-none px-1 py-1 text-base font-bold tracking-wide text-gray-700">
+                <div
+                  id="mobile-referral-code"
+                  className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-2"
+                >
+                  <span className="select-none px-1 py-1 text-base font-bold tracking-wide text-gray-700 sm:self-auto">
                     BAT-
                   </span>
                   <div className="flex items-center justify-center gap-2">

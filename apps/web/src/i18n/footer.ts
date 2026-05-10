@@ -17,6 +17,7 @@ export type FooterTranslations = {
   cariere: string
   // Suport & Legal
   sigurantaClientului: string
+  verificareGarantie: string
   suportClienti: string
   termeniConditii: string
   termeniReduceri: string
@@ -50,6 +51,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     lithtech: 'Parteneriat LithTech',
     cariere: 'Cariere',
     sigurantaClientului: 'Siguranta clientului',
+    verificareGarantie: 'Verificare Garantie',
     suportClienti: 'Suport Clienti',
     termeniConditii: 'Termeni si Conditii',
     termeniReduceri: 'Termeni Reduceri',
@@ -78,6 +80,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     lithtech: 'LithTech Partnership',
     cariere: 'Careers',
     sigurantaClientului: 'Customer safety',
+    verificareGarantie: 'Warranty check',
     suportClienti: 'Customer Support',
     termeniConditii: 'Terms and Conditions',
     termeniReduceri: 'Discount Terms',
@@ -106,6 +109,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     lithtech: 'LithTech合作',
     cariere: '招聘',
     sigurantaClientului: '客户安全',
+    verificareGarantie: '保修验证',
     suportClienti: '客户支持',
     termeniConditii: '条款与条件',
     termeniReduceri: '折扣条款',

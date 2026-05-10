@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { ShoppingCart } from 'lucide-react'
+import { Bell, ShoppingCart } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useViziuneHeader } from '../contexts/ViziuneHeaderContext'
 import { useCart } from '../contexts/CartContext'
-import { clearAuth, getAuthEmail, getAuthRole } from '../lib/api'
+import { clearAuth, getAuthEmail, getAuthRole, getAuthUserId } from '../lib/api'
+import { getClientNotificationItems, getClientUnreadNotificationCount } from '../lib/clientNotifications'
 import { getMenuTranslations } from '../i18n/menu'
 import { LanguageDropdown } from './LanguageDropdown'
 import MobileMenu from './MobileMenu'
@@ -87,6 +88,7 @@ export default function Header() {
   const headerRef = useRef<HTMLElement>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { itemCount } = useCart()
+  const [notificationCount, setNotificationCount] = useState(0)
   const [authRole, setAuthRole] = useState<'admin' | 'client' | 'partener' | 'sales_agent' | null>(() =>
     typeof window !== 'undefined' ? getAuthRole() : null,
   )
@@ -111,6 +113,8 @@ export default function Header() {
   const companieItems = COMPANIE_PATHS.map(({ key, path }) => ({ label: t[key], path }))
   const cartAria =
     language.code === 'en' ? 'Shopping cart' : language.code === 'zh' ? '购物车' : 'Coș'
+  const notificationsAria =
+    language.code === 'en' ? 'Notifications' : language.code === 'zh' ? '通知' : 'Notificări'
   const hideInstalatoriNav = authRole === 'client'
 
   const closeDropdowns = () => {
@@ -127,6 +131,38 @@ export default function Header() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (authRole !== 'client') {
+      setNotificationCount(0)
+      return
+    }
+    const userId = getAuthUserId()
+    let cancelled = false
+    const onNotificationsChanged = () => {
+      void getClientNotificationItems(language.code)
+        .then((rows) => {
+          if (!cancelled) setNotificationCount(getClientUnreadNotificationCount(rows, userId))
+        })
+        .catch(() => {
+          if (!cancelled) setNotificationCount(0)
+        })
+    }
+    void getClientNotificationItems(language.code)
+      .then((rows) => {
+        if (!cancelled) setNotificationCount(getClientUnreadNotificationCount(rows, userId))
+      })
+      .catch(() => {
+        if (!cancelled) setNotificationCount(0)
+      })
+    window.addEventListener('baterino-notifications-change', onNotificationsChanged)
+    window.addEventListener('storage', onNotificationsChanged)
+    return () => {
+      cancelled = true
+      window.removeEventListener('baterino-notifications-change', onNotificationsChanged)
+      window.removeEventListener('storage', onNotificationsChanged)
+    }
+  }, [authRole, language.code, location.pathname])
 
   return (
     <header
@@ -166,6 +202,21 @@ export default function Header() {
           <div className="hidden md:flex items-center justify-end gap-2 shrink-0 lg:gap-3 lg:min-w-[120px]">
             {!INSTALATORI_ONLY ? (
               <>
+                {authRole === 'client' ? (
+                  <Link
+                    to="/client/notificari"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    onClick={closeDropdowns}
+                    aria-label={notificationsAria}
+                  >
+                    <Bell className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                    {notificationCount > 0 ? (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    ) : null}
+                  </Link>
+                ) : null}
                 <Link
                   to="/cos"
                   className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-50 hover:text-gray-900"
@@ -291,7 +342,39 @@ export default function Header() {
             )}
             <LanguageDropdown current={language} isOpen={langOpen} onToggle={() => { setLangOpen(!langOpen); setDiviziiOpen(false); setCompanieOpen(false); setAccountOpen(false); }} onSelect={setLanguage} />
           </div>
-          <div className="flex items-center md:hidden ml-auto">
+          <div className="flex items-center gap-1 md:hidden ml-auto">
+            {!INSTALATORI_ONLY ? (
+              <>
+                {authRole === 'client' ? (
+                  <Link
+                    to="/client/notificari"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    onClick={closeDropdowns}
+                    aria-label={notificationsAria}
+                  >
+                    <Bell className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                    {notificationCount > 0 ? (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    ) : null}
+                  </Link>
+                ) : null}
+                <Link
+                  to="/cos"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  onClick={closeDropdowns}
+                  aria-label={cartAria}
+                >
+                  <ShoppingCart className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                  {itemCount > 0 ? (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </>
+            ) : null}
             <button type="button" className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> : <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>}
             </button>

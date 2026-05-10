@@ -57,6 +57,12 @@ function normalizeStatus(o: AdminGuestResidentialOrderRow): string {
   return FULFILLMENT_OPTIONS.some((x) => x.value === stRaw) ? stRaw : 'de_platit'
 }
 
+/** Etichetă în `<select>`: `de_platit` + proforma emisă → „Așteptare plată” (valoarea rămâne `de_platit`). */
+function fulfillmentOptionLabel(o: AdminGuestResidentialOrderRow, optionValue: string): string {
+  if (optionValue === 'de_platit' && hasProformaUrl(o)) return 'Așteptare plată'
+  return FULFILLMENT_OPTIONS.find((x) => x.value === optionValue)?.label ?? optionValue
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<AdminGuestResidentialOrderRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -219,7 +225,7 @@ export default function AdminOrders() {
                   >
                     {FULFILLMENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {fulfillmentOptionLabel(detailOrder, opt.value)}
                       </option>
                     ))}
                   </select>
@@ -614,7 +620,7 @@ export default function AdminOrders() {
                         >
                           {FULFILLMENT_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {fulfillmentOptionLabel(o, opt.value)}
                             </option>
                           ))}
                         </select>

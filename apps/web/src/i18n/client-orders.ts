@@ -20,6 +20,24 @@ export type ClientOrdersTranslations = {
   copyOrderNumber: string
   copied: string
   downloadProforma: string
+  /** CTA prezent înainte de „Descarcă proforma” pentru comenzile cu plata în așteptare. */
+  payOnline: string
+  /** Mesaj afișat când plata online încă nu este integrată. */
+  payOnlineComingSoon: string
+  /** Modal "Plătește prin Transfer bancar". */
+  payModalAboveTitle: string
+  payModalTitle: string
+  payModalSubtitle: string
+  payModalCompanyLabel: string
+  payModalBankAccountLabel: string
+  payModalBankNameLabel: string
+  payModalAmountLabel: string
+  payModalDescriptionLabel: string
+  payModalClose: string
+  payModalLoading: string
+  payModalErrorGeneric: string
+  payModalCopy: string
+  payModalCopied: string
   cancelOrder: string
   cancelConfirm: string
   cancelling: string
@@ -30,8 +48,10 @@ export type ClientOrdersTranslations = {
   /** WhatsApp CTA next to cancel; prefill uses {orderNumber}, {orderDate}, {clientEmail}. */
   orderHelpWhatsapp: string
   whatsappHelpPrefill: string
-  /** Status: de_platit */
+  /** Status: de_platit (încă nu s-a emis proforma). */
   stDePlatit: string
+  /** Status: tot `de_platit` în DB, dar proforma emisă — afișare fixă, nu se poate schimba din UI. */
+  stAsteptarePlata: string
   stPreluata: string
   stInPregatire: string
   stInCursLivrare: string
@@ -58,6 +78,23 @@ const ro: ClientOrdersTranslations = {
   copyOrderNumber: 'Copiază numărul comenzii',
   copied: 'Copiat',
   downloadProforma: 'Descarcă proforma',
+  payOnline: 'Plătește Online',
+  payOnlineComingSoon:
+    'Plata online va fi disponibilă în curând. Între timp poți achita prin transfer bancar (detaliile sunt în proformă).',
+  payModalAboveTitle: 'Plătește prin',
+  payModalTitle: 'Transfer bancar',
+  payModalSubtitle:
+    'Din aplicația ta bancară execută un transfer folosind datele de mai jos:',
+  payModalCompanyLabel: 'Nume companie',
+  payModalBankAccountLabel: 'Cont bancar',
+  payModalBankNameLabel: 'Bancă',
+  payModalAmountLabel: 'Suma de plată',
+  payModalDescriptionLabel: 'Descriere plată',
+  payModalClose: 'Închide',
+  payModalLoading: 'Se încarcă datele bancare…',
+  payModalErrorGeneric: 'Nu am putut încărca datele bancare.',
+  payModalCopy: 'Copiază',
+  payModalCopied: 'Copiat',
   cancelOrder: 'Anulează comanda',
   cancelConfirm: 'Sigur vrei să anulezi comanda? Poți face asta doar înainte de plată.',
   cancelling: 'Se anulează…',
@@ -69,6 +106,7 @@ const ro: ClientOrdersTranslations = {
   whatsappHelpPrefill:
     'Salut. Aș dori ajutor pentru comanda cu numărul {orderNumber} din data de {orderDate}. Contul meu de client este {clientEmail}.',
   stDePlatit: 'De plătit',
+  stAsteptarePlata: 'Așteptare plată',
   stPreluata: 'Preluată',
   stInPregatire: 'În pregătire',
   stInCursLivrare: 'În curs de livrare',
@@ -95,6 +133,23 @@ const en: ClientOrdersTranslations = {
   copyOrderNumber: 'Copy order number',
   copied: 'Copied',
   downloadProforma: 'Download proforma',
+  payOnline: 'Pay Online',
+  payOnlineComingSoon:
+    'Online payment will be available soon. In the meantime you can pay by bank transfer (details are in the proforma).',
+  payModalAboveTitle: 'Pay via',
+  payModalTitle: 'Bank transfer',
+  payModalSubtitle:
+    'Open your banking app and start a transfer using the details below:',
+  payModalCompanyLabel: 'Company name',
+  payModalBankAccountLabel: 'Bank account',
+  payModalBankNameLabel: 'Bank',
+  payModalAmountLabel: 'Amount to pay',
+  payModalDescriptionLabel: 'Payment description',
+  payModalClose: 'Close',
+  payModalLoading: 'Loading bank details…',
+  payModalErrorGeneric: 'Could not load bank details.',
+  payModalCopy: 'Copy',
+  payModalCopied: 'Copied',
   cancelOrder: 'Cancel order',
   cancelConfirm: 'Cancel this order? You can only cancel before payment.',
   cancelling: 'Cancelling…',
@@ -105,7 +160,8 @@ const en: ClientOrdersTranslations = {
   orderHelpWhatsapp: 'Order help',
   whatsappHelpPrefill:
     'Hi. I would like help with order number {orderNumber} from {orderDate}. My client account email is {clientEmail}.',
-  stDePlatit: 'Awaiting payment',
+  stDePlatit: 'Payment due',
+  stAsteptarePlata: 'Awaiting payment',
   stPreluata: 'Received',
   stInPregatire: 'Being prepared',
   stInCursLivrare: 'Out for delivery',
@@ -132,6 +188,21 @@ const zh: ClientOrdersTranslations = {
   copyOrderNumber: '复制订单号',
   copied: '已复制',
   downloadProforma: '下载形式发票',
+  payOnline: '在线支付',
+  payOnlineComingSoon: '在线支付即将上线。在此之前请通过银行转账付款（详情见形式发票）。',
+  payModalAboveTitle: '支付方式',
+  payModalTitle: '银行转账',
+  payModalSubtitle: '请在您的银行应用中按以下信息发起转账：',
+  payModalCompanyLabel: '公司名称',
+  payModalBankAccountLabel: '银行账号',
+  payModalBankNameLabel: '银行',
+  payModalAmountLabel: '支付金额',
+  payModalDescriptionLabel: '付款备注',
+  payModalClose: '关闭',
+  payModalLoading: '正在加载银行信息…',
+  payModalErrorGeneric: '无法加载银行信息。',
+  payModalCopy: '复制',
+  payModalCopied: '已复制',
   cancelOrder: '取消订单',
   cancelConfirm: '确定取消该订单？仅在付款前可取消。',
   cancelling: '正在取消…',
@@ -143,6 +214,7 @@ const zh: ClientOrdersTranslations = {
   whatsappHelpPrefill:
     '您好。我需要协助，订单编号为 {orderNumber}，下单日期为 {orderDate}。我的客户账户邮箱为 {clientEmail}。',
   stDePlatit: '待付款',
+  stAsteptarePlata: '等待付款',
   stPreluata: '已接单',
   stInPregatire: '备货中',
   stInCursLivrare: '配送中',
@@ -157,11 +229,21 @@ export function getClientOrdersTranslations(lang: LangCode): ClientOrdersTransla
   return ro
 }
 
+export type FulfillmentStatusLabelOptions = {
+  /** Dacă există proforma emisă (`proformaUrl`), statusul `de_platit` se afișează ca „Așteptare plată”. */
+  hasProforma?: boolean
+}
+
 export function fulfillmentStatusLabel(
   tr: ClientOrdersTranslations,
   status: string,
+  options?: FulfillmentStatusLabelOptions,
 ): string {
-  switch (status) {
+  const s = String(status || 'de_platit').trim()
+  if (s === 'de_platit' && options?.hasProforma) {
+    return tr.stAsteptarePlata
+  }
+  switch (s) {
     case 'preluata':
       return tr.stPreluata
     case 'in_pregatire':

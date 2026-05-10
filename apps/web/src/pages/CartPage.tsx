@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Minus, Plus, Truck } from 'lucide-react'
+import { Minus, Plus, ShoppingBag, Truck } from 'lucide-react'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import {
   cartLineDiscountPercent,
@@ -332,11 +332,33 @@ export default function CartPage() {
   if (itemCount === 0) {
     return (
       <div className="max-w-content mx-auto px-4 py-16 sm:py-20">
-        <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Coșul tău</h1>
-        <p className="text-slate-600 font-['Inter'] mb-6">Coșul este gol.</p>
-        <Link to="/produse" className="inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">
-          Produse
-        </Link>
+        <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-6">Coșul tău</h1>
+        <section className="max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div
+            className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700"
+            aria-hidden
+          >
+            <ShoppingBag className="h-5 w-5" strokeWidth={2} />
+          </div>
+          <h2 className="text-lg font-bold font-['Inter'] text-slate-900">Coșul este gol</h2>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600 font-['Inter']">
+            Adaugă produse în coș pentru a putea continua comanda.
+          </p>
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+            <Link
+              to="/produse"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800"
+            >
+              Vezi produse
+            </Link>
+            <Link
+              to="/reduceri"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-800 hover:bg-slate-50"
+            >
+              Vezi reduceri
+            </Link>
+          </div>
+        </section>
       </div>
     )
   }
@@ -369,14 +391,16 @@ export default function CartPage() {
 
           return (
             <li key={lineKey} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:justify-between">
-              <div className="flex min-w-0 flex-1 gap-4">
-                <CartLineProductThumbLink
-                  to={`/produse/${encodeURIComponent(line.slug)}`}
-                  src={thumb}
-                  lang={lang}
-                />
+              <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:gap-4">
+                <div className="self-center sm:self-center">
+                  <CartLineProductThumbLink
+                    to={`/produse/${encodeURIComponent(line.slug)}`}
+                    src={thumb}
+                    lang={lang}
+                  />
+                </div>
                 <div className="min-w-0 flex flex-col justify-center">
-                  <p className="font-semibold text-slate-900 font-['Inter']">{line.title}</p>
+                  <p className="text-center font-semibold text-slate-900 font-['Inter'] sm:text-left">{line.title}</p>
                   {pr?.status === 'ok' ? (
                     <CartLineSpecDetails specs={pr.specs} lang={lang} />
                   ) : pr?.status === 'loading' || pr == null ? (
@@ -394,7 +418,7 @@ export default function CartPage() {
               </div>
 
               <div className="flex flex-col gap-4 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:gap-6 sm:border-t-0 sm:pt-0 sm:pl-2">
-                <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:justify-start sm:gap-1">
                   <span
                     className={`text-xs font-medium font-['Inter'] ${qtyLocked ? 'text-slate-400' : 'text-slate-500'}`}
                   >
@@ -500,7 +524,7 @@ export default function CartPage() {
                   )}
                 </div>
 
-                <div className="flex items-end sm:items-center">
+                <div className="flex justify-center sm:justify-end sm:items-center">
                   <button
                     type="button"
                     onClick={() => removeLine(lineKey)}
@@ -516,7 +540,7 @@ export default function CartPage() {
       </ul>
 
       <div className="mt-6 flex flex-col gap-4 font-['Inter'] lg:flex-row lg:items-stretch lg:gap-6">
-        <div className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-5 sm:px-6">
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:px-6">
           <div
             className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600 ring-1 ring-slate-100 sm:h-24 sm:w-24"
             aria-hidden

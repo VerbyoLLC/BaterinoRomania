@@ -20,10 +20,10 @@ export function CartLineProductThumbLink({
   return (
     <Link
       to={to}
-      className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 sm:h-24 sm:w-24"
+      className="group relative flex h-64 w-64 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 sm:h-24 sm:w-24"
       aria-label={ariaViewProduct(lang)}
     >
-      <img src={src} alt="" className="h-full w-full object-contain p-2" />
+      <img src={src} alt="" className="h-full w-full object-contain p-3" />
       <span
         className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/0 transition-colors group-hover:bg-slate-900/40 group-focus-visible:bg-slate-900/40"
         aria-hidden

@@ -235,6 +235,18 @@ function IconAgents() {
     </svg>
   )
 }
+function IconWarrantyCertificate() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 3l8 3v6c0 4.5-3.2 8.4-8 9-4.8-.6-8-4.5-8-9V6l8-3z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+    </svg>
+  )
+}
 function IconChevronNav({ open }: { open: boolean }) {
   return (
     <svg
@@ -274,6 +286,7 @@ const SETARI_PATHS = [
   '/admin/company-data',
   '/admin/phone-numbers',
   '/admin/agents',
+  '/admin/warranty-certificate-preview',
 ] as const
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
@@ -337,6 +350,11 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
       { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
       { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
       { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },
+      {
+        to: '/admin/warranty-certificate-preview',
+        label: 'Certificat garanție',
+        icon: <IconWarrantyCertificate />,
+      },
     ],
   },
 ]

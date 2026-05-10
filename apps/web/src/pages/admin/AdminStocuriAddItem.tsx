@@ -318,7 +318,7 @@ export default function AdminStocuriAddItem() {
     }
     if (digits.length !== WAREHOUSE_SN_BODY_DIGITS) {
       setFormError(
-        `Introdu exact ${WAREHOUSE_SN_BODY_DIGITS} cifre după ${WAREHOUSE_SN_FACTORY_PREFIX}: tensiune (2) + capacitate (4) + lună/an (4) + lot (6).`,
+        `Introdu exact ${WAREHOUSE_SN_BODY_DIGITS} cifre după ${WAREHOUSE_SN_FACTORY_PREFIX}: tensiune (2) + capacitate (4) + … + an YY (cifrele 9–10) + lună MM (11–12) + lot (6).`,
       )
       return false
     }
@@ -529,7 +529,7 @@ export default function AdminStocuriAddItem() {
             </h2>
             <p className="mt-2 text-sm text-slate-600 font-['Inter'] leading-relaxed">
               Prefixul fabricii <span className="font-mono font-semibold">{WAREHOUSE_SN_FACTORY_PREFIX}</span> este
-              fix. Introdu doar cele {WAREHOUSE_SN_BODY_DIGITS} cifre (tensiune, capacitate, lună/an, lot).
+              fix. Introdu doar cele {WAREHOUSE_SN_BODY_DIGITS} cifre (tensiune, capacitate, apoi YY/MM la cifrele 9–12, lot).
             </p>
             <div className="mt-5">
               <label htmlFor="modal-sn-digits" className="sr-only">
@@ -775,9 +775,9 @@ export default function AdminStocuriAddItem() {
               apoi <span className="font-medium text-slate-600">Modifică SN</span> dacă trebuie corectat. Format:{' '}
               <span className="font-medium text-slate-600">{WAREHOUSE_SN_FACTORY_PREFIX}</span> +{' '}
               <span className="font-medium text-slate-600">{WAREHOUSE_SN_BODY_DIGITS} cifre</span> (tensiune 2 ·
-              capacitate 4 · lună/an 4 · lot 6). Exemplu: <code className="text-slate-700">LJC5131400325070043</code>{' '}
-              (cifrele 7–10 după LJC = <span className="font-mono">0325</span> → produs în{' '}
-              <span className="font-mono">03/2025</span>).
+              capacitate 4 · … · la cifrele 9–10 anul YY, 11–12 luna MM · lot 6). Exemplu:{' '}
+              <code className="text-slate-700">LJC5131400325070043</code> (cifrele 9–12 după LJC ={' '}
+              <span className="font-mono">2507</span> → produs în <span className="font-mono">07/2025</span>).
             </p>
             <p className="mt-0.5 text-xs text-slate-400 font-mono font-['Inter']">
               {serialBody.replace(/\D/g, '').length}/{WAREHOUSE_SN_BODY_DIGITS} cifre

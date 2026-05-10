@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   AlertCircle,
@@ -229,6 +229,18 @@ export default function GuestCheckout() {
 
   const [activeStep, setActiveStep] = useState<CheckoutStep>(1)
   const [maxReachedStep, setMaxReachedStep] = useState<CheckoutStep>(1)
+
+  const goToStep = useCallback((step: CheckoutStep) => {
+    setActiveStep(step)
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`checkout-accordion-trigger-${step}`)
+      if (el) {
+        const offset = 72 // approx sticky header height
+        const top = el.getBoundingClientRect().top + window.scrollY - offset
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    })
+  }, [])
   const [product, setProduct] = useState<PublicProduct | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -746,14 +758,16 @@ export default function GuestCheckout() {
                     key={lineKey}
                     className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
                   >
-                    <div className="flex min-w-0 flex-1 gap-4 sm:items-center">
-                      <CartLineProductThumbLink
-                        to={`/produse/${encodeURIComponent(line.slug || line.productId)}`}
-                        src={line.imageUrl?.trim() || getProductCardImageUrl({ images: [], cardImage: null })}
-                        lang={lang}
-                      />
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:gap-4 sm:items-center">
+                      <div className="self-center sm:self-center">
+                        <CartLineProductThumbLink
+                          to={`/produse/${encodeURIComponent(line.slug || line.productId)}`}
+                          src={line.imageUrl?.trim() || getProductCardImageUrl({ images: [], cardImage: null })}
+                          lang={lang}
+                        />
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="m-0 font-['Inter'] font-semibold text-slate-900">{line.title}</p>
+                        <p className="m-0 text-center font-['Inter'] font-semibold text-slate-900 sm:text-left">{line.title}</p>
                         <CartLineSpecDetails specs={cartLineSpecs[lineKey]} lang={lang} />
                         <CartLineProgramDiscountMark
                           line={line}
@@ -806,7 +820,7 @@ export default function GuestCheckout() {
             </div>
 
             <div className="mt-2 flex flex-col gap-4 font-['Inter']">
-              <div className="flex min-w-0 w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-5 sm:px-6">
+              <div className="flex min-w-0 w-full flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center sm:flex-row sm:items-center sm:px-6 sm:text-left">
                 <div
                   className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600 ring-1 ring-slate-100 sm:h-24 sm:w-24"
                   aria-hidden
@@ -817,7 +831,7 @@ export default function GuestCheckout() {
                   <p className="m-0 text-xs font-bold uppercase tracking-widest text-slate-500">{tr.orderShippingLabel}</p>
                   <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">{tr.orderShippingTitle}</p>
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{tr.orderShippingSubtitle}</p>
-                  <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t border-slate-100 pt-3 sm:hidden">
+                  <div className="mt-4 flex flex-wrap items-baseline justify-center gap-2 border-t border-slate-100 pt-3 sm:hidden sm:justify-between">
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       {tr.orderShippingAmountLabel}
                     </span>
@@ -857,7 +871,7 @@ export default function GuestCheckout() {
                 type="button"
                 onClick={() => {
                   setMaxReachedStep((m) => (m < 2 ? 2 : m))
-                  setActiveStep(2)
+                  goToStep(2)
                 }}
                 className="order-1 min-h-[48px] flex-1 rounded-xl bg-slate-900 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:order-2 sm:max-w-xs"
               >
@@ -962,7 +976,7 @@ export default function GuestCheckout() {
             type="button"
             onClick={() => {
               setMaxReachedStep((m) => (m < 2 ? 2 : m))
-              setActiveStep(2)
+              goToStep(2)
             }}
             className="w-full min-h-[48px] rounded-xl bg-slate-900 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -1031,7 +1045,7 @@ export default function GuestCheckout() {
               setProfileAutosaveBusy(false)
             }
             setMaxReachedStep((m) => (m < 3 ? 3 : m))
-            setActiveStep(3)
+            goToStep(3)
           }}
         >
           <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">{tr.contactIntro}</p>
@@ -1143,7 +1157,7 @@ export default function GuestCheckout() {
               type="button"
               onClick={() => {
                 setProfileSaveError(null)
-                setActiveStep(1)
+                goToStep(1)
               }}
               disabled={profileAutosaveBusy}
               className={`order-2 min-h-[44px] sm:order-1 ${checkoutBackButtonClass} disabled:opacity-50`}
@@ -1229,7 +1243,7 @@ export default function GuestCheckout() {
               setProfileAutosaveBusy(false)
             }
             setMaxReachedStep((m) => (m < 4 ? 4 : m))
-            setActiveStep(4)
+            goToStep(4)
           }}
         >
           <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">{tr.addressIntro}</p>
@@ -1522,7 +1536,7 @@ export default function GuestCheckout() {
               type="button"
               onClick={() => {
                 setProfileSaveError(null)
-                setActiveStep(2)
+                goToStep(2)
               }}
               disabled={profileAutosaveBusy}
               className={`order-2 min-h-[44px] sm:order-1 ${checkoutBackButtonClass} disabled:opacity-50`}
@@ -1610,7 +1624,7 @@ export default function GuestCheckout() {
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-between">
               <button
                 type="button"
-                onClick={() => setActiveStep(3)}
+                onClick={() => goToStep(3)}
                 disabled={orderPlaceLoading}
                 className={`order-2 min-h-[44px] sm:order-1 sm:shrink-0 ${checkoutBackButtonClass} disabled:opacity-50`}
               >
@@ -1678,7 +1692,7 @@ export default function GuestCheckout() {
 
           {/* Mobile order summary strip */}
           {checkoutReady ? (
-            <div className="mb-6 mt-6 flex gap-3 rounded-2xl border border-slate-200/90 bg-[#f7f7f7] p-3 lg:hidden">
+            <div className="mb-6 mt-6 hidden gap-3 rounded-2xl border border-slate-200/90 bg-[#f7f7f7] p-3 lg:hidden">
               {cartMode ? (
                 <>
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-100">
@@ -1737,7 +1751,7 @@ export default function GuestCheckout() {
                         aria-controls={`checkout-accordion-panel-${step.id}`}
                         id={`checkout-accordion-trigger-${step.id}`}
                         onClick={() => {
-                          if (reachable) setActiveStep(step.id)
+                          if (reachable) goToStep(step.id)
                         }}
                         className={`flex w-full min-h-[56px] items-center gap-3 px-4 py-3.5 text-left transition-colors sm:gap-4 sm:px-5 sm:py-4 ${
                           open ? 'bg-[#f7f7f7]' : 'bg-[#f7f7f7] hover:bg-neutral-200/40'

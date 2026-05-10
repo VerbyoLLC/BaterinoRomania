@@ -48,7 +48,10 @@ export default function AdminCompanyData() {
     load()
   }, [navigate, load])
 
-  const setField = (field: 'name' | 'cui' | 'address', value: string) => {
+  const setField = (
+    field: 'name' | 'cui' | 'address' | 'representativeName',
+    value: string,
+  ) => {
     setData((prev) => (prev ? { ...prev, [field]: value } : prev))
     setSavedOk(false)
   }
@@ -214,6 +217,26 @@ export default function AdminCompanyData() {
                   onChange={(e) => setField('address', e.target.value)}
                   placeholder="Adresă sediu social"
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="company-representative"
+                  className="block text-sm font-medium text-slate-700 font-['Inter'] mb-1.5"
+                >
+                  Reprezentant
+                </label>
+                <input
+                  id="company-representative"
+                  type="text"
+                  className={inputClass}
+                  value={data.representativeName ?? ''}
+                  onChange={(e) => setField('representativeName', e.target.value)}
+                  placeholder="ex. RAZVAN NECHIFOR"
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-slate-500 font-['Inter']">
+                  Numele reprezentantului apare pe certificatul de garanție la „Reprezentant furnizor”.
+                </p>
               </div>
             </section>
 

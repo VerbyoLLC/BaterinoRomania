@@ -46,6 +46,7 @@ import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
 import AdminProductModels from './pages/admin/AdminProductModels'
 import AdminStocuriAddItem from './pages/admin/AdminStocuriAddItem'
 import AdminStocuriLista from './pages/admin/AdminStocuriLista'
+import AdminWarrantyCertificatePreview from './pages/admin/AdminWarrantyCertificatePreview'
 import Blog from './pages/Blog'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
@@ -73,7 +74,9 @@ import ClientSettings from './pages/client/ClientSettings'
 import ClientMyProducts from './pages/client/ClientMyProducts'
 import ClientBenefits from './pages/client/ClientBenefits'
 import ClientDiscountCodes from './pages/client/ClientDiscountCodes'
+import ClientNotifications from './pages/client/ClientNotifications'
 import CartPage from './pages/CartPage'
+import VerificareGarantie from './pages/VerificareGarantie'
 
 export default function App() {
   return (
@@ -105,6 +108,7 @@ export default function App() {
           <Route path="company-data" element={<AdminCompanyData />} />
           <Route path="phone-numbers" element={<AdminPhoneNumbers />} />
           <Route path="agents" element={<AdminAgents />} />
+          <Route path="warranty-certificate-preview" element={<AdminWarrantyCertificatePreview />} />
         </Route>
 
         {/* ── Auth: in instalatori-only mode, no register — redirect to login ── */}
@@ -147,10 +151,12 @@ export default function App() {
               <Route path="instalatori" element={<Instalatori />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
+              <Route path="verificare-garantie" element={<VerificareGarantie />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />
                 <Route path="beneficii" element={<ClientBenefits />} />
+                <Route path="notificari" element={<ClientNotifications />} />
                 <Route path="coduri-reducere" element={<ClientDiscountCodes />} />
                 <Route path="comenzi" element={<ClientOrders />} />
                 <Route path="setari" element={<ClientSettings />} />
@@ -164,10 +170,12 @@ export default function App() {
               <Route path="produse/:slug" element={<ProductRezidential />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
+              <Route path="verificare-garantie" element={<VerificareGarantie />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />
                 <Route path="beneficii" element={<ClientBenefits />} />
+                <Route path="notificari" element={<ClientNotifications />} />
                 <Route path="coduri-reducere" element={<ClientDiscountCodes />} />
                 <Route path="comenzi" element={<ClientOrders />} />
                 <Route path="setari" element={<ClientSettings />} />

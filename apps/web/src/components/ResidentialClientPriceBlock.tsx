@@ -414,42 +414,50 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             Adaugă în coș
           </button>
         ) : null}
-        <button
-          type="button"
-          disabled={discountProgramsLoading && !guestWithDiscount}
-          onClick={() => {
-            if (guestWithDiscount) {
-              navigate('/signup/clienti')
-              return
-            }
-            if (!hasProgramDiscount) {
-              const s = String(product.slug || product.id || '').trim()
-              if (s) {
-                navigate(`/comanda?slug=${encodeURIComponent(s)}&qty=${qty}`)
+        {/* Pentru clienții autentificați ascundem „COMANDĂ” direct — checkout-ul se face din coș,
+            ca să se aplice corect reducerile, codurile și fluxul standard de plată. */}
+        {!isClientUser ? (
+          <button
+            type="button"
+            disabled={discountProgramsLoading && !guestWithDiscount}
+            onClick={() => {
+              if (guestWithDiscount) {
+                navigate('/signup/clienti')
                 return
               }
-            }
-            const lines = [
-              product.title,
-              `${tr.cantitateLabel}: ${qty}`,
-              selectedDiscount
-                ? formatResidentialDiscountOption(tr, selectedDiscount.programLabel, selectedDiscount.discountPercent)
-                : tr.faraReducere,
-            ]
-            if (hasProgramDiscount) {
-              lines.push(`${tr.economisestiLabel}: ${fmtMoney(totalSavings)} ${p.currencySuffix}`)
-            }
-            lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
-            window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
-          }}
-          className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors disabled:cursor-wait disabled:opacity-50 ${
-            hasProgramDiscount
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'bg-gray-900 hover:bg-gray-800 text-white'
-          }`}
-        >
-          {guestWithDiscount ? tr.comandaCuContBtn || 'COMANDĂ CU CONT' : tr.comandaBtn}
-        </button>
+              if (!hasProgramDiscount) {
+                const s = String(product.slug || product.id || '').trim()
+                if (s) {
+                  navigate(`/comanda?slug=${encodeURIComponent(s)}&qty=${qty}`)
+                  return
+                }
+              }
+              const lines = [
+                product.title,
+                `${tr.cantitateLabel}: ${qty}`,
+                selectedDiscount
+                  ? formatResidentialDiscountOption(
+                      tr,
+                      selectedDiscount.programLabel,
+                      selectedDiscount.discountPercent,
+                    )
+                  : tr.faraReducere,
+              ]
+              if (hasProgramDiscount) {
+                lines.push(`${tr.economisestiLabel}: ${fmtMoney(totalSavings)} ${p.currencySuffix}`)
+              }
+              lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
+              window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
+            }}
+            className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors disabled:cursor-wait disabled:opacity-50 ${
+              hasProgramDiscount
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-900 hover:bg-gray-800 text-white'
+            }`}
+          >
+            {guestWithDiscount ? tr.comandaCuContBtn || 'COMANDĂ CU CONT' : tr.comandaBtn}
+          </button>
+        ) : null}
         {guestWithDiscount ? (
           <p
             className="text-sm text-neutral-600 font-['Inter'] leading-snug m-0 mt-2 sm:mt-3 text-center max-w-prose mx-auto px-0.5 pb-1 relative z-[1]"

@@ -68,7 +68,7 @@ export function CartLineSpecDetails({
   return (
     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-4">
       {items.map(({ label, value }) => (
-        <div key={label}>
+        <div key={label} className="text-center sm:text-left">
           <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-slate-500 font-['Inter']">{label}</dt>
           <dd className="mt-1 text-sm font-semibold leading-snug text-slate-900 font-['Inter']">{value}</dd>
         </div>

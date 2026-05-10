@@ -22,12 +22,12 @@ export function CartLineProgramDiscountMark({ line, programLabelById, tr }: Prop
   const badge = tr.discountProgramBadge.replace('{program}', program).replace('{pct}', String(pct))
 
   return (
-    <div className="mt-2 space-y-1.5">
-      <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50/90 px-2.5 py-1 text-left text-xs font-semibold leading-snug text-emerald-950 font-['Inter'] ring-1 ring-emerald-100/80">
+    <div className="mt-4 space-y-1.5 text-center sm:mt-2 sm:text-left">
+      <span className="inline-flex max-w-full items-center justify-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold leading-snug text-emerald-950 font-['Inter'] ring-1 ring-emerald-100/80 sm:justify-start">
         <Tag className="h-3.5 w-3.5 shrink-0 text-emerald-800" strokeWidth={2.25} aria-hidden />
         <span className="min-w-0">{badge}</span>
       </span>
-      <p className="m-0 max-w-xl text-[0.7rem] leading-snug text-slate-600 font-['Inter']">{tr.discountDocumentsNotice}</p>
+      <p className="m-0 max-w-xl text-[0.7rem] leading-snug text-slate-600 font-['Inter'] sm:max-w-none">{tr.discountDocumentsNotice}</p>
     </div>
   )
 }
