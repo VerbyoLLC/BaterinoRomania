@@ -14,22 +14,23 @@ export type GuestCheckoutTranslations = {
   panelStep2: string
   panelStep3: string
   panelStep4: string
-  contactIntro: string
+  /** Step 2 — radio group: natural person */
+  buyerTypeNaturalPerson: string
+  /** Step 2 — radio group: legal entity */
+  buyerTypeLegalEntity: string
+  /** Step 2 — aria-label for buyer type radios */
+  buyerTypeGroupAria: string
+  /** Step 2 — subtitle for contact fields when PJ */
+  contactPersonSectionTitle: string
+  /** Step 2 — company block heading when PJ */
+  companyInvoiceSectionTitle: string
+  fieldCompanyName: string
+  fieldCompanyCui: string
+  placeholderCompanyName: string
+  placeholderCompanyCui: string
   addressIntro: string
-  /** Billing block heading */
-  sectionBillingTitle: string
-  /** Delivery block heading (when different from billing) */
-  sectionDeliveryTitle: string
-  /** Checkbox label fragment before first bold phrase */
-  differentDeliveryPart1: string
-  /** Bold: delivery address phrase */
-  differentDeliveryBoldDelivery: string
-  /** Between the two bold phrases */
-  differentDeliveryPart2: string
-  /** Bold: billing address phrase */
-  differentDeliveryBoldBilling: string
-  /** After second bold phrase (e.g. ?) */
-  differentDeliveryPart3: string
+  /** Variantă pentru PJ — adresa firmei este folosită la facturare, Pasul 3 este strict pentru livrare. */
+  addressIntroCompany: string
   selectCountyPlaceholder: string
   selectCityPlaceholder: string
   selectCityPlaceholderNeedCounty: string
@@ -165,22 +166,26 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     subline:
       'Poți continua fără cont (fără program de reducere) sau îți poți crea un cont client în dreapta pentru reduceri și o experiență completă.',
     navStep1: 'Produs și preț',
-    navStep2: 'Date de contact',
-    navStep3: 'Adresă livrare și date factură',
+    navStep2: 'Persoană de contact și date de facturare',
+    navStep3: 'Adresa de livrare',
     navStep4: 'Finalizare comandă',
     panelStep1: 'Pasul 1: Produs și preț',
-    panelStep2: 'Pasul 2: Date de contact',
-    panelStep3: 'Pasul 3: Adresă de livrare și date factură',
+    panelStep2: 'Pasul 2: Persoană de contact și date de facturare',
+    panelStep3: 'Pasul 3: Adresa de livrare',
     panelStep4: 'Pasul 4: Finalizare comandă',
-    contactIntro: 'Completează datele tale de contact. Le folosim pentru confirmarea comenzii.',
-    addressIntro: 'Completează adresa de facturare. Dacă livrarea este în alt loc, bifează opțiunea de mai jos.',
-    sectionBillingTitle: 'Adresa de facturare',
-    sectionDeliveryTitle: 'Adresa de livrare',
-    differentDeliveryPart1: 'Este ',
-    differentDeliveryBoldDelivery: 'adresa de livrare',
-    differentDeliveryPart2: ' diferită de ',
-    differentDeliveryBoldBilling: 'adresa de facturare',
-    differentDeliveryPart3: '?',
+    buyerTypeNaturalPerson: 'Persoană fizică',
+    buyerTypeLegalEntity: 'Persoană juridică',
+    buyerTypeGroupAria: 'Tip cumpărător pentru facturare',
+    contactPersonSectionTitle: 'Persoană de contact',
+    companyInvoiceSectionTitle: 'Date firmă (factură pe persoană juridică)',
+    fieldCompanyName: 'Nume companie',
+    fieldCompanyCui: 'CUI',
+    placeholderCompanyName: 'Ex.: S.C. Exemplu S.R.L.',
+    placeholderCompanyCui: 'Ex.: RO12345678',
+    addressIntro:
+      'Adresa de mai jos este folosită atât pentru facturare, cât și pentru livrare. Dacă dorești să modifici adresa de livrare, o poți face în formularul de mai jos.',
+    addressIntroCompany:
+      'Factura va fi emisă pe firma introdusă mai sus. Completează mai jos adresa unde dorești să primești coletul.',
     selectCountyPlaceholder: 'Selectează județul',
     selectCityPlaceholder: 'Selectează localitatea',
     selectCityPlaceholderNeedCounty: 'Selectează mai întâi județul',
@@ -188,8 +193,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnContinueStep3: 'Continuă',
     btnContinueStep4: 'Continuă',
     btnBackStep1: 'Înapoi la produs',
-    btnBackStep2: 'Înapoi la date de contact',
-    btnBackStep3: 'Înapoi la adresă de livrare și date factură',
+    btnBackStep2: 'Înapoi la persoană de contact și date de facturare',
+    btnBackStep3: 'Înapoi la adresa de livrare',
     orderProductLabel: 'Produs',
     orderQtyLabel: 'Cantitate',
     orderTotalLabel: 'Total final',
@@ -296,22 +301,26 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     subline:
       'You can continue as a guest (no discount programme) or create a client account on the right for discounts and the full experience.',
     navStep1: 'Product and price',
-    navStep2: 'Contact information',
-    navStep3: 'Delivery address and invoice details',
+    navStep2: 'Contact person & billing details',
+    navStep3: 'Delivery address',
     navStep4: 'Complete order',
     panelStep1: 'Step 1: Product and price',
-    panelStep2: 'Step 2: Contact information',
-    panelStep3: 'Step 3: Delivery address and invoice details',
+    panelStep2: 'Step 2: Contact person & billing details',
+    panelStep3: 'Step 3: Delivery address',
     panelStep4: 'Step 4: Complete order',
-    contactIntro: 'Enter your contact details. We use them to confirm your order.',
-    addressIntro: 'Enter your billing address. If delivery should go elsewhere, use the option below.',
-    sectionBillingTitle: 'Billing address',
-    sectionDeliveryTitle: 'Delivery address',
-    differentDeliveryPart1: 'Is the ',
-    differentDeliveryBoldDelivery: 'delivery address',
-    differentDeliveryPart2: ' different from the ',
-    differentDeliveryBoldBilling: 'billing address',
-    differentDeliveryPart3: '?',
+    buyerTypeNaturalPerson: 'Natural person',
+    buyerTypeLegalEntity: 'Legal entity',
+    buyerTypeGroupAria: 'Buyer type for invoicing',
+    contactPersonSectionTitle: 'Contact person',
+    companyInvoiceSectionTitle: 'Company details (invoice to legal entity)',
+    fieldCompanyName: 'Company name',
+    fieldCompanyCui: 'Tax ID (CUI)',
+    placeholderCompanyName: 'e.g. ACME SRL',
+    placeholderCompanyCui: 'e.g. RO12345678',
+    addressIntro:
+      'The address below is used for both billing and delivery. If you want to change the delivery address, you can do so in the form below.',
+    addressIntroCompany:
+      'The invoice will be issued to the company entered above. Please fill in below the address where you would like to receive the package.',
     selectCountyPlaceholder: 'Select county',
     selectCityPlaceholder: 'Select city / locality',
     selectCityPlaceholderNeedCounty: 'Select county first',
@@ -319,8 +328,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnContinueStep3: 'Continue',
     btnContinueStep4: 'Continue',
     btnBackStep1: 'Back to product',
-    btnBackStep2: 'Back to contact',
-    btnBackStep3: 'Back to delivery and invoice details',
+    btnBackStep2: 'Back to contact person & billing details',
+    btnBackStep3: 'Back to delivery address',
     orderProductLabel: 'Product',
     orderQtyLabel: 'Quantity',
     orderTotalLabel: 'Final total',
@@ -425,22 +434,24 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     headline: '您的订单',
     subline: '您可以以访客继续（无折扣计划），或在右侧注册客户账户以享受折扣与完整功能。',
     navStep1: '商品与价格',
-    navStep2: '联系信息',
-    navStep3: '收货地址与发票信息',
+    navStep2: '联系人与开票资料',
+    navStep3: '收货地址',
     navStep4: '完成订单',
     panelStep1: '第 1 步：商品与价格',
-    panelStep2: '第 2 步：联系信息',
-    panelStep3: '第 3 步：收货地址与发票信息',
+    panelStep2: '第 2 步：联系人与开票资料',
+    panelStep3: '第 3 步：收货地址',
     panelStep4: '第 4 步：完成订单',
-    contactIntro: '填写联系方式，用于订单确认。',
-    addressIntro: '请填写账单地址。若收货地址不同，请勾选下方选项。',
-    sectionBillingTitle: '账单地址',
-    sectionDeliveryTitle: '收货地址',
-    differentDeliveryPart1: '',
-    differentDeliveryBoldDelivery: '收货地址',
-    differentDeliveryPart2: '是否与',
-    differentDeliveryBoldBilling: '账单地址',
-    differentDeliveryPart3: '不同？',
+    buyerTypeNaturalPerson: '个人',
+    buyerTypeLegalEntity: '企业 / 法人',
+    buyerTypeGroupAria: '开票主体类型',
+    contactPersonSectionTitle: '联系人',
+    companyInvoiceSectionTitle: '公司信息（法人发票抬头）',
+    fieldCompanyName: '公司名称',
+    fieldCompanyCui: '税号（CUI）',
+    placeholderCompanyName: '如：某某有限责任公司',
+    placeholderCompanyCui: '如：RO12345678',
+    addressIntro: '以下地址同时作为账单地址与收货地址。如需修改收货地址，可在下方表单中更改。',
+    addressIntroCompany: '发票将开具给上方填写的公司。请在下方填写您希望收货的地址。',
     selectCountyPlaceholder: '选择县 / 省',
     selectCityPlaceholder: '选择城市',
     selectCityPlaceholderNeedCounty: '请先选择县 / 省',
@@ -448,8 +459,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     btnContinueStep3: '继续',
     btnContinueStep4: '继续',
     btnBackStep1: '返回商品',
-    btnBackStep2: '返回联系信息',
-    btnBackStep3: '返回收货地址与发票信息',
+    btnBackStep2: '返回联系人与开票资料',
+    btnBackStep3: '返回收货地址',
     orderProductLabel: '商品',
     orderQtyLabel: '数量',
     orderTotalLabel: '最终合计',

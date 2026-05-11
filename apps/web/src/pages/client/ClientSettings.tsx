@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { KeyRound, Loader2, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
+import { Building2, KeyRound, Loader2, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
 import {
   clearAuth,
   deleteClientAccount,
@@ -37,6 +37,7 @@ const phoneInnerInputClass =
 
 const SETTINGS_NAV: readonly { id: string; label: string; Icon: LucideIcon }[] = [
   { id: 'date-personale', label: 'Date personale', Icon: User },
+  { id: 'date-companie', label: 'Date companie', Icon: Building2 },
   { id: 'adresa-livrare', label: 'Adresa de livrare', Icon: MapPin },
   { id: 'schimba-parola', label: 'Schimbă parola', Icon: KeyRound },
   { id: 'schimba-email', label: 'Schimbă email', Icon: Mail },
@@ -86,6 +87,39 @@ function ClientProfilePersonalFieldsSkeleton() {
         <div className={bar} aria-hidden />
       </div>
       <div className="h-11 w-52 max-w-full rounded-xl bg-slate-200/80 animate-pulse" aria-hidden />
+    </div>
+  )
+}
+
+function ClientProfileCompanyFieldsSkeleton() {
+  const bar = 'h-12 w-full rounded-xl bg-slate-100 animate-pulse'
+  const label = 'mb-1.5 h-3.5 w-28 rounded bg-slate-200/90 animate-pulse'
+  const cell = (
+    <div>
+      <div className={label} aria-hidden />
+      <div className={bar} aria-hidden />
+    </div>
+  )
+  return (
+    <div className="space-y-3" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Se încarcă datele companiei…</span>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        {cell}
+        {cell}
+      </div>
+      <div>
+        <div className={label} aria-hidden />
+        <div className={bar} aria-hidden />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        {cell}
+        {cell}
+      </div>
+      <div className="max-w-[14rem]">
+        <div className={label} aria-hidden />
+        <div className={bar} aria-hidden />
+      </div>
+      <div className="h-11 w-56 max-w-full rounded-xl bg-slate-200/80 animate-pulse" aria-hidden />
     </div>
   )
 }
@@ -159,18 +193,28 @@ export default function ClientSettings() {
   const [delCity, setDelCity] = useState('')
   const [delPostal, setDelPostal] = useState('')
 
+  const [companyName, setCompanyName] = useState('')
+  const [companyCui, setCompanyCui] = useState('')
+  const [companyAddress, setCompanyAddress] = useState('')
+  const [companyCounty, setCompanyCounty] = useState('')
+  const [companyCity, setCompanyCity] = useState('')
+  const [companyPostal, setCompanyPostal] = useState('')
+
   const [loadError, setLoadError] = useState<string | null>(null)
   /** True until primul GET /client/profile se termină (succes sau eroare). */
   const [profileLoading, setProfileLoading] = useState(true)
   const [savingPersonal, setSavingPersonal] = useState(false)
   const [savingAddress, setSavingAddress] = useState(false)
+  const [savingCompany, setSavingCompany] = useState(false)
   const [personalSaveMsg, setPersonalSaveMsg] = useState<string | null>(null)
   const [addressSaveMsg, setAddressSaveMsg] = useState<string | null>(null)
+  const [companySaveMsg, setCompanySaveMsg] = useState<string | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [lastNameError, setLastNameError] = useState<string | null>(null)
   const [firstNameError, setFirstNameError] = useState<string | null>(null)
   const [personalSaveErr, setPersonalSaveErr] = useState<string | null>(null)
   const [addressSaveErr, setAddressSaveErr] = useState<string | null>(null)
+  const [companySaveErr, setCompanySaveErr] = useState<string | null>(null)
   const [addressFieldErrors, setAddressFieldErrors] = useState<Partial<Record<AddressFieldKey, string>>>({})
 
   const [curPwd, setCurPwd] = useState('')
@@ -197,6 +241,7 @@ export default function ClientSettings() {
 
   const billCities = useMemo(() => getCitiesForCounty(billCounty), [billCounty])
   const delCities = useMemo(() => getCitiesForCounty(delCounty), [delCounty])
+  const companyCities = useMemo(() => getCitiesForCounty(companyCounty), [companyCounty])
 
   function buildPayload(): ClientProfilePayload {
     return {
@@ -212,6 +257,12 @@ export default function ClientSettings() {
       delCounty: deliveryDifferent ? delCounty.trim() : undefined,
       delCity: deliveryDifferent ? delCity.trim() : undefined,
       delPostal: deliveryDifferent ? delPostal.trim() : undefined,
+      companyName: companyName.trim(),
+      companyCui: companyCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase(),
+      companyAddress: companyAddress.trim(),
+      companyCounty: companyCounty.trim(),
+      companyCity: companyCity.trim(),
+      companyPostal: companyPostal.trim(),
     }
   }
 
@@ -235,6 +286,12 @@ export default function ClientSettings() {
           setDelCounty(profile.delCounty || '')
           setDelCity(profile.delCity || '')
           setDelPostal(profile.delPostal || '')
+          setCompanyName(profile.companyName || '')
+          setCompanyCui(profile.companyCui || '')
+          setCompanyAddress(profile.companyAddress || '')
+          setCompanyCounty(profile.companyCounty || '')
+          setCompanyCity(profile.companyCity || '')
+          setCompanyPostal(profile.companyPostal || '')
         }
       })
       .catch((e) => {
@@ -254,6 +311,7 @@ export default function ClientSettings() {
     setSavingPersonal(true)
     setPersonalSaveMsg(null)
     setAddressSaveMsg(null)
+    setCompanySaveMsg(null)
     setPersonalSaveErr(null)
     setPhoneError(null)
     setLastNameError(null)
@@ -293,6 +351,7 @@ export default function ClientSettings() {
     setSavingAddress(true)
     setAddressSaveMsg(null)
     setPersonalSaveMsg(null)
+    setCompanySaveMsg(null)
     setAddressSaveErr(null)
     setAddressFieldErrors({})
     try {
@@ -320,6 +379,25 @@ export default function ClientSettings() {
       setAddressSaveErr(err instanceof Error ? err.message : 'Eroare')
     } finally {
       setSavingAddress(false)
+    }
+  }
+
+  async function handleSaveCompany(e: React.FormEvent) {
+    e.preventDefault()
+    if (profileLoading) return
+    setSavingCompany(true)
+    setCompanySaveMsg(null)
+    setPersonalSaveMsg(null)
+    setAddressSaveMsg(null)
+    setCompanySaveErr(null)
+    try {
+      const payload = buildPayload()
+      await putClientProfile(payload, 'company')
+      setCompanySaveMsg('Datele companiei au fost salvate.')
+    } catch (err) {
+      setCompanySaveErr(err instanceof Error ? err.message : 'Eroare')
+    } finally {
+      setSavingCompany(false)
     }
   }
 
@@ -558,6 +636,133 @@ export default function ClientSettings() {
           {personalSaveErr ? (
             <p className="text-sm text-red-600 font-['Inter']">{personalSaveErr}</p>
           ) : null}
+        </form>
+      </SettingsSection>
+
+      <SettingsSection id="date-companie" title="Date companie" Icon={Building2}>
+        <form onSubmit={handleSaveCompany} className="space-y-3">
+          <p className="text-sm text-slate-600 font-['Inter'] -mt-1 leading-snug">
+            Dacă ești persoană juridică și dorești factura pe persoană juridică, completează datele firmei mai jos.
+          </p>
+          {profileLoading ? (
+            <ClientProfileCompanyFieldsSkeleton />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <label className="block min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">Nume companie</span>
+                  <input
+                    className={`${inputClass} mt-1`}
+                    value={companyName}
+                    placeholder="Ex.: S.C. Exemplu S.R.L."
+                    autoComplete="organization"
+                    onChange={(e) => {
+                      setCompanySaveMsg(null)
+                      setCompanyName(sanitizeAddressField(e.target.value))
+                    }}
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">CUI</span>
+                  <input
+                    className={`${inputClass} mt-1`}
+                    value={companyCui}
+                    placeholder="Ex.: RO12345678"
+                    autoComplete="off"
+                    onChange={(e) => {
+                      setCompanySaveMsg(null)
+                      setCompanyCui(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())
+                    }}
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800 font-['Inter']">Adresă</span>
+                <input
+                  className={`${inputClass} mt-1`}
+                  value={companyAddress}
+                  placeholder="Ex.: Str. Industriei nr. 10"
+                  onChange={(e) => {
+                    setCompanySaveMsg(null)
+                    setCompanyAddress(sanitizeAddressField(e.target.value))
+                  }}
+                />
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <label className="block min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">Județ</span>
+                  <select
+                    className={`${inputClass} mt-1`}
+                    value={companyCounty}
+                    onChange={(e) => {
+                      setCompanySaveMsg(null)
+                      setCompanyCounty(e.target.value)
+                      setCompanyCity('')
+                    }}
+                  >
+                    <option value="">Alege județul</option>
+                    {ROMANIAN_COUNTIES.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 font-['Inter']">Oraș</span>
+                  <select
+                    className={`${inputClass} mt-1`}
+                    value={companyCity}
+                    onChange={(e) => {
+                      setCompanySaveMsg(null)
+                      setCompanyCity(e.target.value)
+                    }}
+                  >
+                    <option value="">Alege localitatea</option>
+                    {companyCities.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="block w-full max-w-[14rem]">
+                <span className="text-sm font-semibold text-slate-800 font-['Inter']">Cod poștal</span>
+                <input
+                  className={`${inputClass} mt-1`}
+                  value={companyPostal}
+                  placeholder="Ex.: 020123"
+                  onChange={(e) => {
+                    setCompanySaveMsg(null)
+                    setCompanyPostal(sanitizePostalField(e.target.value))
+                  }}
+                />
+              </label>
+            </>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={savingCompany || profileLoading}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 font-['Inter']"
+            >
+              {savingCompany ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  Se salvează…
+                </>
+              ) : (
+                'Salvează datele companiei'
+              )}
+            </button>
+            {companySaveMsg ? (
+              <p className="text-sm font-medium text-green-700 font-['Inter']" role="status">
+                {companySaveMsg}
+              </p>
+            ) : null}
+          </div>
+          {companySaveErr ? <p className="text-sm text-red-600 font-['Inter']">{companySaveErr}</p> : null}
         </form>
       </SettingsSection>
 

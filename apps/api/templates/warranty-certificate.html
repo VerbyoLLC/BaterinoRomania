@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificat de Garanție – Baterino · {{CERT_NUMBER}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0e0e0e;
+    --ink-mid: #444;
+    --ink-soft: #888;
+    --ink-faint: #bbb;
+    --rule: #e0e0e0;
+    --bg: #fafaf8;
+    --paper: #ffffff;
+    --accent: #1a3a5c;
+    --accent-light: #e8eef5;
+    --green: #14532d;
+    --green-bg: #f0fdf4;
+    --red: #7f1d1d;
+    --red-bg: #fef2f2;
+    --sans: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    --display: 'Nunito Sans', 'Inter', system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    font-family: var(--sans);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .page {
+    background: var(--paper);
+    width: 794px;
+    padding: 52px 56px 56px;
+    box-shadow: 0 2px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    position: relative;
+  }
+  .page::before, .page::after {
+    content: '';
+    position: absolute;
+    width: 32px; height: 32px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .page::before { top: 18px; left: 18px; border-width: 2px 0 0 2px; }
+  .page::after  { bottom: 18px; right: 18px; border-width: 0 2px 2px 0; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 36px; gap: 24px; }
+  .header-left { flex: 1; }
+  .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .brand-logo { height: 32px; width: auto; display: block; }
+  .cert-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .cert-title { font-family: var(--display); font-weight: 700; font-size: 28px; color: var(--ink); line-height: 1.1; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .cert-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-mid); letter-spacing: 0.04em; border-left: 3px solid var(--accent); padding-left: 10px; }
+  .cert-number { display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--accent); background: var(--accent-light); padding: 4px 10px; border-radius: 999px; font-weight: 500; }
+  .qr-block { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+  .qr-label { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); text-align: center; }
+  .qr-img { width: 100px; height: 100px; border: 1px solid var(--rule); padding: 5px; background: white; display: block; }
+  .rule { border: none; border-top: 1px solid var(--rule); margin: 0 0 28px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .card { border: 1px solid var(--rule); padding: 14px 16px; }
+  .card.span2 { grid-column: 1 / -1; }
+  .card-label { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--rule); }
+  .field { margin-bottom: 7px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-key { font-size: 9px; color: var(--ink-soft); margin-bottom: 1px; font-weight: 400; }
+  .field-val { font-size: 12px; color: var(--ink); font-weight: 500; font-family: var(--sans); }
+  .field-val.dynamic { color: var(--ink); font-weight: 500; }
+  .disclaimer { background: #f7f7f5; border: 1px solid #d8d8d4; border-left: 3px solid var(--accent); padding: 14px 18px; margin-bottom: 16px; }
+  .disclaimer p { font-size: 10.5px; color: var(--ink-mid); line-height: 1.65; font-style: italic; }
+  .disclaimer p + p { margin-top: 6px; }
+  .coverage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .coverage-card { border: 1px solid var(--rule); padding: 14px 16px; }
+  .coverage-title { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+  .coverage-title.yes { color: var(--green); }
+  .coverage-title.no  { color: var(--red); }
+  .coverage-item { font-size: 10px; color: var(--ink-mid); line-height: 1.55; padding-left: 12px; position: relative; margin-bottom: 3px; }
+  .coverage-item::before { content: '—'; position: absolute; left: 0; color: var(--ink-faint); font-size: 9px; }
+  .procedure { border: 1px solid var(--rule); padding: 14px 16px; margin-bottom: 16px; }
+  .procedure-title { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
+  .steps { display: flex; gap: 0; position: relative; }
+  .steps::before { content: ''; position: absolute; top: 14px; left: 14px; right: 14px; height: 1px; background: var(--rule); }
+  .step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; position: relative; z-index: 1; }
+  .step-num { width: 28px; height: 28px; background: var(--accent); color: white; font-family: var(--mono); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; }
+  .step-text { font-size: 9px; color: var(--ink-mid); text-align: center; line-height: 1.4; padding: 0 4px; max-width: 100px; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .sig-box { border: 1px solid var(--rule); padding: 14px 16px; }
+  .sig-role { font-family: var(--mono); font-size: 8.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+  .sig-name { font-size: 13px; color: var(--ink); margin-bottom: 28px; font-weight: 600; font-family: var(--display); letter-spacing: -0.005em; }
+  .sig-line { border-top: 1px solid var(--ink-faint); padding-top: 5px; font-size: 8.5px; color: var(--ink-faint); font-style: italic; }
+  .footer { border-top: 1px solid var(--rule); padding-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .footer-text { font-size: 9px; color: var(--ink-faint); line-height: 1.6; font-style: italic; }
+  .doc-id { font-family: var(--mono); font-size: 8.5px; color: var(--ink-faint); letter-spacing: 0.06em; white-space: nowrap; }
+  /* A4: 210mm × 297mm. Margini interne 12mm pe toate laturile.
+     Tipărirea (Ctrl+P → Save as PDF) generează exact 2 pagini A4. */
+  @page { size: A4; margin: 12mm; }
+  @media print {
+    body {
+      background: white;
+      padding: 0;
+      min-height: 0;
+      display: block;
+    }
+    .page {
+      box-shadow: none;
+      width: 100%;
+      max-width: none;
+      padding: 0;
+      border: none;
+    }
+    /* Corner accents sunt absolute pe `.page` — nu se „regenerează” pentru pagina 2,
+       aşa că le ascundem ca să nu apară decorativ doar pe prima pagină. */
+    .page::before, .page::after { display: none; }
+
+    /* Page break explicit: secţiunea „Condiţii de garanţie” începe pe pagina 2. */
+    .page-break {
+      display: block;
+      page-break-before: always;
+      break-before: page;
+      height: 0;
+    }
+
+    /* Evităm tăierea cardurilor între pagini. */
+    .card, .coverage-card, .disclaimer, .procedure, .sig-box {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .sig-row, .coverage-grid, .grid-2, .grid-3 {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .header { page-break-after: avoid; break-after: avoid; }
+  }
+  /* Pe ecran, marker-ul de page break este invizibil. */
+  .page-break { display: none; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-row">
+        <img src="{{LOGO_URL}}" alt="Baterino" class="brand-logo">
+      </div>
+      <div class="cert-eyebrow">Document oficial · Garanție produs</div>
+      <div class="cert-title">Certificat de Garanție</div>
+      <div class="cert-meta">
+        Baterie {{BRAND}} LiFePO4 &nbsp;·&nbsp; {{CAPACITATE}} kWh &nbsp;·&nbsp; SN: {{SERIAL_NUMBER}}
+      </div>
+      <div class="cert-number">Nr. certificat · {{CERT_NUMBER}}</div>
+    </div>
+    <div class="qr-block">
+      <div class="qr-label">Verificare garanție live</div>
+      <img class="qr-img" src="{{QR_DATA_URL}}" alt="QR Verificare Garanție · {{SERIAL_NUMBER}}">
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-label">Date produs</div>
+      <div class="field"><div class="field-key">Denumire</div><div class="field-val">Baterie LiFePO4 (Litiu Fier Fosfat)</div></div>
+      <div class="field"><div class="field-key">Model / Cod produs</div><div class="field-val dynamic">{{MODEL_COD}}</div></div>
+      <div class="field"><div class="field-key">Capacitate nominală</div><div class="field-val dynamic">{{CAPACITATE}} kWh</div></div>
+      <div class="field"><div class="field-key">Tensiune nominală</div><div class="field-val dynamic">{{TENSIUNE}} V</div></div>
+      <div class="field"><div class="field-key">Data fabricației</div><div class="field-val dynamic">{{DATA_FABRICATIEI}}</div></div>
+      <div class="field"><div class="field-key">Data vânzării</div><div class="field-val dynamic">{{DATA_VANZARII}}</div></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="card" style="flex:1">
+        <div class="card-label">Furnizor / Importator</div>
+        <div class="field"><div class="field-key">Firmă</div><div class="field-val dynamic">{{FURNIZOR_NUME}}</div></div>
+        <div class="field"><div class="field-key">CUI</div><div class="field-val dynamic">{{FURNIZOR_CUI}}</div></div>
+        <div class="field"><div class="field-key">Adresă</div><div class="field-val dynamic">{{FURNIZOR_ADRESA}}</div></div>
+        <div class="field"><div class="field-key">Telefon</div><div class="field-val dynamic">{{FURNIZOR_TELEFON}}</div></div>
+        <div class="field"><div class="field-key">Web</div><div class="field-val dynamic">{{FURNIZOR_WEB}}</div></div>
+      </div>
+      <div class="card" style="flex:1">
+        <div class="card-label">Producător</div>
+        <div class="field"><div class="field-key">Firmă</div><div class="field-val">Shenzhen Lithtech Energy Co., Ltd</div></div>
+        <div class="field"><div class="field-key">Web</div><div class="field-val">ltc-energy.com</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-label">Beneficiar (distribuitor)</div>
+      <div class="field"><div class="field-key">Nume / Denumire</div><div class="field-val dynamic">{{BENEFICIAR_NUME}}</div></div>
+      <div class="field"><div class="field-key">CUI / Nr. Reg. Com.</div><div class="field-val dynamic">{{BENEFICIAR_CUI}}</div></div>
+      <div class="field"><div class="field-key">Adresă</div><div class="field-val dynamic">{{BENEFICIAR_ADRESA}}</div></div>
+      <div class="field"><div class="field-key">Telefon / E-mail</div><div class="field-val dynamic">{{BENEFICIAR_TELEFON}}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Utilizator final</div>
+      <div class="field"><div class="field-key">Nume / Denumire</div><div class="field-val dynamic">{{UTILIZATOR_NUME}}</div></div>
+      <div class="field"><div class="field-key">CNP / CUI</div><div class="field-val dynamic">{{UTILIZATOR_CNP_CUI}}</div></div>
+      <div class="field"><div class="field-key">Adresă</div><div class="field-val dynamic">{{UTILIZATOR_ADRESA}}</div></div>
+      <div class="field"><div class="field-key">Telefon / E-mail</div><div class="field-val dynamic">{{UTILIZATOR_TELEFON}}</div></div>
+    </div>
+  </div>
+
+  <div class="page-break" aria-hidden="true"></div>
+
+  <div class="card span2" style="margin-bottom:16px">
+    <div class="card-label">Condiții de garanție</div>
+    <div class="grid-3">
+      <div class="field"><div class="field-key">Perioadă</div><div class="field-val dynamic">{{PERIOADA}} ani / {{PERIOADA_LUNI}} luni de la data vânzării</div></div>
+      <div class="field"><div class="field-key">Garanție capacitate</div><div class="field-val dynamic">{{CICLURI}}</div></div>
+      <div class="field"><div class="field-key">Unitate service autorizată</div><div class="field-val">Baterino Energy SRL</div></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <p>Garanția este valabilă exclusiv dacă instalarea bateriei a fost realizată de un instalator autorizat/atestat. În lipsa dovezii de instalare autorizată, furnizorul își rezervă dreptul de a refuza orice solicitare în garanție.</p>
+    <p>Garanția acoperă defectele de material și de fabricație, în condițiile utilizării normale a produsului, conform specificațiilor tehnice din manualul de utilizare.</p>
+  </div>
+
+  <div class="coverage-grid">
+    <div class="coverage-card">
+      <div class="coverage-title yes">Ce acoperă garanția</div>
+      <div class="coverage-item">Defecte de fabricație ale celulelor LiFePO4</div>
+      <div class="coverage-item">Defecțiuni BMS datorate fabricației</div>
+      <div class="coverage-item">Scăderea capacității sub 80% din nominal</div>
+      <div class="coverage-item">Defecte ale carcasei cauzate de fabricație</div>
+      <div class="coverage-item">Erori de conectică / terminale livrate</div>
+    </div>
+    <div class="coverage-card">
+      <div class="coverage-title no">Ce nu acoperă garanția</div>
+      <div class="coverage-item">Utilizare necorespunzătoare, supraîncărcare</div>
+      <div class="coverage-item">Modificări neautorizate sau reparații terți</div>
+      <div class="coverage-item">Daune fizice: lovituri, căderi, deteriorări mecanice</div>
+      <div class="coverage-item">Expunere la umezeală, coroziune, medii agresive</div>
+      <div class="coverage-item">Fluctuații de tensiune sau instalare incorectă</div>
+    </div>
+  </div>
+
+  <div class="procedure">
+    <div class="procedure-title">Procedura de garanție</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Contactează furnizorul cu certificatul și dovada de cumpărare</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Completează formularul de reclamație RMA</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Returnează produsul în ambalaj original</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Soluționare în maximum 30 de zile calendaristice</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-role">Reprezentant furnizor</div>
+      <div class="sig-name">{{REPREZENTANT_NUME}}</div>
+      <div class="sig-line">Semnătură și ștampilă</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-role">Beneficiar / Client</div>
+      <div class="sig-name">{{BENEFICIAR_SEMNATAR}}</div>
+      <div class="sig-line">Semnătură</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">
+      Certificat valabil numai împreună cu factura / bonul fiscal de achiziție.<br>
+      Garanția este personală și netransferabilă. Păstrați acest document pe toată durata perioadei de garanție.
+    </div>
+    <div class="doc-id">{{CERT_NUMBER}}</div>
+  </div>
+</div>
+</body>
+</html>

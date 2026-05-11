@@ -41,6 +41,7 @@ import AdminAgents from './pages/admin/AdminAgents'
 import AdminChangePassword from './pages/admin/AdminChangePassword'
 import AdminAccountDetails from './pages/admin/AdminAccountDetails'
 import AdminOrders from './pages/admin/AdminOrders'
+import AdminService from './pages/admin/AdminService'
 import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
 import AdminProductModels from './pages/admin/AdminProductModels'
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="stocuri/add-item" element={<AdminStocuriAddItem />} />
           <Route path="stocuri/lista" element={<AdminStocuriLista />} />
           <Route path="orders"    element={<AdminOrders />} />
+          <Route path="service"   element={<AdminService />} />
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="change-password" element={<AdminChangePassword />} />
           <Route path="account" element={<AdminAccountDetails />} />

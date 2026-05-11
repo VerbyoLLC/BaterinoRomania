@@ -31,7 +31,7 @@ function DashboardCard({
       >
         <Icon className="h-5 w-5" strokeWidth={2} />
       </div>
-      <p className="font-bold text-slate-900 font-['Inter'] mb-1.5">{title}</p>
+      <p className="mb-1.5 text-lg font-bold leading-snug text-slate-900 font-['Inter']">{title}</p>
       <p className="text-sm text-slate-600 font-['Inter'] leading-snug">{description}</p>
     </Link>
   )

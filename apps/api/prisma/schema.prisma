@@ -59,6 +59,13 @@ model ClientProfile {
   delCounty           String?
   delCity             String?
   delPostal           String?
+  /** Facturare pe persoană juridică (opțional): date firmă completate în Setări → Date companie. */
+  companyName         String   @default("")
+  companyCui          String   @default("")
+  companyAddress      String   @default("")
+  companyCounty       String   @default("")
+  companyCity         String   @default("")
+  companyPostal       String   @default("")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -83,6 +90,15 @@ model ResidentialOrder {
   delCounty         String?
   delCity           String?
   delPostal         String?
+  /** 'person' (Persoană fizică) sau 'company' (Persoană juridică) — controlează proforma și separarea factură/livrare. */
+  buyerType         String   @default("person")
+  /** Date firmă pentru factură PJ — populate doar când buyerType = 'company'; oglindite în bill* pentru proforma. */
+  companyName       String?
+  companyCui        String?
+  companyAddress    String?
+  companyCounty     String?
+  companyCity       String?
+  companyPostal     String?
   currency          String   @default("RON")
   /** de_platit | preluata | in_pregatire | in_curs_livrare | livrata | anulata — setat din admin sau anulare client. */
   fulfillmentStatus String   @default("de_platit")
@@ -99,6 +115,7 @@ model ResidentialOrder {
   @@index([orderSource])
   @@index([createdAt])
   @@index([fulfillmentStatus])
+  @@index([buyerType])
 }
 
 model ResidentialOrderLine {
@@ -311,13 +328,17 @@ model WarehouseSavedItem {
   warehouseStockUnit   WarehouseStockUnit         @relation(fields: [warehouseStockUnitId], references: [id], onDelete: Cascade)
   modelNumber          String
   serialNumber         String                     @unique
-  /** Formatted as MM/YYYY and derived from SN when record is created. */
+  /** Formatted as MM/YYYY; derived from SN (cifrele 9–10 = an YY, 11–12 = lună în cele 16 cifre după LJC). */
   producedOn           String                     @default("")
   warehouseIn          DateTime                   @default(now())
   /** La intrare în depozit se setează automat `depozit`; poate fi actualizat ulterior. */
   location             WarehouseSavedItemLocation @default(depozit)
   distributor          String?
   client               String?
+  /** URL public R2 către PDF-ul certificatului de garanţie generat (null = neg generat încă). */
+  warrantyCertificateUrl String?                  @db.Text
+  /** Timestamp-ul ultimei generări a certificatului. */
+  warrantyCertificateGeneratedAt DateTime?
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @updatedAt
 
@@ -367,13 +388,15 @@ model SiteSetting {
 
 /** Date firmei Baterino (facturi, documente) — un singur rând, id fix „default”. */
 model BaterinoCompany {
-  id           String               @id @default("default")
-  name         String               @default("Baterino SRL")
-  cui          String               @default("")
-  address      String               @default("")
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  bankAccounts CompanyBankAccount[]
+  id                 String               @id @default("default")
+  name               String               @default("Baterino SRL")
+  cui                String               @default("")
+  address            String               @default("")
+  /** Reprezentant legal/oficial al companiei. Se afişează pe certificatul de garanţie la „Reprezentant furnizor”. */
+  representativeName String               @default("")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  bankAccounts       CompanyBankAccount[]
 }
 
 model CompanyBankAccount {
@@ -413,6 +436,14 @@ model GuestResidentialOrder {
   delCounty    String?
   delCity      String?
   delPostal    String?
+  /** 'person' | 'company' — păstrat pentru paritate cu ResidentialOrder pe rândurile legacy. */
+  buyerType    String   @default("person")
+  companyName  String?
+  companyCui   String?
+  companyAddress String?
+  companyCounty  String?
+  companyCity    String?
+  companyPostal  String?
   productId    String
   productSlug  String?
   productTitle String
@@ -431,6 +462,54 @@ model GuestResidentialOrder {
   @@index([orderSource])
   @@index([createdAt])
   @@index([fulfillmentStatus])
+  @@index([buyerType])
+}
+
+/**
+ * Cerere de service trimisă de un client (sau partener, în viitor) pentru un
+ * produs înregistrat. Datele despre cont și produs sunt copii (snapshot) la
+ * momentul trimiterii, ca să rămână stabile dacă utilizatorul își modifică
+ * profilul sau dacă produsul se schimbă în catalog.
+ *
+ * status: open | in_progress | resolved | closed
+ *   - open: tocmai creată, neasumată încă de echipă
+ *   - in_progress: în lucru (UI client afișează „În desfășurare”)
+ *   - resolved: rezolvată
+ *   - closed: închisă fără rezolvare (refuzată / duplicat / etc.)
+ *
+ * Pe frontend, atât `open` cât și `in_progress` se traduc în „În desfășurare”
+ * pentru client (orice cerere care nu este `resolved` sau `closed`).
+ */
+model ServiceRequest {
+  id                  String   @id @default(cuid())
+  /** BTROS-YYYYMMDD-NNNN — afișat utilizatorului în email și UI. */
+  requestNumber       String   @unique
+  /** client | partener (rolul contului la momentul trimiterii). */
+  accountType         String
+  userId              String?
+  /** Snapshot date cont la momentul trimiterii. */
+  firstName           String   @default("")
+  lastName            String   @default("")
+  email               String
+  phone               String   @default("")
+  /** Snapshot produs (SN unic - dar nu legăm prin FK ca să nu rupem dacă unitatea se șterge). */
+  serialNumber        String
+  modelNumber         String
+  productTitle        String
+  /** ID rând WarehouseSavedItem (link logic, fără FK constraint). */
+  savedItemId         String?
+  /** Descrierea problemei completată de utilizator. */
+  problemDescription  String   @db.Text
+  /** open | in_progress | resolved | closed */
+  status              String   @default("open")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([serialNumber])
+  @@index([status])
+  @@index([createdAt])
 }
 
 /** Agenți de vânzări / teren — admin Setări → Agenți; opțional legat de cont User (rol sales_agent). */

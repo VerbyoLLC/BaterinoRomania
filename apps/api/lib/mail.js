@@ -24,6 +24,18 @@ function getReferralInviteTemplateRender() {
   return require(resolved).getReferralInviteTemplate
 }
 
+function getResidentialOrderProformaTemplateRender() {
+  const resolved = require.resolve('../templates/order-proforma-email.js')
+  delete require.cache[resolved]
+  return require(resolved).getResidentialOrderProformaTemplate
+}
+
+function getServiceRequestReceivedTemplateRender() {
+  const resolved = require.resolve('../templates/service-request-received-email.js')
+  delete require.cache[resolved]
+  return require(resolved).getServiceRequestReceivedTemplate
+}
+
 function envTrim(name, fallback = '') {
   const v = process.env[name]
   if (v == null || v === '') return fallback
@@ -444,6 +456,156 @@ async function sendReferralInviteEmail({ to, senderName, referralCode }) {
   })
 }
 
+/**
+ * Trimite emailul de confirmare comandă cu proforma în atașament.
+ * Eșecul este logat dar nu este aruncat — emailul nu trebuie să blocheze înregistrarea comenzii.
+ *
+ * @param {{
+ *   to: string,
+ *   order: any,
+ *   lines: Array<any>,
+ *   currency: string,
+ *   supplier: { name: string, cui: string, ibanRon: string, bankName: string },
+ *   payment: { reference: string, paymentDueStr: string },
+ *   totalIncl: number,
+ *   pdfBuffer: Buffer,
+ *   pdfFilename: string,
+ * }} params
+ * @returns {Promise<boolean>}
+ */
+async function sendResidentialOrderProformaEmail(params) {
+  const {
+    to,
+    order,
+    lines,
+    currency,
+    supplier,
+    payment,
+    totalIncl,
+    pdfBuffer,
+    pdfFilename,
+  } = params
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping order proforma email.')
+    return false
+  }
+  if (!to || typeof to !== 'string') {
+    console.warn('[Mail] No recipient for order proforma email – skipping.')
+    return false
+  }
+
+  const orderNumber = String(order?.orderNumber || '').trim()
+  const subject = orderNumber
+    ? `Comanda ${orderNumber} – proforma ${SITE_NAME}`
+    : `Confirmare comandă – ${SITE_NAME}`
+
+  const getTemplate = getResidentialOrderProformaTemplateRender()
+  const html = getTemplate({ order, lines, currency, supplier, payment, totalIncl })
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+  const filename = String(pdfFilename || 'proforma.pdf')
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+        attachments: pdfBuffer
+          ? [
+              {
+                filename,
+                content: Buffer.isBuffer(pdfBuffer) ? pdfBuffer.toString('base64') : pdfBuffer,
+              },
+            ]
+          : undefined,
+      })
+      if (error) {
+        console.error('[Mail] Resend order proforma error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+        attachments: pdfBuffer
+          ? [
+              {
+                filename,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+              },
+            ]
+          : undefined,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Order proforma email error:', err?.message || err)
+    return false
+  }
+}
+
+/**
+ * Confirmare către utilizator după crearea unei cereri de service.
+ * Conține numărul cererii (BTROS-…), produsul și problema descrisă.
+ *
+ * @param {{
+ *   email: string,
+ *   requestNumber: string,
+ *   firstName?: string,
+ *   productTitle: string,
+ *   serialNumber: string,
+ *   modelNumber: string,
+ *   problemDescription: string,
+ * }} params
+ * @returns {Promise<boolean>}
+ */
+async function sendServiceRequestReceivedEmail(params) {
+  const { email } = params
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping service request received email.')
+    return false
+  }
+  if (!email || typeof email !== 'string') {
+    console.warn('[Mail] No recipient for service request email – skipping.')
+    return false
+  }
+
+  const subject = `Cerere service primită ${params.requestNumber || ''} – ${SITE_NAME}`.trim()
+  const getTemplate = getServiceRequestReceivedTemplateRender()
+  const html = getTemplate(params)
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend service request received error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Service request received error:', err?.message || err)
+    return false
+  }
+}
+
 async function sendInquiryConfirmation(inquiry) {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
@@ -488,6 +650,8 @@ module.exports = {
   sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
+  sendResidentialOrderProformaEmail,
+  sendServiceRequestReceivedEmail,
   isMailConfigured,
   getMailProvider,
   getMailFrom,

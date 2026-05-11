@@ -72,6 +72,12 @@ export type GuestResidentialOrderPayload = {
   phone: string
   nume: string
   prenume: string
+  /**
+   * 'person' (Persoană fizică) → billAddress = adresa Pas 3 (livrare = facturare).
+   * 'company' (Persoană juridică) → company* = facturare, delAddress = adresa de livrare din Pas 3.
+   */
+  buyerType?: 'person' | 'company'
+  /** PF / fallback: adresa din Pasul 3 (folosită și ca livrare când differentDeliveryAddress=false). */
   billAddress: string
   billCounty: string
   billCity: string
@@ -81,6 +87,13 @@ export type GuestResidentialOrderPayload = {
   delCounty?: string
   delCity?: string
   delPostal?: string
+  /** PJ: datele firmei pentru factură (oglindite ca bill* pe rândul de comandă). */
+  companyName?: string
+  companyCui?: string
+  companyAddress?: string
+  companyCounty?: string
+  companyCity?: string
+  companyPostal?: string
 }
 
 export type GuestResidentialOrderResponse = {
@@ -99,11 +112,13 @@ export async function submitGuestResidentialOrder(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   const token = getAuthToken()
   if (token) headers.Authorization = `Bearer ${token}`
+  const buyerType: 'person' | 'company' = payload.buyerType === 'company' ? 'company' : 'person'
   const body: Record<string, unknown> = {
     email: payload.email,
     phone: payload.phone,
     nume: payload.nume,
     prenume: payload.prenume,
+    buyerType,
     billAddress: payload.billAddress,
     billCounty: payload.billCounty,
     billCity: payload.billCity,
@@ -113,6 +128,14 @@ export async function submitGuestResidentialOrder(
     delCounty: payload.differentDeliveryAddress ? payload.delCounty : undefined,
     delCity: payload.differentDeliveryAddress ? payload.delCity : undefined,
     delPostal: payload.differentDeliveryAddress ? payload.delPostal : undefined,
+  }
+  if (buyerType === 'company') {
+    body.companyName = payload.companyName
+    body.companyCui = payload.companyCui
+    body.companyAddress = payload.companyAddress
+    body.companyCounty = payload.companyCounty
+    body.companyCity = payload.companyCity
+    body.companyPostal = payload.companyPostal
   }
   if (payload.items && payload.items.length > 0) {
     body.items = payload.items.map((x) => {
@@ -506,11 +529,18 @@ export type ClientProfilePayload = {
   delCounty?: string
   delCity?: string
   delPostal?: string
+  /** Facturare persoană juridică (opțional). */
+  companyName: string
+  companyCui: string
+  companyAddress: string
+  companyCounty: string
+  companyCity: string
+  companyPostal: string
 }
 
 export type ClientProfileDto = ClientProfilePayload
 
-export type ClientProfileSaveSection = 'personal' | 'address'
+export type ClientProfileSaveSection = 'personal' | 'address' | 'company'
 
 export async function getClientProfile(): Promise<{
   createdAt: string
@@ -641,6 +671,12 @@ export async function putClientProfile(
       delCounty: payload.deliveryDifferent ? payload.delCounty : undefined,
       delCity: payload.deliveryDifferent ? payload.delCity : undefined,
       delPostal: payload.deliveryDifferent ? payload.delPostal : undefined,
+      companyName: payload.companyName,
+      companyCui: payload.companyCui,
+      companyAddress: payload.companyAddress,
+      companyCounty: payload.companyCounty,
+      companyCity: payload.companyCity,
+      companyPostal: payload.companyPostal,
     }),
   })
   const json = await res.json().catch(() => ({}))
@@ -858,6 +894,116 @@ export async function getClientRegisteredProducts(): Promise<ClientRegisteredPro
   return Array.isArray(json) ? json : []
 }
 
+export type ServiceRequestDto = {
+  id: string
+  requestNumber: string
+  accountType: 'client' | 'partener' | string
+  userId: string | null
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  serialNumber: string
+  modelNumber: string
+  productTitle: string
+  savedItemId: string | null
+  problemDescription: string
+  status: 'open' | 'in_progress' | 'resolved' | 'closed' | string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Statusuri care contează ca cerere „în desfășurare” pe UI client. */
+export const SERVICE_REQUEST_ACTIVE_STATUSES: ReadonlyArray<string> = ['open', 'in_progress']
+
+export function isServiceRequestActive(s: ServiceRequestDto): boolean {
+  return SERVICE_REQUEST_ACTIVE_STATUSES.includes(String(s.status))
+}
+
+export async function getClientServiceRequests(): Promise<ServiceRequestDto[]> {
+  const res = await fetch(`${API_BASE}/client/service-requests`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? (json as ServiceRequestDto[]) : []
+}
+
+export type CreateServiceRequestResult =
+  | { ok: true; request: ServiceRequestDto }
+  | { ok: false; code: 'already_active'; request: ServiceRequestDto; error: string }
+  | { ok: false; code: 'error'; error: string }
+
+export async function createClientServiceRequest(body: {
+  savedItemId: string
+  problemDescription: string
+}): Promise<CreateServiceRequestResult> {
+  const res = await fetch(`${API_BASE}/client/service-requests`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    code?: string
+    serviceRequest?: ServiceRequestDto
+  } & Partial<ServiceRequestDto>
+  if (res.status === 409 && json.code === 'service_request_already_active' && json.serviceRequest) {
+    return {
+      ok: false,
+      code: 'already_active',
+      request: json.serviceRequest,
+      error: json.error || 'Există deja o cerere activă.',
+    }
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    return { ok: false, code: 'error', error: json.error || 'Eroare.' }
+  }
+  return { ok: true, request: json as ServiceRequestDto }
+}
+
+export async function getAdminServiceRequests(): Promise<ServiceRequestDto[]> {
+  const res = await fetch(`${API_BASE}/admin/service-requests`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? (json as ServiceRequestDto[]) : []
+}
+
+export async function patchAdminServiceRequestStatus(
+  id: string,
+  status: 'open' | 'in_progress' | 'resolved' | 'closed',
+): Promise<ServiceRequestDto> {
+  const res = await fetch(
+    `${API_BASE}/admin/service-requests/${encodeURIComponent(id)}/status`,
+    {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    },
+  )
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as ServiceRequestDto
+}
+
 export async function claimClientRegisteredProduct(body: {
   serialNumber?: string
   qrRaw?: string
@@ -983,7 +1129,7 @@ export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentS
 /**
  * Generează (la nevoie) și descarcă proforma PDF.
  *
- * Backend-ul randează HTML→PDF, încarcă în R2 sub `Proforme/<orderId>/` cu
+ * Backend-ul randează HTML→PDF, încarcă în R2 sub `orders/<orderId>/` cu
  * `Content-Disposition: attachment` și întoarce JSON cu URL-ul direct R2.
  * Browser-ul descarcă PDF-ul direct de la CDN — fără riscuri de transformare
  * binară pe lanțul Express/CORS/compression (cauza vechilor PDF-uri „corupte”).
@@ -2025,6 +2171,12 @@ export type AdminClientProfile = {
   delCounty: string | null
   delCity: string | null
   delPostal: string | null
+  companyName: string
+  companyCui: string
+  companyAddress: string
+  companyCounty: string
+  companyCity: string
+  companyPostal: string
 }
 
 export type AdminClientRow = {

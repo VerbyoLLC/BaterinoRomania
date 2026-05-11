@@ -15,15 +15,19 @@ import {
 } from 'lucide-react'
 import {
   claimClientRegisteredProduct,
+  createClientServiceRequest,
   downloadClientRegisteredProductWarrantyCertificate,
   getAuthEmail,
   getClientRegisteredProducts,
+  getClientServiceRequests,
   getProductCardImageUrl,
+  isServiceRequestActive,
   postClientRegisteredProductWarrantyCertificate,
   WAREHOUSE_SN_BODY_DIGITS,
   WAREHOUSE_SN_FACTORY_PREFIX,
   normalizeWarehouseSerialNumber,
   type ClientRegisteredProductDto,
+  type ServiceRequestDto,
 } from '../../lib/api'
 import { CONTACT_WHATSAPP_WAME } from '../../lib/contactWhatsApp'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -98,6 +102,16 @@ export default function ClientMyProducts() {
   const [infoBanner, setInfoBanner] = useState<string | null>(null)
   const [warrantyBusyId, setWarrantyBusyId] = useState<string | null>(null)
 
+  const [serviceModalProduct, setServiceModalProduct] = useState<ClientRegisteredProductDto | null>(null)
+  const [serviceProblem, setServiceProblem] = useState('')
+  const [serviceError, setServiceError] = useState<string | null>(null)
+  const [serviceSubmitting, setServiceSubmitting] = useState(false)
+  /** Cererile active mapate pe `serialNumber` — toate cererile open / in_progress ale userului. */
+  const [activeServiceBySn, setActiveServiceBySn] = useState<Record<string, ServiceRequestDto>>({})
+  /** Când butonul „În desfășurare” este apăsat, afișăm un modal read-only cu ID-ul cererii. */
+  const [serviceInProgress, setServiceInProgress] = useState<ServiceRequestDto | null>(null)
+  const serviceTextareaRef = useRef<HTMLTextAreaElement>(null)
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanRafRef = useRef(0)
@@ -118,9 +132,29 @@ export default function ClientMyProducts() {
     }
   }, [tr.loadError])
 
+  const loadServiceRequests = useCallback(async () => {
+    try {
+      const rows = await getClientServiceRequests()
+      const map: Record<string, ServiceRequestDto> = {}
+      for (const r of rows) {
+        if (!isServiceRequestActive(r)) continue
+        const sn = String(r.serialNumber || '')
+        if (!sn) continue
+        const prev = map[sn]
+        if (!prev || new Date(r.createdAt).getTime() > new Date(prev.createdAt).getTime()) {
+          map[sn] = r
+        }
+      }
+      setActiveServiceBySn(map)
+    } catch {
+      /* Ignorăm — banda de stare a cererilor nu trebuie să rupă pagina. */
+    }
+  }, [])
+
   useEffect(() => {
     void loadList()
-  }, [loadList])
+    void loadServiceRequests()
+  }, [loadList, loadServiceRequests])
 
   const stopScanner = useCallback(() => {
     if (scanRafRef.current) cancelAnimationFrame(scanRafRef.current)
@@ -311,6 +345,32 @@ export default function ClientMyProducts() {
     return () => window.removeEventListener('keydown', onKey)
   }, [manualOpen])
 
+  useEffect(() => {
+    if (!serviceModalProduct) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !serviceSubmitting) {
+        setServiceModalProduct(null)
+        setServiceProblem('')
+        setServiceError(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    const t = window.setTimeout(() => serviceTextareaRef.current?.focus(), 50)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.clearTimeout(t)
+    }
+  }, [serviceModalProduct, serviceSubmitting])
+
+  useEffect(() => {
+    if (!serviceInProgress) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setServiceInProgress(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [serviceInProgress])
+
   const openScan = () => {
     setScanOpen(true)
     setScanError(null)
@@ -448,15 +508,64 @@ export default function ClientMyProducts() {
     return `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(text)}`
   }
 
-  function whatsappServiceHref(p: ClientRegisteredProductDto) {
-    const email = (getAuthEmail() ?? '').trim() || '—'
-    const title = p.product?.title || p.modelNumber
-    const text = tr.whatsappServicePrefill
-      .replace(/{productTitle}/g, title)
-      .replace(/{serialNumber}/g, p.serialNumber)
-      .replace(/{modelNumber}/g, p.modelNumber)
-      .replace(/{clientEmail}/g, email)
-    return `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(text)}`
+  function openServiceModal(p: ClientRegisteredProductDto) {
+    const active = activeServiceBySn[p.serialNumber]
+    if (active) {
+      setServiceInProgress(active)
+      return
+    }
+    setServiceProblem('')
+    setServiceError(null)
+    setServiceModalProduct(p)
+  }
+
+  function closeServiceModal() {
+    setServiceModalProduct(null)
+    setServiceProblem('')
+    setServiceError(null)
+  }
+
+  function closeServiceInProgress() {
+    setServiceInProgress(null)
+  }
+
+  async function submitServiceRequest() {
+    if (!serviceModalProduct || serviceSubmitting) return
+    const desc = serviceProblem.trim()
+    if (desc.length < 3) {
+      setServiceError(tr.serviceModalProblemRequired)
+      return
+    }
+    setServiceError(null)
+    setServiceSubmitting(true)
+    try {
+      const result = await createClientServiceRequest({
+        savedItemId: serviceModalProduct.savedItemId,
+        problemDescription: desc,
+      })
+      if (result.ok) {
+        setActiveServiceBySn((prev) => ({
+          ...prev,
+          [result.request.serialNumber]: result.request,
+        }))
+        closeServiceModal()
+        return
+      }
+      if (result.code === 'already_active') {
+        setActiveServiceBySn((prev) => ({
+          ...prev,
+          [result.request.serialNumber]: result.request,
+        }))
+        closeServiceModal()
+        setServiceInProgress(result.request)
+        return
+      }
+      setServiceError(result.error)
+    } catch (e) {
+      setServiceError(e instanceof Error ? e.message : 'Eroare.')
+    } finally {
+      setServiceSubmitting(false)
+    }
   }
 
   return (
@@ -476,7 +585,7 @@ export default function ClientMyProducts() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <section
-          className="max-w-md min-h-[20.5rem] rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          className="max-w-md min-h-[20.5rem] rounded-2xl border border-slate-200 bg-[#f7f7f7] p-5 shadow-sm"
           aria-labelledby="register-product-title"
         >
           <div
@@ -636,15 +745,39 @@ export default function ClientMyProducts() {
                         <MessageCircle className="h-4 w-4 shrink-0 text-slate-800" strokeWidth={2} aria-hidden />
                         {tr.helpProduct}
                       </a>
-                      <a
-                        href={whatsappServiceHref(p)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={pillActionBtn}
-                      >
-                        <Wrench className="h-4 w-4 shrink-0 text-slate-800" strokeWidth={2} aria-hidden />
-                        {tr.serviceRequest}
-                      </a>
+                      {(() => {
+                        const active = activeServiceBySn[p.serialNumber]
+                        if (active) {
+                          return (
+                            <button
+                              type="button"
+                              className={`${pillActionBtn} bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900`}
+                              onClick={() => setServiceInProgress(active)}
+                            >
+                              <Wrench
+                                className="h-4 w-4 shrink-0 text-amber-700"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                              {tr.serviceRequestInProgress}
+                            </button>
+                          )
+                        }
+                        return (
+                          <button
+                            type="button"
+                            className={pillActionBtn}
+                            onClick={() => openServiceModal(p)}
+                          >
+                            <Wrench
+                              className="h-4 w-4 shrink-0 text-slate-800"
+                              strokeWidth={2}
+                              aria-hidden
+                            />
+                            {tr.serviceRequest}
+                          </button>
+                        )
+                      })()}
                     </div>
                   </div>
                 </li>
@@ -835,6 +968,193 @@ export default function ClientMyProducts() {
                 </button>
               </>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {serviceModalProduct ? (() => {
+        const p = serviceModalProduct
+        const img =
+          (p.product?.imageUrl && String(p.product.imageUrl).trim()) ||
+          getProductCardImageUrl({ images: [], cardImage: null })
+        const title = p.product?.title || p.modelNumber
+        return (
+          <div
+            className="fixed inset-0 z-[85] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
+            role="presentation"
+            onClick={() => !serviceSubmitting && closeServiceModal()}
+          >
+            <div
+              className="w-full max-w-md rounded-t-2xl border border-slate-200 bg-white shadow-xl sm:rounded-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="service-modal-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative px-5 pt-6 pb-4">
+                <button
+                  type="button"
+                  aria-label={tr.serviceModalClose}
+                  className="absolute right-3 top-3 rounded-lg p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                  disabled={serviceSubmitting}
+                  onClick={() => closeServiceModal()}
+                >
+                  <X className="h-5 w-5" aria-hidden />
+                </button>
+
+                <div className="flex flex-col items-center">
+                  <img
+                    src="/images/shared/baterino-logo-black.svg"
+                    alt="Baterino"
+                    className="h-8 w-auto object-contain"
+                  />
+                  <p
+                    id="service-modal-title"
+                    className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500"
+                  >
+                    {tr.serviceModalBrand}
+                  </p>
+                </div>
+
+                <div className="mt-5 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/90">
+                    <img src={img} alt="" className="h-full w-full object-contain p-1" loading="lazy" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="m-0 text-sm font-semibold text-slate-900 truncate">{title}</p>
+                    <p className="mt-1 m-0 text-xs tabular-nums text-slate-500">SN: {p.serialNumber}</p>
+                    <p className="mt-0.5 m-0 text-xs tabular-nums text-slate-500">Model: {p.modelNumber}</p>
+                    <p className="mt-0.5 m-0 text-xs tabular-nums text-slate-500">{tr.serviceModalWarrantyLabel}</p>
+                  </div>
+                </div>
+
+                <label htmlFor="service-problem" className="mt-5 block text-sm font-medium text-slate-800">
+                  {tr.serviceModalProblemLabel}
+                </label>
+                <textarea
+                  ref={serviceTextareaRef}
+                  id="service-problem"
+                  value={serviceProblem}
+                  onChange={(e) => {
+                    setServiceProblem(e.target.value)
+                    if (serviceError) setServiceError(null)
+                  }}
+                  rows={4}
+                  placeholder={tr.serviceModalProblemPlaceholder}
+                  disabled={serviceSubmitting}
+                  className="mt-2 w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                  maxLength={1000}
+                />
+                {serviceError ? (
+                  <p className="mt-2 m-0 text-sm text-red-600">{serviceError}</p>
+                ) : null}
+
+                <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 disabled:opacity-50"
+                    disabled={serviceSubmitting}
+                    onClick={() => closeServiceModal()}
+                  >
+                    {tr.serviceModalCancel}
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                    disabled={serviceSubmitting}
+                    onClick={() => void submitServiceRequest()}
+                  >
+                    {serviceSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : null}
+                    {serviceSubmitting ? tr.serviceModalSubmitting : tr.serviceModalSubmit}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })() : null}
+
+      {serviceInProgress ? (
+        <div
+          className="fixed inset-0 z-[85] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
+          role="presentation"
+          onClick={() => closeServiceInProgress()}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-slate-200 bg-white shadow-xl sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="service-in-progress-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative px-5 pt-6 pb-4">
+              <button
+                type="button"
+                aria-label={tr.serviceModalClose}
+                className="absolute right-3 top-3 rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+                onClick={() => closeServiceInProgress()}
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+
+              <div className="flex flex-col items-center">
+                <img
+                  src="/images/shared/baterino-logo-black.svg"
+                  alt="Baterino"
+                  className="h-8 w-auto object-contain"
+                />
+                <p
+                  id="service-in-progress-title"
+                  className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500"
+                >
+                  {tr.serviceModalBrand}
+                </p>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/90 flex items-center justify-center">
+                  <Wrench className="h-8 w-8 text-amber-700" strokeWidth={1.6} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 text-sm font-semibold text-slate-900 truncate">
+                    {serviceInProgress.productTitle}
+                  </p>
+                  <p className="mt-1 m-0 text-xs tabular-nums text-slate-500">
+                    SN: {serviceInProgress.serialNumber}
+                  </p>
+                  <p className="mt-0.5 m-0 text-xs tabular-nums text-slate-500">
+                    Model: {serviceInProgress.modelNumber}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="m-0 text-xs font-semibold uppercase tracking-wider text-amber-800">
+                  {tr.serviceModalInProgressTitle.replace(
+                    '{requestNumber}',
+                    serviceInProgress.requestNumber,
+                  )}
+                </p>
+                <p className="mt-2 m-0 text-sm leading-relaxed text-slate-800">
+                  {tr.serviceModalInProgressMessage.replace(
+                    '{requestNumber}',
+                    serviceInProgress.requestNumber,
+                  )}
+                </p>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"
+                  onClick={() => closeServiceInProgress()}
+                >
+                  {tr.serviceModalOk}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

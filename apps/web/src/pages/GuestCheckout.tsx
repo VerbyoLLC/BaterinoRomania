@@ -78,6 +78,22 @@ function checkoutPath(slug: string, qty: number): string {
   return `/comanda?${q.toString()}`
 }
 
+/**
+ * Pasul 3 pentru PJ înseamnă adresa de livrare. Prefilează câmpurile de adresă din profilul
+ * client folosind delivery-ul salvat (dacă există), altfel cade pe billing-ul vechi salvat.
+ */
+function pjDeliveryPrefillFromProfile(profile: ClientProfilePayload | null) {
+  if (!profile) return null
+  const delA = String(profile.delAddress ?? '').trim()
+  const delC = String(profile.delCounty ?? '').trim()
+  const delCi = String(profile.delCity ?? '').trim()
+  const delP = String(profile.delPostal ?? '').trim()
+  if (delA || delC || delCi || delP) {
+    return { billAddress: delA, billCounty: delC, billCity: delCi, billPostal: delP }
+  }
+  return null
+}
+
 function profileHasCompletePersonal(p: ClientProfilePayload | null): boolean {
   if (!p) return false
   const phone = String(p.phone || '').replace(/\D/g, '')
@@ -105,37 +121,6 @@ function profileHasCompleteAddress(p: ClientProfilePayload | null): boolean {
     )
   }
   return true
-}
-
-function buildCheckoutClientProfilePayload(
-  shipNume: string,
-  shipPrenume: string,
-  shipPhone: string,
-  billAddress: string,
-  billCounty: string,
-  billCity: string,
-  billPostal: string,
-  differentDeliveryAddress: boolean,
-  delAddress: string,
-  delCounty: string,
-  delCity: string,
-  delPostal: string,
-): ClientProfilePayload {
-  const phone = shipPhone.replace(/\D/g, '').slice(0, 9)
-  return {
-    firstName: shipPrenume.trim(),
-    lastName: shipNume.trim(),
-    phone,
-    billAddress: billAddress.trim(),
-    billCounty: billCounty.trim(),
-    billCity: billCity.trim(),
-    billPostal: billPostal.trim(),
-    deliveryDifferent: differentDeliveryAddress,
-    delAddress: differentDeliveryAddress ? delAddress.trim() : undefined,
-    delCounty: differentDeliveryAddress ? delCounty.trim() : undefined,
-    delCity: differentDeliveryAddress ? delCity.trim() : undefined,
-    delPostal: differentDeliveryAddress ? delPostal.trim() : undefined,
-  }
 }
 
 /** Shared layout; border color applied only in `inputClass` / `inputClassWithError` so errors are not overridden by slate. */
@@ -173,15 +158,15 @@ const checkoutBackButtonClass =
 
 type Step2FieldKey = 'nume' | 'prenume' | 'phone' | 'email'
 type Step2FieldErrors = Partial<Record<Step2FieldKey, string>>
-type Step3FieldKey =
-  | 'billAddress'
-  | 'billCity'
-  | 'billCounty'
-  | 'billPostal'
-  | 'delAddress'
-  | 'delCity'
-  | 'delCounty'
-  | 'delPostal'
+type Step2CompanyFieldKey =
+  | 'companyName'
+  | 'companyCui'
+  | 'companyAddress'
+  | 'companyCounty'
+  | 'companyCity'
+  | 'companyPostal'
+type Step2CompanyErrors = Partial<Record<Step2CompanyFieldKey, string>>
+type Step3FieldKey = 'billAddress' | 'billCity' | 'billCounty' | 'billPostal'
 type Step3FieldErrors = Partial<Record<Step3FieldKey, string>>
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -253,11 +238,15 @@ export default function GuestCheckout() {
   const [billCounty, setBillCounty] = useState('')
   const [billCity, setBillCity] = useState('')
   const [billPostal, setBillPostal] = useState('')
-  const [differentDeliveryAddress, setDifferentDeliveryAddress] = useState(false)
-  const [delAddress, setDelAddress] = useState('')
-  const [delCounty, setDelCounty] = useState('')
-  const [delCity, setDelCity] = useState('')
-  const [delPostal, setDelPostal] = useState('')
+
+  /** Pasul 2 — facturare PJ: date firmă (sincronizate cu profilul client „Date companie”). */
+  const [checkoutBuyerIsPj, setCheckoutBuyerIsPj] = useState(false)
+  const [coName, setCoName] = useState('')
+  const [coCui, setCoCui] = useState('')
+  const [coAddress, setCoAddress] = useState('')
+  const [coCounty, setCoCounty] = useState('')
+  const [coCity, setCoCity] = useState('')
+  const [coPostal, setCoPostal] = useState('')
 
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -267,6 +256,7 @@ export default function GuestCheckout() {
   const [authLoading, setAuthLoading] = useState(false)
 
   const [step2FieldErrors, setStep2FieldErrors] = useState<Step2FieldErrors>({})
+  const [step2CompanyErrors, setStep2CompanyErrors] = useState<Step2CompanyErrors>({})
   const [step3FieldErrors, setStep3FieldErrors] = useState<Step3FieldErrors>({})
   const [orderSubmitted, setOrderSubmitted] = useState(false)
   const [submittedOrderNumber, setSubmittedOrderNumber] = useState<string | null>(null)
@@ -335,7 +325,45 @@ export default function GuestCheckout() {
   }, [cartMode, cartLines, cartLineVatPct, tr])
 
   const billCities = useMemo(() => getCitiesForCounty(billCounty), [billCounty])
-  const delCities = useMemo(() => getCitiesForCounty(delCounty), [delCounty])
+  const companyCities = useMemo(() => getCitiesForCounty(coCounty), [coCounty])
+
+  const checkoutProfilePayloadForApi = useCallback((): ClientProfilePayload => {
+    const phoneDigits = shipPhone.replace(/\D/g, '').slice(0, 9)
+    return {
+      firstName: shipPrenume.trim(),
+      lastName: shipNume.trim(),
+      phone: phoneDigits,
+      billAddress: billAddress.trim(),
+      billCounty: billCounty.trim(),
+      billCity: billCity.trim(),
+      billPostal: billPostal.trim(),
+      deliveryDifferent: false,
+      delAddress: undefined,
+      delCounty: undefined,
+      delCity: undefined,
+      delPostal: undefined,
+      companyName: coName.trim(),
+      companyCui: coCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase(),
+      companyAddress: coAddress.trim(),
+      companyCounty: coCounty.trim(),
+      companyCity: coCity.trim(),
+      companyPostal: coPostal.trim(),
+    }
+  }, [
+    shipNume,
+    shipPrenume,
+    shipPhone,
+    billAddress,
+    billCounty,
+    billCity,
+    billPostal,
+    coName,
+    coCui,
+    coAddress,
+    coCounty,
+    coCity,
+    coPostal,
+  ])
 
   const returnToCheckout = cartMode ? '/comanda' : slug ? checkoutPath(slug, qty) : '/comanda'
   const loginNext = encodeURIComponent(returnToCheckout)
@@ -366,6 +394,11 @@ export default function GuestCheckout() {
     getClientProfile()
       .then(({ email, profile }) => {
         if (cancelled) return
+        const isPjProfile = Boolean(
+          String(profile?.companyName || '').trim() || String(profile?.companyCui || '').trim(),
+        )
+        // PF: Pas 3 = adresa unică (bill = del). PJ: Pas 3 = adresa de livrare; bill se setează la submit din company*.
+        const pjDelPrefill = profile && isPjProfile ? pjDeliveryPrefillFromProfile(profile) : null
         profileBaselineRef.current = profile
           ? {
               firstName: profile.firstName,
@@ -380,6 +413,12 @@ export default function GuestCheckout() {
               delCounty: profile.delCounty ?? undefined,
               delCity: profile.delCity ?? undefined,
               delPostal: profile.delPostal ?? undefined,
+              companyName: profile.companyName ?? '',
+              companyCui: profile.companyCui ?? '',
+              companyAddress: profile.companyAddress ?? '',
+              companyCounty: profile.companyCounty ?? '',
+              companyCity: profile.companyCity ?? '',
+              companyPostal: profile.companyPostal ?? '',
             }
           : null
         setShipEmail(email)
@@ -387,15 +426,19 @@ export default function GuestCheckout() {
           setShipNume(profile.lastName || '')
           setShipPrenume(profile.firstName || '')
           setShipPhone(profile.phone || '')
-          setBillAddress(profile.billAddress || '')
-          setBillCounty(profile.billCounty || '')
-          setBillCity(profile.billCity || '')
-          setBillPostal(profile.billPostal || '')
-          setDifferentDeliveryAddress(Boolean(profile.deliveryDifferent))
-          setDelAddress(profile.delAddress || '')
-          setDelCounty(profile.delCounty || '')
-          setDelCity(profile.delCity || '')
-          setDelPostal(profile.delPostal || '')
+          setBillAddress(pjDelPrefill ? pjDelPrefill.billAddress : profile.billAddress || '')
+          setBillCounty(pjDelPrefill ? pjDelPrefill.billCounty : profile.billCounty || '')
+          setBillCity(pjDelPrefill ? pjDelPrefill.billCity : profile.billCity || '')
+          setBillPostal(pjDelPrefill ? pjDelPrefill.billPostal : profile.billPostal || '')
+          setCoName(profile.companyName || '')
+          setCoCui(profile.companyCui || '')
+          setCoAddress(profile.companyAddress || '')
+          setCoCounty(profile.companyCounty || '')
+          setCoCity(profile.companyCity || '')
+          setCoPostal(profile.companyPostal || '')
+          setCheckoutBuyerIsPj(isPjProfile)
+        } else {
+          setCheckoutBuyerIsPj(false)
         }
       })
       .catch(() => {})
@@ -622,21 +665,47 @@ export default function GuestCheckout() {
     setOrderPlaceLoading(true)
     try {
       const phoneDigits = shipPhone.replace(/\D/g, '').slice(0, 9)
-      const common = {
-        email: shipEmail.trim(),
-        phone: phoneDigits,
-        nume: shipNume.trim(),
-        prenume: shipPrenume.trim(),
-        billAddress: billAddress.trim(),
-        billCounty: billCounty.trim(),
-        billCity: billCity.trim(),
-        billPostal: billPostal.trim(),
-        differentDeliveryAddress,
-        delAddress: differentDeliveryAddress ? delAddress.trim() : '',
-        delCounty: differentDeliveryAddress ? delCounty.trim() : '',
-        delCity: differentDeliveryAddress ? delCity.trim() : '',
-        delPostal: differentDeliveryAddress ? delPostal.trim() : '',
-      }
+      const cuiClean = coCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+      // PF: Pas 3 = adresa unică (bill = del). PJ: company* = facturare; Pas 3 = adresa de livrare distinctă.
+      const common = checkoutBuyerIsPj
+        ? {
+            email: shipEmail.trim(),
+            phone: phoneDigits,
+            nume: shipNume.trim(),
+            prenume: shipPrenume.trim(),
+            buyerType: 'company' as const,
+            billAddress: coAddress.trim(),
+            billCounty: coCounty.trim(),
+            billCity: coCity.trim(),
+            billPostal: coPostal.trim(),
+            differentDeliveryAddress: true,
+            delAddress: billAddress.trim(),
+            delCounty: billCounty.trim(),
+            delCity: billCity.trim(),
+            delPostal: billPostal.trim(),
+            companyName: coName.trim(),
+            companyCui: cuiClean,
+            companyAddress: coAddress.trim(),
+            companyCounty: coCounty.trim(),
+            companyCity: coCity.trim(),
+            companyPostal: coPostal.trim(),
+          }
+        : {
+            email: shipEmail.trim(),
+            phone: phoneDigits,
+            nume: shipNume.trim(),
+            prenume: shipPrenume.trim(),
+            buyerType: 'person' as const,
+            billAddress: billAddress.trim(),
+            billCounty: billCounty.trim(),
+            billCity: billCity.trim(),
+            billPostal: billPostal.trim(),
+            differentDeliveryAddress: false,
+            delAddress: '',
+            delCounty: '',
+            delCity: '',
+            delPostal: '',
+          }
       const result = cartMode
         ? await submitGuestResidentialOrder({
             items: cartLines.map((c) => {
@@ -1011,30 +1080,34 @@ export default function GuestCheckout() {
             if (phoneDigits.length !== 9) err.phone = tr.fieldErrorPhone
             if (!shipEmail.trim()) err.email = tr.fieldErrorEmpty
             else if (!isValidEmail(shipEmail)) err.email = tr.fieldErrorEmail
-            if (Object.keys(err).length > 0) {
+            const coErr: Step2CompanyErrors = {}
+            if (checkoutBuyerIsPj) {
+              if (!coName.trim()) coErr.companyName = tr.fieldErrorEmpty
+              if (!coCui.trim()) coErr.companyCui = tr.fieldErrorEmpty
+              if (!coAddress.trim()) coErr.companyAddress = tr.fieldErrorEmpty
+              if (!coCounty.trim()) coErr.companyCounty = tr.fieldErrorEmpty
+              if (!coCity.trim()) coErr.companyCity = tr.fieldErrorEmpty
+              if (!coPostal.trim()) coErr.companyPostal = tr.fieldErrorEmpty
+            }
+            if (Object.keys(err).length > 0 || Object.keys(coErr).length > 0) {
               setStep2FieldErrors(err)
+              setStep2CompanyErrors(coErr)
               return
             }
             setStep2FieldErrors({})
+            setStep2CompanyErrors({})
             setProfileSaveError(null)
-            if (isClientSession && !profileHasCompletePersonal(profileBaselineRef.current)) {
+            if (isClientSession) {
               setProfileAutosaveBusy(true)
               try {
-                const payload = buildCheckoutClientProfilePayload(
-                  shipNume,
-                  shipPrenume,
-                  shipPhone,
-                  billAddress,
-                  billCounty,
-                  billCity,
-                  billPostal,
-                  differentDeliveryAddress,
-                  delAddress,
-                  delCounty,
-                  delCity,
-                  delPostal,
-                )
-                await putClientProfile(payload, 'personal')
+                const payload = checkoutProfilePayloadForApi()
+                if (!profileHasCompletePersonal(profileBaselineRef.current)) {
+                  await putClientProfile(payload, 'personal')
+                }
+                if (checkoutBuyerIsPj) {
+                  await putClientProfile(payload, 'company')
+                }
+                profileBaselineRef.current = payload
               } catch (saveErr) {
                 setProfileSaveError(
                   saveErr instanceof Error ? saveErr.message : tr.profileSaveError,
@@ -1048,9 +1121,47 @@ export default function GuestCheckout() {
             goToStep(3)
           }}
         >
-          <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">{tr.contactIntro}</p>
-          <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 sm:pt-3">
-            <label className="block">
+          <div
+            className="flex flex-wrap gap-5"
+            role="radiogroup"
+            aria-label={tr.buyerTypeGroupAria}
+          >
+            <label className="flex cursor-pointer items-center gap-2.5 font-['Inter'] text-sm font-semibold text-slate-800">
+              <input
+                type="radio"
+                name="checkout-buyer-type"
+                className="h-4 w-4 shrink-0 border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                checked={!checkoutBuyerIsPj}
+                onChange={() => {
+                  setCheckoutBuyerIsPj(false)
+                  setStep2CompanyErrors({})
+                }}
+              />
+              <span>{tr.buyerTypeNaturalPerson}</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2.5 font-['Inter'] text-sm font-semibold text-slate-800">
+              <input
+                type="radio"
+                name="checkout-buyer-type"
+                className="h-4 w-4 shrink-0 border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                checked={checkoutBuyerIsPj}
+                onChange={() => {
+                  setCheckoutBuyerIsPj(true)
+                  setStep2CompanyErrors({})
+                }}
+              />
+              <span>{tr.buyerTypeLegalEntity}</span>
+            </label>
+          </div>
+
+          {checkoutBuyerIsPj ? (
+            <p className="mb-6 mt-0.5 text-sm font-bold uppercase tracking-wide text-slate-700 font-['Inter'] sm:text-base">
+              {tr.contactPersonSectionTitle}
+            </p>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block min-w-0">
               <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldNume}</span>
               <input
                 value={shipNume}
@@ -1072,7 +1183,7 @@ export default function GuestCheckout() {
               />
               <FieldError id="checkout-step2-nume-err" message={step2FieldErrors.nume} />
             </label>
-            <label className="block">
+            <label className="block min-w-0">
               <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldPrenume}</span>
               <input
                 value={shipPrenume}
@@ -1147,6 +1258,174 @@ export default function GuestCheckout() {
               <FieldError id="checkout-step2-email-err" message={step2FieldErrors.email} />
             </label>
           </div>
+
+          {checkoutBuyerIsPj ? (
+            <div className="space-y-4 border-t border-slate-200 pt-5">
+              <p className="mb-6 mt-0.5 text-sm font-bold uppercase tracking-wide text-slate-700 font-['Inter'] sm:text-base">
+                {tr.companyInvoiceSectionTitle}
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <label className="block min-w-0">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
+                    {tr.fieldCompanyName}
+                  </span>
+                  <input
+                    value={coName}
+                    onChange={(e) => {
+                      setStep2CompanyErrors((p) => {
+                        if (!p.companyName) return p
+                        const n = { ...p }
+                        delete n.companyName
+                        return n
+                      })
+                      setCoName(sanitizeAddressField(e.target.value))
+                    }}
+                    className={inputClassWithError(Boolean(step2CompanyErrors.companyName))}
+                    autoComplete="organization"
+                    placeholder={tr.placeholderCompanyName}
+                    aria-invalid={Boolean(step2CompanyErrors.companyName)}
+                    aria-describedby={
+                      step2CompanyErrors.companyName ? 'checkout-step2-co-name-err' : undefined
+                    }
+                  />
+                  <FieldError id="checkout-step2-co-name-err" message={step2CompanyErrors.companyName} />
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
+                    {tr.fieldCompanyCui}
+                  </span>
+                  <input
+                    value={coCui}
+                    onChange={(e) => {
+                      setStep2CompanyErrors((p) => {
+                        if (!p.companyCui) return p
+                        const n = { ...p }
+                        delete n.companyCui
+                        return n
+                      })
+                      setCoCui(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())
+                    }}
+                    className={inputClassWithError(Boolean(step2CompanyErrors.companyCui))}
+                    autoComplete="off"
+                    placeholder={tr.placeholderCompanyCui}
+                    aria-invalid={Boolean(step2CompanyErrors.companyCui)}
+                    aria-describedby={
+                      step2CompanyErrors.companyCui ? 'checkout-step2-co-cui-err' : undefined
+                    }
+                  />
+                  <FieldError id="checkout-step2-co-cui-err" message={step2CompanyErrors.companyCui} />
+                </label>
+              </div>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldAddress}</span>
+                <input
+                  value={coAddress}
+                  onChange={(e) => {
+                    setStep2CompanyErrors((p) => {
+                      if (!p.companyAddress) return p
+                      const n = { ...p }
+                      delete n.companyAddress
+                      return n
+                    })
+                    setCoAddress(sanitizeAddressField(e.target.value))
+                  }}
+                  className={inputClassWithError(Boolean(step2CompanyErrors.companyAddress))}
+                  autoComplete="street-address"
+                  placeholder={tr.placeholderAddress}
+                  aria-invalid={Boolean(step2CompanyErrors.companyAddress)}
+                  aria-describedby={
+                    step2CompanyErrors.companyAddress ? 'checkout-step2-co-addr-err' : undefined
+                  }
+                />
+                <FieldError id="checkout-step2-co-addr-err" message={step2CompanyErrors.companyAddress} />
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <label className="block min-w-0">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldCounty}</span>
+                  <select
+                    value={coCounty}
+                    onChange={(e) => {
+                      setStep2CompanyErrors((p) => {
+                        const n = { ...p }
+                        delete n.companyCounty
+                        delete n.companyCity
+                        return n
+                      })
+                      setCoCounty(e.target.value)
+                      setCoCity('')
+                    }}
+                    className={selectClassWithError(Boolean(step2CompanyErrors.companyCounty))}
+                    aria-invalid={Boolean(step2CompanyErrors.companyCounty)}
+                    aria-describedby={
+                      step2CompanyErrors.companyCounty ? 'checkout-step2-co-county-err' : undefined
+                    }
+                  >
+                    <option value="">{tr.selectCountyPlaceholder}</option>
+                    {ROMANIAN_COUNTIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError id="checkout-step2-co-county-err" message={step2CompanyErrors.companyCounty} />
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldCity}</span>
+                  <select
+                    value={coCity}
+                    disabled={!coCounty}
+                    onChange={(e) => {
+                      setStep2CompanyErrors((p) => {
+                        if (!p.companyCity) return p
+                        const n = { ...p }
+                        delete n.companyCity
+                        return n
+                      })
+                      setCoCity(e.target.value)
+                    }}
+                    className={`${selectClassWithError(Boolean(step2CompanyErrors.companyCity))} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
+                    aria-invalid={Boolean(step2CompanyErrors.companyCity)}
+                    aria-describedby={
+                      step2CompanyErrors.companyCity ? 'checkout-step2-co-city-err' : undefined
+                    }
+                  >
+                    <option value="">
+                      {coCounty ? tr.selectCityPlaceholder : tr.selectCityPlaceholderNeedCounty}
+                    </option>
+                    {companyCities.map((cityName) => (
+                      <option key={cityName} value={cityName}>
+                        {cityName}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError id="checkout-step2-co-city-err" message={step2CompanyErrors.companyCity} />
+                </label>
+              </div>
+              <label className="block w-full max-w-[14rem]">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldPostal}</span>
+                <input
+                  value={coPostal}
+                  onChange={(e) => {
+                    setStep2CompanyErrors((p) => {
+                      if (!p.companyPostal) return p
+                      const n = { ...p }
+                      delete n.companyPostal
+                      return n
+                    })
+                    setCoPostal(sanitizePostalField(e.target.value))
+                  }}
+                  className={inputClassWithError(Boolean(step2CompanyErrors.companyPostal))}
+                  autoComplete="postal-code"
+                  placeholder={tr.placeholderPostal}
+                  aria-invalid={Boolean(step2CompanyErrors.companyPostal)}
+                  aria-describedby={
+                    step2CompanyErrors.companyPostal ? 'checkout-step2-co-postal-err' : undefined
+                  }
+                />
+                <FieldError id="checkout-step2-co-postal-err" message={step2CompanyErrors.companyPostal} />
+              </label>
+            </div>
+          ) : null}
           {profileSaveError ? (
             <div className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2.5" role="alert">
               <p className="m-0 text-sm font-medium text-red-800 font-['Inter']">{profileSaveError}</p>
@@ -1203,12 +1482,6 @@ export default function GuestCheckout() {
             if (!billCounty.trim()) err.billCounty = tr.fieldErrorEmpty
             if (!billCity.trim()) err.billCity = tr.fieldErrorEmpty
             if (!billPostal.trim()) err.billPostal = tr.fieldErrorEmpty
-            if (differentDeliveryAddress) {
-              if (!delAddress.trim()) err.delAddress = tr.fieldErrorEmpty
-              if (!delCounty.trim()) err.delCounty = tr.fieldErrorEmpty
-              if (!delCity.trim()) err.delCity = tr.fieldErrorEmpty
-              if (!delPostal.trim()) err.delPostal = tr.fieldErrorEmpty
-            }
             if (Object.keys(err).length > 0) {
               setStep3FieldErrors(err)
               return
@@ -1218,21 +1491,25 @@ export default function GuestCheckout() {
             if (isClientSession && !profileHasCompleteAddress(profileBaselineRef.current)) {
               setProfileAutosaveBusy(true)
               try {
-                const payload = buildCheckoutClientProfilePayload(
-                  shipNume,
-                  shipPrenume,
-                  shipPhone,
-                  billAddress,
-                  billCounty,
-                  billCity,
-                  billPostal,
-                  differentDeliveryAddress,
-                  delAddress,
-                  delCounty,
-                  delCity,
-                  delPostal,
-                )
+                // PF: salvăm câmpurile ca billing (livrare = facturare).
+                // PJ: bill* = adresa companiei (mirror din profilul company*), del* = adresa din Pas 3.
+                const base = checkoutProfilePayloadForApi()
+                const payload: ClientProfilePayload = checkoutBuyerIsPj
+                  ? {
+                      ...base,
+                      billAddress: coAddress.trim(),
+                      billCounty: coCounty.trim(),
+                      billCity: coCity.trim(),
+                      billPostal: coPostal.trim(),
+                      deliveryDifferent: true,
+                      delAddress: billAddress.trim(),
+                      delCounty: billCounty.trim(),
+                      delCity: billCity.trim(),
+                      delPostal: billPostal.trim(),
+                    }
+                  : base
                 await putClientProfile(payload, 'address')
+                profileBaselineRef.current = payload
               } catch (saveErr) {
                 setProfileSaveError(
                   saveErr instanceof Error ? saveErr.message : tr.profileSaveError,
@@ -1246,10 +1523,10 @@ export default function GuestCheckout() {
             goToStep(4)
           }}
         >
-          <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">{tr.addressIntro}</p>
-
-          <div>
-            <p className="m-0 mb-5 text-sm font-bold text-slate-900 font-['Inter']">{tr.sectionBillingTitle}</p>
+          <div className="flex flex-col gap-0">
+            <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">
+              {checkoutBuyerIsPj ? tr.addressIntroCompany : tr.addressIntro}
+            </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block sm:col-span-2">
                 <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldAddress}</span>
@@ -1367,163 +1644,6 @@ export default function GuestCheckout() {
               </label>
             </div>
           </div>
-
-          <div className="border-t border-slate-200 pt-5">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={differentDeliveryAddress}
-                onChange={(e) => {
-                  const on = e.target.checked
-                  setDifferentDeliveryAddress(on)
-                  if (!on) {
-                    setDelAddress('')
-                    setDelCounty('')
-                    setDelCity('')
-                    setDelPostal('')
-                    setStep3FieldErrors((p) => {
-                      const n = { ...p }
-                      delete n.delAddress
-                      delete n.delCity
-                      delete n.delCounty
-                      delete n.delPostal
-                      return n
-                    })
-                  }
-                }}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900/20"
-              />
-              <span className="text-sm leading-snug text-slate-700 font-['Inter']">
-                {tr.differentDeliveryPart1}
-                <strong className="font-bold text-slate-900">{tr.differentDeliveryBoldDelivery}</strong>
-                {tr.differentDeliveryPart2}
-                <strong className="font-bold text-slate-900">{tr.differentDeliveryBoldBilling}</strong>
-                {tr.differentDeliveryPart3}
-              </span>
-            </label>
-          </div>
-
-          {differentDeliveryAddress ? (
-            <div>
-              <p className="m-0 mb-5 text-sm font-bold text-slate-900 font-['Inter']">{tr.sectionDeliveryTitle}</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block sm:col-span-2">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldAddress}</span>
-                  <input
-                    value={delAddress}
-                    onChange={(e) => {
-                      setStep3FieldErrors((p) => {
-                        if (!p.delAddress) return p
-                        const n = { ...p }
-                        delete n.delAddress
-                        return n
-                      })
-                      setDelAddress(sanitizeAddressField(e.target.value))
-                    }}
-                    className={inputClassWithError(Boolean(step3FieldErrors.delAddress))}
-                    autoComplete="shipping street-address"
-                    placeholder={tr.placeholderAddress}
-                    required
-                    aria-invalid={Boolean(step3FieldErrors.delAddress)}
-                    aria-describedby={step3FieldErrors.delAddress ? 'checkout-step3-del-address-err' : undefined}
-                  />
-                  <FieldError id="checkout-step3-del-address-err" message={step3FieldErrors.delAddress} />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldCounty}</span>
-                  <div className="relative">
-                    <select
-                      value={delCounty}
-                      onChange={(e) => {
-                        setStep3FieldErrors((p) => {
-                          if (!p.delCounty) return p
-                          const n = { ...p }
-                          delete n.delCounty
-                          return n
-                        })
-                        setDelCounty(e.target.value)
-                        setDelCity('')
-                      }}
-                      className={selectClassWithError(Boolean(step3FieldErrors.delCounty))}
-                      required
-                      aria-invalid={Boolean(step3FieldErrors.delCounty)}
-                      aria-describedby={step3FieldErrors.delCounty ? 'checkout-step3-del-county-err' : undefined}
-                    >
-                      <option value="">{tr.selectCountyPlaceholder}</option>
-                      {ROMANIAN_COUNTIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                      aria-hidden
-                    />
-                  </div>
-                  <FieldError id="checkout-step3-del-county-err" message={step3FieldErrors.delCounty} />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldCity}</span>
-                  <div className="relative">
-                    <select
-                      value={delCity}
-                      disabled={!delCounty}
-                      onChange={(e) => {
-                        setStep3FieldErrors((p) => {
-                          if (!p.delCity) return p
-                          const n = { ...p }
-                          delete n.delCity
-                          return n
-                        })
-                        setDelCity(e.target.value)
-                      }}
-                      className={`${selectClassWithError(Boolean(step3FieldErrors.delCity))} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500`}
-                      required
-                      aria-invalid={Boolean(step3FieldErrors.delCity)}
-                      aria-describedby={step3FieldErrors.delCity ? 'checkout-step3-del-city-err' : undefined}
-                    >
-                      <option value="">
-                        {delCounty ? tr.selectCityPlaceholder : tr.selectCityPlaceholderNeedCounty}
-                      </option>
-                      {delCities.map((cityName) => (
-                        <option key={cityName} value={cityName}>
-                          {cityName}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                      aria-hidden
-                    />
-                  </div>
-                  <FieldError id="checkout-step3-del-city-err" message={step3FieldErrors.delCity} />
-                </label>
-                <label className="block sm:col-span-2">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldPostal}</span>
-                  <input
-                    value={delPostal}
-                    onChange={(e) => {
-                      setStep3FieldErrors((p) => {
-                        if (!p.delPostal) return p
-                        const n = { ...p }
-                        delete n.delPostal
-                        return n
-                      })
-                      setDelPostal(sanitizePostalField(e.target.value))
-                    }}
-                    className={`${inputClassWithError(Boolean(step3FieldErrors.delPostal))} max-w-xs`}
-                    autoComplete="shipping postal-code"
-                    placeholder={tr.placeholderPostal}
-                    required
-                    aria-invalid={Boolean(step3FieldErrors.delPostal)}
-                    aria-describedby={step3FieldErrors.delPostal ? 'checkout-step3-del-postal-err' : undefined}
-                  />
-                  <FieldError id="checkout-step3-del-postal-err" message={step3FieldErrors.delPostal} />
-                </label>
-              </div>
-            </div>
-          ) : null}
 
           {profileSaveError ? (
             <div className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2.5" role="alert">

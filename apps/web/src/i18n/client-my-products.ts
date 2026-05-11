@@ -34,8 +34,24 @@ export type ClientMyProductsTranslations = {
   noManualLink: string
   /** WhatsApp prefill: {productTitle}, {serialNumber}, {modelNumber}, {clientEmail} */
   whatsappProductPrefill: string
-  /** WhatsApp prefill cerere service: {productTitle}, {serialNumber}, {modelNumber}, {clientEmail} */
+  /** WhatsApp prefill cerere service: {productTitle}, {serialNumber}, {modelNumber}, {clientEmail}, {problemDescription} */
   whatsappServicePrefill: string
+  serviceModalBrand: string
+  serviceModalWarrantyLabel: string
+  serviceModalProblemLabel: string
+  serviceModalProblemPlaceholder: string
+  serviceModalProblemRequired: string
+  serviceModalSubmit: string
+  serviceModalSubmitting: string
+  serviceModalCancel: string
+  serviceModalClose: string
+  /** Etichetă buton când există deja o cerere activă pentru produs. */
+  serviceRequestInProgress: string
+  /** Eticheta mică sub butonul „În desfășurare” cu numărul cererii. {requestNumber} */
+  serviceModalInProgressTitle: string
+  /** Mesaj afișat în loc de formular când cererea este deja deschisă. {requestNumber} */
+  serviceModalInProgressMessage: string
+  serviceModalOk: string
   snInvalidLength: string
   claimErrorAlreadyRegistered: string
   claimErrorInvalidSerial: string
@@ -80,7 +96,21 @@ const translations: Record<LangCode, ClientMyProductsTranslations> = {
     whatsappProductPrefill:
       'Salut. Am nevoie de ajutor pentru produsul {productTitle} (SN: {serialNumber}, model {modelNumber}). Contul meu: {clientEmail}.',
     whatsappServicePrefill:
-      'Salut. Doresc să deschid o cerere de service pentru produsul {productTitle} (SN: {serialNumber}, model {modelNumber}). Contul meu: {clientEmail}.',
+      'Salut. Doresc să deschid o cerere de service pentru produsul {productTitle} (SN: {serialNumber}, model {modelNumber}). Contul meu: {clientEmail}.\n\nProblema: {problemDescription}',
+    serviceModalBrand: 'Divizia de Service',
+    serviceModalWarrantyLabel: 'Garanție: 10 Ani',
+    serviceModalProblemLabel: 'Descrie pe scurt problema produsului.',
+    serviceModalProblemPlaceholder: 'Detalii despre problema apărută…',
+    serviceModalProblemRequired: 'Te rugăm să descrii pe scurt problema.',
+    serviceModalSubmit: 'Trimite cererea',
+    serviceModalSubmitting: 'Se trimite…',
+    serviceModalCancel: 'Anulează',
+    serviceModalClose: 'Închide',
+    serviceRequestInProgress: 'În desfășurare',
+    serviceModalInProgressTitle: 'Cerere {requestNumber}',
+    serviceModalInProgressMessage:
+      'Cererea ta de service cu ID-ul {requestNumber} este în analiză. Te vom contacta dacă avem nevoie de detalii suplimentare.',
+    serviceModalOk: 'Am înțeles',
     snInvalidLength: 'Introdu exact 16 cifre.',
     claimErrorAlreadyRegistered: 'Acest produs a fost deja înregistrat.',
     claimErrorInvalidSerial:
@@ -123,7 +153,21 @@ const translations: Record<LangCode, ClientMyProductsTranslations> = {
     whatsappProductPrefill:
       'Hi. I need help with {productTitle} (SN: {serialNumber}, model {modelNumber}). My account: {clientEmail}.',
     whatsappServicePrefill:
-      'Hi. I would like to open a service request for {productTitle} (SN: {serialNumber}, model {modelNumber}). My account: {clientEmail}.',
+      'Hi. I would like to open a service request for {productTitle} (SN: {serialNumber}, model {modelNumber}). My account: {clientEmail}.\n\nIssue: {problemDescription}',
+    serviceModalBrand: 'Service Division',
+    serviceModalWarrantyLabel: 'Warranty: 10 Years',
+    serviceModalProblemLabel: 'Briefly describe the product issue.',
+    serviceModalProblemPlaceholder: 'Details about the issue you noticed…',
+    serviceModalProblemRequired: 'Please briefly describe the issue.',
+    serviceModalSubmit: 'Submit request',
+    serviceModalSubmitting: 'Sending…',
+    serviceModalCancel: 'Cancel',
+    serviceModalClose: 'Close',
+    serviceRequestInProgress: 'In progress',
+    serviceModalInProgressTitle: 'Request {requestNumber}',
+    serviceModalInProgressMessage:
+      'Your service request with ID {requestNumber} is under investigation. We might contact you for further details.',
+    serviceModalOk: 'Got it',
     snInvalidLength: 'Enter exactly 16 digits.',
     claimErrorAlreadyRegistered: 'This product has already been registered.',
     claimErrorInvalidSerial:
@@ -164,7 +208,21 @@ const translations: Record<LangCode, ClientMyProductsTranslations> = {
     whatsappProductPrefill:
       '您好。我需要关于 {productTitle} 的帮助（SN：{serialNumber}，型号 {modelNumber}）。我的账户：{clientEmail}。',
     whatsappServicePrefill:
-      '您好。我希望为 {productTitle} 开具售后服务申请（SN：{serialNumber}，型号 {modelNumber}）。我的账户：{clientEmail}。',
+      '您好。我希望为 {productTitle} 开具售后服务申请（SN：{serialNumber}，型号 {modelNumber}）。我的账户：{clientEmail}。\n\n问题：{problemDescription}',
+    serviceModalBrand: '售后服务部',
+    serviceModalWarrantyLabel: '保修：10 年',
+    serviceModalProblemLabel: '请简要描述产品问题。',
+    serviceModalProblemPlaceholder: '请详细说明您遇到的问题…',
+    serviceModalProblemRequired: '请简要描述遇到的问题。',
+    serviceModalSubmit: '提交申请',
+    serviceModalSubmitting: '正在提交…',
+    serviceModalCancel: '取消',
+    serviceModalClose: '关闭',
+    serviceRequestInProgress: '处理中',
+    serviceModalInProgressTitle: '申请 {requestNumber}',
+    serviceModalInProgressMessage:
+      '您编号为 {requestNumber} 的售后申请正在处理中。如有需要，我们将与您联系以获取更多信息。',
+    serviceModalOk: '知道了',
     snInvalidLength: '请输入 16 位数字。',
     claimErrorAlreadyRegistered: '该产品已被注册。',
     claimErrorInvalidSerial: '该序列号不正确或不属于 LithTech 产品。如需注册帮助，请联系我们。',

@@ -2,7 +2,12 @@
  * Cloudflare R2 (S3-compatible) upload utility.
  * Stores product images and PDF documents.
  */
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3')
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} = require('@aws-sdk/client-s3')
 
 let s3Client = null
 
@@ -39,9 +44,12 @@ function isR2Configured() {
  * @param {Buffer} buffer - File content
  * @param {string} key - Object key (path in bucket), e.g. "products/123-image.jpg"
  * @param {string} contentType - MIME type, e.g. "image/jpeg", "application/pdf"
+ * @param {object} [opts]
+ * @param {string} [opts.contentDisposition] - ex. `attachment; filename="proforma-001.pdf"` (forces download in browser)
+ * @param {string} [opts.cacheControl] - ex. `public, max-age=31536000, immutable`
  * @returns {Promise<string>} Public URL of the uploaded file
  */
-async function uploadToR2(buffer, key, contentType) {
+async function uploadToR2(buffer, key, contentType, opts = {}) {
   const bucket = process.env.R2_BUCKET
   const publicUrlBase = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
 
@@ -56,6 +64,8 @@ async function uploadToR2(buffer, key, contentType) {
       Key: key,
       Body: buffer,
       ContentType: contentType,
+      ...(opts.contentDisposition ? { ContentDisposition: opts.contentDisposition } : {}),
+      ...(opts.cacheControl ? { CacheControl: opts.cacheControl } : {}),
     })
   )
 
@@ -149,6 +159,26 @@ function urlToKey(url) {
 }
 
 /**
+ * Descarcă conţinutul unui obiect R2 ca Buffer Node.js.
+ * Folosit pentru streamingul certificatelor private prin API.
+ * @param {string} key - Object key (path in bucket)
+ * @returns {Promise<Buffer>}
+ */
+async function downloadFromR2(key) {
+  const bucket = process.env.R2_BUCKET
+  if (!bucket) throw new Error('R2_BUCKET not set')
+  const client = getR2Client()
+  const out = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+  if (!out?.Body) throw new Error('R2 object body missing')
+  /* `Body` este un stream Node.js (Readable) când rulăm în Node. */
+  const chunks = []
+  for await (const chunk of out.Body) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk))
+  }
+  return Buffer.concat(chunks)
+}
+
+/**
  * Delete an object from R2 by key.
  * @param {string} key - Object key (path in bucket)
  */
@@ -201,8 +231,62 @@ function guestOrderDocumentKey(orderDbId, filename = 'proforma.pdf') {
   return `${base}/${safe || 'document.pdf'}`
 }
 
+/**
+ * Cheie R2 pentru proforma PDF generată automat — același prefix `orders/<id>/`
+ * ca factura / proforma încărcată manual, astfel toate PDF-urile comenzii stau într-un singur „folder”.
+ * @param {string} orderDbId - id Prisma (cuid)
+ * @param {string} [orderNumber] - nr. comandă afișat (pentru nume fișier)
+ * @returns {string}
+ */
+function proformaPdfKey(orderDbId, orderNumber = '') {
+  const base = orderFolderPrefix(orderDbId)
+  const safeNum = String(orderNumber || 'comanda')
+    .replace(/[/\\]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 80) || 'comanda'
+  return `${base}/proforma-${safeNum}.pdf`
+}
+
+/** Prefix R2 pentru certificatele de garanţie. Folderul per certificat
+ *  foloseşte cuid-ul `WarehouseSavedItem.id` (neghicibil), iar fişierul
+ *  păstrează SN-ul ca nume — astfel utilizatorul primeşte un fişier cu
+ *  nume semnificativ la download, dar URL-ul R2 nu poate fi enumerat
+ *  doar pe baza SN-urilor publice ale produselor. */
+const WARRANTY_CERTIFICATES_PREFIX = 'warranty-certificates'
+
+/**
+ * Sanitizare strictă pentru un serial number folosit ca nume de fişier
+ * (păstrează doar alfanumerice + `-` şi `_`, capătă lungime maximă).
+ */
+function sanitizeSerialNumber(sn) {
+  const cleaned = String(sn || '')
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80)
+  return cleaned || 'certificat'
+}
+
+/**
+ * Cheia R2 pentru PDF-ul certificatului de garanţie.
+ * Format: `warranty-certificates/<savedItemId cuid>/<SN>.pdf`.
+ *
+ * URL-ul R2 nu trebuie expus în UI — este folosit doar server-side, pentru
+ * stream-ul prin endpoint-ul autentificat `/warranty-certificate/download`.
+ */
+function warrantyCertificateKey(savedItemId, serialNumber) {
+  const id = String(savedItemId || '').trim()
+  if (!/^[A-Za-z0-9_-]+$/.test(id) || id.length < 8) {
+    throw new Error('Invalid savedItemId for warranty certificate key')
+  }
+  const safeSn = sanitizeSerialNumber(serialNumber)
+  return `${WARRANTY_CERTIFICATES_PREFIX}/${id}/${safeSn}.pdf`
+}
+
 module.exports = {
   uploadToR2,
+  downloadFromR2,
   generateKey,
   sanitizeFolderName,
   isR2Configured,
@@ -211,4 +295,7 @@ module.exports = {
   orderFolderPrefix,
   ensureGuestOrderFolder,
   guestOrderDocumentKey,
+  proformaPdfKey,
+  warrantyCertificateKey,
+  sanitizeSerialNumber,
 }

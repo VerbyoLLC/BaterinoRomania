@@ -64,7 +64,16 @@ export default function AdminClients() {
       const name = displayName(c).toLowerCase()
       const phone = (c.profile?.phone || '').toLowerCase()
       const bill = billingLine(c).toLowerCase()
-      return email.includes(q) || ref.includes(q) || name.includes(q) || phone.includes(q) || bill.includes(q)
+      const p = c.profile
+      const companyHint = [p?.companyName, p?.companyCui].map((s) => String(s || '').trim().toLowerCase()).join(' ')
+      return (
+        email.includes(q) ||
+        ref.includes(q) ||
+        name.includes(q) ||
+        phone.includes(q) ||
+        bill.includes(q) ||
+        companyHint.includes(q)
+      )
     })
   }, [rows, query])
 

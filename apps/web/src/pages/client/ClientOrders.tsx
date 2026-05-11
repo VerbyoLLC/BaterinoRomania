@@ -115,7 +115,6 @@ export default function ClientOrders() {
   /** Comanda pentru care e deschis modalul de plată (Transfer bancar). */
   const [payOrder, setPayOrder] = useState<ClientOrderRow | null>(null)
   const [bankDetails, setBankDetails] = useState<ClientPaymentBankDetails | null>(null)
-  const [bankLoading, setBankLoading] = useState(false)
   const [bankError, setBankError] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
@@ -152,12 +151,15 @@ export default function ClientOrders() {
     }
   }, [payOrder])
 
-  // Încarcă datele bancare o singură dată când utilizatorul deschide primul modal de plată.
+  // Date bancare din API (`/client/payment-bank-details`). Deps: doar `payOrder?.id` (fără state
+  // de loading în deps — vezi istoric: re-rulare + cleanup anula răspunsul).
   useEffect(() => {
-    if (!payOrder) return
-    if (bankDetails || bankLoading) return
+    if (!payOrder) {
+      setBankDetails(null)
+      setBankError(null)
+      return
+    }
     let cancelled = false
-    setBankLoading(true)
     setBankError(null)
     void (async () => {
       try {
@@ -165,14 +167,12 @@ export default function ClientOrders() {
         if (!cancelled) setBankDetails(data)
       } catch (e) {
         if (!cancelled) setBankError(e instanceof Error ? e.message : tr.payModalErrorGeneric)
-      } finally {
-        if (!cancelled) setBankLoading(false)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [payOrder, bankDetails, bankLoading, tr.payModalErrorGeneric])
+  }, [payOrder?.id, tr.payModalErrorGeneric])
 
   const copyPayField = useCallback(
     async (fieldId: string, value: string) => {
@@ -678,7 +678,6 @@ export default function ClientOrders() {
           order={payOrder}
           tr={tr}
           lang={lang}
-          loading={bankLoading}
           error={bankError}
           details={bankDetails}
           copiedField={copiedField}
@@ -694,7 +693,6 @@ type PayOnlineModalProps = {
   order: ClientOrderRow
   tr: ReturnType<typeof getClientOrdersTranslations>
   lang: LangCode
-  loading: boolean
   error: string | null
   details: ClientPaymentBankDetails | null
   copiedField: string | null
@@ -720,7 +718,6 @@ function PayOnlineModal({
   order,
   tr,
   lang,
-  loading,
   error,
   details,
   copiedField,

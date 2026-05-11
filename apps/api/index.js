@@ -17,6 +17,8 @@ const {
   sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
+  sendResidentialOrderProformaEmail,
+  sendServiceRequestReceivedEmail,
   isMailConfigured,
   getMailProvider,
   getMailFrom,
@@ -26,13 +28,25 @@ const {
 const { verifyGoogleIdToken, googleClientIds, idTokenAudiences } = require('./lib/google-id-token.js')
 const {
   uploadToR2,
+  downloadFromR2,
   generateKey,
   isR2Configured,
   urlToKey,
   deleteFromR2,
   ensureGuestOrderFolder,
   guestOrderDocumentKey,
+  proformaPdfKey,
+  warrantyCertificateKey,
 } = require('./lib/r2.js')
+const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
+const {
+  parseSerialFromQrPayload,
+  normalizeWarehouseSerialNumber,
+  isValidWarehouseSerialNumber,
+  deriveProducedOnFromSerial,
+  SN_INVALID_MESSAGE,
+} = require('./lib/warehouse-serial.js')
+const QRCode = require('qrcode')
 const PROFORMA_TEMPLATE_MODULE_PATH = './lib/proforma-template.js'
 function getProformaTemplateLib() {
   // Dev helper: pick up template edits instantly without API restart.
@@ -44,6 +58,18 @@ function getProformaTemplateLib() {
     }
   }
   return require(PROFORMA_TEMPLATE_MODULE_PATH)
+}
+
+const WARRANTY_CERT_TEMPLATE_MODULE_PATH = './lib/warranty-certificate-template.js'
+function getWarrantyCertificateTemplateLib() {
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      delete require.cache[require.resolve(WARRANTY_CERT_TEMPLATE_MODULE_PATH)]
+    } catch {
+      // ignore resolve/cache misses
+    }
+  }
+  return require(WARRANTY_CERT_TEMPLATE_MODULE_PATH)
 }
 
 const REFERRAL_INVITE_TEMPLATE_PATH = './templates/referral-invite-email.js'
@@ -298,6 +324,12 @@ function sanitizeGuestOrderPostal(value) {
   return s.replace(/[^\p{L}\p{N}\s\-]/gu, '').trim()
 }
 
+/** CUI / cod fiscal firmă: litere și cifre (fără spații sau punctuație). */
+function sanitizeCompanyCui(value) {
+  const s = stripControlChars(value ?? '')
+  return s.replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()
+}
+
 function clientProfileDefaultsFromRow(prev) {
   if (!prev) {
     return {
@@ -313,6 +345,12 @@ function clientProfileDefaultsFromRow(prev) {
       delCounty: null,
       delCity: null,
       delPostal: null,
+      companyName: '',
+      companyCui: '',
+      companyAddress: '',
+      companyCounty: '',
+      companyCity: '',
+      companyPostal: '',
     }
   }
   return {
@@ -328,6 +366,12 @@ function clientProfileDefaultsFromRow(prev) {
     delCounty: prev.delCounty ?? null,
     delCity: prev.delCity ?? null,
     delPostal: prev.delPostal ?? null,
+    companyName: prev.companyName ?? '',
+    companyCui: prev.companyCui ?? '',
+    companyAddress: prev.companyAddress ?? '',
+    companyCounty: prev.companyCounty ?? '',
+    companyCity: prev.companyCity ?? '',
+    companyPostal: prev.companyPostal ?? '',
   }
 }
 
@@ -1109,6 +1153,7 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: {
+        createdAt: true,
         email: true,
         password: true,
         firstName: true,
@@ -1134,6 +1179,12 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
           delCounty: profile.delCounty,
           delCity: profile.delCity,
           delPostal: profile.delPostal,
+          companyName: profile.companyName,
+          companyCui: profile.companyCui,
+          companyAddress: profile.companyAddress,
+          companyCounty: profile.companyCounty,
+          companyCity: profile.companyCity,
+          companyPostal: profile.companyPostal,
         }
       : {
           firstName: String(user.firstName || '').trim(),
@@ -1148,8 +1199,15 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
           delCounty: null,
           delCity: null,
           delPostal: null,
+          companyName: '',
+          companyCui: '',
+          companyAddress: '',
+          companyCounty: '',
+          companyCity: '',
+          companyPostal: '',
         }
     return res.json({
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : String(user.createdAt || ''),
       email: user.email,
       referralCode,
       referralInviteEmailsSent: user.referralInviteEmailsSent ?? 0,
@@ -1267,7 +1325,10 @@ app.post('/api/referral/validate-code', async (req, res) => {
 app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const body = req.body || {}
-    const section = body.section === 'personal' || body.section === 'address' ? body.section : null
+    const section =
+      body.section === 'personal' || body.section === 'address' || body.section === 'company'
+        ? body.section
+        : null
 
     const prev = await prisma.clientProfile.findUnique({ where: { userId: req.userId } })
     const base = clientProfileDefaultsFromRow(prev)
@@ -1304,6 +1365,16 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
         delCity,
         delPostal,
       }
+    } else if (section === 'company') {
+      data = {
+        ...base,
+        companyName: sanitizeGuestOrderText(body.companyName),
+        companyCui: sanitizeCompanyCui(body.companyCui),
+        companyAddress: sanitizeGuestOrderText(body.companyAddress),
+        companyCounty: sanitizeGuestOrderText(body.companyCounty),
+        companyCity: sanitizeGuestOrderText(body.companyCity),
+        companyPostal: sanitizeGuestOrderPostal(body.companyPostal),
+      }
     } else {
       const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
       const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
@@ -1321,6 +1392,12 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
         delCounty,
         delCity,
         delPostal,
+        companyName: sanitizeGuestOrderText(body.companyName),
+        companyCui: sanitizeCompanyCui(body.companyCui),
+        companyAddress: sanitizeGuestOrderText(body.companyAddress),
+        companyCounty: sanitizeGuestOrderText(body.companyCounty),
+        companyCity: sanitizeGuestOrderText(body.companyCity),
+        companyPostal: sanitizeGuestOrderPostal(body.companyPostal),
       }
     }
 
@@ -1347,6 +1424,12 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
         delCounty: profile.delCounty,
         delCity: profile.delCity,
         delPostal: profile.delPostal,
+        companyName: profile.companyName,
+        companyCui: profile.companyCui,
+        companyAddress: profile.companyAddress,
+        companyCounty: profile.companyCounty,
+        companyCity: profile.companyCity,
+        companyPostal: profile.companyPostal,
       },
     })
   } catch (err) {
@@ -1672,6 +1755,68 @@ function productCardImageUrlFromRow(p) {
   return typeof first === 'string' && first.trim() ? first.trim() : ''
 }
 
+/** Client „Produse înregistrate”: card payload din WarehouseSavedItem + Product. */
+function mapWarehouseSavedItemToClientRegisteredDto(row) {
+  const product = row?.warehouseStockUnit?.product
+  let technicalDocs = []
+  if (product?.documenteTehnice != null) {
+    const raw = product.documenteTehnice
+    const docs = Array.isArray(raw) ? raw : []
+    technicalDocs = docs
+      .filter((d) => d && typeof d === 'object' && String(d.url || '').trim())
+      .map((d) => ({
+        descriere: String(d.descriere || '').trim(),
+        url: String(d.url).trim(),
+      }))
+  }
+  return {
+    savedItemId: row.id,
+    serialNumber: row.serialNumber,
+    modelNumber: row.modelNumber,
+    warehouseIn: row.warehouseIn instanceof Date ? row.warehouseIn.toISOString() : row.warehouseIn,
+    /* URL-ul R2 nu este expus în UI — folosit doar server-side. Frontend-ul
+       primeşte un boolean ca să decidă între „Generează” şi „Descarcă”. */
+    warrantyCertificateAvailable: Boolean(row.warrantyCertificateUrl),
+    warrantyCertificateGeneratedAt:
+      row.warrantyCertificateGeneratedAt instanceof Date
+        ? row.warrantyCertificateGeneratedAt.toISOString()
+        : null,
+    product: product
+      ? {
+          id: product.id,
+          title: product.title,
+          slug: product.slug,
+          imageUrl: productCardImageUrlFromRow(product) || null,
+          documenteTehnice: technicalDocs,
+        }
+      : null,
+  }
+}
+
+function clientProfileCompleteForWarranty(profile, user) {
+  const fn = String(profile?.firstName ?? user?.firstName ?? '').trim()
+  const ln = String(profile?.lastName ?? user?.lastName ?? '').trim()
+  const addr = String(profile?.billAddress ?? '').trim()
+  return Boolean(fn && ln && addr)
+}
+
+const registeredProductInclude = {
+  warehouseStockUnit: {
+    include: {
+      product: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          cardImage: true,
+          images: true,
+          documenteTehnice: true,
+        },
+      },
+    },
+  },
+}
+
 async function enrichClientOrderListWithProductImages(rows) {
   const productIds = new Set()
   for (const o of rows) {
@@ -1730,42 +1875,172 @@ app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, 
   }
 })
 
+/**
+ * Detalii bancare pentru plata online (modal "Plătește prin Transfer bancar").
+ *
+ * Întoarce strict câmpurile sigure (nume companie + IBAN RON + bancă) folosite de UI
+ * pentru plata prin transfer. Folosim aceeași logică de selecție a contului ca proforma
+ * (`pickBankAccountByCurrency('RON')`) pentru ca datele afișate în modal să coincidă
+ * 1:1 cu cele tipărite în PDF-ul proforma.
+ */
+app.get('/api/client/payment-bank-details', authMiddleware, clientAuthMiddleware, async (_req, res) => {
+  try {
+    const company = await readCompanyDataFromDb()
+    const { pickBankAccountByCurrency: pickBank } = getProformaTemplateLib()
+    const accounts = Array.isArray(company?.bankAccounts) ? company.bankAccounts : []
+    const ronAccount = pickBank(accounts, 'RON') || accounts[0] || null
+    return res.json({
+      companyName: String(company?.name || '').trim(),
+      bankAccount: String(ronAccount?.iban || '').trim(),
+      bankName: String(ronAccount?.bankName || '').trim(),
+    })
+  } catch (err) {
+    console.error('client payment bank details:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcarea datelor bancare.' })
+  }
+})
+
+/**
+ * Întoarce JSON `{ downloadUrl, orderNumber }`. URL-ul este obiectul R2 încărcat cu
+ * `Content-Disposition: attachment; filename="..."`, ca browser-ul să descarce PDF-ul direct
+ * de la R2 (CDN-served, byte-perfect — fără riscuri de transformare în lanțul Express/CORS/compression).
+ *
+ * `?regenerate=1` forțează re-generarea chiar dacă există deja un PDF în R2.
+ */
 app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
+    if (!isR2Configured()) {
+      return res.status(503).json({
+        error: 'Generarea proformei (PDF) necesită R2. Configurează R2_BUCKET, R2_PUBLIC_URL etc.',
+      })
+    }
     const emailNorm = String(req.userEmail || '')
       .trim()
       .toLowerCase()
     const orderId = String(req.params.orderId || '').trim()
     if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
 
-    const company = await readCompanyDataFromDb()
+    /**
+     * Dev mode (`NODE_ENV !== 'production'`) regenerează implicit la fiecare cerere
+     * ca să vezi imediat schimbările din template fără a apela `?regenerate=1`.
+     * În producție se cache-uiește la URL-ul R2 din `proformaUrl` până la
+     * `?regenerate=1` explicit (sau env `BATERINO_PROFORMA_FORCE_REGENERATE=1`).
+     */
+    const forceRegenerate =
+      String(req.query.regenerate || '') === '1' ||
+      process.env.BATERINO_PROFORMA_FORCE_REGENERATE === '1' ||
+      process.env.NODE_ENV !== 'production'
+
+    const safePdfFile = (orderNumber) =>
+      `proforma-${String(orderNumber || 'comanda').replace(/[^\w.-]+/g, '_')}.pdf`
+
+    /** Apending `?t=<ms>` la URL ca să forțeze browser-ul (și CDN-ul) să nu folosească copia veche. */
+    const cacheBust = (url) => `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
+
+    const generateAndUpload = async ({ html, orderNumber }) => {
+      const pdfBuffer = await renderWarrantyPdf(html)
+      if (
+        !Buffer.isBuffer(pdfBuffer) ||
+        pdfBuffer.length < 5 ||
+        pdfBuffer.slice(0, 5).toString('latin1') !== '%PDF-'
+      ) {
+        const head = Buffer.isBuffer(pdfBuffer)
+          ? pdfBuffer.slice(0, 32).toString('latin1')
+          : typeof pdfBuffer
+        throw new Error(`PDF invalid (lipsă header %PDF-). Primii 32 octeți: ${head}`)
+      }
+      const key = proformaPdfKey(orderId, orderNumber)
+      const publicUrl = await uploadToR2(pdfBuffer, key, 'application/pdf', {
+        contentDisposition: `attachment; filename="${safePdfFile(orderNumber)}"`,
+        cacheControl: 'no-cache, max-age=0, must-revalidate',
+      })
+      return publicUrl
+    }
+
     const residential = await prisma.residentialOrder.findFirst({
       where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
       include: { lines: { orderBy: { id: 'asc' } } },
     })
-    let html
-    let orderNumber
+
     if (residential) {
       if (!PROFORMA_ALLOWED_STATUSES.has(String(residential.fulfillmentStatus || 'de_platit'))) {
         return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
       }
-      html = getProformaTemplateLib().buildResidentialOrderProformaHtml(residential, company)
-      orderNumber = residential.orderNumber
-    } else {
-      const legacy = await prisma.guestResidentialOrder.findFirst({
-        where: { id: orderId, email: emailNorm, orderSource: 'client' },
-      })
-      if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
-      if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
-        return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
+      const orderNumber = residential.orderNumber || orderId
+      let downloadUrl = !forceRegenerate && residential.proformaUrl ? String(residential.proformaUrl) : ''
+      let regenerated = false
+      if (!downloadUrl) {
+        const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
+          readCompanyDataFromDb(),
+          prisma.departmentPhone.findUnique({ where: { department: 'general' } }).catch(() => null),
+          prisma.departmentPhone.findUnique({ where: { department: 'rezidential' } }).catch(() => null),
+        ])
+        const supplierPhone =
+          String(generalPhoneRow?.phone || '').trim() ||
+          String(process.env.BATERINO_OFFICE_PHONE || '').trim()
+        const supplierSupportPhone =
+          String(residentialPhoneRow?.phone || '').trim() ||
+          String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
+        const html = await getProformaTemplateLib().buildResidentialOrderProformaHtml(residential, company, {
+          supplierPhone,
+          supplierSupportPhone,
+          proformaIssueDate: new Date(),
+        })
+        downloadUrl = await generateAndUpload({ html, orderNumber })
+        await prisma.residentialOrder.update({
+          where: { id: orderId },
+          data: { proformaUrl: downloadUrl },
+        })
+        regenerated = true
       }
-      html = getProformaTemplateLib().buildGuestOrderProformaHtml(legacy, company)
-      orderNumber = legacy.orderNumber
+      return res.json({
+        downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
+        orderNumber,
+        proformaUrl: downloadUrl,
+        regenerated,
+      })
     }
-    const safeFile = `proforma-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.html`
-    res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
-    return res.send(html)
+
+    const legacy = await prisma.guestResidentialOrder.findFirst({
+      where: { id: orderId, email: emailNorm, orderSource: 'client' },
+    })
+    if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
+    if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
+      return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
+    }
+    const orderNumber = legacy.orderNumber || orderId
+    let downloadUrl = !forceRegenerate && legacy.proformaUrl ? String(legacy.proformaUrl) : ''
+    let regenerated = false
+    if (!downloadUrl) {
+      const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
+        readCompanyDataFromDb(),
+        prisma.departmentPhone.findUnique({ where: { department: 'general' } }).catch(() => null),
+        prisma.departmentPhone.findUnique({ where: { department: 'rezidential' } }).catch(() => null),
+      ])
+      const supplierPhone =
+        String(generalPhoneRow?.phone || '').trim() ||
+        String(process.env.BATERINO_OFFICE_PHONE || '').trim()
+      const supplierSupportPhone =
+        String(residentialPhoneRow?.phone || '').trim() ||
+        String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
+      const html = await getProformaTemplateLib().buildGuestOrderProformaHtml(legacy, company, {
+        supplierPhone,
+        supplierSupportPhone,
+        proformaIssueDate: new Date(),
+      })
+      downloadUrl = await generateAndUpload({ html, orderNumber })
+      await prisma.guestResidentialOrder.update({
+        where: { id: orderId },
+        data: { proformaUrl: downloadUrl },
+      })
+      regenerated = true
+    }
+    return res.json({
+      downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
+      orderNumber,
+      proformaUrl: downloadUrl,
+      regenerated,
+    })
   } catch (err) {
     console.error('Client order proforma error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la generarea proformei.' })
@@ -1867,6 +2142,839 @@ app.post('/api/client/orders/:orderId/cancel', authMiddleware, clientAuthMiddlew
     res.status(500).json({ error: err?.message || 'Eroare.' })
   }
 })
+
+app.get('/api/client/registered-products', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const rows = await prisma.warehouseSavedItem.findMany({
+      where: { client: req.userId },
+      orderBy: { warehouseIn: 'desc' },
+      include: registeredProductInclude,
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(mapWarehouseSavedItemToClientRegisteredDto))
+  } catch (err) {
+    console.error('Client registered products list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea produselor.' })
+  }
+})
+
+app.post('/api/client/registered-products/claim', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    let serialNumber = String(body.serialNumber || '').trim()
+    const qrRaw = body.qrRaw != null ? String(body.qrRaw) : ''
+    if (!serialNumber && qrRaw) serialNumber = parseSerialFromQrPayload(qrRaw)
+    if (!serialNumber) {
+      return res.status(400).json({ error: 'Introdu numărul de serie sau scanează codul QR.' })
+    }
+
+    serialNumber = normalizeWarehouseSerialNumber(serialNumber)
+    if (!isValidWarehouseSerialNumber(serialNumber)) {
+      return res.status(400).json({ error: SN_INVALID_MESSAGE })
+    }
+
+    const userId = req.userId
+    const saved = await prisma.warehouseSavedItem.findUnique({
+      where: { serialNumber },
+      include: registeredProductInclude,
+    })
+    if (!saved) {
+      return res.status(404).json({ error: 'Acest număr de serie nu există în evidența noastră.' })
+    }
+
+    const existingClient = saved.client != null ? String(saved.client).trim() : ''
+    if (existingClient && existingClient !== userId) {
+      return res.status(409).json({ error: 'Acest produs este deja înregistrat pe alt cont.' })
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const upd = await tx.warehouseSavedItem.updateMany({
+        where: {
+          id: saved.id,
+          OR: [{ client: null }, { client: '' }, { client: userId }],
+        },
+        data: {
+          client: userId,
+          location: 'client_final',
+        },
+      })
+      if (upd.count === 0) {
+        const check = await tx.warehouseSavedItem.findUnique({
+          where: { id: saved.id },
+          select: { client: true },
+        })
+        const c = check?.client != null ? String(check.client).trim() : ''
+        if (c && c !== userId) {
+          const e = new Error('CONFLICT')
+          e.code = 'CLAIM_CONFLICT'
+          throw e
+        }
+        const e = new Error('UPDATE_FAILED')
+        e.code = 'UPDATE_FAILED'
+        throw e
+      }
+      return tx.warehouseSavedItem.findUnique({
+        where: { id: saved.id },
+        include: registeredProductInclude,
+      })
+    })
+
+    if (!updated) return res.status(500).json({ error: 'Eroare la înregistrare.' })
+    res.set('Cache-Control', 'no-store')
+    return res.json(mapWarehouseSavedItemToClientRegisteredDto(updated))
+  } catch (err) {
+    if (err?.code === 'CLAIM_CONFLICT') {
+      return res.status(409).json({ error: 'Acest produs este deja înregistrat pe alt cont.' })
+    }
+    console.error('Client claim registered product error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la înregistrare.' })
+  }
+})
+
+/* ── Service requests ──────────────────────────────────────────────────── */
+
+/** Cereri considerate „active” pentru UI client (buton „În desfășurare”). */
+const SERVICE_REQUEST_ACTIVE_STATUSES = ['open', 'in_progress']
+const SERVICE_REQUEST_VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed']
+
+/**
+ * Generează un cod cerere unic în formatul BTROS-YYYYMMDD-NNNN, unde NNNN este
+ * un batch zilnic incremental (numărul cererilor create în aceeași zi + 1).
+ * Pe eventuală coliziune (race) reîncercăm cu următorul număr disponibil.
+ */
+async function generateServiceRequestNumber() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const datePart = `${y}${m}${d}`
+  const dayStart = new Date(y, now.getMonth(), now.getDate(), 0, 0, 0, 0)
+  const dayEnd = new Date(y, now.getMonth(), now.getDate(), 23, 59, 59, 999)
+
+  let countToday = await prisma.serviceRequest.count({
+    where: { createdAt: { gte: dayStart, lte: dayEnd } },
+  })
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const seq = String(countToday + 1 + attempt).padStart(4, '0')
+    const candidate = `BTROS-${datePart}-${seq}`
+    const exists = await prisma.serviceRequest.findUnique({
+      where: { requestNumber: candidate },
+      select: { id: true },
+    })
+    if (!exists) return candidate
+  }
+  /* Fallback extrem (foarte improbabil): adăugăm timpul curent în milisec. */
+  return `BTROS-${datePart}-${Date.now().toString().slice(-4)}`
+}
+
+function mapServiceRequestRow(row) {
+  return {
+    id: row.id,
+    requestNumber: row.requestNumber,
+    accountType: row.accountType,
+    userId: row.userId,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    email: row.email,
+    phone: row.phone,
+    serialNumber: row.serialNumber,
+    modelNumber: row.modelNumber,
+    productTitle: row.productTitle,
+    savedItemId: row.savedItemId,
+    problemDescription: row.problemDescription,
+    status: row.status,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  }
+}
+
+/** Listă proprie de cereri service pentru clientul curent (folosită ca să marchăm butonul „În desfășurare” pe produsele cu cerere activă). */
+app.get('/api/client/service-requests', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId
+    const rows = await prisma.serviceRequest.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(mapServiceRequestRow))
+  } catch (err) {
+    console.error('Client service requests list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea cererilor.' })
+  }
+})
+
+/**
+ * Creare cerere service.
+ * Body: { savedItemId: string, problemDescription: string }
+ * Reguli:
+ *  - produsul trebuie să fie înregistrat pe userul curent (saved.client === userId)
+ *  - dacă există deja o cerere activă (open/in_progress) pentru acest SN al userului,
+ *    returnăm 409 cu detaliile cererii existente.
+ */
+app.post('/api/client/service-requests', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const savedItemId = String(body.savedItemId || '').trim()
+    const problemDescription = String(body.problemDescription || '').trim()
+    if (!savedItemId) return res.status(400).json({ error: 'Lipsește produsul.' })
+    if (problemDescription.length < 3) {
+      return res.status(400).json({ error: 'Te rugăm să descrii pe scurt problema.' })
+    }
+    if (problemDescription.length > 2000) {
+      return res.status(400).json({ error: 'Descrierea este prea lungă (max. 2000 caractere).' })
+    }
+
+    const userId = req.userId
+    const saved = await prisma.warehouseSavedItem.findFirst({
+      where: { id: savedItemId, client: userId },
+      include: {
+        warehouseStockUnit: {
+          include: {
+            product: { select: { id: true, title: true } },
+          },
+        },
+      },
+    })
+    if (!saved) {
+      return res.status(404).json({ error: 'Produsul nu este înregistrat pe contul tău.' })
+    }
+
+    const existingActive = await prisma.serviceRequest.findFirst({
+      where: {
+        userId,
+        serialNumber: saved.serialNumber,
+        status: { in: SERVICE_REQUEST_ACTIVE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (existingActive) {
+      return res.status(409).json({
+        error: 'Există deja o cerere de service activă pentru acest produs.',
+        code: 'service_request_already_active',
+        serviceRequest: mapServiceRequestRow(existingActive),
+      })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, phone: true },
+    })
+    const profile = await prisma.clientProfile.findUnique({ where: { userId } }).catch(() => null)
+
+    const firstName = String(profile?.firstName || user?.firstName || '').trim()
+    const lastName = String(profile?.lastName || user?.lastName || '').trim()
+    const email = String(user?.email || req.userEmail || '').trim().toLowerCase()
+    const phone = String(profile?.phone || user?.phone || '').trim()
+    const productTitle = String(saved.warehouseStockUnit?.product?.title || saved.modelNumber || '').trim()
+
+    if (!email) {
+      return res.status(400).json({ error: 'Contul tău nu are un email valid pentru notificări.' })
+    }
+
+    const requestNumber = await generateServiceRequestNumber()
+
+    const created = await prisma.serviceRequest.create({
+      data: {
+        requestNumber,
+        accountType: 'client',
+        userId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        serialNumber: saved.serialNumber,
+        modelNumber: saved.modelNumber,
+        productTitle,
+        savedItemId: saved.id,
+        problemDescription,
+        status: 'open',
+      },
+    })
+
+    /* Trimitem emailul în fundal — nu blocăm răspunsul HTTP. */
+    sendServiceRequestReceivedEmail({
+      email,
+      requestNumber: created.requestNumber,
+      firstName,
+      productTitle,
+      serialNumber: created.serialNumber,
+      modelNumber: created.modelNumber,
+      problemDescription: created.problemDescription,
+    }).catch((e) => console.error('[ServiceRequest] Email error:', e?.message || e))
+
+    res.set('Cache-Control', 'no-store')
+    return res.status(201).json(mapServiceRequestRow(created))
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Conflict la generarea numărului cererii. Reîncearcă.' })
+    }
+    console.error('Client service request create error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la trimiterea cererii.' })
+  }
+})
+
+/** Listă completă pentru pagina admin (Service). */
+app.get('/api/admin/service-requests', authMiddleware, adminAuthMiddleware, async (_req, res) => {
+  try {
+    const rows = await prisma.serviceRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(mapServiceRequestRow))
+  } catch (err) {
+    console.error('Admin service requests list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea cererilor.' })
+  }
+})
+
+/** Actualizare status cerere service (open | in_progress | resolved | closed). */
+app.patch('/api/admin/service-requests/:id/status', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    const nextStatus = String(req.body?.status || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    if (!SERVICE_REQUEST_VALID_STATUSES.includes(nextStatus)) {
+      return res.status(400).json({ error: 'Status invalid.' })
+    }
+    const updated = await prisma.serviceRequest.update({
+      where: { id },
+      data: { status: nextStatus },
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(mapServiceRequestRow(updated))
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      return res.status(404).json({ error: 'Cererea nu există.' })
+    }
+    console.error('Admin service request status error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+function extractNumericString(s) {
+  const m = String(s ?? '').match(/-?\d+(?:[.,]\d+)?/)
+  if (!m) return ''
+  return m[0].replace(',', '.')
+}
+
+function extractYears(s, fallback = 10) {
+  const m = String(s ?? '').match(/\d+/)
+  if (!m) return fallback
+  const n = parseInt(m[0], 10)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
+function joinFilled(parts, sep = ', ') {
+  return parts
+    .map((p) => String(p ?? '').trim())
+    .filter((p) => p.length > 0)
+    .join(sep)
+}
+
+function formatRoDateFromDate(d) {
+  if (!d) return ''
+  const dt = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(dt.getTime())) return ''
+  const day = String(dt.getDate()).padStart(2, '0')
+  const mo = String(dt.getMonth() + 1).padStart(2, '0')
+  const yr = dt.getFullYear()
+  return `${day}.${mo}.${yr}`
+}
+
+async function loadWarrantyCertificateData(savedItemId, userId) {
+  const saved = await prisma.warehouseSavedItem.findFirst({
+    where: { id: savedItemId, client: userId },
+    include: {
+      warehouseStockUnit: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              title: true,
+              brand: true,
+              energieNominala: true,
+              tensiuneNominala: true,
+              cicluriDescarcare: true,
+              adancimeDescarcare: true,
+              technicalSpecsModels: true,
+              garantie: true,
+            },
+          },
+        },
+      },
+    },
+  })
+  if (!saved) return { saved: null }
+  const distributorName = String(saved.distributor || '').trim()
+  const modelNumber = String(saved.modelNumber || '').trim()
+  const [user, profile, company, generalPhone, partner, productModel] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, phone: true },
+    }),
+    prisma.clientProfile.findUnique({ where: { userId } }),
+    /* Date companie (admin → Setări → Date companie). */
+    prisma.baterinoCompany
+      .findUnique({ where: { id: 'default' } })
+      .catch(() => null),
+    /* Telefon general (admin → Setări → Numere de telefon). */
+    prisma.departmentPhone
+      .findUnique({ where: { department: 'general' } })
+      .catch(() => null),
+    /* Profilul companiei distribuitoare (admin → Companii). Match
+       case-insensitive pe companyName, cu publicName ca fallback. */
+    distributorName
+      ? prisma.partner
+          .findFirst({
+            where: {
+              OR: [
+                { companyName: { equals: distributorName, mode: 'insensitive' } },
+                { publicName: { equals: distributorName, mode: 'insensitive' } },
+              ],
+            },
+            select: {
+              companyName: true,
+              publicName: true,
+              cui: true,
+              tradeRegisterNumber: true,
+              address: true,
+              companyStreet: true,
+              companyCity: true,
+              companyCounty: true,
+              companyPostalCode: true,
+              phone: true,
+              publicPhone: true,
+              user: { select: { email: true } },
+            },
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+    /* Specificațiile per modelNumber (admin → Modele produse → drawer
+       „Technical specifications”). Folosim conținutul textual ca sursă
+       primară pentru Tensiune nominală / Cicluri. */
+    modelNumber
+      ? prisma.productModel
+          .findUnique({
+            where: { modelNumber },
+            select: { technicalDescription: true },
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+  ])
+  return { saved, user, profile, company, generalPhone, partner, productModel }
+}
+
+/**
+ * Construieşte un identificator unic, stabil, pentru certificatul de garanţie.
+ * Format: `CG-{anul în care a fost adăugat itemul}-{itemNumber 5 cifre}`.
+ * Foloseşte `WarehouseSavedItem.itemNumber` (autoincrement, unic) → garantăm
+ * unicitatea fără tabele suplimentare. Anul se ia din `createdAt` pentru
+ * stabilitate (numărul nu se schimbă la regenerare).
+ */
+function buildCertNumber(saved) {
+  const created = saved?.createdAt instanceof Date ? saved.createdAt : new Date()
+  const year = String(created.getFullYear())
+  const num = Number(saved?.itemNumber)
+  const seq = Number.isFinite(num) && num > 0 ? String(num).padStart(5, '0') : '00000'
+  return `CG-${year}-${seq}`
+}
+
+/**
+ * Parsează `ProductModel.technicalDescription` (text plain `Etichetă: valoare`,
+ * o linie per câmp) într-un Map cu cheile normalizate (lowercase, fără
+ * diacritice). Liniile fără `:` sunt ignorate (header-e tip „Model-specific:”).
+ * Suportă atât etichete EN (ex. „Nominal Voltage”, „Cycle life”) cât şi RO
+ * (ex. „Tensiune nominală”, „Cicluri”).
+ */
+function parseProductModelDescription(text) {
+  const map = new Map()
+  if (!text) return map
+  const lines = String(text).split(/\r?\n/)
+  for (const line of lines) {
+    const idx = line.indexOf(':')
+    if (idx <= 0) continue
+    const label = line.slice(0, idx).trim()
+    const value = line.slice(idx + 1).trim()
+    if (!label || !value) continue
+    /* Normalizăm cheia: lowercase + fără diacritice românești. */
+    const norm = label
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    map.set(norm, value)
+  }
+  return map
+}
+
+/**
+ * Întoarce prima valoare găsită în `descMap` pentru oricare dintre etichetele
+ * date (deja normalizate). Util pentru a accepta şi etichete EN, şi RO.
+ */
+function pickFromDescMap(descMap, labels) {
+  for (const l of labels) {
+    const v = descMap.get(l)
+    if (v) return v
+  }
+  return ''
+}
+
+/**
+ * Caută în `Product.technicalSpecsModels` (industrial) intrarea care corespunde
+ * `modelNumber` şi întoarce obiectul de specs (ex. `{ nominalVoltage, cycleLife, ... }`).
+ * Returnează `null` dacă nu există entry pentru modelul respectiv.
+ */
+function findModelSpecs(product, modelNumber) {
+  const tsm = product?.technicalSpecsModels
+  if (!tsm || typeof tsm !== 'object') return null
+  const entries = Array.isArray(tsm.entries) ? tsm.entries : []
+  if (entries.length === 0) return null
+  const target = String(modelNumber || '').trim().toLowerCase()
+  if (!target) return null
+  const match = entries.find(
+    (e) => String(e?.modelName || '').trim().toLowerCase() === target,
+  )
+  return match?.specs || null
+}
+
+function buildWarrantyCertificateValues({
+  saved,
+  user,
+  profile,
+  company,
+  generalPhone,
+  partner,
+  productModel,
+}) {
+  const product = saved.warehouseStockUnit?.product || {}
+  const modelSpecs = findModelSpecs(product, saved.modelNumber)
+  /* Specs din `ProductModel.technicalDescription` (admin → Modele produse). */
+  const modelDesc = parseProductModelDescription(productModel?.technicalDescription)
+
+  const utilizatorNume =
+    joinFilled(
+      [
+        String(profile?.firstName ?? user?.firstName ?? '').trim(),
+        String(profile?.lastName ?? user?.lastName ?? '').trim(),
+      ],
+      ' ',
+    ) || '—'
+
+  const utilizatorAdresa =
+    joinFilled([
+      profile?.delAddress || profile?.billAddress,
+      profile?.delCity || profile?.billCity,
+      profile?.delCounty || profile?.billCounty,
+      profile?.delPostal || profile?.billPostal,
+    ]) || '—'
+
+  const utilizatorTelefon =
+    joinFilled([profile?.phone || user?.phone, user?.email], ' · ') || '—'
+
+  const periodaAni = extractYears(product.garantie, 10)
+  const periodaLuni = periodaAni * 12
+
+  /* Tensiune: preferăm specs per modelNumber. Surse, în ordine:
+     1) ProductModel.technicalDescription → "Nominal Voltage" / "Tensiune nominală"
+     2) Product.technicalSpecsModels (industrial multi-model) → nominalVoltage
+     3) Product.tensiuneNominala (câmp legacy pe Product). */
+  const tensiuneRaw = String(
+    pickFromDescMap(modelDesc, ['nominal voltage', 'tensiune nominala']) ||
+      modelSpecs?.nominalVoltage ||
+      product.tensiuneNominala ||
+      '',
+  ).trim()
+  const tensiune = extractNumericString(tensiuneRaw) || '—'
+
+  /* Cicluri / „Garanție capacitate”: preferăm specs per modelNumber. Surse:
+     1) ProductModel.technicalDescription → "Cycle life" / "Cicluri"
+     2) Product.technicalSpecsModels → cycleLife
+     3) Product.cicluriDescarcare. Dacă valoarea e doar număr (ex. „8000 Times”
+     sau „8000 Cicluri”), o normalizăm la formatul de certificat. */
+  const cicluriRaw = String(
+    pickFromDescMap(modelDesc, ['cycle life', 'cicluri', 'cicluri descarcare']) ||
+      modelSpecs?.cycleLife ||
+      product.cicluriDescarcare ||
+      '',
+  ).trim()
+  const cicluriNum = cicluriRaw ? extractNumericString(cicluriRaw) : ''
+  const cicluri = cicluriNum
+    ? `≥ ${cicluriNum} cicluri la ≥ 80% capacitate`
+    : cicluriRaw || '≥ 8000 cicluri la ≥ 80% capacitate'
+
+  /* Furnizor / Importator: din admin → Setări → Date companie + Numere de telefon (general). */
+  const furnizorNume = String(company?.name || '').trim() || 'Baterino SRL'
+  const furnizorCui = String(company?.cui || '').trim() || '—'
+  const furnizorAdresa =
+    String(company?.address || '')
+      .replace(/\s*\r?\n\s*/g, ', ')
+      .replace(/,\s*,/g, ',')
+      .trim() || '—'
+  const furnizorTelefon = String(generalPhone?.phone || '').trim() || '—'
+
+  /* Beneficiar (distribuitor): preluat din profilul Partner asociat numelui
+     setat la unitate (admin → Companii). Dacă nu există match, păstrăm doar
+     denumirea brută. */
+  const beneficiarNume =
+    String(partner?.companyName || partner?.publicName || saved.distributor || '').trim() || '—'
+  const beneficiarCui =
+    joinFilled(
+      [
+        String(partner?.cui || '').trim(),
+        String(partner?.tradeRegisterNumber || '').trim(),
+      ],
+      ' · ',
+    ) || '—'
+  const beneficiarAdresa =
+    (() => {
+      if (!partner) return '—'
+      const composed = joinFilled([
+        partner.companyStreet,
+        partner.companyCity,
+        partner.companyCounty,
+        partner.companyPostalCode,
+      ])
+      if (composed) return composed
+      return String(partner.address || '').trim() || '—'
+    })()
+  const beneficiarTelefon =
+    joinFilled(
+      [
+        String(partner?.phone || partner?.publicPhone || '').trim(),
+        String(partner?.user?.email || '').trim(),
+      ],
+      ' · ',
+    ) || '—'
+
+  return {
+    BRAND: String(product.brand || 'Baterino').trim() || 'Baterino',
+    CAPACITATE: extractNumericString(product.energieNominala) || '—',
+    SERIAL_NUMBER: String(saved.serialNumber || '').trim() || '—',
+    MODEL_COD: String(saved.modelNumber || '').trim() || '—',
+    TENSIUNE: tensiune,
+    DATA_FABRICATIEI: String(saved.producedOn || '').trim() || '—',
+    DATA_VANZARII: formatRoDateFromDate(saved.updatedAt || saved.createdAt) || '—',
+    FURNIZOR_NUME: furnizorNume,
+    FURNIZOR_CUI: furnizorCui,
+    FURNIZOR_ADRESA: furnizorAdresa,
+    FURNIZOR_TELEFON: furnizorTelefon,
+    FURNIZOR_WEB: 'baterino.ro',
+    BENEFICIAR_NUME: beneficiarNume,
+    BENEFICIAR_CUI: beneficiarCui,
+    BENEFICIAR_ADRESA: beneficiarAdresa,
+    BENEFICIAR_TELEFON: beneficiarTelefon,
+    UTILIZATOR_NUME: utilizatorNume,
+    UTILIZATOR_CNP_CUI: '—',
+    UTILIZATOR_ADRESA: utilizatorAdresa,
+    UTILIZATOR_TELEFON: utilizatorTelefon,
+    PERIOADA: String(periodaAni),
+    PERIOADA_LUNI: String(periodaLuni),
+    CICLURI: cicluri,
+    REPREZENTANT_NUME: String(company?.representativeName || '').trim() || '—',
+    BENEFICIAR_SEMNATAR: utilizatorNume,
+    CERT_NUMBER: buildCertNumber(saved),
+  }
+}
+
+app.post(
+  '/api/client/registered-products/:savedItemId/warranty-certificate',
+  authMiddleware,
+  clientAuthMiddleware,
+  async (req, res) => {
+    try {
+      const savedItemId = String(req.params.savedItemId || '').trim()
+      if (!savedItemId) return res.status(400).json({ error: 'ID lipsă.' })
+
+      const { saved, user, profile, company, generalPhone, partner, productModel } =
+        await loadWarrantyCertificateData(savedItemId, req.userId)
+      if (!saved) {
+        return res.status(404).json({ error: 'Produs negăsit sau nu îți aparține.' })
+      }
+      if (!clientProfileCompleteForWarranty(profile, user)) {
+        return res.status(400).json({
+          code: 'profile_incomplete',
+          error:
+            'Completează numele, prenumele și adresa de facturare din setări pentru a genera certificatul de garanție.',
+          fields: ['firstName', 'lastName', 'billAddress'],
+        })
+      }
+
+      const tplLib = getWarrantyCertificateTemplateLib()
+      const values = buildWarrantyCertificateValues({
+        saved,
+        user,
+        profile,
+        company,
+        generalPhone,
+        partner,
+        productModel,
+      })
+
+      /* Pentru logo folosim un URL absolut (HTML-ul se deschide în browser).
+         În dev preferăm originul cererii (Origin/Referer) ca să nu depindem de
+         setarea FRONTEND_URL şi să meargă out-of-the-box pe orice port Vite. */
+      const requestOrigin = (() => {
+        const o = String(req.headers.origin || '').trim()
+        if (o) return o.replace(/\/$/, '')
+        const ref = String(req.headers.referer || '').trim()
+        if (ref) {
+          try {
+            const u = new URL(ref)
+            return `${u.protocol}//${u.host}`
+          } catch {
+            /* ignore */
+          }
+        }
+        return ''
+      })()
+      values.LOGO_URL = requestOrigin
+        ? `${requestOrigin}/images/shared/baterino-logo-black.svg`
+        : tplLib.defaultWarrantyLogoUrl()
+
+      /* QR code: link către pagina publică de verificare garanție, cu SN-ul
+         pre-completat în query string. Deep-link util când codul e scanat. */
+      const verifyBase = requestOrigin || 'https://baterino.ro'
+      const verifyUrl = `${verifyBase}/verificare-garantie?sn=${encodeURIComponent(
+        values.SERIAL_NUMBER || '',
+      )}`
+      try {
+        values.QR_DATA_URL = await QRCode.toDataURL(verifyUrl, {
+          errorCorrectionLevel: 'M',
+          margin: 1,
+          width: 300,
+          color: { dark: '#0e0e0e', light: '#ffffff' },
+        })
+      } catch (qrErr) {
+        console.error('Warranty QR generation failed:', qrErr)
+        values.QR_DATA_URL = ''
+      }
+
+      const html = tplLib.buildWarrantyCertificateHtml(values)
+
+      const safeSn = String(saved.serialNumber || 'certificat').replace(/[^\w.-]+/g, '_')
+
+      /* Generăm PDF-ul real (Puppeteer) şi îl arhivăm în R2 (privat, accesat
+         doar prin endpoint-ul autentificat de download). Pe medii dev fără
+         R2, păstrăm comportamentul vechi: răspundem cu HTML inline. */
+      if (isR2Configured()) {
+        try {
+          const pdfBuffer = await renderWarrantyPdf(html)
+          const key = warrantyCertificateKey(saved.id, saved.serialNumber)
+          /* Dacă există un fişier vechi salvat la o cheie diferită (ex. format
+             SN-based din versiunile anterioare), îl ştergem ca să nu rămână
+             expus. */
+          const previousUrl = saved.warrantyCertificateUrl
+          if (previousUrl) {
+            const previousKey = urlToKey(previousUrl)
+            if (previousKey && previousKey !== key) {
+              await deleteFromR2(previousKey).catch((e) =>
+                console.warn('Old warranty cert delete failed:', e?.message || e),
+              )
+            }
+          }
+          /* Upload (suprascrie dacă există deja la aceeaşi cheie). URL-ul nu
+             este expus clientului — îl folosim doar intern pentru a regăsi
+             cheia obiectului la următorul download. */
+          const internalUrl = await uploadToR2(pdfBuffer, key, 'application/pdf')
+          await prisma.warehouseSavedItem.update({
+            where: { id: saved.id },
+            data: {
+              warrantyCertificateUrl: internalUrl,
+              warrantyCertificateGeneratedAt: new Date(),
+            },
+          })
+          /* Răspundem cu PDF-ul direct (force download). Browser-ul va salva
+             fişierul pe disc; nu mai expunem niciun URL public. */
+          res.setHeader('Content-Type', 'application/pdf')
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${safeSn}.pdf"`,
+          )
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+          res.setHeader('X-Content-Type-Options', 'nosniff')
+          return res.send(pdfBuffer)
+        } catch (pdfErr) {
+          console.error('Warranty PDF generation/upload failed:', pdfErr)
+          return res.status(500).json({
+            error: 'Generarea PDF-ului certificatului a eșuat. Încearcă din nou.',
+          })
+        }
+      }
+
+      /* Fallback (dev fără R2): răspundem cu HTML ca până acum. */
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="certificat-garantie-${safeSn}.html"`,
+      )
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+      return res.send(html)
+    } catch (err) {
+      console.error('Client warranty certificate error:', err)
+      return res.status(500).json({ error: err?.message || 'Eroare.' })
+    }
+  },
+)
+
+/**
+ * Download certificat existent: stream privat din R2.
+ * URL-ul R2 nu este niciodată expus în UI. Singurul mod de a obţine PDF-ul
+ * este prin acest endpoint, care:
+ *   - cere auth (`authMiddleware` + `clientAuthMiddleware`),
+ *   - verifică ownership-ul (item-ul aparţine user-ului curent),
+ *   - streamează PDF-ul cu `Content-Disposition: attachment` (forţează
+ *     download, nu permite preview inline într-un tab partajabil).
+ */
+app.get(
+  '/api/client/registered-products/:savedItemId/warranty-certificate/download',
+  authMiddleware,
+  clientAuthMiddleware,
+  async (req, res) => {
+    try {
+      const savedItemId = String(req.params.savedItemId || '').trim()
+      if (!savedItemId) return res.status(400).json({ error: 'ID lipsă.' })
+      const saved = await prisma.warehouseSavedItem.findFirst({
+        where: { id: savedItemId, client: req.userId },
+        select: {
+          id: true,
+          serialNumber: true,
+          warrantyCertificateUrl: true,
+        },
+      })
+      if (!saved) {
+        return res.status(404).json({ error: 'Produs negăsit sau nu îți aparține.' })
+      }
+      if (!saved.warrantyCertificateUrl) {
+        return res.status(404).json({
+          code: 'no_certificate',
+          error: 'Nu există încă un certificat generat pentru acest produs.',
+        })
+      }
+      const key = urlToKey(saved.warrantyCertificateUrl)
+      if (!key) {
+        return res.status(500).json({ error: 'Stocare certificat indisponibilă.' })
+      }
+      let buffer
+      try {
+        buffer = await downloadFromR2(key)
+      } catch (e) {
+        console.error('Warranty certificate R2 download failed:', e)
+        return res.status(500).json({ error: 'Nu am putut descărca certificatul.' })
+      }
+      const safeSn = String(saved.serialNumber || 'certificat').replace(/[^\w.-]+/g, '_')
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeSn}.pdf"`)
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+      res.setHeader('X-Content-Type-Options', 'nosniff')
+      res.setHeader('Content-Length', String(buffer.length))
+      return res.send(buffer)
+    } catch (err) {
+      console.error('Client warranty certificate download error:', err)
+      return res.status(500).json({ error: err?.message || 'Eroare.' })
+    }
+  },
+)
 
 /** Înscriere partener completă: activități + nume contact + telefon (pasul „profil public”). */
 function isPartnerSignupApplicationComplete(partner) {
@@ -2171,7 +3279,7 @@ async function proformaPreviewHandler(req, res) {
   }
   try {
     const company = await readCompanyDataFromDb()
-    const html = getProformaTemplateLib().buildSampleProformaPreviewHtml(company)
+    const html = await getProformaTemplateLib().buildSampleProformaPreviewHtml(company)
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
     res.setHeader('Pragma', 'no-cache')
@@ -2331,6 +3439,12 @@ const adminClientsHandler = async (req, res) => {
             delCounty: true,
             delCity: true,
             delPostal: true,
+            companyName: true,
+            companyCui: true,
+            companyAddress: true,
+            companyCounty: true,
+            companyCity: true,
+            companyPostal: true,
           },
         },
         _count: { select: { residentialOrders: true } },
@@ -2683,6 +3797,7 @@ const DEFAULT_COMPANY_DATA = {
   name: 'Baterino SRL',
   cui: '',
   address: '',
+  representativeName: '',
   bankAccounts: [],
 }
 
@@ -2709,6 +3824,7 @@ function normalizeCompanyDataPayload(body) {
   const name = String(body?.name ?? '').trim()
   const cui = String(body?.cui ?? '').trim()
   const address = String(body?.address ?? '').trim()
+  const representativeName = String(body?.representativeName ?? '').trim()
   const rawList = Array.isArray(body?.bankAccounts) ? body.bankAccounts : []
   const bankAccounts = []
   for (const a of rawList.slice(0, MAX_COMPANY_BANK_ACCOUNTS)) {
@@ -2721,7 +3837,7 @@ function normalizeCompanyDataPayload(body) {
       accountName: String(a?.accountName ?? '').trim(),
     })
   }
-  return { name, cui, address, bankAccounts }
+  return { name, cui, address, representativeName, bankAccounts }
 }
 
 async function readCompanyDataFromLegacySetting() {
@@ -2777,11 +3893,13 @@ async function migrateCompanyDataFromSiteSettingIfNeeded() {
         name: data.name || 'Baterino SRL',
         cui: data.cui,
         address: data.address,
+        representativeName: data.representativeName || '',
       },
       update: {
         name: data.name || 'Baterino SRL',
         cui: data.cui,
         address: data.address,
+        representativeName: data.representativeName || '',
       },
     })
     await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
@@ -2809,6 +3927,7 @@ function companyToApiShape(company) {
     name: company.name,
     cui: company.cui,
     address: company.address,
+    representativeName: company.representativeName ?? '',
     bankAccounts: company.bankAccounts.map((b) => ({
       id: b.id,
       bankName: b.bankName,
@@ -2864,11 +3983,13 @@ const putAdminCompanyDataHandler = async (req, res) => {
               name: data.name || 'Baterino SRL',
               cui: data.cui,
               address: data.address,
+              representativeName: data.representativeName || '',
             },
             update: {
               name: data.name,
               cui: data.cui,
               address: data.address,
+              representativeName: data.representativeName || '',
             },
           })
           await tx.companyBankAccount.deleteMany({ where: { companyId: COMPANY_ID } })
@@ -3516,6 +4637,115 @@ app.post('/api/inquiries', async (req, res) => {
   }
 })
 
+/**
+ * După plasarea unei comenzi rezidențiale: generează proforma PDF, o salvează în R2
+ * (pentru reutilizare în „cont/comenzi”) și trimite confirmarea pe email cu PDF atașat.
+ *
+ * Rulează în fundal; nu blocăm răspunsul HTTP. Erorile sunt doar logate.
+ *
+ * @param {{ id: string, orderNumber: string, email: string, lines: Array<any> } & Record<string, any>} order
+ */
+async function dispatchOrderProformaEmail(order) {
+  if (!order || !order.email) return
+  try {
+    const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
+      readCompanyDataFromDb(),
+      prisma.departmentPhone.findUnique({ where: { department: 'general' } }).catch(() => null),
+      prisma.departmentPhone.findUnique({ where: { department: 'rezidential' } }).catch(() => null),
+    ])
+    const supplierPhone =
+      String(generalPhoneRow?.phone || '').trim() ||
+      String(process.env.BATERINO_OFFICE_PHONE || '').trim()
+    const supplierSupportPhone =
+      String(residentialPhoneRow?.phone || '').trim() ||
+      String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
+
+    const issueDate = new Date()
+    const proformaLib = getProformaTemplateLib()
+    const html = await proformaLib.buildResidentialOrderProformaHtml(order, company, {
+      supplierPhone,
+      supplierSupportPhone,
+      proformaIssueDate: issueDate,
+    })
+
+    const pdfBuffer = await renderWarrantyPdf(html)
+    if (
+      !Buffer.isBuffer(pdfBuffer) ||
+      pdfBuffer.length < 5 ||
+      pdfBuffer.slice(0, 5).toString('latin1') !== '%PDF-'
+    ) {
+      throw new Error('Proforma PDF invalidă (lipsă header %PDF-).')
+    }
+
+    const safeNum = String(order.orderNumber || 'comanda').replace(/[^\w.-]+/g, '_')
+    const pdfFilename = `proforma-${safeNum}.pdf`
+
+    // Best-effort upload în R2 (dacă e configurat) — nu blocăm trimiterea emailului dacă eșuează.
+    let proformaUrl = ''
+    if (isR2Configured()) {
+      try {
+        const key = proformaPdfKey(order.id, order.orderNumber)
+        proformaUrl = await uploadToR2(pdfBuffer, key, 'application/pdf', {
+          contentDisposition: `attachment; filename="${pdfFilename}"`,
+          cacheControl: 'no-cache, max-age=0, must-revalidate',
+        })
+        await prisma.residentialOrder
+          .update({ where: { id: order.id }, data: { proformaUrl } })
+          .catch((e) => console.error('[GuestOrder] proformaUrl persist error:', e?.message || e))
+      } catch (e) {
+        console.error('[GuestOrder] Proforma R2 upload error:', e?.message || e)
+      }
+    }
+
+    const accounts = Array.isArray(company?.bankAccounts) ? company.bankAccounts : []
+    const ronAccount = proformaLib.pickBankAccountByCurrency(accounts, 'RON') || accounts[0] || null
+    const supplierCui = company?.cui
+      ? `RO${String(company.cui).replace(/^RO/i, '').trim()}`
+      : ''
+
+    const linesArr = Array.isArray(order.lines) ? order.lines : []
+    const totalIncl = linesArr.reduce(
+      (s, L) => s + (Number(L.lineTotalInclVat) || Number(L.unitPriceInclVat) * Number(L.quantity) || 0),
+      0,
+    )
+
+    const { paymentDueStr } = proformaLib.proformaIssueAndPaymentDueStrings
+      ? proformaLib.proformaIssueAndPaymentDueStrings(issueDate)
+      : (() => {
+          const due = new Date(issueDate)
+          due.setDate(due.getDate() + 30)
+          const dd = String(due.getDate()).padStart(2, '0')
+          const mm = String(due.getMonth() + 1).padStart(2, '0')
+          return { paymentDueStr: `${dd}/${mm}/${due.getFullYear()}` }
+        })()
+
+    await sendResidentialOrderProformaEmail({
+      to: order.email,
+      order,
+      lines: linesArr,
+      currency: order.currency || 'RON',
+      supplier: {
+        name: String(company?.name || '').trim(),
+        cui: supplierCui,
+        ibanRon: String(ronAccount?.iban || '').trim(),
+        bankName: String(ronAccount?.bankName || '').trim(),
+      },
+      payment: {
+        reference: order.orderNumber || '',
+        paymentDueStr: paymentDueStr || '',
+      },
+      totalIncl,
+      pdfBuffer,
+      pdfFilename,
+    })
+  } catch (err) {
+    console.error('[GuestOrder] dispatchOrderProformaEmail error:', err?.message || err)
+  }
+}
+
+// `proformaIssueAndPaymentDueStrings` nu este exportat de modulul template; folosim un fallback local.
+// (helperul de mai sus încearcă întâi metoda exportată dacă apare în viitor.)
+
 // ── Public: guest residential checkout — persist order (track by orderNumber + email) ──
 // Acceptă `items: [{ productIdOrSlug, quantity }]` (coș) sau câmpurile vechi produs unic.
 app.post('/api/guest-residential-orders', async (req, res) => {
@@ -3530,15 +4760,39 @@ app.post('/api/guest-residential-orders', async (req, res) => {
     const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
     const lastName = sanitizeGuestOrderPersonName(body.nume ?? body.lastName)
     const firstName = sanitizeGuestOrderPersonName(body.prenume ?? body.firstName)
-    const billAddress = sanitizeGuestOrderText(body.billAddress)
-    const billCounty = sanitizeGuestOrderText(body.billCounty)
-    const billCity = sanitizeGuestOrderText(body.billCity)
-    const billPostal = sanitizeGuestOrderPostal(body.billPostal)
-    const deliveryDifferent = Boolean(body.differentDeliveryAddress ?? body.deliveryDifferent)
+    const buyerType = body.buyerType === 'company' ? 'company' : 'person'
+    const companyName = buyerType === 'company' ? sanitizeGuestOrderText(body.companyName) : ''
+    const companyCui = buyerType === 'company' ? sanitizeCompanyCui(body.companyCui) : ''
+    const companyAddress = buyerType === 'company' ? sanitizeGuestOrderText(body.companyAddress) : ''
+    const companyCounty = buyerType === 'company' ? sanitizeGuestOrderText(body.companyCounty) : ''
+    const companyCity = buyerType === 'company' ? sanitizeGuestOrderText(body.companyCity) : ''
+    const companyPostal = buyerType === 'company' ? sanitizeGuestOrderPostal(body.companyPostal) : ''
+    // Pasul 3 din checkout: pentru PF este adresa de livrare/facturare, pentru PJ este STRICT adresa de livrare.
+    const inputAddress = sanitizeGuestOrderText(body.billAddress)
+    const inputCounty = sanitizeGuestOrderText(body.billCounty)
+    const inputCity = sanitizeGuestOrderText(body.billCity)
+    const inputPostal = sanitizeGuestOrderPostal(body.billPostal)
+    let billAddress = inputAddress
+    let billCounty = inputCounty
+    let billCity = inputCity
+    let billPostal = inputPostal
+    let deliveryDifferent = Boolean(body.differentDeliveryAddress ?? body.deliveryDifferent)
     let delAddress = body.delAddress != null ? sanitizeGuestOrderText(body.delAddress) : ''
     let delCounty = body.delCounty != null ? sanitizeGuestOrderText(body.delCounty) : ''
     let delCity = body.delCity != null ? sanitizeGuestOrderText(body.delCity) : ''
     let delPostal = body.delPostal != null ? sanitizeGuestOrderPostal(body.delPostal) : ''
+    if (buyerType === 'company') {
+      // Factură pe firmă: bill* = sediul/punctul de facturare (=companyAddress), del* = adresa Pas 3.
+      billAddress = companyAddress
+      billCounty = companyCounty
+      billCity = companyCity
+      billPostal = companyPostal
+      delAddress = inputAddress
+      delCounty = inputCounty
+      delCity = inputCity
+      delPostal = inputPostal
+      deliveryDifferent = true
+    }
 
     const parsedItems = normalizeCheckoutItems(body)
     if (parsedItems.length === 0) {
@@ -3567,18 +4821,27 @@ app.post('/api/guest-residential-orders', async (req, res) => {
     if (!lastName || !firstName) {
       return res.status(400).json({ error: 'Nume și prenume sunt obligatorii.' })
     }
-    if (!billAddress || !billCounty || !billCity || !billPostal) {
-      return res.status(400).json({ error: 'Adresa de facturare este incompletă.' })
-    }
-    if (deliveryDifferent) {
+    if (buyerType === 'company') {
+      if (!companyName || !companyCui || !companyAddress || !companyCounty || !companyCity || !companyPostal) {
+        return res.status(400).json({ error: 'Datele firmei sunt incomplete.' })
+      }
       if (!delAddress || !delCounty || !delCity || !delPostal) {
         return res.status(400).json({ error: 'Adresa de livrare este incompletă.' })
       }
     } else {
-      delAddress = null
-      delCounty = null
-      delCity = null
-      delPostal = null
+      if (!billAddress || !billCounty || !billCity || !billPostal) {
+        return res.status(400).json({ error: 'Adresa de facturare este incompletă.' })
+      }
+      if (deliveryDifferent) {
+        if (!delAddress || !delCounty || !delCity || !delPostal) {
+          return res.status(400).json({ error: 'Adresa de livrare este incompletă.' })
+        }
+      } else {
+        delAddress = null
+        delCounty = null
+        delCity = null
+        delPostal = null
+      }
     }
 
     const linePayloads = []
@@ -3645,6 +4908,13 @@ app.post('/api/guest-residential-orders', async (req, res) => {
           delCounty,
           delCity,
           delPostal,
+          buyerType,
+          companyName: buyerType === 'company' ? companyName : null,
+          companyCui: buyerType === 'company' ? companyCui : null,
+          companyAddress: buyerType === 'company' ? companyAddress : null,
+          companyCounty: buyerType === 'company' ? companyCounty : null,
+          companyCity: buyerType === 'company' ? companyCity : null,
+          companyPostal: buyerType === 'company' ? companyPostal : null,
           currency,
           lines: {
             create: linePayloads.map((L) => ({
@@ -3658,6 +4928,7 @@ app.post('/api/guest-residential-orders', async (req, res) => {
             })),
           },
         },
+        include: { lines: { orderBy: { id: 'asc' } } },
       })
       return order
     })
@@ -3667,6 +4938,11 @@ app.post('/api/guest-residential-orders', async (req, res) => {
         console.error('[GuestOrder] R2 orders folder error:', e?.message || e),
       )
     }
+
+    // Generează proforma + trimite emailul în fundal — fără să blocheze răspunsul HTTP.
+    dispatchOrderProformaEmail(createdOrder).catch((e) =>
+      console.error('[GuestOrder] Proforma email dispatch error:', e?.message || e),
+    )
 
     return res.status(201).json({
       orderNumber,
@@ -4091,64 +5367,6 @@ const deleteProductHandler = async (req, res) => {
 app.delete('/api/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
 app.delete('/admin/products/:id', authMiddleware, adminAuthMiddleware, deleteProductHandler)
 
-/** Extrage numărul de serie din textul QR (SN:…, JSON, URL ?sn=) sau întreg conținutul. */
-function parseSerialFromQrPayload(raw) {
-  const s = String(raw ?? '').trim()
-  if (!s) return ''
-  const prefixed = /^SN:\s*(.+)$/i.exec(s)
-  if (prefixed) return prefixed[1].trim().slice(0, 512)
-  if (s.startsWith('{')) {
-    try {
-      const j = JSON.parse(s)
-      const sn = j.SN ?? j.sn ?? j.serialNumber ?? j.serial
-      if (typeof sn === 'string' && sn.trim()) return sn.trim().slice(0, 512)
-    } catch {
-      // ignore
-    }
-  }
-  try {
-    const u = new URL(s)
-    const q = u.searchParams.get('SN') || u.searchParams.get('sn')
-    if (q && q.trim()) return q.trim().slice(0, 512)
-  } catch {
-    // not a URL
-  }
-  return s.slice(0, 512)
-}
-
-const WAREHOUSE_SN_FACTORY_PREFIX = 'LJC'
-const WAREHOUSE_SN_BODY_DIGITS = 16
-
-function normalizeWarehouseSerialNumber(raw) {
-  let t = String(raw ?? '')
-    .replace(/\s/g, '')
-    .toUpperCase()
-  if (!t) return ''
-  if (t.startsWith(WAREHOUSE_SN_FACTORY_PREFIX)) {
-    return WAREHOUSE_SN_FACTORY_PREFIX + t.slice(WAREHOUSE_SN_FACTORY_PREFIX.length).replace(/\s/g, '')
-  }
-  return `${WAREHOUSE_SN_FACTORY_PREFIX}${t}`
-}
-
-function isValidWarehouseSerialNumber(serial) {
-  return new RegExp(`^${WAREHOUSE_SN_FACTORY_PREFIX}\\d{${WAREHOUSE_SN_BODY_DIGITS}}$`).test(String(serial ?? ''))
-}
-
-/** 16 cifre după LJC: tensiune (2) · capacitate (4) · lună/an MMYY (4) · lot (6). Ex. 5131400325070043 → 03/2025. */
-function deriveProducedOnFromSerial(serialNumber) {
-  let digits = String(serialNumber ?? '').replace(/\D/g, '')
-  if (digits.length > WAREHOUSE_SN_BODY_DIGITS) {
-    digits = digits.slice(-WAREHOUSE_SN_BODY_DIGITS)
-  }
-  if (digits.length < WAREHOUSE_SN_BODY_DIGITS) return ''
-  const month = digits.slice(6, 8)
-  const year = digits.slice(8, 10)
-  if (!/^\d{2}$/.test(month) || !/^\d{2}$/.test(year)) return ''
-  const m = parseInt(month, 10)
-  if (m < 1 || m > 12) return ''
-  return `${month}/20${year}`
-}
-
 function warehouseStockUnitToJson(row) {
   if (!row) return row
   return {
@@ -4186,6 +5404,13 @@ function warehouseSavedItemToJson(row) {
     location: row.location || 'depozit',
     distributor: row.distributor || null,
     client: row.client || null,
+    /* Status certificat de garanţie client (afişat în „Garanţie client” din admin Stocuri). */
+    warrantyCertificateAvailable: Boolean(row.warrantyCertificateUrl),
+    warrantyCertificateGeneratedAt:
+      row.warrantyCertificateGeneratedAt instanceof Date
+        ? row.warrantyCertificateGeneratedAt.toISOString()
+        : null,
+    warrantyCertificateNumber: row.warrantyCertificateUrl ? buildCertNumber(row) : null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   }
@@ -4214,8 +5439,35 @@ const listWarehouseSavedItemsHandler = async (req, res) => {
       orderBy: { warehouseIn: 'desc' },
       take,
     })
+    const clientIds = [
+      ...new Set(
+        rows.map((r) => String(r.client || '').trim()).filter(Boolean),
+      ),
+    ]
+    const users =
+      clientIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: clientIds } },
+            select: { id: true, email: true, firstName: true, lastName: true },
+          })
+        : []
+    const userById = new Map(users.map((u) => [u.id, u]))
     res.set('Cache-Control', 'no-store')
-    return res.json(rows.map(warehouseSavedItemToJson))
+    return res.json(
+      rows.map((row) => {
+        const o = warehouseSavedItemToJson(row)
+        const cid = String(row.client || '').trim()
+        if (cid && userById.has(cid)) {
+          const u = userById.get(cid)
+          o.clientAccount = {
+            email: u.email,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+          }
+        }
+        return o
+      }),
+    )
   } catch (err) {
     console.error('List warehouse saved items error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcarea listei de stocuri.' })
@@ -4256,10 +5508,7 @@ const createWarehouseStockUnitHandler = async (req, res) => {
 
     serialNumber = normalizeWarehouseSerialNumber(serialNumber)
     if (!isValidWarehouseSerialNumber(serialNumber)) {
-      return res.status(400).json({
-        error:
-          'SN invalid. Format: LJC (fabrică) + 16 cifre — tensiune 2, capacitate 4, lună/an 4, lot 6 (ex. LJC5131400325070001). La manual poți introduce doar cele 16 cifre după LJC.',
-      })
+      return res.status(400).json({ error: SN_INVALID_MESSAGE })
     }
 
     const existingBySn = await prisma.warehouseStockUnit.findUnique({
@@ -4342,6 +5591,70 @@ app.get('/api/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware,
 app.get('/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
 app.delete('/api/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 app.delete('/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
+
+/**
+ * Admin: descărcare PDF certificat de garanţie pentru orice item din depozit.
+ * Spre deosebire de varianta client, nu cerem ownership — admin-ul are acces
+ * la toate certificatele. Răspunsul are `Content-Disposition: attachment` ca
+ * să forţeze descărcarea (URL-ul R2 nu este expus).
+ */
+const downloadAdminWarehouseWarrantyCertificateHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const saved = await prisma.warehouseSavedItem.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        serialNumber: true,
+        warrantyCertificateUrl: true,
+      },
+    })
+    if (!saved) {
+      return res.status(404).json({ error: 'Item negăsit.' })
+    }
+    if (!saved.warrantyCertificateUrl) {
+      return res.status(404).json({
+        code: 'no_certificate',
+        error: 'Nu există încă un certificat generat pentru acest produs.',
+      })
+    }
+    const key = urlToKey(saved.warrantyCertificateUrl)
+    if (!key) {
+      return res.status(500).json({ error: 'Stocare certificat indisponibilă.' })
+    }
+    let buffer
+    try {
+      buffer = await downloadFromR2(key)
+    } catch (e) {
+      console.error('Admin warranty cert R2 download failed:', e)
+      return res.status(500).json({ error: 'Nu am putut descărca certificatul.' })
+    }
+    const safeSn = String(saved.serialNumber || 'certificat').replace(/[^\w.-]+/g, '_')
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${safeSn}.pdf"`)
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Length', String(buffer.length))
+    return res.send(buffer)
+  } catch (err) {
+    console.error('Admin warranty certificate download error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+
+app.get(
+  '/api/admin/warehouse-saved-items/:id/warranty-certificate/download',
+  authMiddleware,
+  adminAuthMiddleware,
+  downloadAdminWarehouseWarrantyCertificateHandler,
+)
+app.get(
+  '/admin/warehouse-saved-items/:id/warranty-certificate/download',
+  authMiddleware,
+  adminAuthMiddleware,
+  downloadAdminWarehouseWarrantyCertificateHandler,
+)
 
 const listProductModelsHandler = async (req, res) => {
   try {
