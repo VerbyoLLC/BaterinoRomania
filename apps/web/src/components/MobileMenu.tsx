@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, Gift, LogOut, Package, ReceiptText, Settings, UserRound, BadgePercent } from 'lucide-react'
+import { Bell, Gift, LogOut, Package, ReceiptText, Settings, ShieldCheck, UserRound, BadgePercent } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LANGUAGES } from '../i18n/menu'
@@ -395,6 +395,19 @@ export default function MobileMenu({
                       <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                     </Link>
                   ) : null}
+                  <Link
+                    to="/verificare-garantie"
+                    className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                    onClick={handleLinkClick}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.verificareGarantie}</p>
+                      <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">
+                        {t.mainVerificareGarantieSubtitle}
+                      </p>
+                    </div>
+                    <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                  </Link>
                   <div className="flex-1" />
                   <div className="mt-6" />
                   <button
@@ -471,6 +484,17 @@ export default function MobileMenu({
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>
                       <Link
+                        to="/verificare-garantie"
+                        className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                        onClick={handleLinkClick}
+                      >
+                        <span className="flex items-center gap-3 text-black text-xl font-bold font-['Inter'] leading-8">
+                          <ShieldCheck className="size-6 text-gray-700" aria-hidden />
+                          {t.verificareGarantie}
+                        </span>
+                        <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                      </Link>
+                      <Link
                         to="/client/comenzi"
                         className="flex items-center justify-between w-full py-3 border-b border-gray-100"
                         onClick={handleLinkClick}
@@ -536,6 +560,19 @@ export default function MobileMenu({
                         <div className="flex-1 min-w-0">
                           <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.siguranta}</p>
                           <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainSigurantaSubtitle}</p>
+                        </div>
+                        <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                      </Link>
+                      <Link
+                        to="/verificare-garantie"
+                        className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                        onClick={handleLinkClick}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.verificareGarantie}</p>
+                          <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">
+                            {t.mainVerificareGarantieSubtitle}
+                          </p>
                         </div>
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>

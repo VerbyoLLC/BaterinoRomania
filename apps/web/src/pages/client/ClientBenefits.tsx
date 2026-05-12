@@ -161,14 +161,20 @@ export default function ClientBenefits() {
           title={tr.c6Title}
           description={tr.c6Desc}
           action={
-            <a
-              href={waReturnHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={pillButtonClass()}
-            >
-              {tr.c6Btn}
-            </a>
+            INSTALATORI_ONLY ? (
+              <a
+                href={waReturnHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={pillButtonClass()}
+              >
+                {tr.c6Btn}
+              </a>
+            ) : (
+              <Link to="/returnare-produse" className={pillButtonClass()}>
+                {tr.c6Btn}
+              </Link>
+            )
           }
         />
       </div>

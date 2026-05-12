@@ -55,6 +55,14 @@ function formatRoDateOnly(iso: string | null | undefined) {
   }
 }
 
+/** Data recepție client: ISO → ro-RO; altfel afișare literală (ex. zz-ll-aaaa). */
+function formatClientReceiptDate(raw: string | null | undefined) {
+  const s = raw != null ? String(raw).trim() : ''
+  if (!s) return '—'
+  if (/^\d{4}-\d{2}-\d{2}/.test(s) || s.includes('T')) return formatRoDateOnly(s)
+  return s
+}
+
 function formatSerialGrouped(serialNumber: string) {
   const raw = String(serialNumber ?? '').trim().toUpperCase()
   if (!raw) return '—'
@@ -549,7 +557,7 @@ export default function AdminStocuriLista() {
         )}
         <div className="overflow-x-auto">
         <table
-          className={`w-full border-collapse text-left text-sm font-['Inter'] ${isAdmin ? 'min-w-[1520px]' : 'min-w-[1460px]'}`}
+          className={`w-full border-collapse text-left text-sm font-['Inter'] ${isAdmin ? 'min-w-[1700px]' : 'min-w-[1640px]'}`}
         >
           <thead className="sticky top-0 z-10 bg-slate-100/95 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] backdrop-blur-sm">
             <tr className="text-slate-700">
@@ -570,6 +578,7 @@ export default function AdminStocuriLista() {
                 </th>
               )}
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Nr. item</th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Marcă</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Model</th>
               <th className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 SN
@@ -588,24 +597,27 @@ export default function AdminStocuriLista() {
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
                 Garanție client
               </th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+                Data recepție
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={isAdmin ? 12 : 11} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-8 text-center text-slate-500">
                   Se încarcă...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 12 : 11} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-8 text-center text-slate-500">
                   Nu există iteme salvate încă.
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 12 : 11} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
+                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
                   Niciun rezultat pentru filtrele curente.{' '}
                   <button
                     type="button"
@@ -635,6 +647,7 @@ export default function AdminStocuriLista() {
                     </td>
                   )}
                   <td className="px-4 py-3 font-mono">{formatWarehouseItemNumber(row.itemNumber)}</td>
+                  <td className="px-4 py-3">{row.brand?.trim() ? row.brand : '—'}</td>
                   <td className="px-4 py-3">{row.modelNumber || '—'}</td>
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs sm:text-sm align-middle">
                     {formatSerialGrouped(row.serialNumber)}
@@ -702,6 +715,9 @@ export default function AdminStocuriLista() {
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap tabular-nums text-slate-700">
+                    {formatClientReceiptDate(row.clientReceiptDate)}
                   </td>
                 </tr>
               ))

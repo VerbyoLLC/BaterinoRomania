@@ -22,10 +22,19 @@ export default function TermeniSiConditii() {
           </h1>
         </header>
 
-        <div className="prose prose-gray max-w-none">
+        <div className="prose prose-gray max-w-none space-y-10">
           <p className="text-neutral-600 text-base lg:text-lg font-medium font-['Inter'] leading-6 lg:leading-8">
             {tr.intro}
           </p>
+
+          <section id="politica-retur" className="scroll-mt-24">
+            <h2 className="text-xl font-bold text-slate-900 font-['Inter'] sm:text-2xl">{tr.returnPolicyTitle}</h2>
+            <div className="mt-4 space-y-4 text-neutral-600 text-base font-['Inter'] leading-relaxed lg:text-lg lg:leading-8">
+              {tr.returnPolicyParagraphs.map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+            </div>
+          </section>
         </div>
       </article>
     </>

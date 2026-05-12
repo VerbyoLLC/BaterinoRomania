@@ -24,6 +24,8 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainDiviziiSubtitle: 'Diviziile noastre tehnice', mainInstalatori: 'Instalatori & Distribuitori',
     mainInstalatoriSubtitle: 'Devino partenerul nostru', mainCompanieSubtitle: 'Viziune, Parteneriat și Contact',
     mainLangSubtitle: 'Alege limba sitului', mainLogin: 'Logare', mainLoginSubtitle: 'Clienți și Parteneri',
+    verificareGarantie: 'Verificare garanție',
+    mainVerificareGarantieSubtitle: 'Verifică numărul de serie al bateriei',
   },
   en: {
     home: 'Home', produse: 'Products', reduceri: 'Discounts', siguranta: 'Safety', divizii: 'Divisions',
@@ -42,6 +44,8 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainDiviziiSubtitle: 'Our technical divisions', mainInstalatori: 'Installers & Distributors',
     mainInstalatoriSubtitle: 'Become our partner', mainCompanieSubtitle: 'Vision, Partnership and Contact',
     mainLangSubtitle: 'Choose site language', mainLogin: 'Log in', mainLoginSubtitle: 'Clients and Partners',
+    verificareGarantie: 'Warranty check',
+    mainVerificareGarantieSubtitle: 'Verify your battery serial number',
   },
   zh: {
     home: '首页', produse: '产品', reduceri: '折扣', siguranta: '安全', divizii: '事业部',
@@ -60,6 +64,8 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainDiviziiSubtitle: '我们的技术部门', mainInstalatori: '安装商与经销商',
     mainInstalatoriSubtitle: '成为我们的合作伙伴', mainCompanieSubtitle: '愿景、合作与联系',
     mainLangSubtitle: '选择网站语言', mainLogin: '登录', mainLoginSubtitle: '客户和合作伙伴',
+    verificareGarantie: '保修查询',
+    mainVerificareGarantieSubtitle: '验证电池序列号',
   },
 }
 

@@ -78,6 +78,7 @@ import ClientDiscountCodes from './pages/client/ClientDiscountCodes'
 import ClientNotifications from './pages/client/ClientNotifications'
 import CartPage from './pages/CartPage'
 import VerificareGarantie from './pages/VerificareGarantie'
+import ReturnareProduse from './pages/ReturnareProduse'
 
 export default function App() {
   return (
@@ -154,6 +155,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
+              <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />
@@ -173,6 +175,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
+              <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />

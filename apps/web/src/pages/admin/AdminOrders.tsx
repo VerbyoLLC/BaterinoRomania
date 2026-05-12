@@ -41,6 +41,7 @@ function formatMoney(amount: string | null, currency: string): string {
 function orderSourceLabel(source: string): { label: string; className: string } {
   const s = String(source || '').toLowerCase()
   if (s === 'client') return { label: 'Client', className: 'bg-emerald-100 text-emerald-900' }
+  if (s === 'partner' || s === 'partener') return { label: 'Partener', className: 'bg-sky-100 text-sky-900' }
   return { label: 'Invitat', className: 'bg-slate-200 text-slate-800' }
 }
 

@@ -19,6 +19,7 @@ const {
   sendPartnerAccountApprovedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
+  sendReturRequestReceivedEmail,
   isMailConfigured,
   getMailProvider,
   getMailFrom,
@@ -37,6 +38,7 @@ const {
   guestOrderDocumentKey,
   proformaPdfKey,
   warrantyCertificateKey,
+  buildReturConditionPhotoKey,
 } = require('./lib/r2.js')
 const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
 const {
@@ -46,6 +48,8 @@ const {
   deriveProducedOnFromSerial,
   SN_INVALID_MESSAGE,
 } = require('./lib/warehouse-serial.js')
+const { warrantyVerifyRateLimitMiddleware } = require('./lib/warranty-verify-rate-limit.js')
+const { mintWarrantyVerifyToken, parseWarrantyVerifyToken } = require('./lib/warranty-verify-token.js')
 const QRCode = require('qrcode')
 const PROFORMA_TEMPLATE_MODULE_PATH = './lib/proforma-template.js'
 function getProformaTemplateLib() {
@@ -85,6 +89,11 @@ function getReferralInviteTemplateLib() {
 }
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
+/** Fotografii retur: 2–6 fișiere JPEG; max. ~8MB/fișier. */
+const returUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 6 },
+})
 
 /** Slugify title for URL: lowercase, hyphenated, no diacritics */
 /** Accept only { entries: [...] } for JSON column; reject arrays / wrong shape (typeof [] === 'object'). */
@@ -453,6 +462,11 @@ const app = express()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'baterino-dev-secret-change-in-production'
 
+/** Pe Railway / reverse proxy: setează TRUST_PROXY=1 ca req.ip să fie IP-ul clientului (rate limit corect). */
+if (String(process.env.TRUST_PROXY || '').trim() === '1') {
+  app.set('trust proxy', 1)
+}
+
 app.use(cors({
   origin: true,
   credentials: true,
@@ -494,6 +508,25 @@ function adminAuthMiddleware(req, res, next) {
 function clientAuthMiddleware(req, res, next) {
   if (req.userRole !== 'client') {
     return res.status(403).json({ error: 'Acces restricționat. Doar conturile client pot accesa.' })
+  }
+  next()
+}
+
+/** Bearer opțional: pentru POST /api/retur — completează datele din profil dacă e client autentificat. */
+function optionalAuthMiddleware(req, res, next) {
+  req.userId = undefined
+  req.userRole = undefined
+  req.userEmail = undefined
+  const auth = req.headers.authorization
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
+  if (!token) return next()
+  try {
+    const payload = jwt.verify(token, JWT_SECRET)
+    req.userId = payload.userId
+    req.userRole = payload.role
+    req.userEmail = payload.email ?? null
+  } catch {
+    // ignoră token invalid
   }
   next()
 }
@@ -2453,6 +2486,104 @@ app.patch('/api/admin/service-requests/:id/status', authMiddleware, adminAuthMid
   }
 })
 
+const RETUR_ADMIN_VALID_STATUSES = ['pending', 'reviewed', 'closed']
+
+/** Serie publică cerere retur (formular site): BTRT + id (min. 6 cifre, extins dacă id > 999999). */
+function formatReturRegistrationNumber(id) {
+  const n = Number(id)
+  if (!Number.isFinite(n) || n < 1) return 'BTRT-000000'
+  const s = String(Math.floor(n))
+  return `BTRT-${s.length < 6 ? s.padStart(6, '0') : s}`
+}
+
+function mapReturRow(row) {
+  let photoUrls = []
+  try {
+    const raw = row.conditionPhotoUrls
+    if (Array.isArray(raw)) {
+      photoUrls = raw.filter((u) => typeof u === 'string')
+    }
+  } catch {
+    photoUrls = []
+  }
+  return {
+    id: row.id,
+    registrationNumber: formatReturRegistrationNumber(row.id),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    userId: row.userId,
+    submitSource: row.submitSource,
+    lastName: row.lastName,
+    firstName: row.firstName,
+    street: row.street,
+    county: row.county,
+    city: row.city,
+    postal: row.postal,
+    phone: row.phone,
+    email: row.email,
+    orderNumber: row.orderNumber,
+    receiptDate: row.receiptDate,
+    serialNumber: row.serialNumber,
+    productBrand: row.productBrand,
+    productModel: row.productModel,
+    returnReason: row.returnReason,
+    returnReasonOther: row.returnReasonOther,
+    condUninstalled: row.condUninstalled,
+    condSeals: row.condSeals,
+    condPackaging: row.condPackaging,
+    pickupStreet: row.pickupStreet,
+    pickupCounty: row.pickupCounty,
+    pickupCity: row.pickupCity,
+    pickupPostal: row.pickupPostal,
+    refundTitular: row.refundTitular,
+    refundIban: row.refundIban,
+    policyAccepted: row.policyAccepted,
+    declarationAccepted: row.declarationAccepted,
+    locale: row.locale,
+    conditionPhotoUrls: photoUrls,
+    status: row.status,
+  }
+}
+
+/** Listă cereri retur (formular site) pentru admin Service. */
+app.get('/api/admin/retur', authMiddleware, adminAuthMiddleware, async (_req, res) => {
+  try {
+    const rows = await prisma.retur.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(mapReturRow))
+  } catch (err) {
+    console.error('Admin retur list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea cererilor de retur.' })
+  }
+})
+
+/** Actualizare status cerere retur (pending | reviewed | closed). */
+app.patch('/api/admin/retur/:id/status', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id || '').trim(), 10)
+    const nextStatus = String(req.body?.status || '').trim()
+    if (!Number.isFinite(id) || id < 1) return res.status(400).json({ error: 'ID invalid.' })
+    if (!RETUR_ADMIN_VALID_STATUSES.includes(nextStatus)) {
+      return res.status(400).json({ error: 'Status invalid.' })
+    }
+    const updated = await prisma.retur.update({
+      where: { id },
+      data: { status: nextStatus },
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(mapReturRow(updated))
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      return res.status(404).json({ error: 'Cererea nu există.' })
+    }
+    console.error('Admin retur status error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
 function extractNumericString(s) {
   const m = String(s ?? '').match(/-?\d+(?:[.,]\d+)?/)
   if (!m) return ''
@@ -2832,12 +2963,20 @@ app.post(
         ? `${requestOrigin}/images/shared/baterino-logo-black.svg`
         : tplLib.defaultWarrantyLogoUrl()
 
-      /* QR code: link către pagina publică de verificare garanție, cu SN-ul
-         pre-completat în query string. Deep-link util când codul e scanat. */
+      /* QR: link semnat ?t=… dacă există WARRANTY_VERIFY_TOKEN_SECRET; altfel ?sn=… (compat). */
       const verifyBase = requestOrigin || 'https://baterino.ro'
-      const verifyUrl = `${verifyBase}/verificare-garantie?sn=${encodeURIComponent(
-        values.SERIAL_NUMBER || '',
-      )}`
+      const serialForQr = String(values.SERIAL_NUMBER || '').trim()
+      const tokenSecret = String(process.env.WARRANTY_VERIFY_TOKEN_SECRET || '').trim()
+      let verifyUrl = ''
+      if (tokenSecret && serialForQr) {
+        const minted = mintWarrantyVerifyToken(serialForQr, tokenSecret)
+        if (minted) {
+          verifyUrl = `${verifyBase}/verificare-garantie?t=${encodeURIComponent(minted)}`
+        }
+      }
+      if (!verifyUrl) {
+        verifyUrl = `${verifyBase}/verificare-garantie?sn=${encodeURIComponent(serialForQr)}`
+      }
       try {
         values.QR_DATA_URL = await QRCode.toDataURL(verifyUrl, {
           errorCorrectionLevel: 'M',
@@ -4637,6 +4776,298 @@ app.post('/api/inquiries', async (req, res) => {
   }
 })
 
+const RETUR_CONDITION_PHOTO_MIN = 2
+const RETUR_CONDITION_PHOTO_MAX = 6
+const RETUR_REASONS = new Set(['withdrawal', 'defective', 'not_as_described', 'damaged_delivery', 'other'])
+
+/** Acceptă doar JPEG pentru fotografii retur (browser trimite de obicei image/jpeg). */
+function isReturJpegPhoto(f) {
+  const m = String(f.mimetype || '').toLowerCase()
+  if (m === 'image/jpeg' || m === 'image/jpg' || m === 'image/pjpeg') return true
+  const n = String(f.originalname || '').toLowerCase()
+  return n.endsWith('.jpg') || n.endsWith('.jpeg')
+}
+
+function isValidDdMmYyyyRetur(s) {
+  const t = String(s || '').trim()
+  if (!/^\d{2}-\d{2}-\d{4}$/.test(t)) return false
+  const [dd, mm, yyyy] = t.split('-').map(Number)
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return false
+  const d = new Date(yyyy, mm - 1, dd)
+  return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd
+}
+
+function parseBoolField(v) {
+  if (v === true) return true
+  if (v === false) return false
+  const s = String(v ?? '').toLowerCase().trim()
+  return s === 'true' || s === '1' || s === 'on' || s === 'yes'
+}
+
+function normalizeIbanRetur(raw) {
+  return String(raw || '')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+}
+
+function isValidRoIbanRetur(raw) {
+  return /^RO\d{2}[A-Z0-9]{20}$/.test(normalizeIbanRetur(raw))
+}
+
+async function loadClientSnapshotForRetur(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { firstName: true, lastName: true, email: true, phone: true },
+  })
+  const profile = await prisma.clientProfile.findUnique({
+    where: { userId },
+    select: {
+      firstName: true,
+      lastName: true,
+      phone: true,
+      billAddress: true,
+      billCounty: true,
+      billCity: true,
+      billPostal: true,
+    },
+  })
+  return {
+    firstName: String(profile?.firstName || user?.firstName || '').trim(),
+    lastName: String(profile?.lastName || user?.lastName || '').trim(),
+    email: String(user?.email || '').trim().toLowerCase(),
+    phone: String(profile?.phone || user?.phone || '').trim(),
+    street: String(profile?.billAddress || '').trim(),
+    county: String(profile?.billCounty || '').trim(),
+    city: String(profile?.billCity || '').trim(),
+    postal: String(profile?.billPostal || '')
+      .replace(/\D/g, '')
+      .slice(0, 6),
+  }
+}
+
+app.options('/api/retur', (_req, res) => res.status(204).end())
+
+/**
+ * Public: cerere retur (multipart). Câmpuri text în body + între 2 și 6 fișiere `photos` (JPEG .jpg / .jpeg).
+ * Opțional `Authorization: Bearer` pentru client — datele de contact se completează din profil dacă lipsesc.
+ */
+app.post(
+  '/api/retur',
+  optionalAuthMiddleware,
+  returUploadMiddleware.array('photos', RETUR_CONDITION_PHOTO_MAX),
+  async (req, res) => {
+    try {
+      if (!isR2Configured()) {
+        return res.status(503).json({ error: 'Stocarea fișierelor (R2) nu este configurată.' })
+      }
+
+      const files = Array.isArray(req.files) ? req.files : []
+      if (files.length < RETUR_CONDITION_PHOTO_MIN || files.length > RETUR_CONDITION_PHOTO_MAX) {
+        return res.status(400).json({
+          error: `Încarcă între ${RETUR_CONDITION_PHOTO_MIN} și ${RETUR_CONDITION_PHOTO_MAX} fotografii JPEG (.jpg sau .jpeg).`,
+          code: 'retur_photos_count',
+        })
+      }
+      if (!files.every((f) => isReturJpegPhoto(f))) {
+        return res.status(400).json({
+          error: 'Sunt permise doar fișiere JPEG (.jpg sau .jpeg).',
+          code: 'retur_photos_type',
+        })
+      }
+      const imageFiles = files
+
+      const b = req.body || {}
+      const str = (k) => String(b[k] ?? '').trim()
+
+      let lastName = str('lastName')
+      let firstName = str('firstName')
+      let street = str('street')
+      let county = str('county')
+      let city = str('city')
+      let postal = normalizeRoPostalCode(str('postal')) || ''
+      let phone = str('phone')
+      let email = str('email').toLowerCase()
+
+      let userIdToStore = null
+      let submitSource = 'guest'
+      if (req.userId && req.userRole === 'client') {
+        submitSource = 'client'
+        userIdToStore = req.userId
+        const snap = await loadClientSnapshotForRetur(req.userId)
+        if (!lastName) lastName = snap.lastName
+        if (!firstName) firstName = snap.firstName
+        if (!street) street = snap.street
+        if (!county) county = snap.county
+        if (!city) city = snap.city
+        if (!postal) postal = snap.postal
+        if (!phone) phone = snap.phone
+        if (!email) email = snap.email
+      }
+
+      const nameRe = /^[\p{L}\s'\-]+$/u
+      if (!lastName || !firstName || lastName.length < 2 || firstName.length < 2) {
+        return res.status(400).json({ error: 'Nume și prenume invalide sau lipsă.' })
+      }
+      if (!nameRe.test(lastName) || !nameRe.test(firstName)) {
+        return res.status(400).json({ error: 'Nume și prenume conțin caractere nepermise.' })
+      }
+      if (!street || street.length < 3 || !county || !city || !/^\d{6}$/.test(postal)) {
+        return res.status(400).json({ error: 'Adresa de contact este incompletă sau codul poștal nu are 6 cifre.' })
+      }
+      const digitsPhone = phone.replace(/\D/g, '')
+      if (digitsPhone.length < 9) {
+        return res.status(400).json({ error: 'Telefon invalid.' })
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: 'Email invalid.' })
+      }
+
+      const orderNumber = str('orderNumber')
+      const receiptDate = str('receiptDate')
+      const serialNumber = str('serialNumber')
+      const productBrand = str('productBrand')
+      const productModel = str('productModel')
+      if (!orderNumber || !receiptDate || !serialNumber || !productBrand || !productModel) {
+        return res.status(400).json({ error: 'Completează detaliile despre comandă și produs.' })
+      }
+      if (!isValidDdMmYyyyRetur(receiptDate)) {
+        return res.status(400).json({ error: 'Data recepției nu este validă (format zz-ll-aaaa).' })
+      }
+
+      const returnReason = str('returnReason')
+      if (!RETUR_REASONS.has(returnReason)) {
+        return res.status(400).json({ error: 'Motiv retur invalid.' })
+      }
+      let returnReasonOther = str('returnReasonOther')
+      if (returnReason === 'other' && returnReasonOther.length < 3) {
+        return res.status(400).json({ error: 'Completează descrierea pentru „Alt motiv”.' })
+      }
+      if (returnReasonOther.length > 4000) {
+        return res.status(400).json({ error: 'Descrierea motivului este prea lungă.' })
+      }
+      if (returnReason !== 'other') returnReasonOther = ''
+
+      const condUninstalled = parseBoolField(b.condUninstalled)
+      const condSeals = parseBoolField(b.condSeals)
+      const condPackaging = parseBoolField(b.condPackaging)
+      if (!condUninstalled && !condSeals && !condPackaging) {
+        return res.status(400).json({ error: 'Bifează cel puțin o declarație despre starea produsului.' })
+      }
+
+      const pickupStreet = str('pickupStreet')
+      const pickupCounty = str('pickupCounty')
+      const pickupCity = str('pickupCity')
+      const pickupPostal = normalizeRoPostalCode(str('pickupPostal')) || ''
+      if (!pickupStreet || pickupStreet.length < 3 || !pickupCounty || !pickupCity || !/^\d{6}$/.test(pickupPostal)) {
+        return res.status(400).json({ error: 'Adresa de preluare este incompletă sau codul poștal nu are 6 cifre.' })
+      }
+
+      const refundTitular = str('refundTitular')
+      const refundIbanRaw = str('refundIban')
+      if (!refundTitular || refundTitular.length < 2) {
+        return res.status(400).json({ error: 'Titular cont invalid.' })
+      }
+      const titRe = /^[\p{L}\p{N}\s'\-.,()/&]+$/u
+      if (!titRe.test(refundTitular)) {
+        return res.status(400).json({ error: 'Titular cont conține caractere nepermise.' })
+      }
+      if (!isValidRoIbanRetur(refundIbanRaw)) {
+        return res.status(400).json({ error: 'IBAN invalid (format RO + 22 caractere).' })
+      }
+      const refundIban = normalizeIbanRetur(refundIbanRaw)
+
+      const policyAccepted = parseBoolField(b.policyAccepted)
+      const declarationAccepted = parseBoolField(b.declarationAccepted)
+      if (!policyAccepted || !declarationAccepted) {
+        return res.status(400).json({ error: 'Confirmă politica de retur și declarația de corectitudine.' })
+      }
+
+      let locale = str('locale') || 'ro'
+      if (!['ro', 'en', 'zh'].includes(locale)) locale = 'ro'
+
+      const created = await prisma.retur.create({
+        data: {
+          userId: userIdToStore,
+          submitSource,
+          lastName,
+          firstName,
+          street,
+          county,
+          city,
+          postal,
+          phone,
+          email,
+          orderNumber,
+          receiptDate,
+          serialNumber,
+          productBrand,
+          productModel,
+          returnReason,
+          returnReasonOther,
+          condUninstalled,
+          condSeals,
+          condPackaging,
+          pickupStreet,
+          pickupCounty,
+          pickupCity,
+          pickupPostal,
+          refundTitular,
+          refundIban,
+          policyAccepted,
+          declarationAccepted,
+          locale,
+          conditionPhotoUrls: [],
+          status: 'pending',
+        },
+      })
+
+      const returId = created.id
+      const photoUrls = []
+      const uploadedKeys = []
+      try {
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i]
+          const key = buildReturConditionPhotoKey(orderNumber, returId, i + 1, file.mimetype)
+          const url = await uploadToR2(file.buffer, key, file.mimetype)
+          uploadedKeys.push(key)
+          photoUrls.push(url)
+        }
+        await prisma.retur.update({
+          where: { id: returId },
+          data: { conditionPhotoUrls: photoUrls },
+        })
+      } catch (uploadErr) {
+        for (const key of uploadedKeys) {
+          await deleteFromR2(key).catch(() => {})
+        }
+        await prisma.retur.delete({ where: { id: returId } }).catch(() => {})
+        console.error('[Retur] Upload rollback:', uploadErr)
+        return res.status(500).json({ error: 'Nu am putut salva fotografiile. Încearcă din nou.' })
+      }
+
+      const registrationNumber = formatReturRegistrationNumber(returId)
+      sendReturRequestReceivedEmail({
+        email,
+        locale,
+        registrationNumber,
+        firstName,
+        orderNumber,
+        productBrand,
+        productModel,
+      }).catch((e) => console.error('[Retur] Confirmation email error:', e?.message || e))
+
+      return res.status(201).json({
+        id: returId,
+        registrationNumber,
+        message: 'Cererea de retur a fost înregistrată.',
+      })
+    } catch (err) {
+      console.error('Retur submit error:', err)
+      return res.status(500).json({ error: err?.message || 'Eroare la înregistrarea cererii de retur.' })
+    }
+  },
+)
+
 /**
  * După plasarea unei comenzi rezidențiale: generează proforma PDF, o salvează în R2
  * (pentru reutilizare în „cont/comenzi”) și trimite confirmarea pe email cu PDF atașat.
@@ -4752,9 +5183,12 @@ app.post('/api/guest-residential-orders', async (req, res) => {
   try {
     const body = req.body || {}
     const authPayload = readOptionalAuthPayload(req)
-    const isClient = authPayload?.role === 'client'
-    const orderSource = isClient ? 'client' : 'guest'
-    const userIdForOrder = isClient && authPayload?.userId ? String(authPayload.userId) : null
+    const role = authPayload?.role
+    const isClient = role === 'client'
+    const isPartener = role === 'partener'
+    const orderSource = isClient ? 'client' : isPartener ? 'partner' : 'guest'
+    const userIdForOrder =
+      (isClient || isPartener) && authPayload?.userId ? String(authPayload.userId) : null
 
     const emailRaw = String(body.email || '').trim().toLowerCase()
     const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
@@ -4806,12 +5240,16 @@ app.post('/api/guest-residential-orders', async (req, res) => {
     if (!emailRegex.test(emailRaw)) {
       return res.status(400).json({ error: 'Email invalid.' })
     }
-    /** Pentru client autentificat, emailul din cont (JWT) — legătură reală în DB. */
+    /** Pentru client / partener autentificat, emailul din cont (JWT) — legătură reală în DB. */
     let emailToStore = emailRaw
-    if (isClient) {
+    if (isClient || isPartener) {
       const tokenEmail = String(authPayload.email || '').trim().toLowerCase()
       if (!tokenEmail || !emailRegex.test(tokenEmail)) {
-        return res.status(401).json({ error: 'Sesiune invalidă. Autentifică-te din nou ca și client.' })
+        return res.status(401).json({
+          error: isClient
+            ? 'Sesiune invalidă. Autentifică-te din nou ca și client.'
+            : 'Sesiune invalidă. Autentifică-te din nou ca și partener.',
+        })
       }
       emailToStore = tokenEmail
     }
@@ -4995,6 +5433,94 @@ function mapResidentialRowAdmin(o) {
   }
 }
 
+/** Agregate comenzi rezidențiale pentru dashboard admin (fără listă completă). */
+const adminOrdersDashboardSummaryHandler = async (req, res) => {
+  try {
+    const NEW_STATUS = 'de_platit'
+    const [
+      resNewBySource,
+      legNewBySource,
+      resByStatus,
+      legByStatus,
+    ] = await Promise.all([
+      prisma.residentialOrder.groupBy({
+        by: ['orderSource'],
+        where: { fulfillmentStatus: NEW_STATUS },
+        _count: { _all: true },
+      }),
+      prisma.guestResidentialOrder.groupBy({
+        by: ['orderSource'],
+        where: { fulfillmentStatus: NEW_STATUS },
+        _count: { _all: true },
+      }),
+      prisma.residentialOrder.groupBy({
+        by: ['fulfillmentStatus'],
+        _count: { _all: true },
+      }),
+      prisma.guestResidentialOrder.groupBy({
+        by: ['fulfillmentStatus'],
+        _count: { _all: true },
+      }),
+    ])
+    const bucketSource = (src) => {
+      const s = String(src || 'guest').toLowerCase()
+      if (s === 'client') return 'client'
+      if (s === 'partner' || s === 'partener') return 'partner'
+      return 'guest'
+    }
+    const newBySource = { client: 0, partner: 0, guest: 0 }
+    for (const row of resNewBySource) {
+      const k = bucketSource(row.orderSource)
+      newBySource[k] += row._count._all
+    }
+    for (const row of legNewBySource) {
+      const k = bucketSource(row.orderSource)
+      newBySource[k] += row._count._all
+    }
+    const newOrdersTotal = newBySource.client + newBySource.partner + newBySource.guest
+    const byFulfillmentStatus = {}
+    for (const row of resByStatus) {
+      const st = String(row.fulfillmentStatus || 'de_platit')
+      byFulfillmentStatus[st] = (byFulfillmentStatus[st] || 0) + row._count._all
+    }
+    for (const row of legByStatus) {
+      const st = String(row.fulfillmentStatus || 'de_platit')
+      byFulfillmentStatus[st] = (byFulfillmentStatus[st] || 0) + row._count._all
+    }
+    res.set('Cache-Control', 'no-store')
+    return res.json({
+      newOrders: {
+        total: newOrdersTotal,
+        client: newBySource.client,
+        partner: newBySource.partner,
+        guest: newBySource.guest,
+      },
+      byFulfillmentStatus,
+    })
+  } catch (err) {
+    console.error('Admin orders dashboard summary error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la agregate comenzi.' })
+  }
+}
+
+/** Agregate cereri service + retur pentru dashboard admin (status „noi”). */
+const adminServiceDashboardSummaryHandler = async (req, res) => {
+  try {
+    const [serviceOpen, returPending] = await Promise.all([
+      prisma.serviceRequest.count({ where: { status: 'open' } }),
+      prisma.retur.count({ where: { status: 'pending' } }),
+    ])
+    res.set('Cache-Control', 'no-store')
+    return res.json({
+      service: { newOpen: serviceOpen },
+      retur: { newPending: returPending },
+    })
+  } catch (err) {
+    console.error('Admin service dashboard summary error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la agregate service.' })
+  }
+}
+
 const adminGuestResidentialOrdersHandler = async (req, res) => {
   try {
     const [legacyRows, modernRows] = await Promise.all([
@@ -5022,6 +5548,30 @@ app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddlewa
 app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/api/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get(
+  '/api/admin/orders-dashboard-summary',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminOrdersDashboardSummaryHandler,
+)
+app.get(
+  '/admin/orders-dashboard-summary',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminOrdersDashboardSummaryHandler,
+)
+app.get(
+  '/api/admin/service-dashboard-summary',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminServiceDashboardSummaryHandler,
+)
+app.get(
+  '/admin/service-dashboard-summary',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminServiceDashboardSummaryHandler,
+)
 
 const patchAdminOrderFulfillmentStatusHandler = async (req, res) => {
   try {
@@ -5224,6 +5774,39 @@ const listPublicProductsHandler = async (req, res) => {
 app.get('/api/products', listPublicProductsHandler)
 app.get('/products', listPublicProductsHandler)
 
+/** Modele produs (catalog) pentru formulare publice (ex. retur) — fără auth, fără specificații tehnice complete. */
+const listPublicProductModelsHandler = async (_req, res) => {
+  try {
+    const rows = await prisma.productModel.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { modelNumber: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        series: true,
+        modelNumber: true,
+        usageType: true,
+      },
+    })
+    res.set('Cache-Control', 'public, max-age=120')
+    return res.json(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        brand: r.brand,
+        series: r.series || '',
+        modelNumber: r.modelNumber,
+        usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
+      })),
+    )
+  } catch (err) {
+    console.error('List public product models error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea modelelor.' })
+  }
+}
+app.get('/api/public/product-models', listPublicProductModelsHandler)
+app.get('/public/product-models', listPublicProductModelsHandler)
+
 // ── Public: get single published product (no auth) ───────────────────────
 // Accepts id (cuid) or slug for SEO-friendly URLs
 // Falls back to draft when no published products exist (consistent with list)
@@ -5255,6 +5838,189 @@ const getPublicProductHandler = async (req, res) => {
 }
 app.get('/api/products/:id', getPublicProductHandler)
 app.get('/products/:id', getPublicProductHandler)
+
+/** Imagine card sau prima din `images` — pentru verificare garanție publică. */
+function pickProductHeroImageUrlForWarrantyVerify(product) {
+  const card = product?.cardImage && String(product.cardImage).trim()
+  if (card) return card
+  const imgs = product?.images
+  if (Array.isArray(imgs)) {
+    for (const x of imgs) {
+      const u = typeof x === 'string' ? x.trim() : ''
+      if (u) return u
+    }
+  }
+  return ''
+}
+
+/** Garanție „activă” publică doar dacă unitatea e la client final sau distribuitor (câmp sau locație). */
+function warehouseSavedItemEligibleForPublicWarrantyVerify(savedItem) {
+  if (!savedItem) return false
+  const hasClient = savedItem.client != null && String(savedItem.client).trim() !== ''
+  const hasDistributor = savedItem.distributor != null && String(savedItem.distributor).trim() !== ''
+  if (hasClient || hasDistributor) return true
+  const loc = String(savedItem.location || 'depozit').trim()
+  return loc === 'client_final' || loc === 'distribuitor'
+}
+
+/** Public: verificare SN în depozit (fără date personale / certificat). ?t= token semnat sau ?sn= legacy. */
+const verifyPublicWarrantySerialHandler = async (req, res) => {
+  try {
+    const tokenParam = String(req.query.t ?? req.query.token ?? '').trim()
+    let sn = ''
+
+    if (tokenParam) {
+      const secret = String(process.env.WARRANTY_VERIFY_TOKEN_SECRET || '').trim()
+      if (!secret) {
+        return res.status(503).json({
+          code: 'token_not_configured',
+          error: 'Verificarea cu link semnat nu este configurată pe server.',
+        })
+      }
+      const parsed = parseWarrantyVerifyToken(tokenParam, secret)
+      if (!parsed) {
+        return res.status(400).json({
+          code: 'invalid_token',
+          error: 'Linkul de verificare nu este valid sau a expirat.',
+        })
+      }
+      sn = parsed.sn
+    } else {
+      sn = String(req.query.sn ?? req.query.serial ?? '').trim()
+      const qrRaw = req.query.qr != null ? String(req.query.qr) : ''
+      if (!sn && qrRaw) sn = parseSerialFromQrPayload(qrRaw)
+      if (!sn) {
+        return res.status(400).json({
+          error: 'Introdu numărul de serie sau folosește linkul din certificat.',
+        })
+      }
+      sn = normalizeWarehouseSerialNumber(sn)
+      if (!isValidWarehouseSerialNumber(sn)) {
+        return res.status(400).json({ error: SN_INVALID_MESSAGE, code: 'invalid_serial' })
+      }
+    }
+    const unit = await prisma.warehouseStockUnit.findUnique({
+      where: { serialNumber: sn },
+      select: {
+        serialNumber: true,
+        product: {
+          select: {
+            brand: true,
+            title: true,
+            sku: true,
+            cardImage: true,
+            images: true,
+          },
+        },
+        savedItem: {
+          select: {
+            modelNumber: true,
+            client: true,
+            distributor: true,
+            location: true,
+          },
+        },
+      },
+    })
+    if (!unit) {
+      return res.json({
+        found: false,
+        serialNumber: sn,
+      })
+    }
+    if (!warehouseSavedItemEligibleForPublicWarrantyVerify(unit.savedItem)) {
+      return res.json({
+        found: false,
+        serialNumber: sn,
+      })
+    }
+    const p = unit.product
+    const modelNumber =
+      (unit.savedItem && String(unit.savedItem.modelNumber || '').trim()) || String(p?.sku || '').trim()
+    const imageUrl = pickProductHeroImageUrlForWarrantyVerify(p) || null
+    const brand = p?.brand != null ? String(p.brand).trim() : ''
+    return res.json({
+      found: true,
+      serialNumber: unit.serialNumber,
+      brand: brand || null,
+      title: p?.title || '',
+      modelNumber,
+      imageUrl,
+    })
+  } catch (err) {
+    console.error('Warranty verify error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la verificare.' })
+  }
+}
+app.get('/api/warranty-verify', warrantyVerifyRateLimitMiddleware, verifyPublicWarrantySerialHandler)
+app.get('/warranty-verify', warrantyVerifyRateLimitMiddleware, verifyPublicWarrantySerialHandler)
+
+const RETURN_ELIGIBILITY_RECEIPT_MAX_DAYS = 15
+
+/** Parsează `clientReceiptDate` (zz-ll-aaaa, zz.ll.aaaa sau ISO) pentru fereastra de retur. */
+function parseClientReceiptDateForReturEligibility(raw) {
+  const t = String(raw ?? '').trim()
+  if (!t) return null
+  const sep = /^(\d{2})[-.](\d{2})[-.](\d{4})$/.exec(t)
+  if (sep) {
+    const dd = parseInt(sep[1], 10)
+    const mm = parseInt(sep[2], 10)
+    const yyyy = parseInt(sep[3], 10)
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null
+    const d = new Date(yyyy, mm - 1, dd)
+    if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null
+    return d
+  }
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return null
+  return d
+}
+
+/** Data recepției nu e în viitor și nu e cu mai mult de `RETURN_ELIGIBILITY_RECEIPT_MAX_DAYS` zile în urmă (zi calendaristică locală server). */
+function isClientReceiptWithinReturEligibilityWindow(receiptDate) {
+  const t = new Date()
+  const todayStart = new Date(t.getFullYear(), t.getMonth(), t.getDate())
+  const r = receiptDate
+  const receiptStart = new Date(r.getFullYear(), r.getMonth(), r.getDate())
+  const diffDays = Math.floor((todayStart.getTime() - receiptStart.getTime()) / 86400000)
+  return diffDays >= 0 && diffDays <= RETURN_ELIGIBILITY_RECEIPT_MAX_DAYS
+}
+
+/** Public: SN în stocuri + data recepție ≤ 15 zile (fără date personale). */
+const getPublicReturSerialEligibilityHandler = async (req, res) => {
+  try {
+    let sn = String(req.query.sn ?? '').trim()
+    if (!sn) {
+      return res.status(400).json({ error: 'Parametrul sn (număr de serie) este obligatoriu.', code: 'missing_serial' })
+    }
+    sn = normalizeWarehouseSerialNumber(sn)
+    if (!isValidWarehouseSerialNumber(sn)) {
+      return res.status(400).json({ error: SN_INVALID_MESSAGE, code: 'invalid_serial' })
+    }
+    const row = await prisma.warehouseSavedItem.findUnique({
+      where: { serialNumber: sn },
+      select: { clientReceiptDate: true },
+    })
+    if (!row) {
+      return res.set('Cache-Control', 'no-store').json({ eligible: false })
+    }
+    const parsed = parseClientReceiptDateForReturEligibility(row.clientReceiptDate)
+    if (!parsed) {
+      return res.set('Cache-Control', 'no-store').json({ eligible: false })
+    }
+    const eligible = isClientReceiptWithinReturEligibilityWindow(parsed)
+    return res.set('Cache-Control', 'no-store').json({ eligible })
+  } catch (err) {
+    console.error('Retur serial eligibility error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la verificare.' })
+  }
+}
+app.get(
+  '/api/public/retur-serial-eligibility',
+  warrantyVerifyRateLimitMiddleware,
+  getPublicReturSerialEligibilityHandler,
+)
+app.get('/public/retur-serial-eligibility', warrantyVerifyRateLimitMiddleware, getPublicReturSerialEligibilityHandler)
 
 // ── Admin: list products ───────────────────────────────────────────────
 const listProductsHandler = async (req, res) => {
@@ -5393,10 +6159,14 @@ function warehouseSavedItemToJson(row) {
       : typeof row.itemNumber === 'string'
         ? parseInt(row.itemNumber, 10)
         : null
+  const brandRaw = row.warehouseStockUnit?.product?.brand
+  const brand =
+    brandRaw != null && String(brandRaw).trim() ? String(brandRaw).trim() : null
   return {
     id: row.id,
     itemNumber: Number.isFinite(parsedItemNumber) ? parsedItemNumber : null,
     warehouseStockUnitId: row.warehouseStockUnitId,
+    brand,
     modelNumber: row.modelNumber,
     serialNumber: row.serialNumber,
     producedOn: row.producedOn || '',
@@ -5411,6 +6181,10 @@ function warehouseSavedItemToJson(row) {
         ? row.warrantyCertificateGeneratedAt.toISOString()
         : null,
     warrantyCertificateNumber: row.warrantyCertificateUrl ? buildCertNumber(row) : null,
+    clientReceiptDate:
+      row.clientReceiptDate != null && String(row.clientReceiptDate).trim()
+        ? String(row.clientReceiptDate).trim()
+        : null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   }
@@ -5438,6 +6212,13 @@ const listWarehouseSavedItemsHandler = async (req, res) => {
     const rows = await prisma.warehouseSavedItem.findMany({
       orderBy: { warehouseIn: 'desc' },
       take,
+      include: {
+        warehouseStockUnit: {
+          select: {
+            product: { select: { brand: true } },
+          },
+        },
+      },
     })
     const clientIds = [
       ...new Set(

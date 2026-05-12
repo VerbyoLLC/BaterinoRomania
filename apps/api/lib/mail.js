@@ -36,6 +36,12 @@ function getServiceRequestReceivedTemplateRender() {
   return require(resolved).getServiceRequestReceivedTemplate
 }
 
+function getReturRequestReceivedTemplateBundle() {
+  const resolved = require.resolve('../templates/retur-request-received-email.js')
+  delete require.cache[resolved]
+  return require(resolved)
+}
+
 function envTrim(name, fallback = '') {
   const v = process.env[name]
   if (v == null || v === '') return fallback
@@ -606,6 +612,71 @@ async function sendServiceRequestReceivedEmail(params) {
   }
 }
 
+/**
+ * Confirmare către utilizator după înregistrarea unei cereri de retur (formular site).
+ *
+ * @param {{
+ *   email: string,
+ *   locale?: string,
+ *   registrationNumber: string,
+ *   firstName?: string,
+ *   orderNumber: string,
+ *   productBrand: string,
+ *   productModel: string,
+ * }} params
+ * @returns {Promise<boolean>}
+ */
+async function sendReturRequestReceivedEmail(params) {
+  const { email, registrationNumber } = params
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping retur request received email.')
+    return false
+  }
+  if (!email || typeof email !== 'string') {
+    console.warn('[Mail] No recipient for retur confirmation email – skipping.')
+    return false
+  }
+
+  const bundle = getReturRequestReceivedTemplateBundle()
+  const locale = typeof params.locale === 'string' ? params.locale : 'ro'
+  const html = bundle.getReturRequestReceivedTemplate({
+    locale,
+    registrationNumber,
+    firstName: params.firstName,
+    orderNumber: params.orderNumber,
+    productBrand: params.productBrand,
+    productModel: params.productModel,
+  })
+  const subject = bundle.subjectForLocale(locale, registrationNumber)
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend retur request received error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to: email,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Retur request received error:', err?.message || err)
+    return false
+  }
+}
+
 async function sendInquiryConfirmation(inquiry) {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
@@ -652,6 +723,7 @@ module.exports = {
   sendPartnerAccountApprovedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
+  sendReturRequestReceivedEmail,
   isMailConfigured,
   getMailProvider,
   getMailFrom,

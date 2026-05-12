@@ -26,15 +26,22 @@ function parseSerialFromQrPayload(raw) {
 const WAREHOUSE_SN_FACTORY_PREFIX = 'LJC'
 const WAREHOUSE_SN_BODY_DIGITS = 16
 
-function normalizeWarehouseSerialNumber(raw) {
-  let t = String(raw ?? '')
-    .replace(/\s/g, '')
+/** Spații, cratime, punct, underscore, unicode dashes — ex. `LJC - 5120 - 0011 - 2511 - 0009`. */
+function stripWarehouseSerialDisplayFormatting(s) {
+  return String(s ?? '')
     .toUpperCase()
+    .replace(/[\s\-_.\u2010-\u2015]+/g, '')
+}
+
+function normalizeWarehouseSerialNumber(raw) {
+  let t = stripWarehouseSerialDisplayFormatting(raw)
   if (!t) return ''
   if (t.startsWith(WAREHOUSE_SN_FACTORY_PREFIX)) {
-    return WAREHOUSE_SN_FACTORY_PREFIX + t.slice(WAREHOUSE_SN_FACTORY_PREFIX.length).replace(/\s/g, '')
+    const body = t.slice(WAREHOUSE_SN_FACTORY_PREFIX.length).replace(/\D/g, '')
+    return WAREHOUSE_SN_FACTORY_PREFIX + body
   }
-  return `${WAREHOUSE_SN_FACTORY_PREFIX}${t}`
+  const digits = t.replace(/\D/g, '')
+  return `${WAREHOUSE_SN_FACTORY_PREFIX}${digits}`
 }
 
 function isValidWarehouseSerialNumber(serial) {
@@ -60,7 +67,7 @@ function deriveProducedOnFromSerial(serialNumber) {
 }
 
 const SN_INVALID_MESSAGE =
-  'SN invalid. Format: LJC (fabrică) + 16 cifre — tensiune 2, capacitate 4, cifre 9–10 an (YY) / 11–12 lună, lot 6 (ex. LJC5120001125090001). La manual poți introduce doar cele 16 cifre după LJC.'
+  'SN invalid. Format: LJC (fabrică) + 16 cifre — tensiune 2, capacitate 4, cifre 9–10 an (YY) / 11–12 lună, lot 6 (ex. LJC5120001125090001 sau LJC - 5120 - 0011 - 2509 - 0001). La manual poți introduce doar cele 16 cifre după LJC; spații și cratime sunt ignorate.'
 
 module.exports = {
   parseSerialFromQrPayload,

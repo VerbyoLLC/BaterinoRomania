@@ -1,10 +1,41 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getAdminCompanies, getAuthToken } from '../../lib/api'
+import {
+  getAdminCompanies,
+  getAdminOrdersDashboardSummary,
+  getAdminServiceDashboardSummary,
+  getAuthToken,
+  type AdminOrdersDashboardSummary,
+  type AdminServiceDashboardSummary,
+} from '../../lib/api'
+
+const ORDER_STATUS_ORDER = [
+  'de_platit',
+  'preluata',
+  'in_pregatire',
+  'in_curs_livrare',
+  'livrata',
+  'anulata',
+] as const
+
+const ORDER_STATUS_LABELS: Record<(typeof ORDER_STATUS_ORDER)[number], string> = {
+  de_platit: 'De plătit',
+  preluata: 'Preluată',
+  in_pregatire: 'În pregătire',
+  in_curs_livrare: 'În curs de livrare',
+  livrata: 'Livrată',
+  anulata: 'Anulată',
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [partnerPendingCount, setPartnerPendingCount] = useState<number | 'loading' | 'error'>('loading')
+  const [ordersSummary, setOrdersSummary] = useState<AdminOrdersDashboardSummary | 'loading' | 'error'>(
+    'loading',
+  )
+  const [serviceSummary, setServiceSummary] = useState<AdminServiceDashboardSummary | 'loading' | 'error'>(
+    'loading',
+  )
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -19,6 +50,20 @@ export default function AdminDashboard() {
       .catch(() => {
         if (!cancelled) setPartnerPendingCount('error')
       })
+    getAdminOrdersDashboardSummary()
+      .then((s) => {
+        if (!cancelled) setOrdersSummary(s)
+      })
+      .catch(() => {
+        if (!cancelled) setOrdersSummary('error')
+      })
+    getAdminServiceDashboardSummary()
+      .then((s) => {
+        if (!cancelled) setServiceSummary(s)
+      })
+      .catch(() => {
+        if (!cancelled) setServiceSummary('error')
+      })
     return () => {
       cancelled = true
     }
@@ -31,7 +76,7 @@ export default function AdminDashboard() {
 
       <section className="mt-2">
         <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-3">Shortcuts</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-[460px]">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:max-w-[700px] lg:max-w-none lg:max-w-[700px]">
           <Link
             to="/admin/stocuri/add-item"
             className="group flex aspect-square w-full max-w-[220px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm transition hover:border-slate-300 hover:shadow"
@@ -45,6 +90,125 @@ export default function AdminDashboard() {
             </div>
             <p className="mt-4 text-sm font-semibold font-['Inter'] text-slate-900">Stocuri - Add Item</p>
           </Link>
+
+          <div className="group relative flex w-full max-w-[220px] flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md">
+            <Link
+              to="/admin/orders"
+              className="absolute inset-0 z-0 rounded-2xl outline-none ring-offset-2 ring-offset-white focus-visible:z-[5] focus-visible:ring-2 focus-visible:ring-amber-500"
+              aria-label="Comenzi — deschide lista de comenzi"
+            />
+            <div className="relative z-10 flex flex-col pointer-events-none">
+              <div className="flex justify-start">
+                <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-800 transition group-hover:bg-amber-100">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="mt-2 text-left text-base font-bold font-['Inter'] text-slate-900">Comenzi</h3>
+              <div className="mt-3 space-y-3 text-left">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 font-['Inter']">
+                    Comenzi noi (de plătit)
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums text-slate-900 font-['Inter']">
+                    {ordersSummary === 'loading'
+                      ? '…'
+                      : ordersSummary === 'error'
+                        ? '—'
+                        : ordersSummary.newOrders.total}
+                  </p>
+                </div>
+                {ordersSummary !== 'loading' && ordersSummary !== 'error' ? (
+                  <ul className="m-0 list-none space-y-1.5 p-0 text-xs font-['Inter'] text-slate-600">
+                    <li className="flex justify-between gap-2 tabular-nums">
+                      <span>Client</span>
+                      <span className="font-semibold text-slate-900">{ordersSummary.newOrders.client}</span>
+                    </li>
+                    <li className="flex justify-between gap-2 tabular-nums">
+                      <span>Partener</span>
+                      <span className="font-semibold text-slate-900">{ordersSummary.newOrders.partner}</span>
+                    </li>
+                    <li className="flex justify-between gap-2 tabular-nums">
+                      <span>Invitat</span>
+                      <span className="font-semibold text-slate-900">{ordersSummary.newOrders.guest}</span>
+                    </li>
+                  </ul>
+                ) : null}
+                {ordersSummary !== 'loading' && ordersSummary !== 'error' ? (
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500 font-['Inter']">
+                      Stări comandă (toate)
+                    </p>
+                    <ul className="m-0 max-h-32 list-none space-y-1 overflow-y-auto p-0 text-[11px] text-slate-600">
+                      {ORDER_STATUS_ORDER.map((key) => {
+                        const n = ordersSummary.byFulfillmentStatus[key] ?? 0
+                        if (n === 0) return null
+                        return (
+                          <li key={key} className="flex justify-between gap-2 tabular-nums">
+                            <span>{ORDER_STATUS_LABELS[key]}</span>
+                            <span className="font-semibold text-slate-800">{n}</span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative flex w-full max-w-[220px] flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md">
+            <Link
+              to="/admin/service"
+              className="absolute inset-0 z-0 rounded-2xl outline-none ring-offset-2 ring-offset-white focus-visible:z-[5] focus-visible:ring-2 focus-visible:ring-emerald-500"
+              aria-label="Service — deschide cererile de service și retur"
+            />
+            <div className="relative z-10 flex flex-col pointer-events-none">
+              <div className="flex justify-start">
+                <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition group-hover:bg-emerald-100">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="mt-2 text-left text-base font-bold font-['Inter'] text-slate-900">Service</h3>
+              <div className="mt-3 space-y-3 text-left">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 font-['Inter']">
+                    Cereri service noi (Nouă)
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums text-slate-900 font-['Inter']">
+                    {serviceSummary === 'loading'
+                      ? '…'
+                      : serviceSummary === 'error'
+                        ? '—'
+                        : serviceSummary.service.newOpen}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 font-['Inter']">
+                    Cereri retur noi (În așteptare)
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums text-slate-900 font-['Inter']">
+                    {serviceSummary === 'loading'
+                      ? '…'
+                      : serviceSummary === 'error'
+                        ? '—'
+                        : serviceSummary.retur.newPending}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="group relative flex w-full max-w-[220px] flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md">
             <Link

@@ -53,6 +53,137 @@ export async function submitInquiry(payload: InquiryPayload): Promise<{ message:
   return json
 }
 
+/** Eroare la POST /api/retur; `code` vine din JSON când există (ex. retur_photos_count). */
+export class ReturSubmitError extends Error {
+  readonly code?: string
+
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'ReturSubmitError'
+    this.code = code
+  }
+}
+
+/** Payload multipart POST /api/retur (câmpuri text + 2–6 fișiere `photos`). */
+export type SubmitReturPayload = {
+  lastName: string
+  firstName: string
+  street: string
+  county: string
+  city: string
+  postal: string
+  phone: string
+  email: string
+  orderNumber: string
+  receiptDate: string
+  serialNumber: string
+  productBrand: string
+  productModel: string
+  returnReason: string
+  returnReasonOther: string
+  condUninstalled: boolean
+  condSeals: boolean
+  condPackaging: boolean
+  pickupStreet: string
+  pickupCounty: string
+  pickupCity: string
+  pickupPostal: string
+  refundTitular: string
+  refundIban: string
+  policyAccepted: boolean
+  declarationAccepted: boolean
+  locale: string
+}
+
+/** Trimite cererea de retur; opțional Bearer din `getAuthToken()` pentru client autentificat. */
+export async function submitProductRetur(
+  payload: SubmitReturPayload,
+  photos: File[],
+): Promise<{ id: number; registrationNumber: string }> {
+  const fd = new FormData()
+  const entries: [keyof SubmitReturPayload, string][] = [
+    ['lastName', payload.lastName],
+    ['firstName', payload.firstName],
+    ['street', payload.street],
+    ['county', payload.county],
+    ['city', payload.city],
+    ['postal', payload.postal],
+    ['phone', payload.phone],
+    ['email', payload.email],
+    ['orderNumber', payload.orderNumber],
+    ['receiptDate', payload.receiptDate],
+    ['serialNumber', payload.serialNumber],
+    ['productBrand', payload.productBrand],
+    ['productModel', payload.productModel],
+    ['returnReason', payload.returnReason],
+    ['returnReasonOther', payload.returnReasonOther],
+    ['condUninstalled', payload.condUninstalled ? 'true' : 'false'],
+    ['condSeals', payload.condSeals ? 'true' : 'false'],
+    ['condPackaging', payload.condPackaging ? 'true' : 'false'],
+    ['pickupStreet', payload.pickupStreet],
+    ['pickupCounty', payload.pickupCounty],
+    ['pickupCity', payload.pickupCity],
+    ['pickupPostal', payload.pickupPostal],
+    ['refundTitular', payload.refundTitular],
+    ['refundIban', payload.refundIban],
+    ['policyAccepted', payload.policyAccepted ? 'true' : 'false'],
+    ['declarationAccepted', payload.declarationAccepted ? 'true' : 'false'],
+    ['locale', payload.locale],
+  ]
+  for (const [k, v] of entries) {
+    fd.append(k, v)
+  }
+  for (const file of photos) {
+    fd.append('photos', file)
+  }
+  const headers: HeadersInit = {}
+  const token = getAuthToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/retur`, { method: 'POST', headers, body: fd })
+  const json = (await res.json().catch(() => ({}))) as {
+    id?: number
+    registrationNumber?: string
+    error?: string
+    code?: string
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json.error === 'string' && json.error.trim() ? json.error.trim() : 'Eroare la trimiterea cererii.'
+    const code = typeof json.code === 'string' && json.code.trim() ? json.code.trim() : undefined
+    throw new ReturSubmitError(msg, code)
+  }
+  if (typeof json.id !== 'number' || !Number.isFinite(json.id)) {
+    throw new Error('Răspuns invalid de la server.')
+  }
+  const registrationNumber =
+    typeof json.registrationNumber === 'string' && json.registrationNumber.trim()
+      ? json.registrationNumber.trim()
+      : `BTRT-${String(json.id).padStart(6, '0')}`
+  return { id: json.id, registrationNumber }
+}
+
+/** Public: eligibilitate retur după SN în stocuri + data recepție (≤15 zile). */
+export type ReturSerialEligibilityResponse = { eligible: boolean }
+
+export async function getPublicReturSerialEligibility(serialNumber: string): Promise<ReturSerialEligibilityResponse> {
+  const sn = encodeURIComponent(String(serialNumber ?? '').trim())
+  const res = await fetch(`${API_BASE}/public/retur-serial-eligibility?sn=${sn}`, { cache: 'no-store' })
+  const json = (await res.json().catch(() => ({}))) as { eligible?: boolean; error?: string; code?: string }
+  if (res.status === 429) {
+    throw new Error(
+      typeof json.error === 'string' && json.error.trim()
+        ? json.error.trim()
+        : 'Prea multe verificări într-un interval scurt. Încearcă din nou peste un minut.',
+    )
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json.error === 'string' && json.error.trim() ? json.error.trim() : 'Nu am putut verifica numărul de serie.'
+    throw new Error(msg)
+  }
+  return { eligible: Boolean(json.eligible) }
+}
+
 /** Linie coș → același POST ca produs unic. */
 export type GuestResidentialOrderLineInput = {
   productIdOrSlug: string
@@ -102,7 +233,7 @@ export type GuestResidentialOrderResponse = {
   orderId?: string
   email: string
   /** Aliniat cu DB: guest | client */
-  orderSource?: 'guest' | 'client'
+  orderSource?: 'guest' | 'client' | 'partner'
   message?: string
 }
 
@@ -164,7 +295,7 @@ export async function submitGuestResidentialOrder(
     orderNumber: json.orderNumber,
     orderId: typeof json.orderId === 'string' ? json.orderId : undefined,
     email: String(json.email || payload.email),
-    orderSource: src === 'client' || src === 'guest' ? src : undefined,
+    orderSource: src === 'client' || src === 'guest' || src === 'partner' ? src : undefined,
     message: json.message,
   }
 }
@@ -333,6 +464,24 @@ export async function getProducts(): Promise<PublicProduct[]> {
   return Array.isArray(json) ? json : []
 }
 
+/** Rând minimal din catalogul de modele (GET public, fără specificații tehnice). */
+export type PublicProductModelRow = {
+  id: string
+  name: string
+  brand: string
+  series: string
+  modelNumber: string
+  usageType: 'industrial' | 'residential'
+}
+
+export async function getPublicProductModels(): Promise<PublicProductModelRow[]> {
+  const res = await fetch(`${API_BASE}/public/product-models`, { headers: publicFetchHeaders() })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((json as { error?: string }).error || 'Eroare la încărcarea modelelor.')
+  if (!Array.isArray(json)) return []
+  return json as PublicProductModelRow[]
+}
+
 /** Un singur produs publicat (fără auth). Acceptă id sau slug pentru SEO. */
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
   const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
@@ -354,6 +503,105 @@ export async function getProductAsGuest(idOrSlug: string): Promise<PublicProduct
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
   return json
+}
+
+export type WarrantyVerifyResponse =
+  | {
+      found: true
+      serialNumber: string
+      brand: string | null
+      title: string
+      modelNumber: string
+      imageUrl: string | null
+    }
+  | { found: false; serialNumber: string }
+
+export type WarrantyVerifyFetchArg = string | { token: string }
+
+/** Verificare publică SN sau token semnat (?t=). Fără Authorization — același răspuns pentru toți. */
+export async function fetchWarrantyVerify(arg: WarrantyVerifyFetchArg): Promise<
+  | { ok: true; data: WarrantyVerifyResponse }
+  | {
+      ok: false
+      error: string
+      invalidSerial?: boolean
+      invalidToken?: boolean
+      tokenNotConfigured?: boolean
+      rateLimited?: boolean
+    }
+> {
+  const params = new URLSearchParams()
+  let fallbackSerial = ''
+  if (typeof arg === 'object' && arg && typeof arg.token === 'string') {
+    params.set('t', arg.token)
+  } else {
+    const serialNumber = typeof arg === 'string' ? arg : ''
+    fallbackSerial = serialNumber
+    params.set('sn', serialNumber)
+  }
+  const res = await fetch(`${API_BASE}/warranty-verify?${params}`, {
+    headers: {},
+  })
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (res.status === 400) {
+    const err =
+      typeof json.error === 'string'
+        ? json.error
+        : json.code === 'invalid_token'
+          ? 'Link invalid.'
+          : 'SN invalid.'
+    return {
+      ok: false,
+      error: err,
+      invalidSerial: json.code === 'invalid_serial',
+      invalidToken: json.code === 'invalid_token',
+    }
+  }
+  if (res.status === 503 && json.code === 'token_not_configured') {
+    return {
+      ok: false,
+      error:
+        typeof json.error === 'string'
+          ? json.error
+          : 'Verificarea cu link semnat nu este disponibilă.',
+      tokenNotConfigured: true,
+    }
+  }
+  if (res.status === 429) {
+    return {
+      ok: false,
+      error: typeof json.error === 'string' ? json.error : 'Prea multe cereri. Încearcă din nou peste un minut.',
+      rateLimited: true,
+    }
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: typeof json.error === 'string' ? json.error : 'Eroare la verificare.',
+    }
+  }
+  const serialFromJson = String(json.serialNumber ?? fallbackSerial)
+  if (json.found === true) {
+    const brandRaw = json.brand != null ? String(json.brand).trim() : ''
+    return {
+      ok: true,
+      data: {
+        found: true,
+        serialNumber: serialFromJson,
+        brand: brandRaw ? brandRaw : null,
+        title: String(json.title ?? ''),
+        modelNumber: String(json.modelNumber ?? ''),
+        imageUrl: json.imageUrl != null && String(json.imageUrl).trim() ? String(json.imageUrl) : null,
+      },
+    }
+  }
+  return {
+    ok: true,
+    data: {
+      found: false,
+      serialNumber: serialFromJson,
+    },
+  }
 }
 
 /** Verifică dacă API-ul răspunde. Folosește API_BASE (VITE_API_URL în prod). */
@@ -1002,6 +1250,77 @@ export async function patchAdminServiceRequestStatus(
     throw new Error((json as { error?: string }).error || 'Eroare.')
   }
   return json as ServiceRequestDto
+}
+
+export type ReturRequestDto = {
+  id: number
+  /** Serie publică (ex. BTRT-000042), derivată din id. */
+  registrationNumber: string
+  createdAt: string
+  updatedAt: string
+  userId: string | null
+  submitSource: string
+  lastName: string
+  firstName: string
+  street: string
+  county: string
+  city: string
+  postal: string
+  phone: string
+  email: string
+  orderNumber: string
+  receiptDate: string
+  serialNumber: string
+  productBrand: string
+  productModel: string
+  returnReason: string
+  returnReasonOther: string
+  condUninstalled: boolean
+  condSeals: boolean
+  condPackaging: boolean
+  pickupStreet: string
+  pickupCounty: string
+  pickupCity: string
+  pickupPostal: string
+  refundTitular: string
+  refundIban: string
+  policyAccepted: boolean
+  declarationAccepted: boolean
+  locale: string
+  conditionPhotoUrls: string[]
+  status: string
+}
+
+export async function getAdminReturRequests(): Promise<ReturRequestDto[]> {
+  const res = await fetch(`${API_BASE}/admin/retur`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? (json as ReturRequestDto[]) : []
+}
+
+export async function patchAdminReturStatus(
+  id: number,
+  status: 'pending' | 'reviewed' | 'closed',
+): Promise<ReturRequestDto> {
+  const res = await fetch(`${API_BASE}/admin/retur/${encodeURIComponent(String(id))}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return json as ReturRequestDto
 }
 
 export async function claimClientRegisteredProduct(body: {
@@ -1706,15 +2025,53 @@ export function parseWarehouseQrSerial(raw: string): string {
   return s.slice(0, 512)
 }
 
-/** Elimină spații, majuscule; dacă lipsește prefixul fabrică, îl adaugă (implicit la manual). */
-export function normalizeWarehouseSerialNumber(raw: string): string {
-  let t = String(raw ?? '')
-    .replace(/\s/g, '')
+/** Token semnat din lipire URL (?t= / ?token=) sau string raw `payload.sig` (QR certificat). */
+export function extractWarrantyVerifyTokenFromPaste(raw: string): string | null {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  try {
+    const u = new URL(s)
+    const t = u.searchParams.get('t') || u.searchParams.get('token')
+    if (t && t.trim()) return t.trim().slice(0, 4096)
+  } catch {
+    // not a URL
+  }
+  if (!/\s/.test(s) && s.includes('.')) {
+    const dot = s.indexOf('.')
+    if (dot > 0 && dot < s.length - 1 && s.indexOf('.', dot + 1) === -1) {
+      const left = s.slice(0, dot)
+      const right = s.slice(dot + 1)
+      if (
+        left.length >= 8 &&
+        right.length >= 8 &&
+        /^[A-Za-z0-9_-]+$/.test(left) &&
+        /^[A-Za-z0-9_-]+$/.test(right)
+      ) {
+        return s.slice(0, 4096)
+      }
+    }
+  }
+  return null
+}
+
+/** Spații, cratime, punct, underscore, unicode dashes — ex. `LJC - 5120 - 0011 - 2511 - 0009`. */
+function stripWarehouseSerialDisplayFormatting(s: string): string {
+  return String(s ?? '')
     .toUpperCase()
+    .replace(/[\s\-_.\u2010-\u2015]+/g, '')
+}
+
+/** Elimină formatare afișare, majuscule; păstrează doar cifre după LJC; dacă lipsește prefixul fabrică, îl adaugă. */
+export function normalizeWarehouseSerialNumber(raw: string): string {
+  let t = stripWarehouseSerialDisplayFormatting(raw)
   if (!t) return ''
   const p = WAREHOUSE_SN_FACTORY_PREFIX
-  if (t.startsWith(p)) return p + t.slice(p.length).replace(/\s/g, '')
-  return `${p}${t}`
+  if (t.startsWith(p)) {
+    const body = t.slice(p.length).replace(/\D/g, '')
+    return `${p}${body}`
+  }
+  const digits = t.replace(/\D/g, '')
+  return `${p}${digits}`
 }
 
 export function isValidWarehouseSerialNumber(serial: string): boolean {
@@ -1753,6 +2110,8 @@ export type WarehouseSavedItemRow = {
   id: string
   itemNumber: number | null
   warehouseStockUnitId: string
+  /** Marcă din catalog (produs legat de unitatea din depozit). */
+  brand?: string | null
   modelNumber: string
   serialNumber: string
   producedOn: string
@@ -1768,6 +2127,8 @@ export type WarehouseSavedItemRow = {
   warrantyCertificateGeneratedAt?: string | null
   /** Numărul certificatului (CG-YYYY-NNNNN), `null` dacă nu este generat. */
   warrantyCertificateNumber?: string | null
+  /** Data recepției de către client (text, ex. zz-ll-aaaa) sau ISO din fluxuri viitoare. */
+  clientReceiptDate?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -2077,6 +2438,68 @@ export type AdminGuestResidentialOrderRow = {
   clientInvoiceUrl?: string | null
   /** Proforma PDF încărcată de admin (R2). */
   proformaUrl?: string | null
+}
+
+export type AdminOrdersDashboardSummary = {
+  newOrders: {
+    total: number
+    client: number
+    partner: number
+    guest: number
+  }
+  /** Număr comenzi (rezidențial + legacy) per fulfillmentStatus. */
+  byFulfillmentStatus: Record<string, number>
+}
+
+export type AdminServiceDashboardSummary = {
+  service: { newOpen: number }
+  retur: { newPending: number }
+}
+
+export async function getAdminServiceDashboardSummary(): Promise<AdminServiceDashboardSummary> {
+  const res = await fetch(`${API_BASE}/admin/service-dashboard-summary`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => ({}))) as AdminServiceDashboardSummary & { error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea statisticilor service.')
+  }
+  const service = json.service && typeof json.service === 'object' ? json.service : null
+  const retur = json.retur && typeof json.retur === 'object' ? json.retur : null
+  return {
+    service: { newOpen: Number(service?.newOpen) || 0 },
+    retur: { newPending: Number(retur?.newPending) || 0 },
+  }
+}
+
+export async function getAdminOrdersDashboardSummary(): Promise<AdminOrdersDashboardSummary> {
+  const res = await fetch(`${API_BASE}/admin/orders-dashboard-summary`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => ({}))) as AdminOrdersDashboardSummary & { error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea statisticilor comenzi.')
+  }
+  const newOrders = json.newOrders && typeof json.newOrders === 'object' ? json.newOrders : null
+  const byFulfillmentStatus =
+    json.byFulfillmentStatus && typeof json.byFulfillmentStatus === 'object' ? json.byFulfillmentStatus : {}
+  return {
+    newOrders: {
+      total: Number(newOrders?.total) || 0,
+      client: Number(newOrders?.client) || 0,
+      partner: Number(newOrders?.partner) || 0,
+      guest: Number(newOrders?.guest) || 0,
+    },
+    byFulfillmentStatus: Object.fromEntries(
+      Object.entries(byFulfillmentStatus).map(([k, v]) => [k, Number(v) || 0]),
+    ),
+  }
 }
 
 export async function getAdminGuestResidentialOrders(): Promise<AdminGuestResidentialOrderRow[]> {

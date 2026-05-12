@@ -18,6 +18,7 @@ export type FooterTranslations = {
   // Suport & Legal
   sigurantaClientului: string
   verificareGarantie: string
+  returnareProduse: string
   suportClienti: string
   termeniConditii: string
   termeniReduceri: string
@@ -52,6 +53,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     cariere: 'Cariere',
     sigurantaClientului: 'Siguranta clientului',
     verificareGarantie: 'Verificare Garantie',
+    returnareProduse: 'Returnare produse',
     suportClienti: 'Suport Clienti',
     termeniConditii: 'Termeni si Conditii',
     termeniReduceri: 'Termeni Reduceri',
@@ -81,6 +83,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     cariere: 'Careers',
     sigurantaClientului: 'Customer safety',
     verificareGarantie: 'Warranty check',
+    returnareProduse: 'Product returns',
     suportClienti: 'Customer Support',
     termeniConditii: 'Terms and Conditions',
     termeniReduceri: 'Discount Terms',
@@ -110,6 +113,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     cariere: '招聘',
     sigurantaClientului: '客户安全',
     verificareGarantie: '保修验证',
+    returnareProduse: '退货说明',
     suportClienti: '客户支持',
     termeniConditii: '条款与条件',
     termeniReduceri: '折扣条款',

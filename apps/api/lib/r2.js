@@ -284,6 +284,19 @@ function warrantyCertificateKey(savedItemId, serialNumber) {
   return `${WARRANTY_CERTIFICATES_PREFIX}/${id}/${safeSn}.pdf`
 }
 
+const RETUR_PREFIX = 'retur'
+
+/**
+ * Cheie R2 pentru fotografie stare produs: `retur/<orderSlug>-<returId>/photo-NN.ext`
+ * (orderSlug din număr comandă, ușor de recunoscut în bucket).
+ */
+function buildReturConditionPhotoKey(orderNumber, returId, photoIndex1Based, mimetype) {
+  const orderSeg = sanitizeFolderName(orderNumber || 'order').slice(0, 48) || 'order'
+  const ext = MIME_TO_EXT[mimetype] || '.jpg'
+  const idx = Math.max(1, Math.floor(Number(photoIndex1Based)) || 1)
+  return `${RETUR_PREFIX}/${orderSeg}-${returId}/photo-${String(idx).padStart(2, '0')}${ext}`
+}
+
 module.exports = {
   uploadToR2,
   downloadFromR2,
@@ -298,4 +311,5 @@ module.exports = {
   proformaPdfKey,
   warrantyCertificateKey,
   sanitizeSerialNumber,
+  buildReturConditionPhotoKey,
 }

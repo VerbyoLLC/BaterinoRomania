@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getFooterTranslations } from '../i18n/footer'
+import { getVerificareGarantieTranslations } from '../i18n/verificare-garantie'
 import { INSTALATORI_ONLY } from '../lib/siteMode'
 import { getAuthRole } from '../lib/api'
 
@@ -15,6 +16,7 @@ const headingClass =
 function Footer() {
   const { language } = useLanguage()
   const t = getFooterTranslations(language.code)
+  const warrantyPage = getVerificareGarantieTranslations(language.code)
   const [authRole, setAuthRole] = useState<'admin' | 'client' | 'partener' | 'sales_agent' | null>(() =>
     typeof window !== 'undefined' ? getAuthRole() : null,
   )
@@ -38,8 +40,14 @@ function Footer() {
             <Link to={isClient ? '/client' : '/instalatori'} className="flex items-center gap-2">
               <img src="/images/shared/baterino-logo-black.svg" alt="Baterino" className="w-28 h-5 object-contain opacity-90" />
             </Link>
-            <nav className="flex items-center gap-6">
+            <nav className="flex flex-wrap items-center justify-center gap-6">
               {!isClient ? <Link to="/instalatori" className={linkClass}>{t.instalatori}</Link> : null}
+              <Link to="/verificare-garantie" className={linkClass}>
+                {warrantyPage.pageTitle}
+              </Link>
+              <Link to="/returnare-produse" className={linkClass}>
+                {t.returnareProduse}
+              </Link>
               <Link to="/login" className={linkClass}>{t.clienti}</Link>
             </nav>
           </div>
@@ -82,6 +90,7 @@ function Footer() {
             <nav className="flex flex-col gap-2.5">
               <Link to="/siguranta" className={linkClass}>{t.sigurantaClientului}</Link>
               <Link to="/verificare-garantie" className={linkClass}>{t.verificareGarantie}</Link>
+              <Link to="/returnare-produse" className={linkClass}>{t.returnareProduse}</Link>
               <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
               <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
               <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>

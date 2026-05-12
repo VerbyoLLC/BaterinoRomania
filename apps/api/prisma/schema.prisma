@@ -40,6 +40,7 @@ model User {
   clientProfile             ClientProfile?
   residentialOrders         ResidentialOrder[]
   salesAgentProfile         SalesAgent? @relation("UserSalesAgent")
+  retururi                  Retur[]
 }
 
 /** Profil livrare/facturare pentru conturi client (1:1 User). */
@@ -339,6 +340,8 @@ model WarehouseSavedItem {
   warrantyCertificateUrl String?                  @db.Text
   /** Timestamp-ul ultimei generări a certificatului. */
   warrantyCertificateGeneratedAt DateTime?
+  /** Data recepției produsului de către client (ex. zz-ll-aaaa); opțional. */
+  clientReceiptDate    String?
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @updatedAt
 
@@ -510,6 +513,69 @@ model ServiceRequest {
   @@index([serialNumber])
   @@index([status])
   @@index([createdAt])
+}
+
+/**
+ * Cerere de retur trimisă din site (formular Returnare produse).
+ * id numeric (SERIAL) — folosit intern; seria publică afișată este BTRT-{id zero-padded}.
+ * Fotografiile sunt în R2: `retur/<orderSlug>-<id>/`.
+ */
+model Retur {
+  id                  Int      @id @default(autoincrement())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  userId              String?
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /** guest | client — sursa trimiterii. */
+  submitSource        String   @default("guest")
+
+  lastName            String   @default("")
+  firstName           String   @default("")
+  street              String   @default("")
+  county              String   @default("")
+  city                String   @default("")
+  postal              String   @default("")
+  phone               String   @default("")
+  email               String   @default("")
+
+  orderNumber         String
+  receiptDate         String
+  serialNumber        String
+  productBrand        String
+  productModel        String
+
+  returnReason        String
+  returnReasonOther   String   @default("") @db.Text
+
+  condUninstalled     Boolean
+  condSeals           Boolean
+  condPackaging       Boolean
+
+  pickupStreet        String   @default("")
+  pickupCounty        String   @default("")
+  pickupCity          String   @default("")
+  pickupPostal        String   @default("")
+
+  refundTitular       String   @default("")
+  refundIban          String   @default("")
+
+  policyAccepted      Boolean
+  declarationAccepted Boolean
+
+  locale              String   @default("ro")
+
+  /** Listă URL-uri publice R2 (JSON array de string-uri). */
+  conditionPhotoUrls  Json     @default("[]")
+
+  /** pending | reviewed | closed */
+  status              String   @default("pending")
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([createdAt])
+  @@index([email])
+  @@map("retur")
 }
 
 /** Agenți de vânzări / teren — admin Setări → Agenți; opțional legat de cont User (rol sales_agent). */
