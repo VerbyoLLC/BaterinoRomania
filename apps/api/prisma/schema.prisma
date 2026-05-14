@@ -129,6 +129,9 @@ model ResidentialOrderLine {
   quantity         Int
   unitPriceInclVat Decimal? @db.Decimal(14, 2)
   lineTotalInclVat Decimal? @db.Decimal(14, 2)
+  /** Preț catalog / înainte de reducere (cu TVA) — setat doar când s-a aplicat discount la plată. */
+  listUnitPriceInclVat Decimal? @db.Decimal(14, 2)
+  listLineTotalInclVat Decimal? @db.Decimal(14, 2)
   vatPercent       Decimal? @db.Decimal(5, 2)
 
   @@index([orderId])
@@ -148,6 +151,11 @@ model Partner {
   companyCity           String?
   companyCounty         String?
   companyPostalCode     String?
+  /** Magazin / depozit / adresă livrare implicită (distinctă de sediu social și de adresa din profil public). */
+  deliveryStreet        String?
+  deliveryCounty        String?
+  deliveryCity          String?
+  deliveryPostalCode    String?
   tradeRegisterNumber   String?
   activityTypes         String   // "instalator,distribuitor,integrator,altul" (comma-separated)
   contactFirstName      String
@@ -454,6 +462,8 @@ model GuestResidentialOrder {
   currency     String   @default("RON")
   unitPriceInclVat Decimal? @db.Decimal(14, 2)
   lineTotalInclVat Decimal? @db.Decimal(14, 2)
+  listUnitPriceInclVat Decimal? @db.Decimal(14, 2)
+  listLineTotalInclVat Decimal? @db.Decimal(14, 2)
   vatPercent       Decimal? @db.Decimal(5, 2)
   /** de_platit | preluata | in_pregatire | in_curs_livrare | livrata | anulata */
   fulfillmentStatus String   @default("de_platit")

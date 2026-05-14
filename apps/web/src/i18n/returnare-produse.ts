@@ -236,8 +236,7 @@ const translations: Record<LangCode, ReturnareProduseTranslations> = {
       },
       {
         title: 'Trimite produsul',
-        description:
-          'Ambalează corect produsul și expediază-l prin curier, conform indicațiilor primite. Păstrează dovada expedierii.',
+        description: 'Ambalează corect produsul și predă-l curierului nostru.',
       },
       {
         title: 'Verificare la primire',

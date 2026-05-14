@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { Percent, Truck, Headphones, Store, UserCheck, RefreshCw, Check } from 'lucide-react'
+import { Percent, Truck, Headphones, Store, UserCheck, RefreshCw, Check, ShoppingCart } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { getPartnerProfile } from '../../lib/api'
+import { readPartnerCartFromStorage } from '../../lib/partnerCart'
+import { ReducerePartenerBox, SigurantaClientuluiBox, SuportTehnicBox } from './PartnerSidebarBoxes'
 
 const PENDING_PARTNER_ADVANTAGES: { Icon: LucideIcon; title: string; subtitle: string }[] = [
   {
@@ -211,9 +215,29 @@ function PartnerAdvantageBoxesSkeleton() {
 }
 
 export default function PartnerDashboard() {
+  const { language } = useLanguage()
+  const lang = language.code
+
   const [pendingApproval, setPendingApproval] = useState<boolean | null>(null)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [partnerCartLineCount, setPartnerCartLineCount] = useState(0)
+
+  const syncPartnerCartCount = useCallback(() => {
+    setPartnerCartLineCount(readPartnerCartFromStorage().length)
+  }, [])
+
+  useEffect(() => {
+    syncPartnerCartCount()
+    window.addEventListener('storage', syncPartnerCartCount)
+    window.addEventListener('focus', syncPartnerCartCount)
+    document.addEventListener('visibilitychange', syncPartnerCartCount)
+    return () => {
+      window.removeEventListener('storage', syncPartnerCartCount)
+      window.removeEventListener('focus', syncPartnerCartCount)
+      document.removeEventListener('visibilitychange', syncPartnerCartCount)
+    }
+  }, [syncPartnerCartCount])
   const [profile, setProfile] = useState<{
     contactFirstName?: string
     contactLastName?: string
@@ -250,7 +274,9 @@ export default function PartnerDashboard() {
   }, [])
 
   return (
-    <div className="pt-2 px-6 pb-6 sm:pt-4 sm:px-8 sm:pb-8 lg:pt-6 lg:px-10 lg:pb-10 max-w-5xl w-full">
+    <div className="flex min-h-full w-full items-start">
+      {/* ── Main content ── */}
+      <div className="min-w-0 flex-1 pt-2 px-6 pb-6 sm:pt-4 sm:px-8 sm:pb-8 lg:pt-6 lg:px-10 lg:pb-10 max-w-4xl">
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-6">
         Dashboard
       </h1>
@@ -354,6 +380,46 @@ export default function PartnerDashboard() {
         </div>
       )}
 
+      {!loading &&
+        !isSuspended &&
+        !pendingApproval &&
+        partnerCartLineCount > 0 && (
+          <div className="mb-6 rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/95 to-white px-5 py-4 sm:px-6 sm:py-5 shadow-sm ring-1 ring-amber-900/[0.04]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm ring-1 ring-amber-100"
+                  aria-hidden
+                >
+                  <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold font-['Inter'] text-slate-900">
+                    {lang === 'en'
+                      ? 'Finish your order'
+                      : lang === 'zh'
+                        ? '完成您的订单'
+                        : 'Finalizează comanda'}
+                  </h3>
+                  <p className="mt-1 text-sm font-['Inter'] leading-snug text-slate-600">
+                    {lang === 'en'
+                      ? 'You have items in your cart that have not been submitted yet. Continue checkout when you are ready.'
+                      : lang === 'zh'
+                        ? '购物车中有尚未提交的商品，可随时前往结账完成订单。'
+                        : 'Ai produse în coș care nu au fost trimise încă. Continuă pentru a plasa comanda.'}
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/partner/checkout"
+                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold font-['Inter'] text-white shadow-sm transition hover:bg-slate-800"
+              >
+                {lang === 'en' ? 'Go to checkout' : lang === 'zh' ? '去结账' : 'Continuă comanda'}
+              </Link>
+            </div>
+          </div>
+        )}
+
       {!loading && pendingApproval !== true && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -388,6 +454,17 @@ export default function PartnerDashboard() {
           </div>
         </>
       )}
+      </div>
+
+      {/* ── Right sidebar ── */}
+      <aside className="hidden xl:flex w-[26rem] shrink-0 flex-col gap-4 border-l border-slate-200 bg-white p-4 self-stretch overflow-y-auto sticky top-0 max-h-screen">
+        <ReducerePartenerBox
+          discountPercent={profile?.partnerDiscountPercent ?? null}
+          loading={loading}
+        />
+        <SigurantaClientuluiBox />
+        <SuportTehnicBox />
+      </aside>
     </div>
   )
 }

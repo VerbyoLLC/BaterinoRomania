@@ -5,14 +5,14 @@ import { getAuthEmail, getPartnerProfile } from '../../lib/api'
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconProfile() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   )
 }
 function IconSettings() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 2.31.826 1.37 1.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 2.31-1.37 1.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-2.31-.826-1.37-1.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-2.31 1.37-1.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
@@ -20,42 +20,42 @@ function IconSettings() {
 }
 function IconProducts() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m0-14L4 17m8 4V10" />
     </svg>
   )
 }
 function IconOrders() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
   )
 }
 function IconService() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
     </svg>
   )
 }
 function IconSupport() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   )
 }
 function IconDashboard() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
     </svg>
   )
 }
 function IconLogout() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
     </svg>
   )
@@ -64,6 +64,20 @@ function IconLock() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  )
+}
+function IconChevronLeft() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  )
+}
+function IconChevronRight() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   )
 }
@@ -81,52 +95,68 @@ const NAV_BOTTOM = [
   { to: '/partner/suport', label: 'Suport', icon: <IconSupport />, end: false },
 ]
 
-function NavItemLoader({ count }: { count: number }) {
+function NavItemLoader({ count, collapsed }: { count: number; collapsed: boolean }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl animate-pulse"
+          className={`flex items-center gap-3 rounded-xl animate-pulse ${collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'}`}
           aria-hidden
         >
-          <div className="w-5 h-5 rounded-md bg-slate-700/90 flex-shrink-0" />
-          <div className="h-4 flex-1 max-w-[8.5rem] rounded-md bg-slate-700/70" />
+          <div className="w-5 h-5 rounded-md bg-slate-700/90 shrink-0" />
+          {!collapsed && <div className="h-4 flex-1 max-w-[8.5rem] rounded-md bg-slate-700/70" />}
         </div>
       ))}
     </>
   )
 }
 
-/** Locked row: tooltip is anchored to the lock control on the right. */
 function InactiveNavRow({
   tooltip,
   icon,
   label,
+  collapsed,
 }: {
   tooltip: string
   icon: ReactNode
   label: string
+  collapsed: boolean
 }) {
   return (
-    <span className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-500 opacity-60">
+    <span
+      title={collapsed ? label : undefined}
+      className={`group/inactive relative flex w-full cursor-not-allowed items-center rounded-xl text-sm font-['Inter'] font-medium text-slate-500 opacity-60 ${
+        collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+      }`}
+    >
       {icon}
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <button
-        type="button"
-        tabIndex={0}
-        aria-label={tooltip}
-        className="group/lock relative ml-auto inline-flex flex-shrink-0 cursor-help items-center justify-center rounded-md p-1 text-slate-400 outline-none pointer-events-auto hover:text-slate-300 focus-visible:ring-2 focus-visible:ring-white/35"
-        onClick={(e) => e.preventDefault()}
-      >
-        <IconLock />
-        <span
-          role="tooltip"
-          className="pointer-events-none absolute right-0 bottom-full z-[200] mb-1.5 w-max max-w-[min(14rem,calc(100vw-2rem))] rounded-lg bg-slate-800 px-3 py-2 text-left text-xs font-medium leading-snug text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity duration-150 group-hover/lock:opacity-100 group-focus-visible/lock:opacity-100"
-        >
-          {tooltip}
+      {!collapsed && (
+        <>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <button
+            type="button"
+            tabIndex={0}
+            aria-label={tooltip}
+            className="group/lock relative ml-auto inline-flex shrink-0 cursor-help items-center justify-center rounded-md p-1 text-slate-400 outline-none pointer-events-auto hover:text-slate-300 focus-visible:ring-2 focus-visible:ring-white/35"
+            onClick={(e) => e.preventDefault()}
+          >
+            <IconLock />
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute right-0 bottom-full z-[200] mb-1.5 w-max max-w-[min(14rem,calc(100vw-2rem))] rounded-lg bg-slate-800 px-3 py-2 text-left text-xs font-medium leading-snug text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity duration-150 group-hover/lock:opacity-100 group-focus-visible/lock:opacity-100"
+            >
+              {tooltip}
+            </span>
+          </button>
+        </>
+      )}
+      {/* tooltip in collapsed mode */}
+      {collapsed && (
+        <span className="pointer-events-none absolute left-full ml-2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/inactive:opacity-100">
+          {label}
         </span>
-      </button>
+      )}
     </span>
   )
 }
@@ -135,8 +165,8 @@ export default function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
-  /** null = încărcare; false = în așteptare aprobare admin */
   const [isApproved, setIsApproved] = useState<boolean | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
 
@@ -174,6 +204,11 @@ export default function PartnerLayout() {
     }
   }, [isSuspended, isApproved, pendingReview, location.pathname, navigate])
 
+  const navLinkClass = (isActive: boolean, col: boolean) =>
+    `flex items-center rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
+      col ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+    } ${isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
+
   return (
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
 
@@ -187,32 +222,58 @@ export default function PartnerLayout() {
       )}
 
       {/* ── Sidebar ── */}
-      <aside className={`w-64 flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-transform duration-200 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex flex-col h-full py-6 px-4">
+      <aside
+        className={`flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-all duration-200 ease-in-out lg:transform-none ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${collapsed ? 'w-[4.5rem]' : 'w-64'}`}
+      >
+        <div className="flex flex-col h-full py-6 px-3 overflow-hidden">
 
-          {/* Logo */}
-          <a href="/" className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50">
-            <img
-              src="/images/shared/baterino-logo-white.png"
-              alt="Baterino"
-              className="h-7 w-auto object-contain"
-            />
-            <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
-              Partener
-            </span>
-          </a>
+          {/* Logo / collapse toggle */}
+          <div className={`pb-5 mb-4 border-b border-slate-700/50 flex items-center ${collapsed ? 'justify-center' : 'justify-between px-1'}`}>
+            {!collapsed && (
+              <a href="/" className="flex flex-col items-start gap-1 pl-2 min-w-0">
+                <img
+                  src="/images/shared/baterino-logo-white.png"
+                  alt="Baterino"
+                  className="h-7 w-auto object-contain"
+                />
+                <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
+                  Partener
+                </span>
+              </a>
+            )}
+            {collapsed && (
+              <a href="/" className="flex items-center justify-center">
+                <img
+                  src="/images/shared/baterino-logo-white.png"
+                  alt="Baterino"
+                  className="h-6 w-auto object-contain"
+                />
+              </a>
+            )}
+            {/* Collapse toggle — desktop only */}
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? 'Extinde meniul' : 'Restrânge meniul'}
+              className={`hidden lg:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white ${collapsed ? 'mt-3' : ''}`}
+            >
+              {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
+            </button>
+          </div>
 
           {/* Nav */}
           <nav
-            className="flex-1 flex flex-col gap-1"
+            className="flex-1 flex flex-col gap-1 overflow-hidden"
             aria-busy={!profileLoaded}
             aria-label={!profileLoaded ? 'Se încarcă meniul' : undefined}
           >
             {!profileLoaded ? (
               <>
-                <NavItemLoader count={NAV_MAIN.length} />
+                <NavItemLoader count={NAV_MAIN.length} collapsed={collapsed} />
                 <div className="flex-1 min-h-[1rem]" />
-                <NavItemLoader count={NAV_BOTTOM.length} />
+                <NavItemLoader count={NAV_BOTTOM.length} collapsed={collapsed} />
               </>
             ) : (
               <>
@@ -224,15 +285,14 @@ export default function PartnerLayout() {
                   if (navDisabled) {
                     const inactiveTitle = disabledWhenPending
                       ? 'Disponibil dupa aprobare'
-                      : disabledWhenSuspended
-                        ? 'Indisponibil — cont suspendat'
-                        : ''
+                      : 'Indisponibil — cont suspendat'
                     return (
                       <InactiveNavRow
                         key={item.to}
                         tooltip={inactiveTitle}
                         icon={item.icon}
                         label={item.label}
+                        collapsed={collapsed}
                       />
                     )
                   }
@@ -241,17 +301,20 @@ export default function PartnerLayout() {
                       key={item.to}
                       to={item.to}
                       end={item.end}
+                      title={collapsed ? item.label : undefined}
                       onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                          isActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                        }`
-                      }
+                      className={({ isActive }) => navLinkClass(isActive, collapsed)}
                     >
-                      {item.icon}
-                      {item.label}
+                      <span className="relative group/nav">
+                        {item.icon}
+                        {/* Tooltip when collapsed */}
+                        {collapsed && (
+                          <span className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
+                            {item.label}
+                          </span>
+                        )}
+                      </span>
+                      {!collapsed && <span className="truncate">{item.label}</span>}
                     </NavLink>
                   )
                 })}
@@ -261,17 +324,19 @@ export default function PartnerLayout() {
                     key={item.to}
                     to={item.to}
                     end={item.end}
+                    title={collapsed ? item.label : undefined}
                     onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
-                        isActive
-                          ? 'bg-white/10 text-white'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`
-                    }
+                    className={({ isActive }) => navLinkClass(isActive, collapsed)}
                   >
-                    {item.icon}
-                    {item.label}
+                    <span className="relative group/nav">
+                      {item.icon}
+                      {collapsed && (
+                        <span className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
+                          {item.label}
+                        </span>
+                      )}
+                    </span>
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </NavLink>
                 ))}
               </>
@@ -279,22 +344,33 @@ export default function PartnerLayout() {
           </nav>
 
           {/* User + Logout */}
-          <div className="pt-6 border-t border-slate-700/50 flex flex-col gap-1">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                P
+          <div className="pt-5 border-t border-slate-700/50 flex flex-col gap-1">
+            {!collapsed ? (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                  P
+                </div>
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Partener</p>
+                  <p className="text-slate-400 text-xs font-['Inter'] truncate">{getAuthEmail() || '—'}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-white text-sm font-semibold font-['Inter'] truncate">Cont Partener</p>
-                <p className="text-slate-400 text-xs font-['Inter'] truncate">{getAuthEmail() || '—'}</p>
+            ) : (
+              <div className="flex justify-center py-2">
+                <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold">
+                  P
+                </div>
               </div>
-            </div>
+            )}
             <button
               onClick={() => navigate('/login')}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left"
+              title={collapsed ? 'Deconectare' : undefined}
+              className={`flex items-center rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left ${
+                collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              }`}
             >
               <IconLogout />
-              Deconectare
+              {!collapsed && 'Deconectare'}
             </button>
           </div>
         </div>

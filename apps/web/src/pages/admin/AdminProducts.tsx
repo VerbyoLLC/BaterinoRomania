@@ -62,6 +62,8 @@ export default function AdminProducts() {
   const [categorieRezidential, setCategorieRezidential] = useState(false)
   const [categorieIndustrial, setCategorieIndustrial] = useState(false)
   const [categorieMedical, setCategorieMedical] = useState(false)
+  const [categorieComercial, setCategorieComercial] = useState(false)
+  const [categorieMicroGrid, setCategorieMicroGrid] = useState(false)
   const [categorieMaritim, setCategorieMaritim] = useState(false)
   const [energieNominala, setEnergieNominala] = useState('')
   const [capacitate, setCapacitate] = useState('')
@@ -281,6 +283,8 @@ export default function AdminProducts() {
     setCategorieRezidential(cat.includes('rezidential'))
     setCategorieIndustrial(cat.includes('industrial'))
     setCategorieMedical(cat.includes('medical'))
+    setCategorieComercial(cat.includes('comercial'))
+    setCategorieMicroGrid(cat.includes('micro_grid'))
     setCategorieMaritim(cat.includes('maritim'))
     setEnergieNominala(parseUnitValue((row as { energieNominala?: string }).energieNominala, 'Wh'))
     setCapacitate(parseUnitValue((row as { capacitate?: string }).capacitate, 'Ah'))
@@ -377,6 +381,8 @@ export default function AdminProducts() {
     setCategorieRezidential(false)
     setCategorieIndustrial(false)
     setCategorieMedical(false)
+    setCategorieComercial(false)
+    setCategorieMicroGrid(false)
     setCategorieMaritim(false)
     setEnergieNominala('')
     setCapacitate('')
@@ -838,7 +844,17 @@ export default function AdminProducts() {
       sku: sku.trim() || `SKU-${Date.now()}`,
       description: descriptionOut,
       tipProdus,
-      categorie: [categorieRezidential && 'rezidential', categorieIndustrial && 'industrial', categorieMedical && 'medical', categorieMaritim && 'maritim'].filter(Boolean).join(',') || undefined,
+      categorie:
+        [
+          categorieRezidential && 'rezidential',
+          categorieIndustrial && 'industrial',
+          categorieMedical && 'medical',
+          categorieMaritim && 'maritim',
+          categorieComercial && 'comercial',
+          categorieMicroGrid && 'micro_grid',
+        ]
+          .filter(Boolean)
+          .join(',') || undefined,
       priceVisibility,
       pricePresentation,
       catalogStockStatus: tipProdus === 'rezidential' ? catalogStockStatus : null,
@@ -1251,6 +1267,14 @@ export default function AdminProducts() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={categorieMedical} onChange={(e) => setCategorieMedical(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
                     <span className="text-sm font-['Inter'] text-gray-800">Medical</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieComercial} onChange={(e) => setCategorieComercial(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Comercial (catalog parteneri)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieMicroGrid} onChange={(e) => setCategorieMicroGrid(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Micro-grid (catalog parteneri)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={categorieMaritim} onChange={(e) => setCategorieMaritim(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />

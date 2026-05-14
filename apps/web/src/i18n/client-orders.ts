@@ -4,8 +4,16 @@ export type ClientOrdersTranslations = {
   loading: string
   errorGeneric: string
   title: string
+  /** Subtitlu sub titlu (empty state), ca pagina Partener „Servicii”. */
+  pageSubtitle: string
   orderCount: string
+  /** Mesaj scurt legacy / accesibilitate; cardul gol folosește titlul + descrierea detaliată. */
   empty: string
+  emptyStateCardTitle: string
+  emptyStateLine1: string
+  emptyStateLine2: string
+  /** CTA din empty state → catalog produse. */
+  seeProducts: string
   /** Table column headers (desktop row layout). */
   colDate: string
   colProduct: string
@@ -58,14 +66,28 @@ export type ClientOrdersTranslations = {
   stLivrata: string
   stAnulata: string
   totalWithVat: string
+  /** Total linie cu TVA inclus — afișat ca o singură sumă, fără sub-etichete. */
+  priceItemInclVat: string
+  orderTotalsHeading: string
+  /** Rânduri rezumat comandă (sumă linii). */
+  priceOrderExclVat: string
+  priceOrderVat: string
+  /** Linie comandă: etichetă scurtă lângă suma reducerii (cu TVA). */
+  orderLineDiscount: string
 }
 
 const ro: ClientOrdersTranslations = {
   loading: 'Se încarcă comenzile…',
   errorGeneric: 'Eroare la încărcarea comenzilor.',
   title: 'Comenzile mele',
+  pageSubtitle: 'Gestionează și urmărește comenzile tale.',
   orderCount: '{n} comenzi',
   empty: 'Încă nu ai plasat comenzi.',
+  emptyStateCardTitle: 'Nicio comandă încă',
+  emptyStateLine1: 'Nu ai plasat nicio comandă până acum.',
+  emptyStateLine2:
+    'După ce finalizezi o comandă din catalogul rezidențial, o vei vedea aici, cu status și documente.',
+  seeProducts: 'Vezi produse',
   colDate: 'Data',
   colProduct: 'Produs',
   colQuantity: 'Cantitate',
@@ -113,14 +135,25 @@ const ro: ClientOrdersTranslations = {
   stLivrata: 'Livrată',
   stAnulata: 'Anulată',
   totalWithVat: 'Total cu TVA',
+  priceItemInclVat: 'Total cu TVA',
+  orderTotalsHeading: 'Total comandă',
+  priceOrderExclVat: 'Preț produse (fără TVA)',
+  priceOrderVat: 'TVA produse',
+  orderLineDiscount: 'Reducere',
 }
 
 const en: ClientOrdersTranslations = {
   loading: 'Loading your orders…',
   errorGeneric: 'Could not load orders.',
   title: 'My orders',
+  pageSubtitle: 'Manage and track your orders.',
   orderCount: '{n} orders',
   empty: 'You have not placed any orders yet.',
+  emptyStateCardTitle: 'No orders yet',
+  emptyStateLine1: 'You have not placed any orders yet.',
+  emptyStateLine2:
+    'After you complete an order from the residential catalogue, it will appear here with status and documents.',
+  seeProducts: 'View products',
   colDate: 'Date',
   colProduct: 'Product',
   colQuantity: 'Qty',
@@ -168,14 +201,24 @@ const en: ClientOrdersTranslations = {
   stLivrata: 'Delivered',
   stAnulata: 'Cancelled',
   totalWithVat: 'Total incl. VAT',
+  priceItemInclVat: 'Total price (incl. VAT)',
+  orderTotalsHeading: 'Order total',
+  priceOrderExclVat: 'Product price (excl. VAT)',
+  priceOrderVat: 'Product VAT',
+  orderLineDiscount: 'Discount',
 }
 
 const zh: ClientOrdersTranslations = {
   loading: '正在加载订单…',
   errorGeneric: '订单加载失败。',
   title: '我的订单',
+  pageSubtitle: '管理与跟踪您的订单。',
   orderCount: '{n} 笔订单',
   empty: '您还没有下单。',
+  emptyStateCardTitle: '暂无订单',
+  emptyStateLine1: '您目前还没有下过订单。',
+  emptyStateLine2: '在住宅产品目录完成下单后，订单将显示在此处，包含状态与相关单据。',
+  seeProducts: '查看产品',
   colDate: '日期',
   colProduct: '产品',
   colQuantity: '数量',
@@ -221,6 +264,11 @@ const zh: ClientOrdersTranslations = {
   stLivrata: '已送达',
   stAnulata: '已取消',
   totalWithVat: '含税合计',
+  priceItemInclVat: '含税总价',
+  orderTotalsHeading: '订单合计',
+  priceOrderExclVat: '商品金额（不含税）',
+  priceOrderVat: '商品增值税',
+  orderLineDiscount: '折扣',
 }
 
 export function getClientOrdersTranslations(lang: LangCode): ClientOrdersTranslations {

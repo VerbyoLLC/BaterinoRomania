@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getAuthRole, getPublicProductModels, getPublicReturSerialEligibility, normalizeWarehouseSerialNumber, submitProductRetur, ReturSubmitError, type PublicProductModelRow } from '../lib/api'
-import { getCitiesForCounty, ROMANIAN_COUNTIES } from '../lib/romanian-counties-cities'
+import {
+  getAuthRole,
+  getClientProfile,
+  getPublicProductModels,
+  getPublicReturSerialEligibility,
+  normalizeWarehouseSerialNumber,
+  submitProductRetur,
+  ReturSubmitError,
+  type ClientProfileDto,
+  type PublicProductModelRow,
+} from '../lib/api'
+import { getCitiesForCounty, ROMANIAN_COUNTIES, type RomanianCounty } from '../lib/romanian-counties-cities'
 import { getReturnareProduseTranslations } from '../i18n/returnare-produse'
 import SEO from '../components/SEO'
 
@@ -150,6 +160,99 @@ function buildLjcSerial(suffixRaw: string): string {
   return `${LJC_SERIAL_PREFIX}${s}`
 }
 
+/** Prefill marcă / model din răspunsul eligibilității retur (stocuri + catalog modele). */
+type ReturModelPrefillPayload = {
+  productModelId: string | null
+  brand: string | null
+  modelName: string | null
+  modelNumber: string | null
+}
+
+function findPublicModelRowForStockPrefill(
+  rows: PublicProductModelRow[],
+  pre: ReturModelPrefillPayload,
+): PublicProductModelRow | undefined {
+  const id = pre.productModelId?.trim()
+  if (id) {
+    const byId = rows.find((m) => m.id === id)
+    if (byId) return byId
+  }
+  const mn = pre.modelNumber?.trim()
+  if (!mn) return undefined
+  const lower = mn.toLowerCase()
+  return rows.find((m) => m.modelNumber.trim().toLowerCase() === lower)
+}
+
+function stripDiacritics(s: string): string {
+  return s.normalize('NFD').replace(/\p{M}/gu, '')
+}
+
+/** Aliniază textul din profil la valorile din `<select>` (județe RO). */
+function matchRomanianCounty(raw: string): string {
+  const t = String(raw ?? '').trim()
+  if (!t) return ''
+  if ((ROMANIAN_COUNTIES as readonly string[]).includes(t)) return t
+  const low = stripDiacritics(t).toLowerCase()
+  for (const c of ROMANIAN_COUNTIES) {
+    if (stripDiacritics(c).toLowerCase() === low) return c
+  }
+  return ''
+}
+
+function matchCityInCounty(raw: string, cities: string[]): string {
+  const t = String(raw ?? '').trim()
+  if (!t || cities.length === 0) return ''
+  if (cities.includes(t)) return t
+  const low = stripDiacritics(t).toLowerCase()
+  for (const c of cities) {
+    if (stripDiacritics(c).toLowerCase() === low) return c
+  }
+  return ''
+}
+
+/**
+ * Adresă preluare din profil: livrare dacă e diferită de facturare și completă, altfel facturare.
+ * Județ/oraș trebuie să coincidă cu listele din formular.
+ */
+function mapClientProfileToPickupAddress(
+  profile: ClientProfileDto,
+): { street: string; county: string; city: string; postal: string } | null {
+  const useDel =
+    profile.deliveryDifferent &&
+    String(profile.delAddress ?? '').trim().length >= 3 &&
+    String(profile.delCounty ?? '').trim() &&
+    String(profile.delCity ?? '').trim()
+
+  const attempts: Array<{ street: string; countyRaw: string; cityRaw: string; postalRaw: string }> = []
+  if (useDel) {
+    attempts.push({
+      street: String(profile.delAddress).trim(),
+      countyRaw: String(profile.delCounty ?? '').trim(),
+      cityRaw: String(profile.delCity ?? '').trim(),
+      postalRaw: String(profile.delPostal ?? ''),
+    })
+  }
+  attempts.push({
+    street: String(profile.billAddress ?? '').trim(),
+    countyRaw: String(profile.billCounty ?? '').trim(),
+    cityRaw: String(profile.billCity ?? '').trim(),
+    postalRaw: String(profile.billPostal ?? ''),
+  })
+
+  for (const a of attempts) {
+    if (a.street.length < 3) continue
+    const county = matchRomanianCounty(a.countyRaw)
+    if (!county) continue
+    const cities = getCitiesForCounty(county as RomanianCounty)
+    const city = matchCityInCounty(a.cityRaw, cities)
+    if (!city) continue
+    const digits = a.postalRaw.replace(/\D/g, '').slice(0, 6)
+    const postal = digits.length === 6 ? digits : ''
+    return { street: a.street, county, city, postal }
+  }
+  return null
+}
+
 /** 16 cifre după LJC, afișate ca LJC-####-####-####-#### în secțiunea „Verifică”. */
 const LJC_GATE_DIGIT_COUNT = 16
 
@@ -282,6 +385,11 @@ export default function ReturnareProduse() {
   /** Rezultat verificare server (stocuri + data recepție). */
   const [serialEligibilityStatus, setSerialEligibilityStatus] = useState<'idle' | 'loading' | 'eligible' | 'ineligible' | 'error'>('idle')
   const prevSerialGateVerifiedRef = useRef(false)
+  /** SN normalizat pentru care s-a confirmat eligibilitatea (prefill din stocuri). */
+  const [returStockVerifiedSerial, setReturStockVerifiedSerial] = useState<string | null>(null)
+  const [returModelPrefill, setReturModelPrefill] = useState<ReturModelPrefillPayload | null>(null)
+  const [receiptLockedFromStock, setReceiptLockedFromStock] = useState(false)
+  const [brandModelLockedFromStock, setBrandModelLockedFromStock] = useState(false)
   const [productBrand, setProductBrand] = useState('')
   const [productModel, setProductModel] = useState('')
   const [selectedModelId, setSelectedModelId] = useState('')
@@ -329,6 +437,8 @@ export default function ReturnareProduse() {
   const returnReasonDetailsRef = useRef<HTMLDetailsElement>(null)
   const productConditionDetailsRef = useRef<HTMLDetailsElement>(null)
   const pickupAddressDetailsRef = useRef<HTMLDetailsElement>(null)
+  /** O singură completare automată din profil per sesiune autentificată client. */
+  const pickupProfilePrefilledRef = useRef(false)
   const refundMethodDetailsRef = useRef<HTMLDetailsElement>(null)
   const conditionPhotosInputRef = useRef<HTMLInputElement>(null)
 
@@ -344,13 +454,7 @@ export default function ReturnareProduse() {
           setProductBrand('')
           setProductModel('')
           setSelectedModelId('')
-          return
         }
-        const lith = rows.filter((m) => m.brand.trim().toLowerCase() === DEFAULT_RETURN_BRAND.toLowerCase())
-        const pick = lith[0] ?? rows[0]
-        setProductBrand(pick.brand)
-        setProductModel(pick.name)
-        setSelectedModelId(pick.id)
       })
       .catch(() => {
         setPublicModels('error')
@@ -361,6 +465,43 @@ export default function ReturnareProduse() {
   useEffect(() => {
     loadPublicModels()
   }, [loadPublicModels])
+
+  /** După încărcarea catalogului: prefill din stocuri (dacă verificarea SN a reușit) sau implicit Lithtech. */
+  useEffect(() => {
+    if (!Array.isArray(publicModels)) return
+    if (publicModels.length === 0) {
+      setProductBrand('')
+      setProductModel('')
+      setSelectedModelId('')
+      return
+    }
+    if (returStockVerifiedSerial && returModelPrefill) {
+      const matched = findPublicModelRowForStockPrefill(publicModels, returModelPrefill)
+      if (matched) {
+        setProductBrand(matched.brand)
+        setSelectedModelId(matched.id)
+        setProductModel(matched.name)
+        setBrandModelLockedFromStock(true)
+      } else {
+        const pb = returModelPrefill.brand?.trim()
+        if (pb) {
+          const br = publicModels.find((m) => m.brand.trim().toLowerCase() === pb.toLowerCase())?.brand
+          if (br) setProductBrand(br)
+        }
+        const mn = returModelPrefill.modelName?.trim()
+        if (mn) setProductModel(mn)
+        setBrandModelLockedFromStock(false)
+      }
+      setReturModelPrefill(null)
+      return
+    }
+    if (returStockVerifiedSerial) return
+    const lith = publicModels.filter((m) => m.brand.trim().toLowerCase() === DEFAULT_RETURN_BRAND.toLowerCase())
+    const pick = lith[0] ?? publicModels[0]
+    setProductBrand(pick.brand)
+    setProductModel(pick.name)
+    setSelectedModelId(pick.id)
+  }, [publicModels, returStockVerifiedSerial, returModelPrefill])
 
   /** Evită mesaje roșii vechi (ex. după submit eșuat) când utilizatorul își actualizează fotografiile sau declarațiile. */
   useEffect(() => {
@@ -421,6 +562,34 @@ export default function ReturnareProduse() {
       window.removeEventListener('storage', sync)
     }
   }, [])
+
+  /** Client autentificat: precompletare adresă preluare din profil (facturare sau livrare dacă e separată). */
+  useEffect(() => {
+    if (!isClientLogged) {
+      pickupProfilePrefilledRef.current = false
+      return
+    }
+    if (pickupProfilePrefilledRef.current) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const { profile } = await getClientProfile()
+        if (cancelled || !profile) return
+        const pick = mapClientProfileToPickupAddress(profile)
+        if (!pick) return
+        pickupProfilePrefilledRef.current = true
+        setPickupStreet(pick.street)
+        setPickupCounty(pick.county)
+        setPickupCity(pick.city)
+        setPickupPostal(pick.postal)
+      } catch {
+        /* profil indisponibil sau sesiune expirată */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isClientLogged])
 
   useEffect(() => {
     setHighestCompletedStepNum(0)
@@ -496,6 +665,9 @@ export default function ReturnareProduse() {
     if (!orderProductShowFieldErrors) return new Set<OrderProductFieldId>()
     return getOrderProductInvalidFieldIds(orderNumberSuffix, receiptDate, serialSuffix, productBrand, productModel)
   }, [orderProductShowFieldErrors, orderNumberSuffix, receiptDate, serialSuffix, productBrand, productModel])
+
+  const receiptFieldDisabledFromStock = receiptLockedFromStock
+  const serialFieldDisabledFromStock = receiptLockedFromStock || brandModelLockedFromStock
 
   const onOrderProductContinue = useCallback(() => {
     const err = validateOrderProductForm()
@@ -624,9 +796,26 @@ export default function ReturnareProduse() {
     }
   }, [serialSuffix, serialGateVerified])
 
+  /** Doar la schimbarea SN-ului tastat — nu la `returStockVerifiedSerial` (altfel ar șterge „eligible” după verificare reușită). */
   useEffect(() => {
     setSerialEligibilityStatus('idle')
   }, [serialSuffix])
+
+  /** Dacă SN-ul nu mai coincide cu cel pentru care s-a confirmat eligibilitatea, resetăm prefill-ul din stocuri. */
+  useEffect(() => {
+    if (!returStockVerifiedSerial) return
+    const full = normalizeWarehouseSerialNumber(buildLjcSerial(serialSuffix))
+    if (full === returStockVerifiedSerial) return
+    setReturStockVerifiedSerial(null)
+    setReturModelPrefill(null)
+    setReceiptLockedFromStock(false)
+    setBrandModelLockedFromStock(false)
+    setReceiptDate('')
+    setProductBrand('')
+    setSelectedModelId('')
+    setProductModel('')
+    setSerialGateVerified(false)
+  }, [serialSuffix, returStockVerifiedSerial])
 
   useEffect(() => {
     const prev = prevSerialGateVerifiedRef.current
@@ -636,6 +825,14 @@ export default function ReturnareProduse() {
       setSubmitDeclarationAccepted(false)
       setClientFormShowFieldErrors(false)
       setOrderProductShowFieldErrors(false)
+      setReturStockVerifiedSerial(null)
+      setReturModelPrefill(null)
+      setReceiptLockedFromStock(false)
+      setBrandModelLockedFromStock(false)
+      setReceiptDate('')
+      setProductBrand('')
+      setSelectedModelId('')
+      setProductModel('')
     }
     prevSerialGateVerifiedRef.current = serialGateVerified
   }, [serialGateVerified])
@@ -651,12 +848,40 @@ export default function ReturnareProduse() {
     setSerialVerifyGateError('')
     setSerialGateVerified(false)
     setSerialEligibilityStatus('loading')
+    setReturStockVerifiedSerial(null)
+    setReturModelPrefill(null)
+    setReceiptLockedFromStock(false)
+    setBrandModelLockedFromStock(false)
+    setReceiptDate('')
     try {
       const full = normalizeWarehouseSerialNumber(buildLjcSerial(serialSuffix))
-      const { eligible } = await getPublicReturSerialEligibility(full)
-      setSerialEligibilityStatus(eligible ? 'eligible' : 'ineligible')
+      const res = await getPublicReturSerialEligibility(full)
+      if (!res.eligible) {
+        setSerialEligibilityStatus('ineligible')
+        return
+      }
+      setSerialEligibilityStatus('eligible')
+      setReturStockVerifiedSerial(full)
+      if (res.clientReceiptDate?.trim()) {
+        setReceiptDate(res.clientReceiptDate.trim())
+        setReceiptLockedFromStock(true)
+      } else {
+        setReceiptDate('')
+        setReceiptLockedFromStock(false)
+      }
+      setReturModelPrefill({
+        productModelId: res.productModelId ?? null,
+        brand: res.brand ?? null,
+        modelName: res.modelName ?? null,
+        modelNumber: res.modelNumber ?? null,
+      })
     } catch (e) {
       setSerialEligibilityStatus('error')
+      setReturStockVerifiedSerial(null)
+      setReturModelPrefill(null)
+      setReceiptLockedFromStock(false)
+      setBrandModelLockedFromStock(false)
+      setReceiptDate('')
       const msg =
         e instanceof Error && e.message.trim()
           ? e.message.trim()
@@ -728,6 +953,37 @@ export default function ReturnareProduse() {
             {tr.pageTitle}
           </h1>
         </header>
+
+        {returSubmitSeries != null ? (
+          <div
+            className="mb-10 max-w-4xl min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-5 shadow-sm sm:px-6 sm:py-6 font-['Inter']"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <span
+                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-emerald-600 bg-emerald-600 text-white"
+                aria-hidden
+              >
+                <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path
+                    d="M2 6l2.5 2.5L10 3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <p className="min-w-0 text-sm font-medium leading-relaxed text-slate-800">{sp.chkDeclaration}</p>
+            </div>
+            <p className="mt-4 text-sm font-medium leading-relaxed text-emerald-800 sm:text-[15px]">
+              {renderInlineBold(
+                sp.submitSuccessWithId.replace(/\#\{registrationNumber\}/g, returSubmitSeries),
+              )}
+            </p>
+          </div>
+        ) : null}
 
         <div className="max-w-4xl min-w-0 space-y-8 sm:space-y-10">
           <section>
@@ -1215,7 +1471,12 @@ export default function ReturnareProduse() {
                                   </label>
                                   <input
                                     id={`${uid}-ret-recep`}
-                                    className={`${inputClass}${orderProductInvalidFields.has('receiptDate') ? clientFieldErrorClass : ''}`}
+                                    disabled={receiptFieldDisabledFromStock}
+                                    className={`${inputClass}${orderProductInvalidFields.has('receiptDate') ? clientFieldErrorClass : ''}${
+                                      receiptFieldDisabledFromStock
+                                        ? ' cursor-not-allowed bg-slate-100 text-slate-800 disabled:border-slate-300'
+                                        : ''
+                                    }`}
                                     value={receiptDate}
                                     placeholder={op.placeholderDate}
                                     inputMode="numeric"
@@ -1223,6 +1484,7 @@ export default function ReturnareProduse() {
                                     aria-required
                                     aria-invalid={orderProductInvalidFields.has('receiptDate')}
                                     onChange={(e) => {
+                                      if (receiptFieldDisabledFromStock) return
                                       setReceiptDate(formatDdMmYyyyAsYouType(e.target.value))
                                       setOrderProductFormError('')
                                     }}
@@ -1268,7 +1530,8 @@ export default function ReturnareProduse() {
                                   </span>
                                   <input
                                     id={`${uid}-ret-ser`}
-                                    className="box-border min-w-0 flex-1 border-0 bg-transparent px-3.5 text-sm text-slate-900 shadow-none outline-none ring-0 placeholder:text-slate-400 focus:ring-0 font-['Inter']"
+                                    disabled={serialFieldDisabledFromStock}
+                                    className="box-border min-w-0 flex-1 border-0 bg-transparent px-3.5 text-sm text-slate-900 shadow-none outline-none ring-0 placeholder:text-slate-400 focus:ring-0 font-['Inter'] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-800"
                                     value={serialSuffix}
                                     placeholder={op.placeholderSerial}
                                     autoComplete="off"
@@ -1276,6 +1539,7 @@ export default function ReturnareProduse() {
                                     aria-invalid={orderProductInvalidFields.has('serialNumber')}
                                     aria-describedby={`${uid}-ret-ser-hint`}
                                     onChange={(e) => {
+                                      if (serialFieldDisabledFromStock) return
                                       let v = e.target.value
                                       if (/^ljc/i.test(v)) v = v.slice(3).replace(/^[\-+]+/, '')
                                       setSerialSuffix(sanitizeSerialSuffix(v))
@@ -1303,12 +1567,14 @@ export default function ReturnareProduse() {
                                     disabled={
                                       publicModels === 'loading' ||
                                       publicModels === 'error' ||
-                                      (Array.isArray(publicModels) && publicModels.length === 0)
+                                      (Array.isArray(publicModels) && publicModels.length === 0) ||
+                                      brandModelLockedFromStock
                                     }
                                     value={productBrand}
                                     aria-required
                                     aria-invalid={orderProductInvalidFields.has('brand')}
                                     onChange={(e) => {
+                                      if (brandModelLockedFromStock) return
                                       const rows = Array.isArray(publicModels) ? publicModels : []
                                       const b = e.target.value
                                       if (!b) {
@@ -1358,12 +1624,14 @@ export default function ReturnareProduse() {
                                       publicModels === 'loading' ||
                                       publicModels === 'error' ||
                                       (Array.isArray(publicModels) && publicModels.length === 0) ||
-                                      modelsForCurrentBrand.length === 0
+                                      modelsForCurrentBrand.length === 0 ||
+                                      brandModelLockedFromStock
                                     }
                                     value={selectedModelId}
                                     aria-required
                                     aria-invalid={orderProductInvalidFields.has('model')}
                                     onChange={(e) => {
+                                      if (brandModelLockedFromStock) return
                                       const id = e.target.value
                                       setSelectedModelId(id)
                                       if (!id) {
@@ -1792,6 +2060,7 @@ export default function ReturnareProduse() {
                 )
               })}
 
+              {returSubmitSeries == null ? (
               <div className="min-w-0 max-w-full space-y-4 pt-2 pl-4 sm:pl-6 font-['Inter']">
                 <div className="flex min-w-0 items-start gap-3">
                   <input
@@ -1849,14 +2118,6 @@ export default function ReturnareProduse() {
                     {submitPanelError}
                   </p>
                 ) : null}
-                {returSubmitSeries != null ? (
-                  <p className="text-sm font-medium text-emerald-700" role="status">
-                    {renderInlineBold(
-                      sp.submitSuccessWithId.replace(/\#\{registrationNumber\}/g, returSubmitSeries),
-                    )}
-                  </p>
-                ) : null}
-                {returSubmitSeries == null ? (
                 <button
                   type="button"
                   disabled={isSubmittingRetur || !submitSectionUnlocked}
@@ -1942,8 +2203,8 @@ export default function ReturnareProduse() {
                 >
                   {isSubmittingRetur ? sp.submitSubmitting : sp.submitButton}
                 </button>
-                ) : null}
               </div>
+              ) : null}
             </div>
           </section>
             </>

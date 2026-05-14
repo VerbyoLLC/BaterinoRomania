@@ -60,6 +60,7 @@ import PartnerDashboard from './pages/partner/PartnerDashboard'
 import PartnerPublicProfile from './pages/partner/PartnerPublicProfile'
 import PartnerSettings from './pages/partner/PartnerSettings'
 import PartnerProducts from './pages/partner/PartnerProducts'
+import PartnerCheckout from './pages/partner/PartnerCheckout'
 import PartnerOrders from './pages/partner/PartnerOrders'
 import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
@@ -130,6 +131,7 @@ export default function App() {
           <Route path="profil" element={<PartnerPublicProfile />} />
           <Route path="setari" element={<PartnerSettings />} />
           <Route path="produse" element={<PartnerProducts />} />
+          <Route path="checkout" element={<PartnerCheckout />} />
           <Route path="comenzi" element={<PartnerOrders />} />
           <Route path="servicii" element={<PartnerService />} />
           <Route path="suport" element={<PartnerSupport />} />

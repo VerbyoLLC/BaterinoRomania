@@ -558,6 +558,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8 lg:gap-8 mb-10 lg:mb-12 items-start">
+            {/* ── Left: overview text + brochure ── */}
             <div className="min-w-0">
               <div className="flex flex-col gap-5 sm:gap-6 lg:gap-7">
                 {overviewParagraphs.length > 0 ? (
@@ -584,40 +585,112 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               )}
             </div>
 
-            <div className="min-w-0 p-5 sm:p-6 bg-neutral-100 rounded-[10px] border border-neutral-200/80">
-              <img
-                src="/images/shared/baterino-industrial-black.png"
-                alt="Baterino Industrial"
-                className="h-5 w-auto max-w-full object-contain object-left mb-3"
-              />
-              <div className="mb-4">
-                {showResidentialClientPurchaseUI(product) ? (
-                  <ResidentialClientPriceBlock
-                    product={product}
-                    tr={productDetailTr}
-                    lang={language.code as LangCode}
-                  />
-                ) : (
-                  <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
-                )}
-              </div>
-              {tr.contactBlurb.trim() ? (
-                <>
-                  <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>
-                  <p className="mb-4 text-sm font-normal font-['Inter'] leading-5 text-gray-700">{tr.contactBlurb}</p>
-                </>
-              ) : (
-                <p className="mb-4 text-sm font-semibold font-['Inter'] leading-snug text-gray-900 sm:text-base">
-                  {tr.contactTitle}
+            {/* ── Right: sticky sidebar with boxes ── */}
+            <div className="min-w-0 flex flex-col gap-4 lg:sticky lg:top-6">
+
+              {/* Box 1 — Distributor discount */}
+              <div className="rounded-[10px] border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                    <svg className="h-4 w-4 text-amber-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                      <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 5.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 12H11a3 3 0 100-6H9a1 1 0 100 2h2a1 1 0 110 2H8.414l1.293-1.293z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-amber-900 font-['Inter']">
+                    Discount distribuitor
+                  </h3>
+                </div>
+
+                {/* Discount tiers */}
+                <div className="flex flex-col gap-2">
+                  {[
+                    { tier: 'Silver', discount: '5%', min: '5 000', color: 'slate' },
+                    { tier: 'Gold', discount: '10%', min: '15 000', color: 'amber' },
+                    { tier: 'Platinum', discount: '15%', min: '30 000', color: 'sky' },
+                  ].map(({ tier, discount, min, color }) => {
+                    const pillCls =
+                      color === 'amber'
+                        ? 'bg-amber-100 text-amber-800'
+                        : color === 'sky'
+                          ? 'bg-sky-100 text-sky-800'
+                          : 'bg-slate-100 text-slate-700'
+                    const discCls =
+                      color === 'amber'
+                        ? 'text-amber-700'
+                        : color === 'sky'
+                          ? 'text-sky-700'
+                          : 'text-slate-700'
+                    return (
+                      <div
+                        key={tier}
+                        className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold font-['Inter'] ${pillCls}`}>
+                            {tier}
+                          </span>
+                          <span className="text-xs text-slate-500 font-['Inter']">
+                            min. {min} {'{'}currency{'}'}
+                          </span>
+                        </div>
+                        <span className={`text-base font-extrabold tabular-nums font-['Inter'] ${discCls}`}>
+                          -{discount}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="mt-3 m-0 text-[11px] leading-snug text-amber-800/80 font-['Inter']">
+                  Discounturile se aplică automat în funcție de valoarea comenzilor lunare. Contactați-ne pentru detalii.
                 </p>
-              )}
-              <Link
-                to="/contact"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white px-5 py-3.5 font-semibold font-['Inter'] text-sm sm:text-base hover:bg-slate-800 transition-colors shadow-sm"
-              >
-                <Phone size={18} aria-hidden />
-                {tr.contactCta}
-              </Link>
+
+                <Link
+                  to="/instalatori"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100 font-['Inter']"
+                >
+                  <ArrowRight size={15} aria-hidden />
+                  Devino distribuitor
+                </Link>
+              </div>
+
+              {/* Box 2 — Price / contact */}
+              <div className="min-w-0 rounded-[10px] border border-neutral-200/80 bg-neutral-100 p-5 sm:p-6">
+                <img
+                  src="/images/shared/baterino-industrial-black.png"
+                  alt="Baterino Industrial"
+                  className="mb-3 h-5 w-auto max-w-full object-contain object-left"
+                />
+                <div className="mb-4">
+                  {showResidentialClientPurchaseUI(product) ? (
+                    <ResidentialClientPriceBlock
+                      product={product}
+                      tr={productDetailTr}
+                      lang={language.code as LangCode}
+                    />
+                  ) : (
+                    <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+                  )}
+                </div>
+                {tr.contactBlurb.trim() ? (
+                  <>
+                    <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>
+                    <p className="mb-4 text-sm font-normal font-['Inter'] leading-5 text-gray-700">{tr.contactBlurb}</p>
+                  </>
+                ) : (
+                  <p className="mb-4 text-sm font-semibold font-['Inter'] leading-snug text-gray-900 sm:text-base">
+                    {tr.contactTitle}
+                  </p>
+                )}
+                <Link
+                  to="/contact"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 font-['Inter'] sm:text-base"
+                >
+                  <Phone size={18} aria-hidden />
+                  {tr.contactCta}
+                </Link>
+              </div>
+
             </div>
           </div>
         </section>

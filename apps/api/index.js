@@ -232,6 +232,22 @@ function guestResidentialProductEligible(apiProduct) {
   return true
 }
 
+/** Parteneri: catalog larg (industrial, medical…); prețuri vizibile doar cu JWT — verifică după applyPublicPricePolicy. */
+function partnerCatalogCheckoutProductEligible(apiProduct) {
+  const saleRaw = apiProduct.salePrice
+  const sale =
+    saleRaw == null || saleRaw === ''
+      ? NaN
+      : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
+  if (!Number.isFinite(sale) || sale <= 0) return false
+  const tip = String(apiProduct.tipProdus || '').toLowerCase()
+  const stock = apiProduct.catalogStockStatus
+  if (tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')) return false
+  const vis = apiProduct.priceVisibility || 'public'
+  if (vis !== 'public' && vis !== 'partner_only' && vis !== 'hidden') return false
+  return true
+}
+
 /**
  * Catalog line: salePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
  * @returns {{ quantity: number, unitExclCatalog: number, vatPercent: number | null }}
@@ -508,6 +524,13 @@ function adminAuthMiddleware(req, res, next) {
 function clientAuthMiddleware(req, res, next) {
   if (req.userRole !== 'client') {
     return res.status(403).json({ error: 'Acces restricționat. Doar conturile client pot accesa.' })
+  }
+  next()
+}
+
+function partnerAuthMiddleware(req, res, next) {
+  if (req.userRole !== 'partener') {
+    return res.status(403).json({ error: 'Acces restricționat. Doar conturile partener pot accesa.' })
   }
   next()
 }
@@ -1690,6 +1713,10 @@ function mapResidentialOrderToClientJson(o) {
     quantity: L.quantity,
     unitPriceInclVat: L.unitPriceInclVat != null ? String(L.unitPriceInclVat) : null,
     lineTotalInclVat: L.lineTotalInclVat != null ? String(L.lineTotalInclVat) : null,
+    listUnitPriceInclVat:
+      L.listUnitPriceInclVat != null ? String(L.listUnitPriceInclVat) : null,
+    listLineTotalInclVat:
+      L.listLineTotalInclVat != null ? String(L.listLineTotalInclVat) : null,
     vatPercent: L.vatPercent != null ? String(L.vatPercent) : null,
   }))
   let totalIncl = 0
@@ -1736,6 +1763,10 @@ function mapLegacyGuestOrderToClientJson(r) {
       quantity: r.quantity,
       unitPriceInclVat: r.unitPriceInclVat != null ? String(r.unitPriceInclVat) : null,
       lineTotalInclVat: r.lineTotalInclVat != null ? String(r.lineTotalInclVat) : null,
+      listUnitPriceInclVat:
+        r.listUnitPriceInclVat != null ? String(r.listUnitPriceInclVat) : null,
+      listLineTotalInclVat:
+        r.listLineTotalInclVat != null ? String(r.listLineTotalInclVat) : null,
       vatPercent: r.vatPercent != null ? String(r.vatPercent) : null,
     },
   ]
@@ -1875,7 +1906,7 @@ async function enrichClientOrderListWithProductImages(rows) {
   }))
 }
 
-app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, res) => {
+async function listAccountResidentialOrdersHandler(req, res, legacyGuestOrderSource) {
   try {
     const email = String(req.userEmail || '')
       .trim()
@@ -1890,7 +1921,7 @@ app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, 
         take: 100,
       }),
       prisma.guestResidentialOrder.findMany({
-        where: { email, orderSource: 'client' },
+        where: { email, orderSource: legacyGuestOrderSource },
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
@@ -1903,20 +1934,16 @@ app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, async (req, 
     const out = await enrichClientOrderListWithProductImages(merged)
     return res.json(out)
   } catch (err) {
-    console.error('Client orders error:', err)
+    console.error('Residential orders list error:', err)
     res.status(500).json({ error: err?.message || 'Eroare.' })
   }
-})
+}
 
 /**
  * Detalii bancare pentru plata online (modal "Plătește prin Transfer bancar").
- *
- * Întoarce strict câmpurile sigure (nume companie + IBAN RON + bancă) folosite de UI
- * pentru plata prin transfer. Folosim aceeași logică de selecție a contului ca proforma
- * (`pickBankAccountByCurrency('RON')`) pentru ca datele afișate în modal să coincidă
- * 1:1 cu cele tipărite în PDF-ul proforma.
+ * Folosit de client și partener (aceleași conturi RON ca proforma).
  */
-app.get('/api/client/payment-bank-details', authMiddleware, clientAuthMiddleware, async (_req, res) => {
+async function residentialPaymentBankDetailsHandler(_req, res) {
   try {
     const company = await readCompanyDataFromDb()
     const { pickBankAccountByCurrency: pickBank } = getProformaTemplateLib()
@@ -1928,79 +1955,108 @@ app.get('/api/client/payment-bank-details', authMiddleware, clientAuthMiddleware
       bankName: String(ronAccount?.bankName || '').trim(),
     })
   } catch (err) {
-    console.error('client payment bank details:', err)
+    console.error('residential payment bank details:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcarea datelor bancare.' })
   }
-})
+}
 
-/**
- * Întoarce JSON `{ downloadUrl, orderNumber }`. URL-ul este obiectul R2 încărcat cu
- * `Content-Disposition: attachment; filename="..."`, ca browser-ul să descarce PDF-ul direct
- * de la R2 (CDN-served, byte-perfect — fără riscuri de transformare în lanțul Express/CORS/compression).
- *
- * `?regenerate=1` forțează re-generarea chiar dacă există deja un PDF în R2.
- */
-app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddleware, async (req, res) => {
-  try {
-    if (!isR2Configured()) {
-      return res.status(503).json({
-        error: 'Generarea proformei (PDF) necesită R2. Configurează R2_BUCKET, R2_PUBLIC_URL etc.',
-      })
-    }
-    const emailNorm = String(req.userEmail || '')
-      .trim()
-      .toLowerCase()
-    const orderId = String(req.params.orderId || '').trim()
-    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
-
-    /**
-     * Dev mode (`NODE_ENV !== 'production'`) regenerează implicit la fiecare cerere
-     * ca să vezi imediat schimbările din template fără a apela `?regenerate=1`.
-     * În producție se cache-uiește la URL-ul R2 din `proformaUrl` până la
-     * `?regenerate=1` explicit (sau env `BATERINO_PROFORMA_FORCE_REGENERATE=1`).
-     */
-    const forceRegenerate =
-      String(req.query.regenerate || '') === '1' ||
-      process.env.BATERINO_PROFORMA_FORCE_REGENERATE === '1' ||
-      process.env.NODE_ENV !== 'production'
-
-    const safePdfFile = (orderNumber) =>
-      `proforma-${String(orderNumber || 'comanda').replace(/[^\w.-]+/g, '_')}.pdf`
-
-    /** Apending `?t=<ms>` la URL ca să forțeze browser-ul (și CDN-ul) să nu folosească copia veche. */
-    const cacheBust = (url) => `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
-
-    const generateAndUpload = async ({ html, orderNumber }) => {
-      const pdfBuffer = await renderWarrantyPdf(html)
-      if (
-        !Buffer.isBuffer(pdfBuffer) ||
-        pdfBuffer.length < 5 ||
-        pdfBuffer.slice(0, 5).toString('latin1') !== '%PDF-'
-      ) {
-        const head = Buffer.isBuffer(pdfBuffer)
-          ? pdfBuffer.slice(0, 32).toString('latin1')
-          : typeof pdfBuffer
-        throw new Error(`PDF invalid (lipsă header %PDF-). Primii 32 octeți: ${head}`)
+function makeResidentialOrderProformaHandler(legacyGuestOrderSource) {
+  return async (req, res) => {
+    try {
+      if (!isR2Configured()) {
+        return res.status(503).json({
+          error: 'Generarea proformei (PDF) necesită R2. Configurează R2_BUCKET, R2_PUBLIC_URL etc.',
+        })
       }
-      const key = proformaPdfKey(orderId, orderNumber)
-      const publicUrl = await uploadToR2(pdfBuffer, key, 'application/pdf', {
-        contentDisposition: `attachment; filename="${safePdfFile(orderNumber)}"`,
-        cacheControl: 'no-cache, max-age=0, must-revalidate',
+      const emailNorm = String(req.userEmail || '')
+        .trim()
+        .toLowerCase()
+      const orderId = String(req.params.orderId || '').trim()
+      if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+      const forceRegenerate =
+        String(req.query.regenerate || '') === '1' ||
+        process.env.BATERINO_PROFORMA_FORCE_REGENERATE === '1' ||
+        process.env.NODE_ENV !== 'production'
+
+      const safePdfFile = (orderNumber) =>
+        `proforma-${String(orderNumber || 'comanda').replace(/[^\w.-]+/g, '_')}.pdf`
+
+      const cacheBust = (url) => `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
+
+      const generateAndUpload = async ({ html, orderNumber }) => {
+        const pdfBuffer = await renderWarrantyPdf(html)
+        if (
+          !Buffer.isBuffer(pdfBuffer) ||
+          pdfBuffer.length < 5 ||
+          pdfBuffer.slice(0, 5).toString('latin1') !== '%PDF-'
+        ) {
+          const head = Buffer.isBuffer(pdfBuffer)
+            ? pdfBuffer.slice(0, 32).toString('latin1')
+            : typeof pdfBuffer
+          throw new Error(`PDF invalid (lipsă header %PDF-). Primii 32 octeți: ${head}`)
+        }
+        const key = proformaPdfKey(orderId, orderNumber)
+        const publicUrl = await uploadToR2(pdfBuffer, key, 'application/pdf', {
+          contentDisposition: `attachment; filename="${safePdfFile(orderNumber)}"`,
+          cacheControl: 'no-cache, max-age=0, must-revalidate',
+        })
+        return publicUrl
+      }
+
+      const residential = await prisma.residentialOrder.findFirst({
+        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+        include: { lines: { orderBy: { id: 'asc' } } },
       })
-      return publicUrl
-    }
 
-    const residential = await prisma.residentialOrder.findFirst({
-      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
-      include: { lines: { orderBy: { id: 'asc' } } },
-    })
+      if (residential) {
+        if (!PROFORMA_ALLOWED_STATUSES.has(String(residential.fulfillmentStatus || 'de_platit'))) {
+          return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
+        }
+        const orderNumber = residential.orderNumber || orderId
+        let downloadUrl = !forceRegenerate && residential.proformaUrl ? String(residential.proformaUrl) : ''
+        let regenerated = false
+        if (!downloadUrl) {
+          const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
+            readCompanyDataFromDb(),
+            prisma.departmentPhone.findUnique({ where: { department: 'general' } }).catch(() => null),
+            prisma.departmentPhone.findUnique({ where: { department: 'rezidential' } }).catch(() => null),
+          ])
+          const supplierPhone =
+            String(generalPhoneRow?.phone || '').trim() ||
+            String(process.env.BATERINO_OFFICE_PHONE || '').trim()
+          const supplierSupportPhone =
+            String(residentialPhoneRow?.phone || '').trim() ||
+            String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
+          const html = await getProformaTemplateLib().buildResidentialOrderProformaHtml(residential, company, {
+            supplierPhone,
+            supplierSupportPhone,
+            proformaIssueDate: new Date(),
+          })
+          downloadUrl = await generateAndUpload({ html, orderNumber })
+          await prisma.residentialOrder.update({
+            where: { id: orderId },
+            data: { proformaUrl: downloadUrl },
+          })
+          regenerated = true
+        }
+        return res.json({
+          downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
+          orderNumber,
+          proformaUrl: downloadUrl,
+          regenerated,
+        })
+      }
 
-    if (residential) {
-      if (!PROFORMA_ALLOWED_STATUSES.has(String(residential.fulfillmentStatus || 'de_platit'))) {
+      const legacy = await prisma.guestResidentialOrder.findFirst({
+        where: { id: orderId, email: emailNorm, orderSource: legacyGuestOrderSource },
+      })
+      if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
+      if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
         return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
       }
-      const orderNumber = residential.orderNumber || orderId
-      let downloadUrl = !forceRegenerate && residential.proformaUrl ? String(residential.proformaUrl) : ''
+      const orderNumber = legacy.orderNumber || orderId
+      let downloadUrl = !forceRegenerate && legacy.proformaUrl ? String(legacy.proformaUrl) : ''
       let regenerated = false
       if (!downloadUrl) {
         const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
@@ -2014,13 +2070,13 @@ app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddle
         const supplierSupportPhone =
           String(residentialPhoneRow?.phone || '').trim() ||
           String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
-        const html = await getProformaTemplateLib().buildResidentialOrderProformaHtml(residential, company, {
+        const html = await getProformaTemplateLib().buildGuestOrderProformaHtml(legacy, company, {
           supplierPhone,
           supplierSupportPhone,
           proformaIssueDate: new Date(),
         })
         downloadUrl = await generateAndUpload({ html, orderNumber })
-        await prisma.residentialOrder.update({
+        await prisma.guestResidentialOrder.update({
           where: { id: orderId },
           data: { proformaUrl: downloadUrl },
         })
@@ -2032,149 +2088,168 @@ app.get('/api/client/orders/:orderId/proforma', authMiddleware, clientAuthMiddle
         proformaUrl: downloadUrl,
         regenerated,
       })
+    } catch (err) {
+      console.error('Residential order proforma error:', err)
+      res.status(500).json({ error: err?.message || 'Eroare la generarea proformei.' })
     }
-
-    const legacy = await prisma.guestResidentialOrder.findFirst({
-      where: { id: orderId, email: emailNorm, orderSource: 'client' },
-    })
-    if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
-    if (!PROFORMA_ALLOWED_STATUSES.has(String(legacy.fulfillmentStatus || 'de_platit'))) {
-      return res.status(400).json({ error: 'Proforma nu mai este disponibilă pentru această comandă.' })
-    }
-    const orderNumber = legacy.orderNumber || orderId
-    let downloadUrl = !forceRegenerate && legacy.proformaUrl ? String(legacy.proformaUrl) : ''
-    let regenerated = false
-    if (!downloadUrl) {
-      const [company, generalPhoneRow, residentialPhoneRow] = await Promise.all([
-        readCompanyDataFromDb(),
-        prisma.departmentPhone.findUnique({ where: { department: 'general' } }).catch(() => null),
-        prisma.departmentPhone.findUnique({ where: { department: 'rezidential' } }).catch(() => null),
-      ])
-      const supplierPhone =
-        String(generalPhoneRow?.phone || '').trim() ||
-        String(process.env.BATERINO_OFFICE_PHONE || '').trim()
-      const supplierSupportPhone =
-        String(residentialPhoneRow?.phone || '').trim() ||
-        String(process.env.BATERINO_SUPPORT_PHONE || '').trim()
-      const html = await getProformaTemplateLib().buildGuestOrderProformaHtml(legacy, company, {
-        supplierPhone,
-        supplierSupportPhone,
-        proformaIssueDate: new Date(),
-      })
-      downloadUrl = await generateAndUpload({ html, orderNumber })
-      await prisma.guestResidentialOrder.update({
-        where: { id: orderId },
-        data: { proformaUrl: downloadUrl },
-      })
-      regenerated = true
-    }
-    return res.json({
-      downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
-      orderNumber,
-      proformaUrl: downloadUrl,
-      regenerated,
-    })
-  } catch (err) {
-    console.error('Client order proforma error:', err)
-    res.status(500).json({ error: err?.message || 'Eroare la generarea proformei.' })
   }
-})
+}
 
-app.get('/api/client/orders/:orderId/invoice', authMiddleware, clientAuthMiddleware, async (req, res) => {
-  try {
-    const emailNorm = String(req.userEmail || '')
-      .trim()
-      .toLowerCase()
-    const orderId = String(req.params.orderId || '').trim()
-    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+function makeResidentialOrderInvoiceHandler(legacyGuestOrderSource) {
+  return async (req, res) => {
+    try {
+      const emailNorm = String(req.userEmail || '')
+        .trim()
+        .toLowerCase()
+      const orderId = String(req.params.orderId || '').trim()
+      if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
 
-    let orderNumber = ''
-    let invoiceUrl = ''
+      let orderNumber = ''
+      let invoiceUrl = ''
 
-    const residential = await prisma.residentialOrder.findFirst({
-      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
-    })
-    if (residential) {
-      const st = String(residential.fulfillmentStatus || 'de_platit')
-      if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
-        return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+      const residential = await prisma.residentialOrder.findFirst({
+        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+      })
+      if (residential) {
+        const st = String(residential.fulfillmentStatus || 'de_platit')
+        if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
+          return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+        }
+        invoiceUrl = String(residential.clientInvoiceUrl || '').trim()
+        orderNumber = residential.orderNumber
+      } else {
+        const legacy = await prisma.guestResidentialOrder.findFirst({
+          where: { id: orderId, email: emailNorm, orderSource: legacyGuestOrderSource },
+        })
+        if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
+        const st = String(legacy.fulfillmentStatus || 'de_platit')
+        if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
+          return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+        }
+        invoiceUrl = String(legacy.clientInvoiceUrl || '').trim()
+        orderNumber = legacy.orderNumber
       }
-      invoiceUrl = String(residential.clientInvoiceUrl || '').trim()
-      orderNumber = residential.orderNumber
-    } else {
+
+      if (!invoiceUrl) {
+        return res.status(404).json({ error: 'Factura nu a fost încă încărcată.' })
+      }
+
+      const upstream = await fetch(invoiceUrl)
+      if (!upstream.ok) {
+        console.error('Residential invoice fetch failed', upstream.status, invoiceUrl)
+        return res.status(502).json({ error: 'Fișierul facturii nu poate fi citit.' })
+      }
+      const ct = upstream.headers.get('content-type') || 'application/pdf'
+      const safeFile = `factura-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.pdf`
+      res.setHeader('Content-Type', ct)
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
+      const buf = Buffer.from(await upstream.arrayBuffer())
+      return res.send(buf)
+    } catch (err) {
+      console.error('Residential order invoice error:', err)
+      res.status(500).json({ error: err?.message || 'Eroare la descărcarea facturii.' })
+    }
+  }
+}
+
+function makeResidentialOrderCancelHandler(legacyGuestOrderSource) {
+  return async (req, res) => {
+    try {
+      const emailNorm = String(req.userEmail || '')
+        .trim()
+        .toLowerCase()
+      const orderId = String(req.params.orderId || '').trim()
+      if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+
+      const residential = await prisma.residentialOrder.findFirst({
+        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+      })
+      if (residential) {
+        if (residential.fulfillmentStatus !== 'de_platit') {
+          return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
+        }
+        await prisma.residentialOrder.update({
+          where: { id: orderId },
+          data: { fulfillmentStatus: 'anulata' },
+        })
+        return res.json({ ok: true, fulfillmentStatus: 'anulata' })
+      }
       const legacy = await prisma.guestResidentialOrder.findFirst({
-        where: { id: orderId, email: emailNorm, orderSource: 'client' },
+        where: { id: orderId, email: emailNorm, orderSource: legacyGuestOrderSource },
       })
-      if (!legacy) return res.status(404).json({ error: 'Comandă negăsită.' })
-      const st = String(legacy.fulfillmentStatus || 'de_platit')
-      if (!CLIENT_INVOICE_DOWNLOAD_STATUSES.has(st)) {
-        return res.status(400).json({ error: 'Factura nu este disponibilă pentru acest status.' })
+      if (legacy) {
+        if (legacy.fulfillmentStatus !== 'de_platit') {
+          return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
+        }
+        await prisma.guestResidentialOrder.update({
+          where: { id: orderId },
+          data: { fulfillmentStatus: 'anulata' },
+        })
+        return res.json({ ok: true, fulfillmentStatus: 'anulata' })
       }
-      invoiceUrl = String(legacy.clientInvoiceUrl || '').trim()
-      orderNumber = legacy.orderNumber
+      return res.status(404).json({ error: 'Comandă negăsită.' })
+    } catch (err) {
+      console.error('Residential order cancel error:', err)
+      res.status(500).json({ error: err?.message || 'Eroare.' })
     }
-
-    if (!invoiceUrl) {
-      return res.status(404).json({ error: 'Factura nu a fost încă încărcată.' })
-    }
-
-    const upstream = await fetch(invoiceUrl)
-    if (!upstream.ok) {
-      console.error('Client invoice fetch failed', upstream.status, invoiceUrl)
-      return res.status(502).json({ error: 'Fișierul facturii nu poate fi citit.' })
-    }
-    const ct = upstream.headers.get('content-type') || 'application/pdf'
-    const safeFile = `factura-${String(orderNumber).replace(/[^\w.-]+/g, '_')}.pdf`
-    res.setHeader('Content-Type', ct)
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
-    const buf = Buffer.from(await upstream.arrayBuffer())
-    return res.send(buf)
-  } catch (err) {
-    console.error('Client order invoice error:', err)
-    res.status(500).json({ error: err?.message || 'Eroare la descărcarea facturii.' })
   }
-})
+}
 
-app.post('/api/client/orders/:orderId/cancel', authMiddleware, clientAuthMiddleware, async (req, res) => {
-  try {
-    const emailNorm = String(req.userEmail || '')
-      .trim()
-      .toLowerCase()
-    const orderId = String(req.params.orderId || '').trim()
-    if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
+app.get('/api/client/orders', authMiddleware, clientAuthMiddleware, (req, res) =>
+  listAccountResidentialOrdersHandler(req, res, 'client'),
+)
+app.get('/api/partner/orders', authMiddleware, partnerAuthMiddleware, (req, res) =>
+  listAccountResidentialOrdersHandler(req, res, 'partner'),
+)
 
-    const residential = await prisma.residentialOrder.findFirst({
-      where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
-    })
-    if (residential) {
-      if (residential.fulfillmentStatus !== 'de_platit') {
-        return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
-      }
-      await prisma.residentialOrder.update({
-        where: { id: orderId },
-        data: { fulfillmentStatus: 'anulata' },
-      })
-      return res.json({ ok: true, fulfillmentStatus: 'anulata' })
-    }
-    const legacy = await prisma.guestResidentialOrder.findFirst({
-      where: { id: orderId, email: emailNorm, orderSource: 'client' },
-    })
-    if (legacy) {
-      if (legacy.fulfillmentStatus !== 'de_platit') {
-        return res.status(400).json({ error: 'Comanda nu mai poate fi anulată.' })
-      }
-      await prisma.guestResidentialOrder.update({
-        where: { id: orderId },
-        data: { fulfillmentStatus: 'anulata' },
-      })
-      return res.json({ ok: true, fulfillmentStatus: 'anulata' })
-    }
-    return res.status(404).json({ error: 'Comandă negăsită.' })
-  } catch (err) {
-    console.error('Client order cancel error:', err)
-    res.status(500).json({ error: err?.message || 'Eroare.' })
-  }
-})
+app.get('/api/client/payment-bank-details', authMiddleware, clientAuthMiddleware, residentialPaymentBankDetailsHandler)
+app.get('/api/partner/payment-bank-details', authMiddleware, partnerAuthMiddleware, residentialPaymentBankDetailsHandler)
+
+/**
+ * Întoarce JSON `{ downloadUrl, orderNumber }`. URL-ul este obiectul R2 încărcat cu
+ * `Content-Disposition: attachment; filename="..."`, ca browser-ul să descarce PDF-ul direct
+ * de la R2 (CDN-served, byte-perfect — fără riscuri de transformare în lanțul Express/CORS/compression).
+ *
+ * `?regenerate=1` forțează re-generarea chiar dacă există deja un PDF în R2.
+ */
+app.get(
+  '/api/client/orders/:orderId/proforma',
+  authMiddleware,
+  clientAuthMiddleware,
+  makeResidentialOrderProformaHandler('client'),
+)
+app.get(
+  '/api/partner/orders/:orderId/proforma',
+  authMiddleware,
+  partnerAuthMiddleware,
+  makeResidentialOrderProformaHandler('partner'),
+)
+
+app.get(
+  '/api/client/orders/:orderId/invoice',
+  authMiddleware,
+  clientAuthMiddleware,
+  makeResidentialOrderInvoiceHandler('client'),
+)
+app.get(
+  '/api/partner/orders/:orderId/invoice',
+  authMiddleware,
+  partnerAuthMiddleware,
+  makeResidentialOrderInvoiceHandler('partner'),
+)
+
+app.post(
+  '/api/client/orders/:orderId/cancel',
+  authMiddleware,
+  clientAuthMiddleware,
+  makeResidentialOrderCancelHandler('client'),
+)
+app.post(
+  '/api/partner/orders/:orderId/cancel',
+  authMiddleware,
+  partnerAuthMiddleware,
+  makeResidentialOrderCancelHandler('partner'),
+)
 
 app.get('/api/client/registered-products', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
@@ -3184,7 +3259,33 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'Codul poștal (adresă publică) trebuie să aibă exact 6 cifre.' })
       }
     }
+    const dlPc = body.deliveryPostalCode
+    if (dlPc !== undefined && dlPc !== null && String(dlPc).trim() !== '') {
+      const dlNorm = normalizeRoPostalCode(dlPc)
+      if (!dlNorm || !/^\d{6}$/.test(String(dlNorm).trim())) {
+        return res.status(400).json({ error: 'Codul poștal (livrare) trebuie să aibă exact 6 cifre.' })
+      }
+    }
     const userId = req.userId
+
+    const DELIVERY_KEYS = ['deliveryStreet', 'deliveryCounty', 'deliveryCity', 'deliveryPostalCode']
+    function applyPartnerDeliveryPatch(data) {
+      for (const key of DELIVERY_KEYS) {
+        if (body[key] === undefined) continue
+        const raw = body[key]
+        if (raw === null || raw === '') {
+          data[key] = null
+          continue
+        }
+        if (key === 'deliveryStreet') {
+          data[key] = normalizePartnerStreetLine(raw)
+        } else if (key === 'deliveryPostalCode') {
+          data[key] = normalizeRoPostalCode(raw) || null
+        } else {
+          data[key] = String(raw).trim()
+        }
+      }
+    }
 
     const existing = await prisma.partner.findUnique({ where: { userId } })
 
@@ -3227,6 +3328,7 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
         if (v !== undefined && v !== null) data[k] = v
         else if (k === 'logoUrl' && (v === null || v === '')) data[k] = null
       }
+      applyPartnerDeliveryPatch(data)
       const partner = await prisma.partner.update({
         where: { userId },
         data,
@@ -5282,15 +5384,38 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       }
     }
 
+    let partnerCatalogDiscountFactor = 0
+    if (isPartener && userIdForOrder) {
+      try {
+        const part = await prisma.partner.findUnique({
+          where: { userId: userIdForOrder },
+          select: { partnerDiscountPercent: true },
+        })
+        const pct = part?.partnerDiscountPercent
+        if (pct != null && Number.isFinite(Number(pct)) && Number(pct) > 0) {
+          partnerCatalogDiscountFactor = Math.min(1, Math.max(0, Number(pct) / 100))
+        }
+      } catch (_) {
+        partnerCatalogDiscountFactor = 0
+      }
+    }
+
     const linePayloads = []
     for (const it of parsedItems) {
       const row = await findPublicProductRecordByIdOrSlug(it.productIdOrSlug)
       if (!row) {
         return res.status(404).json({ error: `Produs negăsit: ${it.productIdOrSlug}.` })
       }
-      const apiProduct = applyPublicPricePolicy(productToJson(row), null)
-      if (!guestResidentialProductEligible(apiProduct)) {
-        return res.status(400).json({ error: 'Unul sau mai multe produse nu pot fi comandate în fluxul public.' })
+      const apiProduct = applyPublicPricePolicy(productToJson(row), authPayload)
+      const eligible = isPartener
+        ? partnerCatalogCheckoutProductEligible(apiProduct)
+        : guestResidentialProductEligible(apiProduct)
+      if (!eligible) {
+        return res.status(400).json({
+          error: isPartener
+            ? 'Unul sau mai multe produse din coș nu pot fi comandate (preț indisponibil sau stoc).'
+            : 'Unul sau mai multe produse nu pot fi comandate în fluxul public.',
+        })
       }
       let discountFactor = 0
       if (it.reducereProgramId) {
@@ -5299,6 +5424,8 @@ app.post('/api/guest-residential-orders', async (req, res) => {
         } catch (e) {
           return res.status(400).json({ error: e?.message || 'Reducere invalidă.' })
         }
+      } else if (isPartener && partnerCatalogDiscountFactor > 0) {
+        discountFactor = partnerCatalogDiscountFactor
       }
       const qParsed = Math.min(99, Math.max(1, parseInt(String(it.quantity), 10) || 1))
       if (it.reducereProgramId && qParsed > 1) {
@@ -5309,6 +5436,8 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       }
       const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
       const totals = applyDiscountFactorToGuestLineTotals(baseTotals, discountFactor)
+      const listTotals =
+        discountFactor > 0 ? applyDiscountFactorToGuestLineTotals(baseTotals, 0) : null
       const title = String(apiProduct.title || '').trim() || 'Produs'
       const slugVal = apiProduct.slug != null && String(apiProduct.slug).trim() ? String(apiProduct.slug).trim() : null
       linePayloads.push({
@@ -5318,6 +5447,10 @@ app.post('/api/guest-residential-orders', async (req, res) => {
         quantity: totals.quantity,
         unitPriceInclVat: totals.unitPriceInclVat.toFixed(2),
         lineTotalInclVat: totals.lineTotalInclVat.toFixed(2),
+        listUnitPriceInclVat:
+          listTotals != null ? listTotals.unitPriceInclVat.toFixed(2) : null,
+        listLineTotalInclVat:
+          listTotals != null ? listTotals.lineTotalInclVat.toFixed(2) : null,
         vatPercent: totals.vatPercent != null ? totals.vatPercent.toFixed(2) : null,
       })
     }
@@ -5362,6 +5495,8 @@ app.post('/api/guest-residential-orders', async (req, res) => {
               quantity: L.quantity,
               unitPriceInclVat: L.unitPriceInclVat,
               lineTotalInclVat: L.lineTotalInclVat,
+              listUnitPriceInclVat: L.listUnitPriceInclVat,
+              listLineTotalInclVat: L.listLineTotalInclVat,
               vatPercent: L.vatPercent,
             })),
           },
@@ -5976,6 +6111,15 @@ function parseClientReceiptDateForReturEligibility(raw) {
   return d
 }
 
+/** `clientReceiptDate` normalizată ca zz-ll-aaaa pentru formulare publice. */
+function formatClientReceiptDateDdMmYyyy(parsed) {
+  if (!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return null
+  const dd = String(parsed.getDate()).padStart(2, '0')
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(parsed.getFullYear())
+  return `${dd}-${mm}-${yyyy}`
+}
+
 /** Data recepției nu e în viitor și nu e cu mai mult de `RETURN_ELIGIBILITY_RECEIPT_MAX_DAYS` zile în urmă (zi calendaristică locală server). */
 function isClientReceiptWithinReturEligibilityWindow(receiptDate) {
   const t = new Date()
@@ -5999,7 +6143,15 @@ const getPublicReturSerialEligibilityHandler = async (req, res) => {
     }
     const row = await prisma.warehouseSavedItem.findUnique({
       where: { serialNumber: sn },
-      select: { clientReceiptDate: true },
+      select: {
+        clientReceiptDate: true,
+        modelNumber: true,
+        warehouseStockUnit: {
+          select: {
+            product: { select: { brand: true, title: true } },
+          },
+        },
+      },
     })
     if (!row) {
       return res.set('Cache-Control', 'no-store').json({ eligible: false })
@@ -6009,7 +6161,41 @@ const getPublicReturSerialEligibilityHandler = async (req, res) => {
       return res.set('Cache-Control', 'no-store').json({ eligible: false })
     }
     const eligible = isClientReceiptWithinReturEligibilityWindow(parsed)
-    return res.set('Cache-Control', 'no-store').json({ eligible })
+    if (!eligible) {
+      return res.set('Cache-Control', 'no-store').json({ eligible: false })
+    }
+    const clientReceiptDate = formatClientReceiptDateDdMmYyyy(parsed)
+    const savedMn = String(row.modelNumber ?? '').trim()
+    let productModelId = null
+    let brand = null
+    let modelName = null
+    if (savedMn) {
+      const pm = await prisma.productModel.findFirst({
+        where: { modelNumber: savedMn },
+        select: { id: true, brand: true, name: true },
+      })
+      if (pm) {
+        productModelId = pm.id
+        brand = pm.brand
+        modelName = pm.name
+      }
+    }
+    if (!productModelId) {
+      const pb = row.warehouseStockUnit?.product?.brand
+      brand = typeof pb === 'string' && pb.trim() ? pb.trim() : null
+      const title = row.warehouseStockUnit?.product?.title
+      modelName = typeof title === 'string' && title.trim() ? title.trim() : null
+    }
+    return res
+      .set('Cache-Control', 'no-store')
+      .json({
+        eligible: true,
+        clientReceiptDate,
+        productModelId,
+        brand,
+        modelName,
+        modelNumber: savedMn || null,
+      })
   } catch (err) {
     console.error('Retur serial eligibility error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la verificare.' })

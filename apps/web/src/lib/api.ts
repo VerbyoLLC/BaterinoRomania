@@ -163,12 +163,29 @@ export async function submitProductRetur(
 }
 
 /** Public: eligibilitate retur după SN în stocuri + data recepție (≤15 zile). */
-export type ReturSerialEligibilityResponse = { eligible: boolean }
+export type ReturSerialEligibilityResponse = {
+  eligible: boolean
+  /** Prezent doar când `eligible === true`: zz-ll-aaaa din stocuri. */
+  clientReceiptDate?: string | null
+  productModelId?: string | null
+  brand?: string | null
+  modelName?: string | null
+  modelNumber?: string | null
+}
 
 export async function getPublicReturSerialEligibility(serialNumber: string): Promise<ReturSerialEligibilityResponse> {
   const sn = encodeURIComponent(String(serialNumber ?? '').trim())
   const res = await fetch(`${API_BASE}/public/retur-serial-eligibility?sn=${sn}`, { cache: 'no-store' })
-  const json = (await res.json().catch(() => ({}))) as { eligible?: boolean; error?: string; code?: string }
+  const json = (await res.json().catch(() => ({}))) as {
+    eligible?: boolean
+    clientReceiptDate?: string | null
+    productModelId?: string | null
+    brand?: string | null
+    modelName?: string | null
+    modelNumber?: string | null
+    error?: string
+    code?: string
+  }
   if (res.status === 429) {
     throw new Error(
       typeof json.error === 'string' && json.error.trim()
@@ -181,7 +198,34 @@ export async function getPublicReturSerialEligibility(serialNumber: string): Pro
       typeof json.error === 'string' && json.error.trim() ? json.error.trim() : 'Nu am putut verifica numărul de serie.'
     throw new Error(msg)
   }
-  return { eligible: Boolean(json.eligible) }
+  const eligible = Boolean(json.eligible)
+  const out: ReturSerialEligibilityResponse = { eligible }
+  if (eligible) {
+    if (typeof json.clientReceiptDate === 'string' && json.clientReceiptDate.trim()) {
+      out.clientReceiptDate = json.clientReceiptDate.trim()
+    }
+    if (typeof json.productModelId === 'string' && json.productModelId.trim()) {
+      out.productModelId = json.productModelId.trim()
+    } else {
+      out.productModelId = null
+    }
+    if (typeof json.brand === 'string' && json.brand.trim()) {
+      out.brand = json.brand.trim()
+    } else {
+      out.brand = null
+    }
+    if (typeof json.modelName === 'string' && json.modelName.trim()) {
+      out.modelName = json.modelName.trim()
+    } else {
+      out.modelName = null
+    }
+    if (typeof json.modelNumber === 'string' && json.modelNumber.trim()) {
+      out.modelNumber = json.modelNumber.trim()
+    } else {
+      out.modelNumber = null
+    }
+  }
+  return out
 }
 
 /** Linie coș → același POST ca produs unic. */
@@ -395,6 +439,26 @@ export function formatResidentialCatalogPriceDisplay(
   const unit = vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
   const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
   return `${Math.round(unit).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+/** Partner catalog: validated unit from salePrice (catalog/net); NaN if missing or invalid. */
+export function getPartnerCatalogSaleUnitNumeric(product: Pick<PublicProduct, 'salePrice'>): number {
+  const sale = catalogNum(product.salePrice)
+  return sale != null && sale > 0 ? sale : NaN
+}
+
+/** Partner UI / cart: unit price including VAT when product VAT % > 0 (same rule as residential catalog). */
+export function getPartnerDisplayUnitPriceWithVat(product: PublicProduct): number {
+  const sale = catalogNum(product.salePrice)
+  if (sale == null || sale <= 0) return NaN
+  const vat = catalogNum(product.vat)
+  return vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
+}
+
+/** VAT % applied on partner-inclusive price display; null if catalog shows net-only for this product. */
+export function getPartnerCatalogVatPercentForDisplay(product: PublicProduct): number | null {
+  const v = catalogNum(product.vat)
+  return v != null && v > 0 ? v : null
 }
 
 export type CatalogStockStatus = 'in_stock' | 'out_of_stock' | 'coming_soon'
@@ -1022,6 +1086,9 @@ export type ClientOrderLine = {
   quantity: number
   unitPriceInclVat: string | null
   lineTotalInclVat: string | null
+  /** Preț catalog (cu TVA) înainte de reducere — prezent doar dacă comanda a beneficiat de discount. */
+  listUnitPriceInclVat?: string | null
+  listLineTotalInclVat?: string | null
   vatPercent: string | null
   /** Populated by API from catalog (card / first image). */
   imageUrl?: string | null
@@ -1072,6 +1139,26 @@ export type ClientPaymentBankDetails = {
   bankName: string
 }
 
+export async function getPartnerPaymentBankDetails(): Promise<ClientPaymentBankDetails> {
+  const res = await fetch(`${API_BASE}/partner/payment-bank-details`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => ({}))) as Partial<ClientPaymentBankDetails> & {
+    error?: string
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea datelor bancare.')
+  }
+  return {
+    companyName: String(json.companyName || '').trim(),
+    bankAccount: String(json.bankAccount || '').trim(),
+    bankName: String(json.bankName || '').trim(),
+  }
+}
+
 export async function getClientPaymentBankDetails(): Promise<ClientPaymentBankDetails> {
   const res = await fetch(`${API_BASE}/client/payment-bank-details`, {
     headers: authHeaders(),
@@ -1094,6 +1181,18 @@ export async function getClientPaymentBankDetails(): Promise<ClientPaymentBankDe
 
 export async function getClientOrders(): Promise<ClientOrderRow[]> {
   const res = await fetch(`${API_BASE}/client/orders`, { headers: authHeaders(), cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+/** Comenzi rezidențiale ale partenerului autentificat (aceeași formă ca `ClientOrderRow`). */
+export async function getPartnerOrders(): Promise<ClientOrderRow[]> {
+  const res = await fetch(`${API_BASE}/partner/orders`, { headers: authHeaders(), cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
     if (res.status === 401) throw new Error('Sesiune expirată.')
@@ -1445,6 +1544,16 @@ export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentS
   return { fulfillmentStatus: String(json.fulfillmentStatus || 'anulata') }
 }
 
+export async function cancelPartnerOrder(orderId: string): Promise<{ fulfillmentStatus: string }> {
+  const res = await fetch(`${API_BASE}/partner/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; fulfillmentStatus?: string }
+  if (!res.ok) throw new Error(json.error || 'Nu am putut anula comanda.')
+  return { fulfillmentStatus: String(json.fulfillmentStatus || 'anulata') }
+}
+
 /**
  * Generează (la nevoie) și descarcă proforma PDF.
  *
@@ -1453,6 +1562,30 @@ export async function cancelClientOrder(orderId: string): Promise<{ fulfillmentS
  * Browser-ul descarcă PDF-ul direct de la CDN — fără riscuri de transformare
  * binară pe lanțul Express/CORS/compression (cauza vechilor PDF-uri „corupte”).
  */
+export async function downloadPartnerOrderProforma(
+  orderId: string,
+  _orderNumber: string,
+): Promise<{ downloadUrl: string }> {
+  const res = await fetch(`${API_BASE}/partner/orders/${encodeURIComponent(orderId)}/proforma`, {
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    downloadUrl?: string
+  }
+  if (!res.ok || !json.downloadUrl) {
+    throw new Error(json.error || 'Nu am putut genera proforma.')
+  }
+  const a = document.createElement('a')
+  a.href = json.downloadUrl
+  a.rel = 'noopener'
+  a.target = '_blank'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  return { downloadUrl: json.downloadUrl }
+}
+
 export async function downloadClientOrderProforma(
   orderId: string,
   _orderNumber: string,
@@ -1483,6 +1616,29 @@ export async function downloadClientOrderInvoice(orderId: string, orderNumber: s
   const h: Record<string, string> = {}
   if (token) h['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/invoice`, {
+    headers: h,
+  })
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(json.error || 'Nu am putut descărca factura.')
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `factura-${orderNumber.replace(/[^\w.-]+/g, '_')}.pdf`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export async function downloadPartnerOrderInvoice(orderId: string, orderNumber: string): Promise<void> {
+  const token = getAuthToken()
+  const h: Record<string, string> = {}
+  if (token) h['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/partner/orders/${encodeURIComponent(orderId)}/invoice`, {
     headers: h,
   })
   if (!res.ok) {
@@ -1580,6 +1736,11 @@ export type PartnerProfile = {
   companyCity?: string
   companyCounty?: string
   companyPostalCode?: string
+  /** Livrare implicită (magazin / depozit), distinctă de sediu și de adresa din profil public */
+  deliveryStreet?: string | null
+  deliveryCounty?: string | null
+  deliveryCity?: string | null
+  deliveryPostalCode?: string | null
   tradeRegisterNumber?: string
   activityTypes?: string[]
   contactFirstName?: string
