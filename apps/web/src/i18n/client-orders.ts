@@ -49,6 +49,7 @@ export type ClientOrdersTranslations = {
   cancelOrder: string
   cancelConfirm: string
   cancelling: string
+  /** În timpul `fetch`-ului către API înainte de salvarea blobului (proforma). */
   downloading: string
   downloadInvoice: string
   downloadingInvoice: string
@@ -120,7 +121,7 @@ const ro: ClientOrdersTranslations = {
   cancelOrder: 'Anulează comanda',
   cancelConfirm: 'Sigur vrei să anulezi comanda? Poți face asta doar înainte de plată.',
   cancelling: 'Se anulează…',
-  downloading: 'Se pregătește…',
+  downloading: 'Descărcare…',
   downloadInvoice: 'Descarcă factura',
   downloadingInvoice: 'Se descarcă…',
   invoicePending: 'Factura în curs',
@@ -186,7 +187,7 @@ const en: ClientOrdersTranslations = {
   cancelOrder: 'Cancel order',
   cancelConfirm: 'Cancel this order? You can only cancel before payment.',
   cancelling: 'Cancelling…',
-  downloading: 'Preparing…',
+  downloading: 'Downloading…',
   downloadInvoice: 'Download invoice',
   downloadingInvoice: 'Downloading…',
   invoicePending: 'Invoice pending',
@@ -249,7 +250,7 @@ const zh: ClientOrdersTranslations = {
   cancelOrder: '取消订单',
   cancelConfirm: '确定取消该订单？仅在付款前可取消。',
   cancelling: '正在取消…',
-  downloading: '正在准备…',
+  downloading: '正在下载…',
   downloadInvoice: '下载发票',
   downloadingInvoice: '正在下载…',
   invoicePending: '发票处理中',

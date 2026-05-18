@@ -225,9 +225,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     fieldErrorEmail: 'Introdu o adresă de email validă.',
     fieldErrorPhone: 'Numărul de telefon trebuie să aibă exact 9 cifre (după +40).',
     finalizeStep1: 'Vei primi o factură proformă pe e-mailul pe care ni l-ai comunicat mai sus.',
-    finalizeStep2:
-      'Te vom contacta telefonic pentru a ne cunoaște și a verifica că produsul este cel care îți trebuie.',
-    finalizeStep3: 'Achită factura proformă.',
+    finalizeStep2: 'Te vom contacta pentru a confirma comanda.',
+    finalizeStep3: 'Achită factura proformă și nu uita să menționezi numărul comenzii în detaliile transferului.',
     finalizeStep4: 'Produsul este trimis în maxim 24 de ore de la recepționarea plății.',
     btnPlaceOrder: 'Plasează comanda',
     orderPlaceLoading: 'Se trimite…',
@@ -360,9 +359,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     fieldErrorEmail: 'Enter a valid email address.',
     fieldErrorPhone: 'The mobile number must be exactly 9 digits (after +40).',
     finalizeStep1: 'You will receive a proforma invoice by email at the address you provided above.',
-    finalizeStep2:
-      'We will call you to get acquainted and confirm this is the right product for your needs.',
-    finalizeStep3: 'Pay the proforma invoice.',
+    finalizeStep2: 'We will contact you to confirm your order.',
+    finalizeStep3: 'Pay the proforma invoice — remember to include your order number in the transfer details.',
     finalizeStep4: 'The product is shipped within 24 hours of payment being received.',
     btnPlaceOrder: 'Place order',
     orderPlaceLoading: 'Submitting…',

@@ -219,6 +219,7 @@ function VatBreakdownBlock({
     ? 'text-[11px] leading-snug text-slate-500'
     : 'text-xs text-slate-600'
   const subDd = emphasizeGrandTotal ? 'font-medium text-slate-700' : 'font-medium text-slate-800'
+
   return (
     <dl className={`m-0 space-y-1 ${emphasizeGrandTotal ? '' : 'text-xs text-slate-600'}`}>
       <div className={`flex justify-between gap-3 tabular-nums ${subRow}`}>
@@ -252,12 +253,14 @@ function OrderLinePriceWithVat({
   lang,
   tr,
   align = 'start',
+  showDiscount = true,
 }: {
   line: ClientOrderLine
   currency: string
   lang: LangCode
   tr: ClientOrdersTranslations
   align?: 'start' | 'end'
+  showDiscount?: boolean
 }) {
   const qty = Math.max(0, Number(line.quantity) || 0)
   const unitIncl = parseMoneyField(line.unitPriceInclVat)
@@ -265,7 +268,7 @@ function OrderLinePriceWithVat({
   if (lineIncl == null && unitIncl != null && qty > 0) lineIncl = unitIncl * qty
   const cur = String(currency || 'RON').trim() || 'RON'
 
-  const listLine = parseMoneyField(line.listLineTotalInclVat)
+  const listLine = showDiscount ? parseMoneyField(line.listLineTotalInclVat) : null
   let discountAmt: number | null = null
   if (listLine != null && lineIncl != null && listLine > lineIncl + 0.009) {
     discountAmt = listLine - lineIncl
@@ -321,13 +324,30 @@ function OrderTotalsBreakdown({
   )
 }
 
+/** Destinație link linie comandă în listă rezidențială; partenerul deschide sertarul Produse cu `detail`. */
+function orderLineCatalogHref(productsHref: string, line: ClientOrderLine): string {
+  const base = String(productsHref ?? '')
+    .trim()
+    .replace(/\/+$/, '')
+  const partnerListing = /^\/partner\/produse$/i.test(base)
+  if (partnerListing) {
+    return `/partner/produse?detail=${encodeURIComponent(line.productId)}`
+  }
+  return line.productSlug
+    ? `/produse/${encodeURIComponent(line.productSlug)}`
+    : `/produse/${encodeURIComponent(line.productId)}`
+}
+
 export function ResidentialOrdersPage({
   ordersApi,
   productsHref = '/produse',
+  showDiscount = true,
 }: {
   ordersApi: ResidentialOrdersPortalApi
   /** Catalog rezidențial: client `/produse`, partener `/partner/produse`. */
   productsHref?: string
+  /** Afișează prețul de listă barat + reducere pe fiecare linie. Default true. */
+  showDiscount?: boolean
 }) {
   const { language } = useLanguage()
   const lang = language.code as LangCode
@@ -649,9 +669,7 @@ export function ResidentialOrdersPage({
                         </p>
                         <ul className="m-0 mt-2.5 list-none space-y-3 p-0">
                           {lines.map((L) => {
-                            const href = L.productSlug
-                              ? `/produse/${encodeURIComponent(L.productSlug)}`
-                              : `/produse/${encodeURIComponent(L.productId)}`
+                            const href = orderLineCatalogHref(productsHref, L)
                             const src =
                               (L.imageUrl && String(L.imageUrl).trim()) ||
                               getProductCardImageUrl({ images: [], cardImage: null })
@@ -670,18 +688,34 @@ export function ResidentialOrdersPage({
                                     />
                                   </Link>
                                   <div className="min-w-0 flex-1">
-                                    <Link
-                                      to={href}
-                                      className="text-[0.95rem] font-semibold leading-snug text-slate-900 underline-offset-2 hover:underline"
-                                    >
-                                      {L.productTitle}
-                                    </Link>
-                                    <span
-                                      className="ml-2 inline-block align-middle text-[0.95rem] font-semibold tabular-nums text-slate-500 lg:hidden"
-                                      aria-label={tr.colQuantity}
-                                    >
-                                      × {L.quantity}
-                                    </span>
+                                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                      <Link
+                                        to={href}
+                                        className="text-[0.95rem] font-semibold leading-snug text-slate-900 underline-offset-2 hover:underline"
+                                      >
+                                        {L.productTitle}
+                                      </Link>
+                                      <span
+                                        className="inline-block align-middle text-[0.95rem] font-semibold tabular-nums text-slate-500 lg:hidden"
+                                        aria-label={tr.colQuantity}
+                                      >
+                                        × {L.quantity}
+                                      </span>
+                                    </div>
+                                    {L.catalogSpecLine1 || L.catalogSpecLine2 ? (
+                                      <div className="mt-1 space-y-0.5">
+                                        {L.catalogSpecLine1 ? (
+                                          <p className="m-0 text-center text-[11px] font-normal leading-snug text-slate-600 sm:text-left">
+                                            {L.catalogSpecLine1}
+                                          </p>
+                                        ) : null}
+                                        {L.catalogSpecLine2 ? (
+                                          <p className="m-0 text-center text-[11px] font-normal leading-snug text-slate-600 sm:text-left">
+                                            {L.catalogSpecLine2}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
                                     <div className="mt-2 lg:hidden">
                                       <OrderLinePriceWithVat
                                         line={L}
@@ -689,6 +723,7 @@ export function ResidentialOrdersPage({
                                         lang={lang}
                                         tr={tr}
                                         align="start"
+                                        showDiscount={showDiscount}
                                       />
                                     </div>
                                   </div>
@@ -731,6 +766,7 @@ export function ResidentialOrdersPage({
                                 lang={lang}
                                 tr={tr}
                                 align="end"
+                                showDiscount={showDiscount}
                               />
                             </li>
                           ))}
@@ -804,7 +840,9 @@ export function ResidentialOrdersPage({
                           disabled={busy}
                           onClick={() => void onDownloadProforma(o)}
                           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 lg:w-auto"
-                          aria-label={tr.downloadProforma}
+                          aria-label={
+                            busy && actionKind === 'proforma' ? tr.downloading : tr.downloadProforma
+                          }
                         >
                           {busy && actionKind === 'proforma' ? (
                             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-600" aria-hidden />
@@ -823,7 +861,9 @@ export function ResidentialOrdersPage({
                           disabled={busy}
                           onClick={() => void onDownloadInvoice(o)}
                           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 lg:w-auto"
-                          aria-label={tr.downloadInvoice}
+                          aria-label={
+                            busy && actionKind === 'invoice' ? tr.downloadingInvoice : tr.downloadInvoice
+                          }
                         >
                           {busy && actionKind === 'invoice' ? (
                             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-600" aria-hidden />

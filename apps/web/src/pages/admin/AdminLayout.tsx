@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   clearAuth,
   getAuthEmail,
@@ -481,8 +481,12 @@ export default function AdminLayout() {
       <aside className={`w-64 flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-transform duration-200 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full py-6 px-4">
 
-          {/* Logo */}
-          <a href="/" className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50">
+          {/* Logo → admin dashboard */}
+          <Link
+            to="/admin"
+            onClick={() => setSidebarOpen(false)}
+            className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50 rounded-lg outline-none transition-colors hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25"
+          >
             <img
               src="/images/shared/baterino-logo-white.png"
               alt="Baterino"
@@ -491,7 +495,7 @@ export default function AdminLayout() {
             <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
               ADMIN
             </span>
-          </a>
+          </Link>
 
           {/* Nav */}
           <nav className="flex-1 flex flex-col gap-1">

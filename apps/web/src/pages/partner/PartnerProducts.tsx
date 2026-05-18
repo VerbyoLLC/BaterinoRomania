@@ -1,6 +1,22 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, X, ShoppingCart, Minus, Plus, ChevronRight, Trash2, ShoppingBag, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import type { LucideIcon } from 'lucide-react'
+import {
+  Search,
+  X,
+  ShoppingCart,
+  Minus,
+  Plus,
+  ChevronRight,
+  Trash2,
+  ShoppingBag,
+  Bell,
+  Home,
+  LayoutGrid,
+  BriefcaseMedical,
+  Factory,
+  Anchor,
+} from 'lucide-react'
 import {
   getProducts,
   getProduct,
@@ -19,7 +35,7 @@ import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
 import ProductDetailRightSection from '../../components/ProductDetailRightSection'
-import { ReducerePartenerBox, SigurantaClientuluiBox, SuportTehnicBox } from './PartnerSidebarBoxes'
+import { ReducerePartenerBox } from './PartnerSidebarBoxes'
 import {
   hydratePartnerCartFromProducts,
   partnerProductHasListPrice,
@@ -33,14 +49,6 @@ import {
 type CartItem = PartnerCartItem
 
 /* ─────────────────────────────────────────────── helpers ─── */
-function whToKwhDisplay(wh: string | null | undefined): string | null {
-  if (!wh) return null
-  const numStr = String(wh).replace(/\s*Wh$/i, '').replace(',', '.').replace(/\s/g, '')
-  const num = parseFloat(numStr)
-  if (Number.isNaN(num)) return wh
-  const kwh = num / 1000
-  return `${kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2)} kWh`
-}
 
 function formatPrice(price: number, langCode: string, currency: string): string {
   const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
@@ -97,6 +105,14 @@ const PARTNER_CATALOG_SECTION_ORDER: PartnerCatalogSectionId[] = [
   'maritim',
 ]
 
+const PARTNER_CATALOG_SECTION_ICON: Record<PartnerCatalogSectionId, LucideIcon> = {
+  rezidential: Home,
+  micro_grid: LayoutGrid,
+  comercial_medical: BriefcaseMedical,
+  industrial: Factory,
+  maritim: Anchor,
+}
+
 function partnerCatalogCategorieTokens(p: PublicProduct): string[] {
   return String(p.categorie || '')
     .split(',')
@@ -111,15 +127,6 @@ function partnerProductMatchesMicroGrid(p: PublicProduct): boolean {
   if (/\bmicro[\s_-]?grid\b/.test(catRaw) || catRaw.includes('microgrid')) return true
   const blob = `${p.title} ${p.subtitle || ''}`.toLowerCase()
   return /\bmicro[\s_-]?grid\b/.test(blob) || blob.includes('microgrid')
-}
-
-function partnerProductMatchesVoltageFilter(p: PublicProduct, voltageFilter: 'low' | 'high' | ''): boolean {
-  if (!voltageFilter) return true
-  const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
-  if (Number.isNaN(v)) return false
-  if (voltageFilter === 'low' && v >= 100) return false
-  if (voltageFilter === 'high' && v < 100) return false
-  return true
 }
 
 /** Assign each product to exactly one partner-facing section. */
@@ -164,6 +171,44 @@ function partnerCatalogSectionLabels(langCode: string): Record<PartnerCatalogSec
   }
 }
 
+/** Top toolbar ( căutare / iconițe dreapta ) — aceleași limbi ca secțiunile catalogului. */
+function partnerToolbarLabels(langCode: string) {
+  if (langCode === 'en') {
+    return {
+      searchProducts: 'Search products…',
+      clearSearch: 'Clear search',
+      openSearchPanel: 'Open search',
+      closeSearchPanel: 'Close search',
+      notifications: 'Notifications',
+      notificationsEmptyTitle: 'No new notifications',
+      notificationsEmptySubtitle: 'Order updates and alerts will appear here.',
+    }
+  }
+  if (langCode === 'zh') {
+    return {
+      searchProducts: '搜索产品…',
+      clearSearch: '清除搜索',
+      openSearchPanel: '打开搜索',
+      closeSearchPanel: '关闭搜索',
+      notifications: '通知',
+      notificationsEmptyTitle: '暂无新通知',
+      notificationsEmptySubtitle: '订单动态与提醒将在此处显示。',
+    }
+  }
+  return {
+    searchProducts: 'Caută produs…',
+    clearSearch: 'Șterge căutarea',
+    openSearchPanel: 'Deschide căutarea',
+    closeSearchPanel: 'Închide căutarea',
+    notifications: 'Notificări',
+    notificationsEmptyTitle: 'Nicio notificare nouă',
+    notificationsEmptySubtitle: 'Actualizări de comandă și alerte vor fi afișate aici.',
+  }
+}
+
+const PARTNER_TOOLBAR_ICON_BTN =
+  'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/80 disabled:opacity-50'
+
 /* ─────────────────────────────────────────────── StockBadge ─── */
 function StockBadge({
   product,
@@ -198,6 +243,52 @@ function StockBadge({
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
       {inStockLabel}
     </span>
+  )
+}
+
+/* ─────────────────────────────────────────────── Cart skeleton ─── */
+function PartnerCartPanelSkeletonInner() {
+  return (
+    <div className="animate-pulse motion-reduce:animate-none" aria-hidden>
+      <div className="divide-y divide-slate-100">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3 px-4 py-3">
+            <div className="h-14 w-14 shrink-0 rounded-xl bg-slate-200 ring-1 ring-slate-100" />
+            <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+              <div className="h-3.5 w-[72%] max-w-[13rem] rounded-md bg-slate-200" />
+              <div className="h-2.5 w-24 rounded bg-slate-200" />
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="h-8 w-[4.625rem] rounded-lg bg-slate-200" />
+                <div className="h-7 w-7 rounded-lg bg-slate-200" />
+                <div className="ml-auto h-3 w-[4rem] shrink-0 rounded bg-slate-200" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PartnerCartPanelSkeletonFooter() {
+  return (
+    <div className="shrink-0 space-y-3 border-t border-slate-100 bg-white px-4 py-3">
+      <div className="animate-pulse motion-reduce:animate-none space-y-2.5" aria-hidden>
+        <div className="flex justify-between gap-3">
+          <div className="h-3 w-[11rem] max-w-[45%] rounded bg-slate-200" />
+          <div className="h-3 w-14 rounded bg-slate-200" />
+        </div>
+        <div className="flex justify-between gap-3">
+          <div className="h-3 w-8 rounded bg-slate-200" />
+          <div className="h-3 w-14 rounded bg-slate-200" />
+        </div>
+        <div className="flex justify-between gap-3 border-t border-slate-100 pt-2">
+          <div className="h-4 w-[8.5rem] max-w-[50%] rounded bg-slate-200" />
+          <div className="h-4 w-[4.75rem] rounded bg-slate-200" />
+        </div>
+      </div>
+      <div className="h-10 w-full animate-pulse motion-reduce:animate-none rounded-xl bg-slate-300" aria-hidden />
+    </div>
   )
 }
 
@@ -239,15 +330,31 @@ function PartnerCartPanel({
       }
     >
       {loading ? (
-        <div
-          className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-white/80 backdrop-blur-[2px] motion-reduce:backdrop-blur-none"
-          role="status"
-        >
-          <Loader2 className="h-8 w-8 animate-spin text-slate-600 motion-reduce:animate-none" strokeWidth={2} aria-hidden />
+        <>
           <span className="sr-only">{partnerCartLoadingLabel(langCode)}</span>
-        </div>
-      ) : null}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <ShoppingBag className="h-5 w-5 shrink-0 text-slate-700" strokeWidth={2} aria-hidden />
+              <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">Coș de cumpărături</h2>
+              <span className="h-5 min-w-[1.5rem] shrink-0 rounded-full bg-slate-200 animate-pulse motion-reduce:animate-none" aria-hidden />
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="h-5 min-w-[1.25rem] shrink-0 rounded-full bg-slate-200 animate-pulse motion-reduce:animate-none" aria-hidden />
+              {showClose ? (
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  aria-label="Închide coșul"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <X className="h-4 w-4" strokeWidth={2} />
+                </button>
+              ) : null}
+            </div>
+          </header>
+        </>
+      ) : (
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <ShoppingBag className="h-5 w-5 shrink-0 text-slate-700" strokeWidth={2} aria-hidden />
           <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">Coș de cumpărături</h2>
@@ -267,10 +374,13 @@ function PartnerCartPanel({
             <X className="h-4 w-4" strokeWidth={2} />
           </button>
         ) : null}
-      </div>
+      </header>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {items.length === 0 ? (
+        {loading ? (
+          <PartnerCartPanelSkeletonInner />
+        ) : items.length === 0 ? (
           <div className={`flex flex-col items-center justify-center gap-3 px-4 text-center ${variant === 'sidebar' ? 'py-8' : 'py-10'}`}>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
               <ShoppingBag className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
@@ -348,7 +458,9 @@ function PartnerCartPanel({
         )}
       </div>
 
-      {items.length > 0 && (
+      {loading ? (
+        <PartnerCartPanelSkeletonFooter />
+      ) : items.length > 0 ? (
         <div className="shrink-0 space-y-2 border-t border-slate-100 bg-white px-4 py-3">
           {hasPricedItems && (() => {
             const { net, vat } = computePartnerCartTotals(items)
@@ -397,7 +509,7 @@ function PartnerCartPanel({
             </button>
           ) : null}
         </div>
-      )}
+      ) : null}
     </section>
   )
 }
@@ -605,34 +717,18 @@ function PartnerProductCardSkeleton() {
 }
 
 /* ─────────────────────────────────────────────── Detail panel ─── */
-const PARTNER_DETAIL_TABS = [
-  { id: 'detalii' as const, label: 'Detalii' },
-  { id: 'tehnice' as const, label: 'Tehnice' },
-  { id: 'manuale' as const, label: 'Manuale' },
-  { id: 'videos' as const, label: 'Video' },
-]
 
 function ProductDetailPanel({
   product,
   loading,
   tr,
-  trProduse,
   langCode,
-  currency,
-  quantity,
-  onQuantityChange,
-  onAddToCart,
   activeTab,
 }: {
   product: PublicProduct | null
   loading: boolean
   tr: ReturnType<typeof getProductDetailTranslations>
-  trProduse: ReturnType<typeof getProduseTranslations>
   langCode: string
-  currency: string
-  quantity: number
-  onQuantityChange: (delta: number) => void
-  onAddToCart: () => void
   activeTab: 'detalii' | 'tehnice' | 'manuale' | 'videos'
 }) {
   if (loading) {
@@ -665,121 +761,17 @@ function ProductDetailPanel({
     )
   }
 
-  const stockUnavailable = residentialProductStockUnavailable(product)
-
-  const energieDisplay = whToKwhDisplay(product.energieNominala)
-  const p = product as PublicProduct & {
-    capacitate?: string; cicluriDescarcare?: string
-    dimensiuni?: string; greutate?: string; temperaturaFunctionare?: string
-  }
-  const specRows: [string, string][] = []
-  if (energieDisplay) specRows.push([tr.specEnergieNominala, energieDisplay])
-  if (p.capacitate) specRows.push([tr.specCapacitate, p.capacitate])
-  if (p.cicluriDescarcare) specRows.push([tr.specCicluriDescarcare, p.cicluriDescarcare])
-  if (p.dimensiuni) specRows.push([tr.specDimensiuni, p.dimensiuni])
-  if (p.greutate) specRows.push([tr.specGreutate, p.greutate])
-  if (p.temperaturaFunctionare) specRows.push([tr.specTemperaturaOperare, p.temperaturaFunctionare])
-
   return (
     <div className="flex flex-col gap-0">
-      {!stockUnavailable && partnerProductHasListPrice(product) ? (
-        <div className="border-b border-slate-100 px-6 py-3">
-          <p className="m-0 text-lg font-extrabold tabular-nums text-slate-900 font-['Inter']">
-            {formatPrice(getPartnerDisplayUnitPriceWithVat(product), langCode, currency)}
-          </p>
-          {(() => {
-            const vpc = getPartnerCatalogVatPercentForDisplay(product)
-            return vpc != null ? (
-              <p className="mt-0.5 m-0 text-xs font-medium text-slate-500 font-['Inter']">
-                {trProduse.catalogIncludesVatWithPct.replace('{pct}', formatPartnerVatPctLabel(vpc))}
-              </p>
-            ) : null
-          })()}
-        </div>
-      ) : null}
-
-      {/* Qty + Add to basket */}
-      {!stockUnavailable ? (
-        partnerProductHasListPrice(product) ? (
-          <div className="flex items-stretch gap-3 border-b border-slate-100 px-6 py-4">
-            <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <button
-                type="button"
-                onClick={() => onQuantityChange(-1)}
-                aria-label="−"
-                className="flex w-10 items-center justify-center text-slate-600 transition hover:bg-slate-50"
-              >
-                <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
-              <span
-                className="flex w-10 items-center justify-center border-x border-slate-200 text-sm font-bold tabular-nums text-slate-900 font-['Inter']"
-                aria-live="polite"
-              >
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => onQuantityChange(1)}
-                aria-label="+"
-                className="flex w-10 items-center justify-center text-slate-600 transition hover:bg-slate-50"
-              >
-                <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={onAddToCart}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 font-['Inter']"
-            >
-              <ShoppingCart className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-              Adaugă în coș
-            </button>
-          </div>
-        ) : (
-          <div className="border-b border-slate-100 px-6 py-4">
-            <a
-              href="/partner/suport"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 font-['Inter']"
-            >
-              Discută cu noi
-            </a>
-          </div>
-        )
-      ) : (
-        <div className="border-b border-slate-100 px-6 py-4">
-          <div className="rounded-xl bg-slate-50 px-4 py-3 text-center">
-            <p className="m-0 text-sm font-semibold text-slate-600 font-['Inter']">
-              {trProduse.catalogStockPartnerFooterNote}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'detalii' && specRows.length > 0 && (
-          <div className="px-6 py-4 border-b border-slate-100">
-            <p className="mb-3 m-0 text-xs font-bold uppercase tracking-wide text-slate-500 font-['Inter']">
-              {tr.detaliiTehnice}
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-              {specRows.map(([label, value], i) => (
-                <div key={i} className="min-w-0">
-                  <p className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400 font-['Inter']">
-                    {label}
-                  </p>
-                  <p className="m-0 text-sm font-medium text-slate-900 font-['Inter']">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="px-6 py-4">
           <ProductDetailRightSection
             product={product}
             tr={tr}
             langCode={langCode}
             compact
+            hideBadges
             partnerTab={activeTab}
           />
         </div>
@@ -791,15 +783,25 @@ function ProductDetailPanel({
 /* ─────────────────────────────────────────────── Page ─── */
 export default function PartnerProducts() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { language } = useLanguage()
   const { currency } = useCatalogCurrency()
   const tr = getProductDetailTranslations(language.code)
   const trProduse = getProduseTranslations(language.code)
 
+  const partnerDetailTabs = useMemo(
+    () => [
+      { id: 'detalii' as const, label: 'Detalii' },
+      { id: 'tehnice' as const, label: tr.techSpecsTab },
+      { id: 'manuale' as const, label: 'Manuale' },
+      { id: 'videos' as const, label: 'Video' },
+    ],
+    [tr],
+  )
+
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -811,13 +813,27 @@ export default function PartnerProducts() {
   /** False until first catalog load + localStorage hydrate completes (avoids saving [] over a persisted cart). */
   const [cartStorageReady, setCartStorageReady] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
-  /** Desktop (xl+): empty basket hidden until bag icon opens peek panel */
-  const [desktopCartPeek, setDesktopCartPeek] = useState(false)
   const prevCartTotalRef = useRef(0)
+  const [searchBarExpanded, setSearchBarExpanded] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   /* ── partner discount ── */
   const [discountPercent, setDiscountPercent] = useState<number | null>(null)
   const [discountLoading, setDiscountLoading] = useState(true)
+
+  const dismissProductDetailPanel = useCallback(() => {
+    setSelectedId(null)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('detail')
+        return next
+      },
+      { replace: true },
+    )
+  }, [setSearchParams])
+
+  const detailIdFromRoute = searchParams.get('detail')?.trim() ?? ''
 
   const searchRef = useRef<HTMLInputElement>(null)
   const cartSectionRef = useRef<HTMLDivElement>(null)
@@ -879,6 +895,11 @@ export default function PartnerProducts() {
       .finally(() => setDetailLoading(false))
   }, [selectedId])
 
+  useEffect(() => {
+    if (!detailIdFromRoute) return
+    setSelectedId(detailIdFromRoute)
+  }, [detailIdFromRoute])
+
   /* ── search → sections (3-column grids per vertical section) ── */
   const searchFiltered = useMemo(() => {
     let list = products
@@ -904,19 +925,20 @@ export default function PartnerProducts() {
     }
     for (const p of searchFiltered) {
       const sec = getPartnerCatalogSection(p)
-      if (sec === 'rezidential' && !partnerProductMatchesVoltageFilter(p, voltageFilter)) continue
       buckets[sec].push(p)
     }
     const flat = PARTNER_CATALOG_SECTION_ORDER.flatMap((id) => buckets[id])
     return { sectionBuckets: buckets, displayedProductsFlat: flat }
-  }, [searchFiltered, voltageFilter])
+  }, [searchFiltered])
 
-  /* ── deselect if filtered away ── */
+  /* ── deselect if filtered away (never while catalog is loading — avoids clearing ?detail= deep links) ── */
   useEffect(() => {
-    if (selectedId && !displayedProductsFlat.some((p) => p.id === selectedId)) {
-      setSelectedId(null)
+    if (!selectedId) return
+    if (loading) return
+    if (!displayedProductsFlat.some((p) => p.id === selectedId)) {
+      dismissProductDetailPanel()
     }
-  }, [displayedProductsFlat, selectedId])
+  }, [displayedProductsFlat, selectedId, dismissProductDetailPanel, loading])
 
   /* ── qty helpers ── */
   const qty = (id: string) => quantities[id] ?? 1
@@ -938,7 +960,7 @@ export default function PartnerProducts() {
       }
       return [...prev, { product, quantity }]
     })
-    setSelectedId(null)
+    dismissProductDetailPanel()
     if (typeof window === 'undefined' || !window.matchMedia('(min-width: 1280px)').matches) {
       setCartOpen(true)
     }
@@ -960,12 +982,6 @@ export default function PartnerProducts() {
   }
 
   const cartTotalItems = cartItems.reduce((s, i) => s + i.quantity, 0)
-  const showSidebarCart = cartTotalItems > 0 || desktopCartPeek
-
-  /* Any cart total change clears peek (empty peek survives until lines are added/removed) */
-  useEffect(() => {
-    setDesktopCartPeek(false)
-  }, [cartTotalItems])
 
   /* After first line added on desktop, scroll sidebar basket into view */
   useEffect(() => {
@@ -977,17 +993,29 @@ export default function PartnerProducts() {
     }
   }, [cartTotalItems])
 
-  /* Empty desktop peek: scroll sidebar once panel mounts */
-  useEffect(() => {
-    if (!desktopCartPeek || cartTotalItems !== 0) return
-    if (typeof window === 'undefined' || !window.matchMedia('(min-width: 1280px)').matches) return
-    requestAnimationFrame(() => scrollDesktopCartIntoView())
-  }, [desktopCartPeek, cartTotalItems])
-
   const catalogSectionLabels = useMemo(
     () => partnerCatalogSectionLabels(language.code),
     [language.code],
   )
+
+  const trToolbar = useMemo(() => partnerToolbarLabels(language.code), [language.code])
+
+  useEffect(() => {
+    if (!searchBarExpanded || typeof window === 'undefined') return
+    const id = window.requestAnimationFrame(() => {
+      searchRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [searchBarExpanded])
+
+  useEffect(() => {
+    if (!searchBarExpanded || typeof window === 'undefined') return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSearchBarExpanded(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [searchBarExpanded])
 
   const productGridClass =
     'm-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3'
@@ -998,7 +1026,7 @@ export default function PartnerProducts() {
       <div className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white px-5 py-2.5 shadow-sm sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 xl:flex-1 xl:min-w-0">
-            <h1 className="shrink-0 text-xl font-bold text-slate-900 font-['Inter']">Produse</h1>
+            <h1 className="shrink-0 text-2xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:text-3xl">Produse</h1>
             <nav
               className="flex min-w-0 flex-wrap items-center gap-1.5 sm:flex-1 sm:flex-nowrap sm:overflow-x-auto sm:pb-0.5 xl:flex-initial xl:overflow-visible xl:pb-0 [scrollbar-width:thin]"
               role="navigation"
@@ -1029,102 +1057,140 @@ export default function PartnerProducts() {
             </nav>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 xl:shrink-0">
-            <div className="relative min-w-0 flex-1 basis-[min(100%,14rem)] sm:max-w-xs sm:flex-none">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                strokeWidth={2}
-                aria-hidden
-              />
-              <input
-                ref={searchRef}
-                type="search"
-                placeholder="Caută produs…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300/80 font-['Inter']"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  aria-label="Șterge căutarea"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
+          <div className="flex min-w-0 w-full xl:w-auto flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3 xl:flex-nowrap xl:justify-end xl:gap-4">
+            <div
+              className={`flex min-h-9 min-w-0 items-center overflow-hidden transition-[max-width,opacity] duration-200 ease-out ${searchBarExpanded ? 'pointer-events-auto max-w-[min(100vw-10rem,20rem)] flex-1 opacity-100 xl:flex-initial xl:max-w-[20rem]' : 'pointer-events-none max-w-0 flex-[0_0_auto] opacity-0'}`}
+              aria-hidden={!searchBarExpanded}
+            >
+              <div className="relative w-full min-w-[10rem] pr-2 sm:min-w-[12rem]">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <input
+                  ref={searchRef}
+                  id="partner-catalog-search-input"
+                  type="search"
+                  placeholder={trToolbar.searchProducts}
+                  autoComplete="off"
+                  aria-label={trToolbar.searchProducts}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  disabled={!searchBarExpanded}
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300/80 disabled:pointer-events-none disabled:opacity-50 font-['Inter']"
+                />
+                {search && searchBarExpanded ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label={trToolbar.clearSearch}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-700"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
             </div>
 
-            <label className="flex shrink-0 items-center gap-2 text-[11px] font-semibold text-slate-500 font-['Inter'] sm:text-xs">
-              <span className="whitespace-nowrap">{trProduse.filterVolti}</span>
-              <select
-                value={voltageFilter}
-                onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
-                className="h-9 rounded-xl border border-slate-200 bg-white pl-2.5 pr-8 text-xs font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300/80 font-['Inter'] appearance-none"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L1 3h8z'/%3E%3C/svg%3E\")",
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 10px center',
-                  backgroundSize: '10px',
-                }}
-                aria-label={`${catalogSectionLabels.rezidential} · ${trProduse.filterVolti}`}
-              >
-                <option value="">{trProduse.productsVoltageAll}</option>
-                <option value="low">{trProduse.productsVoltageLow}</option>
-                <option value="high">{trProduse.productsVoltageHigh}</option>
-              </select>
-            </label>
-
-            {(voltageFilter || search) && (
+            {search.trim() !== '' ? (
               <button
                 type="button"
-                onClick={() => {
-                  setVoltageFilter('')
-                  setSearch('')
-                }}
+                onClick={() => setSearch('')}
                 className="h-9 shrink-0 rounded-xl px-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 hover:text-slate-800 font-['Inter']"
               >
                 {trProduse.clearFilters}
               </button>
-            )}
+            ) : null}
 
-            {!loading && (
-              <p className="hidden shrink-0 text-xs text-slate-400 font-['Inter'] sm:block">
-                {displayedProductsFlat.length} produse
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches) {
-                  if (cartTotalItems === 0) {
-                    setDesktopCartPeek(true)
-                  } else {
+            <div className="relative flex shrink-0 items-center gap-2">
+              {notificationsOpen ? (
+                <button
+                  type="button"
+                  className="fixed inset-0 z-[19] bg-transparent cursor-default border-0 p-0 m-0"
+                  aria-hidden
+                  tabIndex={-1}
+                  onClick={() => setNotificationsOpen(false)}
+                />
+              ) : null}
+              <button
+                type="button"
+                aria-label={searchBarExpanded ? trToolbar.closeSearchPanel : trToolbar.openSearchPanel}
+                aria-expanded={searchBarExpanded}
+                aria-controls="partner-catalog-search-input"
+                aria-pressed={searchBarExpanded}
+                onClick={() => {
+                  setSearchBarExpanded((e) => !e)
+                  setNotificationsOpen(false)
+                }}
+                className={`${PARTNER_TOOLBAR_ICON_BTN} ${searchBarExpanded ? 'ring-2 ring-slate-900/25' : ''}`}
+              >
+                <Search className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </button>
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  id="partner-toolbar-notifications"
+                  aria-label={trToolbar.notifications}
+                  aria-expanded={notificationsOpen}
+                  aria-controls="partner-notifications-popover"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setNotificationsOpen((v) => !v)
+                    setSearchBarExpanded(false)
+                  }}
+                  className={PARTNER_TOOLBAR_ICON_BTN}
+                >
+                  <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                </button>
+
+                {notificationsOpen ? (
+                  <div
+                    role="dialog"
+                    id="partner-notifications-popover"
+                    aria-labelledby="partner-notifications-heading"
+                    className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(calc(100vw-3rem),18rem)] rounded-xl border border-slate-200 bg-white p-4 text-left shadow-lg ring-1 ring-slate-900/5"
+                  >
+                    <p
+                      id="partner-notifications-heading"
+                      className="m-0 text-sm font-semibold text-slate-900 font-['Inter'] leading-snug"
+                    >
+                      {trToolbar.notificationsEmptyTitle}
+                    </p>
+                    <p className="mt-1.5 m-0 text-xs leading-relaxed text-slate-500 font-['Inter']">
+                      {trToolbar.notificationsEmptySubtitle}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen(false)
+                  setSearchBarExpanded(false)
+                  if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches) {
                     scrollDesktopCartIntoView()
+                  } else {
+                    setCartOpen(true)
                   }
-                } else {
-                  setCartOpen(true)
-                }
-              }}
-              aria-label={`Coș (${cartTotalItems} produse)`}
-              className="relative ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 xl:ml-0"
-            >
-              <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2} />
-              {cartTotalItems > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white font-['Inter']">
-                  {cartTotalItems > 99 ? '99+' : cartTotalItems}
-                </span>
-              )}
-            </button>
+                }}
+                aria-label={`Coș (${cartTotalItems} produse)`}
+                className={PARTNER_TOOLBAR_ICON_BTN}
+              >
+                <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2} />
+                {cartTotalItems > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white font-['Inter']">
+                    {cartTotalItems > 99 ? '99+' : cartTotalItems}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Main area: grid + right sidebar (info + basket) ── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-
         {/* Product grid — only this column scrolls; scrollbar visually hidden */}
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {loading ? (
@@ -1139,24 +1205,24 @@ export default function PartnerProducts() {
                 <Search className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
               </div>
               <p className="text-sm text-slate-500 font-['Inter']">{trProduse.noResults}</p>
-              {(voltageFilter || search) && (
+              {search ? (
                 <button
                   type="button"
                   onClick={() => {
-                    setVoltageFilter('')
                     setSearch('')
                   }}
                   className="text-xs font-semibold text-slate-900 underline underline-offset-2"
                 >
                   {trProduse.clearFilters}
                 </button>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col gap-12 pb-4">
               {PARTNER_CATALOG_SECTION_ORDER.map((sectionId) => {
                 const list = sectionBuckets[sectionId]
                 if (list.length === 0) return null
+                const SectionIcon = PARTNER_CATALOG_SECTION_ICON[sectionId]
                 return (
                   <section
                     key={sectionId}
@@ -1167,9 +1233,14 @@ export default function PartnerProducts() {
                     <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-3">
                       <h2
                         id={`partner-catalog-heading-${sectionId}`}
-                        className="m-0 text-lg font-bold tracking-tight text-slate-900 font-['Inter']"
+                        className="m-0 flex min-w-0 flex-1 items-center gap-2 text-xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:gap-2.5 sm:text-2xl"
                       >
-                        {catalogSectionLabels[sectionId]}
+                        <SectionIcon
+                          className="h-7 w-7 shrink-0 text-slate-700 sm:h-8 sm:w-8"
+                          strokeWidth={1.85}
+                          aria-hidden
+                        />
+                        <span className="min-w-0">{catalogSectionLabels[sectionId]}</span>
                       </h2>
                       <span className="text-xs font-medium tabular-nums text-slate-400 font-['Inter']">
                         {language.code === 'en'
@@ -1202,40 +1273,23 @@ export default function PartnerProducts() {
           )}
         </div>
 
-        {/* ── Right sidebar: coș, reduceri (fix), siguranță & suport (collapsible) ── */}
-        <aside className="hidden min-h-0 w-[26rem] shrink-0 flex-col border-l border-slate-200 bg-[#f7f7f7] xl:flex xl:flex-col">
+        {/* ── Right sidebar: coș, reduceri ── */}
+        <aside className="hidden min-h-0 w-[23rem] shrink-0 flex-col border-l border-slate-200 bg-[#f7f7f7] xl:flex xl:flex-col">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-            <div
-              className={`grid min-h-0 shrink-0 transition-[grid-template-rows,margin-bottom] duration-300 ease-in-out motion-reduce:transition-none ${
-                showSidebarCart ? 'grid-rows-[1fr] mb-0' : 'grid-rows-[0fr] -mb-3'
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <div
-                  ref={cartSectionRef}
-                  className={`flex shrink-0 flex-col motion-reduce:transition-none ${
-                    showSidebarCart ? 'opacity-100' : 'pointer-events-none opacity-0'
-                  } transition-opacity duration-200 ease-out`}
-                  aria-hidden={!showSidebarCart}
-                >
-                  <PartnerCartPanel
-                    variant="sidebar"
-                    loading={!cartStorageReady}
-                    items={cartItems}
-                    onChangeQty={changeCartQty}
-                    onRemove={removeFromCart}
-                    onDismiss={cartTotalItems === 0 ? () => setDesktopCartPeek(false) : undefined}
-                    onCheckout={() => navigate('/partner/checkout')}
-                    langCode={language.code}
-                    currency={currency}
-                  />
-                </div>
-              </div>
+            <div ref={cartSectionRef} className="flex min-h-0 shrink-0 flex-col">
+              <PartnerCartPanel
+                variant="sidebar"
+                loading={!cartStorageReady}
+                items={cartItems}
+                onChangeQty={changeCartQty}
+                onRemove={removeFromCart}
+                onCheckout={() => navigate('/partner/checkout')}
+                langCode={language.code}
+                currency={currency}
+              />
             </div>
 
             <ReducerePartenerBox discountPercent={discountPercent} loading={discountLoading} />
-            <SigurantaClientuluiBox collapsible cartHasItems={cartTotalItems > 0} stackPosition="upper" />
-            <SuportTehnicBox collapsible cartHasItems={cartTotalItems > 0} stackPosition="lower" />
           </div>
         </aside>
       </div>
@@ -1262,7 +1316,7 @@ export default function PartnerProducts() {
       {/* ── Detail drawer ── */}
       <div
         aria-hidden
-        onClick={() => setSelectedId(null)}
+        onClick={() => dismissProductDetailPanel()}
         className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
           selectedId != null ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
@@ -1277,7 +1331,7 @@ export default function PartnerProducts() {
       >
         <div className="shrink-0 border-b border-slate-200">
           {/* Product hero in drawer header */}
-          <div className="flex items-start gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
             {detailLoading ? (
               <div className="flex flex-1 items-center gap-4 animate-pulse">
                 <div className="h-16 w-16 shrink-0 rounded-xl bg-slate-100" />
@@ -1287,37 +1341,47 @@ export default function PartnerProducts() {
                 </div>
               </div>
             ) : selectedProduct ? (
-              <div className="flex min-w-0 flex-1 items-start gap-4">
-                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f7f7f7] ring-1 ring-slate-200">
-                  <img
-                    src={getProductCardImageUrl(selectedProduct)}
-                    alt={selectedProduct.title}
-                    className="h-full w-full object-contain p-1.5"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <div className="mb-1">
-                    <StockBadge
-                      product={selectedProduct}
-                      inStockLabel={trProduse.catalogStockInStock}
-                      outOfStockLabel={trProduse.catalogStockOutOfStock}
-                      comingSoonLabel={trProduse.catalogStockComingSoon}
-                    />
-                  </div>
-                  <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter']">
-                    {selectedProduct.title}
-                  </p>
-                  {selectedProduct.subtitle ? (
-                    <p className="mt-0.5 m-0 text-xs text-slate-500 font-['Inter']">{selectedProduct.subtitle}</p>
-                  ) : null}
-                  {(() => {
-                    const unit = getPartnerDisplayUnitPriceWithVat(selectedProduct)
-                    const stockUnavail = residentialProductStockUnavailable(selectedProduct)
-                    if (!Number.isNaN(unit) && !stockUnavail) {
-                      const vpc = getPartnerCatalogVatPercentForDisplay(selectedProduct)
-                      return (
-                        <div className="mt-1">
+              (() => {
+                const p = selectedProduct
+                const stockUnavailable = residentialProductStockUnavailable(p)
+                const hasList = partnerProductHasListPrice(p)
+                const q = qty(p.id)
+                const unit = getPartnerDisplayUnitPriceWithVat(p)
+                const showPrice = !Number.isNaN(unit) && !stockUnavailable
+                const vpc = showPrice ? getPartnerCatalogVatPercentForDisplay(p) : null
+
+                return (
+                  <div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-5">
+                    {/* Col 1 — image + badge + title */}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f7f7f7] ring-1 ring-slate-200">
+                        <img
+                          src={getProductCardImageUrl(p)}
+                          alt={p.title}
+                          className="h-full w-full object-contain p-1.5"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="mb-1">
+                          <StockBadge
+                            product={p}
+                            inStockLabel={trProduse.catalogStockInStock}
+                            outOfStockLabel={trProduse.catalogStockOutOfStock}
+                            comingSoonLabel={trProduse.catalogStockComingSoon}
+                          />
+                        </div>
+                        <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter']">{p.title}</p>
+                        {p.subtitle ? (
+                          <p className="mt-0.5 m-0 line-clamp-2 text-xs text-slate-500 font-['Inter']">{p.subtitle}</p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Col 2 — price (centered in column) */}
+                    <div className="flex min-h-[3.5rem] flex-col items-center justify-center sm:min-h-0 sm:min-w-[6.75rem] sm:items-end sm:text-right md:min-w-[7.5rem]">
+                      {showPrice ? (
+                        <>
                           <p className="m-0 text-base font-extrabold tabular-nums text-slate-900 font-['Inter']">
                             {formatPrice(unit, language.code, currency)}
                           </p>
@@ -1326,19 +1390,85 @@ export default function PartnerProducts() {
                               {trProduse.catalogIncludesVatWithPct.replace('{pct}', formatPartnerVatPctLabel(vpc))}
                             </p>
                           ) : null}
+                        </>
+                      ) : stockUnavailable ? (
+                        <p className="m-0 max-w-[11rem] text-center text-xs font-semibold text-slate-500 font-['Inter'] sm:text-right">
+                          {getResidentialCatalogStockListingCta(p, {
+                            outOfStock: trProduse.catalogStockOutOfStock,
+                            comingSoon: trProduse.catalogStockComingSoon,
+                          }) ?? '—'}
+                        </p>
+                      ) : !hasList ? (
+                        <p className="m-0 text-xs font-medium text-slate-400 font-['Inter']">—</p>
+                      ) : (
+                        <p className="m-0 text-xs text-slate-400 font-['Inter']">—</p>
+                      )}
+                    </div>
+
+                    {/* Col 3 — quantity + add to cart / alternates */}
+                    <div className="flex min-h-[3.5rem] flex-col items-center justify-center sm:min-h-0 sm:min-w-[11rem] sm:max-w-[13rem]">
+                      {stockUnavailable ? (
+                        <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-center">
+                          <p className="m-0 text-[11px] font-semibold leading-snug text-slate-500 font-['Inter']">
+                            {trProduse.catalogStockPartnerFooterNote}
+                          </p>
                         </div>
-                      )
-                    }
-                    return null
-                  })()}
-                </div>
-              </div>
+                      ) : !hasList ? (
+                        <a
+                          href="/partner/suport"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 active:bg-slate-950 font-['Inter']"
+                        >
+                          Discută cu noi
+                        </a>
+                      ) : (
+                        <div
+                          className="flex w-full flex-col gap-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => changeQty(p.id, -1)}
+                              aria-label="−"
+                              className="flex flex-1 items-center justify-center py-2 text-slate-600 transition hover:bg-slate-50 active:bg-slate-100"
+                            >
+                              <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                            </button>
+                            <span
+                              className="flex w-12 items-center justify-center border-x border-slate-200 text-sm font-bold tabular-nums text-slate-900 font-['Inter']"
+                              aria-live="polite"
+                            >
+                              {q}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => changeQty(p.id, 1)}
+                              aria-label="+"
+                              className="flex flex-1 items-center justify-center py-2 text-slate-600 transition hover:bg-slate-50 active:bg-slate-100"
+                            >
+                              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(p, q)}
+                            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 active:bg-slate-950 font-['Inter']"
+                          >
+                            <ShoppingCart className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                            Adaugă în coș
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()
             ) : (
               <p className="flex-1 text-sm font-semibold text-slate-900 font-['Inter']">Detalii produs</p>
             )}
             <button
               type="button"
-              onClick={() => setSelectedId(null)}
+              onClick={() => dismissProductDetailPanel()}
               aria-label="Închide"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             >
@@ -1346,7 +1476,7 @@ export default function PartnerProducts() {
             </button>
           </div>
           <div className="flex gap-0 overflow-x-auto px-4 sm:px-6" role="tablist">
-            {PARTNER_DETAIL_TABS.map((tab) => (
+            {partnerDetailTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -1369,16 +1499,7 @@ export default function PartnerProducts() {
             product={selectedProduct}
             loading={detailLoading}
             tr={tr}
-            trProduse={trProduse}
             langCode={language.code}
-            currency={currency}
-            quantity={selectedId ? qty(selectedId) : 1}
-            onQuantityChange={(delta) => selectedId && changeQty(selectedId, delta)}
-            onAddToCart={() =>
-              selectedProduct &&
-              partnerProductHasListPrice(selectedProduct) &&
-              addToCart(selectedProduct, selectedId ? qty(selectedId) : 1)
-            }
             activeTab={detailPanelTab}
           />
         </div>

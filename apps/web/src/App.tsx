@@ -80,6 +80,7 @@ import ClientNotifications from './pages/client/ClientNotifications'
 import CartPage from './pages/CartPage'
 import VerificareGarantie from './pages/VerificareGarantie'
 import ReturnareProduse from './pages/ReturnareProduse'
+import PartnerCompanyPublicPage from './pages/PartnerCompanyPublicPage'
 
 export default function App() {
   return (
@@ -154,6 +155,7 @@ export default function App() {
             <>
               <Route index element={<InstalatoriOnlyIndex />} />
               <Route path="instalatori" element={<Instalatori />} />
+              <Route path="companii/:handle" element={<PartnerCompanyPublicPage />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
@@ -173,6 +175,7 @@ export default function App() {
             <>
               <Route index element={<HomeEntry />} />
               <Route path="produse" element={<Produse />} />
+              <Route path="companii/:handle" element={<PartnerCompanyPublicPage />} />
               <Route path="produse/:slug" element={<ProductRezidential />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />

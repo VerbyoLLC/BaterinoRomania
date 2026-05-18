@@ -170,9 +170,11 @@ export type ProductDetailRightSectionProps = {
   compact?: boolean
   /** When set (partner panel tabs), only render the corresponding section */
   partnerTab?: 'detalii' | 'tehnice' | 'manuale' | 'videos'
+  /** Hide the benefit badge grid (Garanție, Compatibilitate etc.) */
+  hideBadges?: boolean
 }
 
-export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false, partnerTab }: ProductDetailRightSectionProps) {
+export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false, partnerTab, hideBadges = false }: ProductDetailRightSectionProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [showCompatibilitate99Modal, setShowCompatibilitate99Modal] = useState(false)
   const [showGarantieModal, setShowGarantieModal] = useState(false)
@@ -184,6 +186,7 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
 
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const galleryImages = imgs.length > 0 ? imgs : [img]
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
@@ -210,6 +213,26 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
       <div className="flex flex-col gap-6">
         {showDetalii && (
         <>
+        {compact ? (
+          <div className="grid grid-cols-3 gap-2">
+            {galleryImages.map((src, i) => (
+              <button
+                key={`${src}-${i}`}
+                type="button"
+                onClick={() => {
+                  setActiveImage(i)
+                  setShowImageModal(true)
+                }}
+                className="aspect-square overflow-hidden rounded-[10px] bg-neutral-100 ring-1 ring-neutral-200/90 transition hover:ring-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                aria-label={`${product.title} — ${i + 1} / ${galleryImages.length}`}
+              >
+                <span className="flex h-full w-full items-center justify-center p-2">
+                  <img src={src} alt="" className="max-h-full max-w-full object-contain" loading={i < 6 ? 'eager' : 'lazy'} />
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
         <div
           className="bg-neutral-100 rounded-[10px] flex items-center justify-center relative overflow-hidden h-[320px] lg:h-[460px] cursor-zoom-in"
           onClick={() => setShowImageModal(true)}
@@ -244,8 +267,9 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
             <ProductImageWithLoader src={img} alt={product.title} />
           )}
         </div>
+        )}
 
-        <div className="grid grid-cols-3 gap-3">
+        {!hideBadges && <div className="grid grid-cols-3 gap-3">
           {badges.map((b, i) => (
             b.id === 'compatibilitate' ? (
               <button key={i} type="button" onClick={() => setShowCompatibilitate99Modal(true)} className="flex flex-col items-center gap-2 bg-neutral-100 rounded-[10px] py-4 px-2 text-center hover:bg-neutral-200 transition-colors cursor-pointer">
@@ -284,36 +308,73 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
               </div>
             )
           ))}
-        </div>
+        </div>}
         </>
         )}
 
         {showDocumenteTehnice && docs.length > 0 && (
           <div>
             <h3 className="text-black text-base font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className={compact ? 'flex flex-wrap gap-3' : 'flex flex-col gap-2'}>
               {docs.map((doc, i) => (
                 <button
                   key={i}
                   type="button"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(doc.url, { mode: 'cors' })
-                      const blob = await res.blob()
-                      const a = document.createElement('a')
-                      a.href = URL.createObjectURL(blob)
-                      a.download = ((doc.descriere || 'document').replace(/[^a-zA-Z0-9-_ăâîșțĂÂÎȘȚ\s]/g, '') || 'document') + '.pdf'
-                      a.click()
-                      URL.revokeObjectURL(a.href)
-                    } catch {
-                      window.open(doc.url, '_blank')
-                    }
+                  aria-label={doc.descriere || tr.document}
+                  onClick={() => {
+                    const apiBase =
+                      import.meta.env.DEV
+                        ? 'http://localhost:3001/api'
+                        : `${window.location.origin}/api`
+                    const proxyUrl = `${apiBase}/download-proxy?url=${encodeURIComponent(doc.url)}`
+                    const a = document.createElement('a')
+                    a.href = proxyUrl
+                    a.download =
+                      ((doc.descriere || 'document').replace(/[^a-zA-Z0-9-_ăâîșțĂÂÎȘȚ\s]/g, '') || 'document') +
+                      '.pdf'
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
                   }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-zinc-200 hover:bg-neutral-50 hover:border-slate-400 transition-all w-full text-left"
+                  className={`group border transition-all ${
+                    compact
+                      ? 'relative flex w-40 flex-col items-center gap-2 rounded-2xl border-neutral-200 bg-neutral-50 p-4 text-center hover:border-slate-300 hover:bg-white hover:shadow-md active:scale-[0.98]'
+                      : 'flex w-full items-center gap-3 rounded-[10px] border-zinc-200 px-4 py-3 text-left hover:bg-neutral-50 hover:border-slate-400'
+                  }`}
                 >
-                  <img src="/images/shared/download-icon.svg" alt="" aria-hidden className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-black text-sm font-medium font-['Inter'] flex-1">{doc.descriere || tr.document}</span>
-                  <span className="text-xs font-bold text-gray-400 uppercase">.PDF</span>
+                  {compact ? (
+                    <>
+                      {/* Download icon — top-right corner */}
+                      <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400 transition-colors group-hover:bg-slate-800 group-hover:text-white">
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
+                        </svg>
+                      </span>
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 ring-1 ring-red-200/60">
+                        <svg className="h-7 w-7 text-red-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
+                          <path d="M8.5 14.5h1.2c.7 0 1.1-.4 1.1-1s-.4-1-1.1-1H8v4h.5v-2zm0-1.5h.7c.4 0 .6.2.6.5s-.2.5-.6.5H8.5v-1zm3 3.5h1.2c1 0 1.6-.6 1.6-1.8 0-1.2-.6-1.7-1.7-1.7H11.5v3.5zm.5-3h.7c.7 0 1.1.3 1.1 1.2 0 .9-.4 1.3-1.1 1.3H12V14zm2.5 3.5V14h2v.5h-1.5v1h1.3v.5h-1.3v1.5H14.5z"/>
+                        </svg>
+                      </span>
+                      <span className="text-xs font-semibold leading-snug text-slate-700 line-clamp-3 font-['Inter'] w-full">
+                        {doc.descriere || tr.document}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-auto">PDF</span>
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src="/images/shared/download-icon.svg"
+                        alt=""
+                        aria-hidden
+                        className="w-5 h-5 flex-shrink-0"
+                      />
+                      <span className="text-black text-sm font-medium font-['Inter'] flex-1">
+                        {doc.descriere || tr.document}
+                      </span>
+                      <span className="text-xs font-bold text-gray-400 uppercase">.PDF</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -322,19 +383,47 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
 
         {showTehnice && techData.length > 0 && (
           <section>
-            <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
-            <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-              {techData.map(([key, val], i) => (
-                <li key={i} className="min-w-0">
-                  <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter']">
-                    {key}
-                  </span>
-                  <span className="mt-1.5 block text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words">
-                    {val}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {partnerTab !== 'tehnice' ? (
+              <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
+            ) : null}
+            <div className="overflow-x-auto rounded-xl border border-neutral-200">
+              <table className="w-full min-w-[280px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-neutral-200 bg-neutral-50">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-neutral-600 font-['Inter'] sm:px-5"
+                    >
+                      {tr.techTableColSpec}
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-neutral-600 font-['Inter'] sm:px-5"
+                    >
+                      {tr.techTableColValue}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {techData.map(([key, val], i) => (
+                    <tr
+                      key={i}
+                      className={`border-b border-neutral-100 last:border-b-0 ${i % 2 === 1 ? 'bg-neutral-50/60' : 'bg-white'}`}
+                    >
+                      <th
+                        scope="row"
+                        className="align-top px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-neutral-500 font-['Inter'] sm:px-5 sm:w-[42%]"
+                      >
+                        {key}
+                      </th>
+                      <td className="align-top px-4 py-3 text-sm font-semibold text-neutral-900 font-['Inter'] leading-snug break-words sm:px-5">
+                        {val}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         )}
 
@@ -411,7 +500,7 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
       {showImageModal &&
         createPortal(
           <ProductImageModal
-            images={imgs.length > 0 ? imgs : [img]}
+            images={galleryImages}
             activeIndex={activeImage}
             onSelect={setActiveImage}
             onClose={() => setShowImageModal(false)}

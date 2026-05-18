@@ -1849,6 +1849,42 @@ export default function GuestCheckout() {
             </div>
           ) : null}
 
+          {/* Step progress bar */}
+          <div className="mt-4 lg:mt-6 mb-2">
+            <div className="flex items-center gap-0">
+              {[1, 2, 3, 4].map((n) => {
+                const done = n < activeStep
+                const active = n === activeStep
+                return (
+                  <div key={n} className="flex flex-1 items-center">
+                    <button
+                      type="button"
+                      disabled={n > maxReachedStep}
+                      onClick={() => { if (n <= maxReachedStep) goToStep(n as CheckoutStep) }}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold font-['Inter'] transition-colors ${
+                        active
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : done
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-slate-200 text-slate-400'
+                      } ${n > maxReachedStep ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      aria-current={active ? 'step' : undefined}
+                    >
+                      {done ? (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : n}
+                    </button>
+                    {n < 4 && (
+                      <div className={`h-0.5 flex-1 mx-1 rounded-full transition-colors ${n < activeStep ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Single column so the step accordion uses full max-w-content (1200px) width */}
           <div className="mt-2 grid grid-cols-1 gap-8 lg:mt-8">
             <div className="min-w-0 w-full">

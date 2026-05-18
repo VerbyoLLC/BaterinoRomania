@@ -70,10 +70,16 @@ function SettingsPanel({
     >
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3 border-b border-gray-100 pb-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600" aria-hidden>
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-lg bg-blue-50 text-blue-600"
+            aria-hidden
+          >
             {icon}
           </span>
-          <h2 id={headingId} className="text-lg font-bold font-['Inter'] text-slate-900">
+          <h2
+            id={headingId}
+            className="m-0 flex min-h-9 items-center text-lg font-bold leading-tight text-slate-900 font-['Inter']"
+          >
             {title}
           </h2>
         </div>

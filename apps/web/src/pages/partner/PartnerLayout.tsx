@@ -1,6 +1,8 @@
-import { useState, useEffect, type ReactNode } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { getAuthEmail, getPartnerProfile } from '../../lib/api'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { LANGUAGES } from '../../i18n/menu'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconProfile() {
@@ -21,7 +23,8 @@ function IconSettings() {
 function IconProducts() {
   return (
     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m0-14L4 17m8 4V10" />
+      <rect x="2" y="7" width="16" height="10" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M22 10v4" />
     </svg>
   )
 }
@@ -32,10 +35,14 @@ function IconOrders() {
     </svg>
   )
 }
-function IconService() {
+function IconRepair() {
   return (
     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+      />
     </svg>
   )
 }
@@ -60,6 +67,22 @@ function IconLogout() {
     </svg>
   )
 }
+function IconGlobe() {
+  return (
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 21a9 9 0 100-18 9 9 0 000 18z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.6 9h16.8M3.6 15h16.8M12 3a15.3 15.3 0 010 18M12 3a15.3 15.3 0 000 18"
+      />
+    </svg>
+  )
+}
 function IconLock() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
@@ -69,14 +92,14 @@ function IconLock() {
 }
 function IconChevronLeft() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
     </svg>
   )
 }
 function IconChevronRight() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   )
@@ -86,7 +109,7 @@ const NAV_MAIN = [
   { to: '/partner', label: 'Dashboard', icon: <IconDashboard />, end: true },
   { to: '/partner/produse', label: 'Produse', icon: <IconProducts />, end: false },
   { to: '/partner/comenzi', label: 'Comenzi', icon: <IconOrders />, end: false },
-  { to: '/partner/servicii', label: 'Servicii', icon: <IconService />, end: false },
+  { to: '/partner/servicii', label: 'Reparatii', icon: <IconRepair />, end: false },
   { to: '/partner/profil', label: 'Profil Public', icon: <IconProfile />, end: false },
 ]
 
@@ -164,8 +187,11 @@ function InactiveNavRow({
 export default function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { language, setLanguage } = useLanguage()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
+  const langMenuRef = useRef<HTMLDivElement>(null)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
   const [isApproved, setIsApproved] = useState<boolean | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
@@ -204,13 +230,31 @@ export default function PartnerLayout() {
     }
   }, [isSuspended, isApproved, pendingReview, location.pathname, navigate])
 
+  useEffect(() => {
+    if (!langMenuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+        setLangMenuOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLangMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [langMenuOpen])
+
   const navLinkClass = (isActive: boolean, col: boolean) =>
     `flex items-center rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
       col ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
     } ${isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
 
   return (
-    <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
+    <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-gray-50">
 
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
@@ -223,7 +267,7 @@ export default function PartnerLayout() {
 
       {/* ── Sidebar ── */}
       <aside
-        className={`flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-all duration-200 ease-in-out lg:transform-none ${
+        className={`flex-shrink-0 bg-slate-900 flex flex-col h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-all duration-200 ease-in-out lg:transform-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${collapsed ? 'w-[4.5rem]' : 'w-64'}`}
       >
@@ -232,7 +276,11 @@ export default function PartnerLayout() {
           {/* Logo / collapse toggle */}
           <div className={`pb-5 mb-4 border-b border-slate-700/50 flex items-center ${collapsed ? 'justify-center' : 'justify-between px-1'}`}>
             {!collapsed && (
-              <a href="/" className="flex flex-col items-start gap-1 pl-2 min-w-0">
+              <Link
+                to="/partner"
+                className="flex flex-col items-start gap-1 pl-2 min-w-0"
+                onClick={() => setSidebarOpen(false)}
+              >
                 <img
                   src="/images/shared/baterino-logo-white.png"
                   alt="Baterino"
@@ -241,23 +289,23 @@ export default function PartnerLayout() {
                 <span className="text-white/60 text-xs font-medium font-['Inter'] tracking-wider uppercase">
                   Partener
                 </span>
-              </a>
+              </Link>
             )}
             {collapsed && (
-              <a href="/" className="flex items-center justify-center">
+              <Link to="/partner" className="flex items-center justify-center" onClick={() => setSidebarOpen(false)}>
                 <img
                   src="/images/shared/baterino-logo-white.png"
                   alt="Baterino"
                   className="h-6 w-auto object-contain"
                 />
-              </a>
+              </Link>
             )}
             {/* Collapse toggle — desktop only */}
             <button
               type="button"
               onClick={() => setCollapsed((c) => !c)}
               aria-label={collapsed ? 'Extinde meniul' : 'Restrânge meniul'}
-              className={`hidden lg:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white ${collapsed ? 'mt-3' : ''}`}
+              className={`hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white ${collapsed ? 'mt-3' : ''}`}
             >
               {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
             </button>
@@ -273,6 +321,7 @@ export default function PartnerLayout() {
               <>
                 <NavItemLoader count={NAV_MAIN.length} collapsed={collapsed} />
                 <div className="flex-1 min-h-[1rem]" />
+                <NavItemLoader count={1} collapsed={collapsed} />
                 <NavItemLoader count={NAV_BOTTOM.length} collapsed={collapsed} />
               </>
             ) : (
@@ -319,6 +368,67 @@ export default function PartnerLayout() {
                   )
                 })}
                 <div className="flex-1 min-h-[1rem]" />
+                <div className="relative" ref={langMenuRef}>
+                  <button
+                    type="button"
+                    aria-expanded={langMenuOpen}
+                    aria-haspopup="listbox"
+                    title={collapsed ? 'Limba' : undefined}
+                    onClick={() => setLangMenuOpen((o) => !o)}
+                    className={`w-full text-left ${navLinkClass(langMenuOpen, collapsed)} ${
+                      langMenuOpen ? 'ring-1 ring-white/15' : ''
+                    }`}
+                  >
+                    <span className="relative group/nav">
+                      <IconGlobe />
+                      {collapsed && (
+                        <span className="pointer-events-none absolute left-full ml-3 top-1/2 z-[200] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
+                          Limba
+                        </span>
+                      )}
+                    </span>
+                    {!collapsed && (
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate">Limba</span>
+                        <span className="block truncate text-xs font-normal text-slate-400 font-['Inter']">
+                          {language.label}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                  {langMenuOpen && (
+                    <div
+                      role="listbox"
+                      aria-label="Alege limba"
+                      className={`absolute z-[250] min-w-[11rem] rounded-xl border border-gray-200 bg-white py-1 shadow-xl ${
+                        collapsed
+                          ? 'left-full top-1/2 ml-2 -translate-y-1/2'
+                          : 'left-full bottom-0 ml-2 max-[380px]:left-0 max-[380px]:right-0 max-[380px]:top-full max-[380px]:mt-2 max-[380px]:ml-0 max-[380px]:translate-y-0'
+                      }`}
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          role="option"
+                          aria-selected={language.code === lang.code}
+                          className={`block w-full px-4 py-2.5 text-left text-sm font-['Inter'] transition-colors ${
+                            language.code === lang.code
+                              ? 'bg-slate-100 font-semibold text-slate-900'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                          onClick={() => {
+                            setLanguage(lang)
+                            setLangMenuOpen(false)
+                            setSidebarOpen(false)
+                          }}
+                        >
+                          {lang.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {NAV_BOTTOM.map((item) => (
                   <NavLink
                     key={item.to}
@@ -377,25 +487,31 @@ export default function PartnerLayout() {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            aria-label="Deschide meniul"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <a href="/" className="flex-shrink-0">
-            <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
-          </a>
-          <div className="w-10" />
+      {/* Scroll lives only on the outlet wrapper below so nested routes don't stack a second scrollbar (main + inner flex). */}
+      <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden">
+        <div
+          id="partner-layout-scroll"
+          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-clip overscroll-y-contain [&>*]:min-h-0"
+        >
+          {/* Mobile header — inside scroll region so sticky works and there is a single vertical scroll */}
+          <div className="lg:hidden sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="-ml-2 rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+              aria-label="Deschide meniul"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <Link to="/partner" className="flex-shrink-0">
+              <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
+            </Link>
+            <div className="w-10" />
+          </div>
+          <Outlet />
         </div>
-        <Outlet />
       </main>
     </div>
   )

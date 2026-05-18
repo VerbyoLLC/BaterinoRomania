@@ -104,6 +104,11 @@ export type ProductDetailTranslations = {
   documenteTehnice: string
   document: string
   dateTehnice: string
+  /** Technical specs table — column headers */
+  techTableColSpec: string
+  techTableColValue: string
+  /** Partner tab / compact heading — short label for technical specs */
+  techSpecsTab: string
   /** Mobile accordion label for main specs grid */
   detaliiTehnice: string
   /** Opens full technical details bottom sheet (mobile accordion) */
@@ -240,6 +245,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     documenteTehnice: 'Documente Tehnice',
     document: 'Document',
     dateTehnice: 'Date tehnice despre produs',
+    techTableColSpec: 'Specificație',
+    techTableColValue: 'Valoare',
+    techSpecsTab: 'Date Tehnice',
     detaliiTehnice: 'Detalii tehnice',
     toateDetaliileBtn: 'Toate detaliile',
     intrebariFrecvente: 'Întrebări frecvente',
@@ -363,6 +371,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     documenteTehnice: 'Technical Documents',
     document: 'Document',
     dateTehnice: 'Technical product data',
+    techTableColSpec: 'Specification',
+    techTableColValue: 'Value',
+    techSpecsTab: 'Technical specs',
     detaliiTehnice: 'Technical details',
     toateDetaliileBtn: 'All details',
     intrebariFrecvente: 'Frequently asked questions',
@@ -485,6 +496,9 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     documenteTehnice: '技术文档',
     document: '文档',
     dateTehnice: '产品技术数据',
+    techTableColSpec: '规格',
+    techTableColValue: '数值',
+    techSpecsTab: '技术规格',
     detaliiTehnice: '技术详情',
     toateDetaliileBtn: '全部参数',
     intrebariFrecvente: '常见问题',

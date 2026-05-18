@@ -96,6 +96,8 @@ export default function AdminProducts() {
   const [priceVisibility, setPriceVisibility] = useState<'hidden' | 'public' | 'partner_only'>('public')
   const [pricePresentation, setPricePresentation] = useState<'simple' | 'detailed'>('simple')
   const [catalogStockStatus, setCatalogStockStatus] = useState<'in_stock' | 'out_of_stock' | 'coming_soon'>('in_stock')
+  const [promovarePeContClient, setPromovarePeContClient] = useState(false)
+  const [promovarePeContPartener, setPromovarePeContPartener] = useState(false)
   const [adminReducerPrograms, setAdminReducerPrograms] = useState<ReducereProgramRow[]>([])
   const [reducereProgramsLoadError, setReducereProgramsLoadError] = useState<string | null>(null)
   const [reducereProgramIds, setReducereProgramIds] = useState<string[]>([])
@@ -331,6 +333,8 @@ export default function AdminProducts() {
     setCatalogStockStatus(
       cs === 'out_of_stock' ? 'out_of_stock' : cs === 'coming_soon' ? 'coming_soon' : 'in_stock',
     )
+    setPromovarePeContClient((row as { promovarePeContClient?: boolean }).promovarePeContClient === true)
+    setPromovarePeContPartener((row as { promovarePeContPartener?: boolean }).promovarePeContPartener === true)
     setReducereProgramIds(normalizeProductReducereProgramIds(row))
     setSeoTitle(String((row as { seoTitle?: string }).seoTitle || ''))
     setSeoDescription(String((row as { seoDescription?: string }).seoDescription || ''))
@@ -415,6 +419,8 @@ export default function AdminProducts() {
     setPriceVisibility('public')
     setPricePresentation('simple')
     setCatalogStockStatus('in_stock')
+    setPromovarePeContClient(false)
+    setPromovarePeContPartener(false)
     setReducereProgramIds([])
     setSelectedProductModelId('')
     setSeoTitle('')
@@ -858,6 +864,8 @@ export default function AdminProducts() {
       priceVisibility,
       pricePresentation,
       catalogStockStatus: tipProdus === 'rezidential' ? catalogStockStatus : null,
+      promovarePeContClient,
+      promovarePeContPartener,
       reducereProgramIds: tipProdus === 'rezidential' ? [...new Set(reducereProgramIds)] : [],
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
@@ -1279,6 +1287,34 @@ export default function AdminProducts() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={categorieMaritim} onChange={(e) => setCategorieMaritim(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
                     <span className="text-sm font-['Inter'] text-gray-800">Maritim</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Promovare în conturi */}
+              <div className="pt-2 border-t border-gray-200">
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-3">Promovare pe cont</h3>
+                <p className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm leading-snug text-sky-950 font-['Inter']">
+                  Acest produs va fi afișat cu prioritate.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
+                  <label className="inline-flex cursor-pointer items-center gap-2 font-['Inter'] text-sm text-gray-800">
+                    <input
+                      type="checkbox"
+                      checked={promovarePeContClient}
+                      onChange={(e) => setPromovarePeContClient(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900"
+                    />
+                    Client
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 font-['Inter'] text-sm text-gray-800">
+                    <input
+                      type="checkbox"
+                      checked={promovarePeContPartener}
+                      onChange={(e) => setPromovarePeContPartener(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900"
+                    />
+                    Partener
                   </label>
                 </div>
               </div>

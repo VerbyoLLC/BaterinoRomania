@@ -25,7 +25,7 @@ export default function PartnerOrders() {
   return (
     <div className="p-6 sm:p-8 lg:p-10">
       <div className="w-full max-w-5xl">
-        <ResidentialOrdersPage ordersApi={ordersApi} productsHref="/partner/produse" />
+        <ResidentialOrdersPage ordersApi={ordersApi} productsHref="/partner/produse" showDiscount={false} />
       </div>
     </div>
   )

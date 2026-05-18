@@ -384,6 +384,8 @@ export type PublicProduct = {
   catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
   /** Rezidențial: id-uri programe reducere (CMS); gol = toate programele în dropdown (comportament vechi) */
   reducereProgramIds?: string[]
+  /** Admin: prioritate în catalog partener */
+  promovarePeContPartener?: boolean
   tensiuneNominala?: string | null
   capacitate?: string | null
   compozitie?: string | null
@@ -1092,6 +1094,9 @@ export type ClientOrderLine = {
   vatPercent: string | null
   /** Populated by API from catalog (card / first image). */
   imageUrl?: string | null
+  /** Din catalog curent — tensiune • capacitate • compoziție și cicluri • Wi-Fi/Bluetooth */
+  catalogSpecLine1?: string | null
+  catalogSpecLine2?: string | null
 }
 
 export type OrderFulfillmentStatus =
@@ -1555,59 +1560,63 @@ export async function cancelPartnerOrder(orderId: string): Promise<{ fulfillment
 }
 
 /**
- * Generează (la nevoie) și descarcă proforma PDF.
- *
- * Backend-ul randează HTML→PDF, încarcă în R2 sub `orders/<orderId>/` cu
- * `Content-Disposition: attachment` și întoarce JSON cu URL-ul direct R2.
- * Browser-ul descarcă PDF-ul direct de la CDN — fără riscuri de transformare
- * binară pe lanțul Express/CORS/compression (cauza vechilor PDF-uri „corupte”).
+ * Generează (la nevoie) și descarcă proforma PDF prin API (`?download=1`),
+ * ca blob în browser — evită blocarea pop-up-ului la deschiderea URL-ului R2 după `fetch` async.
  */
 export async function downloadPartnerOrderProforma(
   orderId: string,
-  _orderNumber: string,
+  orderNumber: string,
 ): Promise<{ downloadUrl: string }> {
-  const res = await fetch(`${API_BASE}/partner/orders/${encodeURIComponent(orderId)}/proforma`, {
-    headers: authHeaders(),
-  })
-  const json = (await res.json().catch(() => ({}))) as {
-    error?: string
-    downloadUrl?: string
-  }
-  if (!res.ok || !json.downloadUrl) {
+  const token = getAuthToken()
+  const h: Record<string, string> = {}
+  if (token) h['Authorization'] = `Bearer ${token}`
+  const res = await fetch(
+    `${API_BASE}/partner/orders/${encodeURIComponent(orderId)}/proforma?download=1`,
+    { headers: h },
+  )
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
     throw new Error(json.error || 'Nu am putut genera proforma.')
   }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = json.downloadUrl
+  a.href = url
+  a.download = `proforma-${orderNumber.replace(/[^\w.-]+/g, '_')}.pdf`
   a.rel = 'noopener'
-  a.target = '_blank'
   document.body.appendChild(a)
   a.click()
   a.remove()
-  return { downloadUrl: json.downloadUrl }
+  URL.revokeObjectURL(url)
+  return { downloadUrl: '' }
 }
 
 export async function downloadClientOrderProforma(
   orderId: string,
-  _orderNumber: string,
+  orderNumber: string,
 ): Promise<{ downloadUrl: string }> {
-  const res = await fetch(`${API_BASE}/client/orders/${encodeURIComponent(orderId)}/proforma`, {
-    headers: authHeaders(),
-  })
-  const json = (await res.json().catch(() => ({}))) as {
-    error?: string
-    downloadUrl?: string
-  }
-  if (!res.ok || !json.downloadUrl) {
+  const token = getAuthToken()
+  const h: Record<string, string> = {}
+  if (token) h['Authorization'] = `Bearer ${token}`
+  const res = await fetch(
+    `${API_BASE}/client/orders/${encodeURIComponent(orderId)}/proforma?download=1`,
+    { headers: h },
+  )
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
     throw new Error(json.error || 'Nu am putut genera proforma.')
   }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = json.downloadUrl
+  a.href = url
+  a.download = `proforma-${orderNumber.replace(/[^\w.-]+/g, '_')}.pdf`
   a.rel = 'noopener'
-  a.target = '_blank'
   document.body.appendChild(a)
   a.click()
   a.remove()
-  return { downloadUrl: json.downloadUrl }
+  URL.revokeObjectURL(url)
+  return { downloadUrl: '' }
 }
 
 /** Descarcă factura PDF (după ce comanda e în „în pregătire” și admin a încărcat factura). */
@@ -1760,6 +1769,39 @@ export type PartnerProfile = {
   facebookUrl?: string
   linkedinUrl?: string
   isPublic?: boolean
+  /** Galerie foto lucrări — array de URL-uri / base64 (max 8). */
+  workPhotos?: string[] | null
+  /** Handle pagină publică /companii/{publicSlug} */
+  publicSlug?: string | null
+}
+
+export type PublicPartnerCompanyProfile = {
+  publicSlug: string
+  companyName: string
+  publicName?: string | null
+  logoUrl?: string | null
+  street?: string | null
+  county?: string | null
+  city?: string | null
+  zipCode?: string | null
+  description?: string | null
+  services?: string[]
+  publicPhone?: string | null
+  whatsapp?: string | null
+  website?: string | null
+  facebookUrl?: string | null
+  linkedinUrl?: string | null
+  workPhotos: string[]
+}
+
+export async function getPublicPartnerCompanyProfile(handleParam: string): Promise<PublicPartnerCompanyProfile> {
+  let seg = decodeURIComponent(handleParam.trim())
+  if (seg.startsWith('@')) seg = seg.slice(1).trim()
+  if (!seg) throw new Error('Profil negăsit.')
+  const res = await fetch(`${API_BASE}/public/companii/${encodeURIComponent(seg)}`)
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json?.error || 'Profil negăsit.')
+  return json as PublicPartnerCompanyProfile
 }
 
 export async function savePartnerProfile(data: PartnerProfile) {
@@ -1990,6 +2032,9 @@ export type CreateProductPayload = {
   pricePresentation?: 'simple' | 'detailed'
   /** Doar rezidențial; la industrial se trimite null din admin */
   catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  /** Prioritate afișare în cont client / partener */
+  promovarePeContClient?: boolean
+  promovarePeContPartener?: boolean
   reducereProgramIds?: string[]
   landedPrice: string | number
   salePrice: string | number
