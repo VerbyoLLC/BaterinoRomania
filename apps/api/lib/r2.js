@@ -2,6 +2,7 @@
  * Cloudflare R2 (S3-compatible) upload utility.
  * Stores product images and PDF documents.
  */
+const crypto = require('crypto')
 const {
   S3Client,
   PutObjectCommand,
@@ -247,6 +248,25 @@ function proformaPdfKey(orderDbId, orderNumber = '') {
   return `${base}/proforma-${safeNum}.pdf`
 }
 
+/** Fotografii instalatori profil public: `PublicProfiles/<NumeFirma>/<fișier>`. „Folderul“ este sanitizarea numelui companiei. */
+const PUBLIC_PROFILES_PREFIX = 'PublicProfiles'
+
+/**
+ * Cheie obiect R2 pentru logo sau lucrare (imagini în profilul public instalator).
+ * @param {string} companyName
+ * @param {'logo' | 'work'} mediaKind
+ * @param {string} mimetype
+ */
+function buildPartnerPublicProfileObjectKey(companyName, mediaKind, mimetype) {
+  const folder = sanitizeFolderName(companyName || 'partener')
+  const ext = MIME_TO_EXT[mimetype] || '.jpg'
+  const stamp = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
+  if (mediaKind === 'logo') {
+    return `${PUBLIC_PROFILES_PREFIX}/${folder}/logo-${stamp}${ext}`
+  }
+  return `${PUBLIC_PROFILES_PREFIX}/${folder}/lucrare-${stamp}${ext}`
+}
+
 /** Prefix R2 pentru certificatele de garanţie. Folderul per certificat
  *  foloseşte cuid-ul `WarehouseSavedItem.id` (neghicibil), iar fişierul
  *  păstrează SN-ul ca nume — astfel utilizatorul primeşte un fişier cu
@@ -302,6 +322,7 @@ module.exports = {
   downloadFromR2,
   generateKey,
   sanitizeFolderName,
+  buildPartnerPublicProfileObjectKey,
   isR2Configured,
   urlToKey,
   deleteFromR2,

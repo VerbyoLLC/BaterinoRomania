@@ -34,6 +34,7 @@ const {
   isR2Configured,
   urlToKey,
   deleteFromR2,
+  buildPartnerPublicProfileObjectKey,
   ensureGuestOrderFolder,
   guestOrderDocumentKey,
   proformaPdfKey,
@@ -97,6 +98,11 @@ function getReferralInviteTemplateLib() {
 }
 
 const uploadMiddleware = multer({ storage: multer.memoryStorage() })
+/** Logo / lucrări profil public partener → R2 `PublicProfiles/...`. */
+const partnerPublicProfileUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+})
 /** Fotografii retur: 2–6 fișiere JPEG; max. ~8MB/fișier. */
 const returUploadMiddleware = multer({
   storage: multer.memoryStorage(),
@@ -1018,6 +1024,14 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     if (user) {
+      /** Înregistrare pe `/signup/clienti`: nu autentifica cont existent și nu împinge în onboarding parteneri. */
+      const intentSignup = String(body.intent || '').trim().toLowerCase() === 'signup'
+      if (intentSignup) {
+        return res.status(409).json({
+          error: 'Există deja un cont cu acest email.',
+          code: 'ACCOUNT_EXISTS',
+        })
+      }
       if (user.googleSub && user.googleSub !== sub) {
         return res.status(409).json({ error: 'Acest email este deja asociat cu un alt cont Google.' })
       }
@@ -3327,6 +3341,19 @@ async function mergePartnerSlugOnPut(prismaCli, existing, body, data) {
   }
 }
 
+async function deletePartnerPublicProfileR2Object(urlString) {
+  if (!urlString || typeof urlString !== 'string') return
+  if (!urlString.startsWith('http')) return
+  if (!isR2Configured()) return
+  const key = urlToKey(urlString)
+  if (!key || !key.startsWith('PublicProfiles/')) return
+  try {
+    await deleteFromR2(key)
+  } catch (e) {
+    console.warn('[R2] delete PublicProfiles object:', key, e?.message || e)
+  }
+}
+
 // ── Public: pagină instalator ───────────────────────────────────────────
 app.get('/api/public/companii/:slugSegment', async (req, res) => {
   try {
@@ -3383,6 +3410,57 @@ app.get('/api/public/companii/:slugSegment', async (req, res) => {
     res.status(500).json({ error: 'Eroare la încărcarea profilului.' })
   }
 })
+
+// ── Partner: încărcare media profil public (logo, lucrări) → R2 PublicProfiles/<firmă>/ ──
+app.post(
+  '/api/partner/public-profile/media',
+  authMiddleware,
+  partnerPublicProfileUploadMiddleware.single('file'),
+  async (req, res) => {
+    try {
+      if (req.userRole !== 'partener') {
+        return res.status(403).json({ error: 'Doar partenerii pot încărca fișiere.' })
+      }
+      if (!req.file) return res.status(400).json({ error: 'Fișier lipsă.' })
+      if (!isR2Configured()) {
+        return res.status(503).json({ error: 'Stocare fișiere neconfigurată. Verifică R2 în .env.' })
+      }
+      const kind = String(req.body?.kind || '').trim().toLowerCase()
+      if (kind !== 'logo' && kind !== 'work') {
+        return res.status(400).json({ error: 'Tip invalid. Folosește kind=logo sau kind=work.' })
+      }
+      const mt = req.file.mimetype || ''
+      if (!/^image\/(jpeg|jpg|png|gif|webp)$/i.test(mt)) {
+        return res.status(400).json({ error: 'Permise doar imagini JPEG, PNG, GIF sau WebP.' })
+      }
+      const maxBytes = kind === 'logo' ? 2 * 1024 * 1024 : 5 * 1024 * 1024
+      if (req.file.size > maxBytes) {
+        return res.status(400).json({
+          error: kind === 'logo' ? 'Logo maxim 2 MB.' : 'Fiecare fotografie maxim 5 MB.',
+        })
+      }
+      const partner = await prisma.partner.findUnique({
+        where: { userId: req.userId },
+        select: { companyName: true },
+      })
+      if (!partner) {
+        return res.status(404).json({ error: 'Profil partener negăsit. Completează mai întâi datele companiei.' })
+      }
+      const companyName = String(partner.companyName || '').trim()
+      if (!companyName) {
+        return res.status(400).json({ error: 'Completează numele companiei înainte de a încărca imagini.' })
+      }
+      const key = buildPartnerPublicProfileObjectKey(companyName, kind, mt)
+      const url = await uploadToR2(req.file.buffer, key, mt, {
+        cacheControl: 'public, max-age=31536000, immutable',
+      })
+      return res.json({ url })
+    } catch (err) {
+      console.error('[Partner public profile upload]', err)
+      res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+    }
+  },
+)
 
 // ── Partner profile (protejat, doar parteneri) ──────────────────────────
 app.put('/api/partner/profile', authMiddleware, async (req, res) => {
@@ -3506,10 +3584,40 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
         }
         throw e
       }
+      const urlsToDeleteAfterUpdate = []
+      if (body.logoUrl !== undefined) {
+        const nextLogo =
+          body.logoUrl === null || body.logoUrl === '' ? null : String(body.logoUrl)
+        const oldLogo = existing.logoUrl ? String(existing.logoUrl) : null
+        if (oldLogo && oldLogo !== nextLogo) urlsToDeleteAfterUpdate.push(oldLogo)
+      }
+      if (body.workPhotos !== undefined) {
+        let oldArr = []
+        try {
+          oldArr = existing.workPhotos ? JSON.parse(existing.workPhotos) : []
+        } catch {
+          oldArr = []
+        }
+        if (!Array.isArray(oldArr)) oldArr = []
+        const newArr =
+          body.workPhotos === null
+            ? []
+            : Array.isArray(body.workPhotos)
+              ? body.workPhotos.slice(0, 8)
+              : []
+        const newSet = new Set(newArr.filter((u) => typeof u === 'string'))
+        for (const u of oldArr) {
+          if (typeof u === 'string' && !newSet.has(u)) urlsToDeleteAfterUpdate.push(u)
+        }
+      }
+
       const partner = await prisma.partner.update({
         where: { userId },
         data,
       })
+      for (const u of urlsToDeleteAfterUpdate) {
+        void deletePartnerPublicProfileR2Object(u)
+      }
       maybeSendPartnerApplicationReceivedEmail(userId, partner).catch((e) =>
         console.error('[Partner] Application received email (async):', e?.message),
       )
