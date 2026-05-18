@@ -176,6 +176,10 @@ model Partner {
   website               String?
   facebookUrl           String?
   linkedinUrl           String?
+  /** Galerie foto lucrări — JSON array de URL-uri / base64 (max 8). */
+  workPhotos            String?
+  /** Handle URL public /companii/{publicSlug}; implicit unic din denumirea companiei; prefix „@” e opțional în URL. */
+  publicSlug           String?  @unique
   isPublic              Boolean  @default(true)
   isSuspended           Boolean  @default(false)
   isApproved            Boolean  @default(false)  // aprobat de admin
@@ -259,6 +263,10 @@ model Product {
   catalogStockStatus    String?
   /** Rezidențial: id-uri ReducereProgram (API) pentru dropdown „programe reducere”; [] = toate (compat). */
   reducereProgramIds    Json     @default("[]")
+
+  /** Prioritate în liste cont client / cont partener (admin). */
+  promovarePeContClient   Boolean  @default(false)
+  promovarePeContPartener Boolean  @default(false)
 
   // Technical details
   energieNominala       String?

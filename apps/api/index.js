@@ -40,6 +40,14 @@ const {
   warrantyCertificateKey,
   buildReturConditionPhotoKey,
 } = require('./lib/r2.js')
+const {
+  slugifyCompanyHandle,
+  normalizePublicSlugParam,
+  isValidPublicSlugFormat,
+  isSlugUrlSegment,
+  allocateUniquePartnerSlug,
+  MAX_SLUG_LEN,
+} = require('./lib/partner-public-slug.js')
 const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
 const {
   parseSerialFromQrPayload,
@@ -1881,6 +1889,25 @@ const registeredProductInclude = {
   },
 }
 
+/** Aligned with web `getCatalogProductSpecLines` — subtitle under title in client order boxes. */
+function catalogSpecLinesFromProductRow(p) {
+  const t = (v) => (v != null ? String(v).trim() : '')
+  const line1Pieces = [t(p?.tensiuneNominala), t(p?.capacitate), t(p?.compozitie)].filter(Boolean)
+  const wifiBt = []
+  if (p?.conectivitateWifi) wifiBt.push('WiFi')
+  if (p?.conectivitateBluetooth) wifiBt.push('Bluetooth')
+  const connJoined = wifiBt.join(' • ')
+  const line2Pieces = []
+  const cicl = t(p?.cicluriDescarcare)
+  if (cicl) line2Pieces.push(cicl)
+  if (connJoined) line2Pieces.push(connJoined)
+  const energie = t(p?.energieNominala)
+  const catalogSpecLine1 =
+    line1Pieces.length > 0 ? line1Pieces.join(' • ') : energie ? energie : null
+  const catalogSpecLine2 = line2Pieces.length ? line2Pieces.join(' • ') : null
+  return { catalogSpecLine1, catalogSpecLine2 }
+}
+
 async function enrichClientOrderListWithProductImages(rows) {
   const productIds = new Set()
   for (const o of rows) {
@@ -1891,18 +1918,36 @@ async function enrichClientOrderListWithProductImages(rows) {
   if (productIds.size === 0) return rows
   const plist = await prisma.product.findMany({
     where: { id: { in: [...productIds] } },
-    select: { id: true, cardImage: true, images: true },
+    select: {
+      id: true,
+      cardImage: true,
+      images: true,
+      tensiuneNominala: true,
+      capacitate: true,
+      compozitie: true,
+      energieNominala: true,
+      cicluriDescarcare: true,
+      conectivitateWifi: true,
+      conectivitateBluetooth: true,
+    },
   })
   const thumbById = new Map()
+  const specById = new Map()
   for (const p of plist) {
     thumbById.set(p.id, productCardImageUrlFromRow(p))
+    specById.set(p.id, catalogSpecLinesFromProductRow(p))
   }
   return rows.map((o) => ({
     ...o,
-    lines: (o.lines || []).map((L) => ({
-      ...L,
-      imageUrl: thumbById.get(L.productId) || null,
-    })),
+    lines: (o.lines || []).map((L) => {
+      const specs = specById.get(L.productId) || { catalogSpecLine1: null, catalogSpecLine2: null }
+      return {
+        ...L,
+        imageUrl: thumbById.get(L.productId) || null,
+        catalogSpecLine1: specs.catalogSpecLine1,
+        catalogSpecLine2: specs.catalogSpecLine2,
+      }
+    }),
   }))
 }
 
@@ -1984,6 +2029,40 @@ function makeResidentialOrderProformaHandler(legacyGuestOrderSource) {
 
       const cacheBust = (url) => `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
 
+      /** Evită deschiderea în tab nou după `fetch` async (blocată ca popup); trimite PDF-ul prin API ca factura. */
+      const wantsFile =
+        String(req.query.download || '') === '1' ||
+        String(req.query.download || '').toLowerCase() === 'true'
+
+      const respondProforma = async (downloadUrl, orderNumber, regenerated) => {
+        if (wantsFile) {
+          const fetchUrl = regenerated ? cacheBust(downloadUrl) : downloadUrl
+          let upstream
+          try {
+            upstream = await fetch(fetchUrl)
+          } catch (e) {
+            console.error('Proforma upstream fetch error:', e)
+            return res.status(502).json({ error: 'Fișierul proformei nu poate fi citit.' })
+          }
+          if (!upstream.ok) {
+            console.error('Proforma upstream fetch failed', upstream.status, fetchUrl)
+            return res.status(502).json({ error: 'Fișierul proformei nu poate fi citit.' })
+          }
+          const ct = upstream.headers.get('content-type') || 'application/pdf'
+          const safeFile = safePdfFile(orderNumber)
+          res.setHeader('Content-Type', ct)
+          res.setHeader('Content-Disposition', `attachment; filename="${safeFile}"`)
+          const buf = Buffer.from(await upstream.arrayBuffer())
+          return res.send(buf)
+        }
+        return res.json({
+          downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
+          orderNumber,
+          proformaUrl: downloadUrl,
+          regenerated,
+        })
+      }
+
       const generateAndUpload = async ({ html, orderNumber }) => {
         const pdfBuffer = await renderWarrantyPdf(html)
         if (
@@ -2040,12 +2119,7 @@ function makeResidentialOrderProformaHandler(legacyGuestOrderSource) {
           })
           regenerated = true
         }
-        return res.json({
-          downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
-          orderNumber,
-          proformaUrl: downloadUrl,
-          regenerated,
-        })
+        return await respondProforma(downloadUrl, orderNumber, regenerated)
       }
 
       const legacy = await prisma.guestResidentialOrder.findFirst({
@@ -2082,12 +2156,7 @@ function makeResidentialOrderProformaHandler(legacyGuestOrderSource) {
         })
         regenerated = true
       }
-      return res.json({
-        downloadUrl: regenerated ? cacheBust(downloadUrl) : downloadUrl,
-        orderNumber,
-        proformaUrl: downloadUrl,
-        regenerated,
-      })
+      return await respondProforma(downloadUrl, orderNumber, regenerated)
     } catch (err) {
       console.error('Residential order proforma error:', err)
       res.status(500).json({ error: err?.message || 'Eroare la generarea proformei.' })
@@ -3227,6 +3296,94 @@ async function maybeSendPartnerApplicationReceivedEmail(userId, partner) {
   }
 }
 
+async function mergePartnerSlugOnPut(prismaCli, existing, body, data) {
+  const mergedCompanyName =
+    data.companyName !== undefined && data.companyName !== null && String(data.companyName).trim() !== ''
+      ? String(data.companyName).trim()
+      : String(existing.companyName || '').trim()
+
+  if (body.publicSlug !== undefined) {
+    if (body.publicSlug === null || body.publicSlug === '') {
+      data.publicSlug = await allocateUniquePartnerSlug(prismaCli, existing.id, mergedCompanyName || 'partener')
+      return
+    }
+    const cand = normalizePublicSlugParam(body.publicSlug)
+    if (!isValidPublicSlugFormat(cand)) {
+      throw Object.assign(new Error('PUBLIC_SLUG_INVALID'), { code: 'PUBLIC_SLUG' })
+    }
+    const clash = await prismaCli.partner.findFirst({
+      where: { publicSlug: cand, NOT: { id: existing.id } },
+      select: { id: true },
+    })
+    if (clash) {
+      throw Object.assign(new Error('PUBLIC_SLUG_TAKEN'), { code: 'PUBLIC_SLUG' })
+    }
+    data.publicSlug = cand
+    return
+  }
+
+  if (!existing.publicSlug) {
+    data.publicSlug = await allocateUniquePartnerSlug(prismaCli, existing.id, mergedCompanyName || 'partener')
+  }
+}
+
+// ── Public: pagină instalator ───────────────────────────────────────────
+app.get('/api/public/companii/:slugSegment', async (req, res) => {
+  try {
+    const slug = normalizePublicSlugParam(req.params.slugSegment || '')
+    if (!isSlugUrlSegment(slug)) {
+      return res.status(404).json({ error: 'Profil negăsit.' })
+    }
+    const partner = await prisma.partner.findFirst({
+      where: {
+        publicSlug: slug,
+        isPublic: true,
+        isApproved: true,
+        isSuspended: false,
+      },
+      select: {
+        publicSlug: true,
+        companyName: true,
+        logoUrl: true,
+        publicName: true,
+        street: true,
+        county: true,
+        city: true,
+        zipCode: true,
+        description: true,
+        services: true,
+        publicPhone: true,
+        whatsapp: true,
+        website: true,
+        facebookUrl: true,
+        linkedinUrl: true,
+        workPhotos: true,
+      },
+    })
+    if (!partner) return res.status(404).json({ error: 'Profil negăsit.' })
+    let workPhotosArr = []
+    if (partner.workPhotos) {
+      try {
+        workPhotosArr = JSON.parse(partner.workPhotos)
+      } catch {
+        workPhotosArr = []
+      }
+    }
+    const servicesArr = String(partner.services || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    return res.json({
+      ...partner,
+      services: servicesArr,
+      workPhotos: Array.isArray(workPhotosArr) ? workPhotosArr : [],
+    })
+  } catch (err) {
+    console.error('Public company profile:', err?.message || err)
+    res.status(500).json({ error: 'Eroare la încărcarea profilului.' })
+  }
+})
+
 // ── Partner profile (protejat, doar parteneri) ──────────────────────────
 app.put('/api/partner/profile', authMiddleware, async (req, res) => {
   try {
@@ -3319,6 +3476,11 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       facebookUrl: body.facebookUrl,
       linkedinUrl: body.linkedinUrl,
       isPublic: body.isPublic,
+      workPhotos: Array.isArray(body.workPhotos)
+        ? JSON.stringify(body.workPhotos.slice(0, 8))
+        : body.workPhotos === null
+          ? null
+          : undefined,
     }
 
     if (existing) {
@@ -3326,9 +3488,24 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       const all = { ...legal, ...publicFields }
       for (const [k, v] of Object.entries(all)) {
         if (v !== undefined && v !== null) data[k] = v
-        else if (k === 'logoUrl' && (v === null || v === '')) data[k] = null
+        else if ((k === 'logoUrl' || k === 'workPhotos') && (v === null || v === '')) data[k] = null
       }
       applyPartnerDeliveryPatch(data)
+      try {
+        await mergePartnerSlugOnPut(prisma, existing, body, data)
+      } catch (e) {
+        if (e.message === 'PUBLIC_SLUG_INVALID') {
+          return res.status(400).json({
+            error: `Adresa paginii tale publice permite doar litere mici, cifre și cratime (2–${MAX_SLUG_LEN} caractere) și nu poate folosi cuvinte rezervate.`,
+          })
+        }
+        if (e.message === 'PUBLIC_SLUG_TAKEN') {
+          return res.status(400).json({
+            error: 'Această adresă este deja folosită de un alt instalator. Alege un alt handle.',
+          })
+        }
+        throw e
+      }
       const partner = await prisma.partner.update({
         where: { userId },
         data,
@@ -3381,6 +3558,11 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
     for (const [k, v] of Object.entries(publicFields)) {
       if (v !== undefined && v !== null && v !== '') createData[k] = v
     }
+    createData.publicSlug = await allocateUniquePartnerSlug(
+      prisma,
+      null,
+      createData.companyName || 'partener',
+    )
     const partner = await prisma.partner.create({
       data: createData,
     })
@@ -3429,10 +3611,43 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
       },
     })
     if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+    let withSlug = partner
+    if (!withSlug.publicSlug) {
+      try {
+        const slug = await allocateUniquePartnerSlug(
+          prisma,
+          withSlug.id,
+          withSlug.companyName || 'partener',
+        )
+        withSlug = await prisma.partner.update({
+          where: { id: withSlug.id },
+          data: { publicSlug: slug },
+          include: {
+            assignedSalesAgent: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                whatsapp: true,
+              },
+            },
+          },
+        })
+      } catch (backfillErr) {
+        console.error('[Partner profile GET] Backfill publicSlug:', backfillErr?.message || backfillErr)
+      }
+    }
     // Ensure partnerDiscountPercent is always present (plain number) for frontend
+    let workPhotosArr = []
+    if (withSlug.workPhotos) {
+      try { workPhotosArr = JSON.parse(withSlug.workPhotos) } catch (_) { workPhotosArr = [] }
+    }
     const result = {
-      ...partner,
-      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
+      ...withSlug,
+      partnerDiscountPercent: withSlug.partnerDiscountPercent != null ? Number(withSlug.partnerDiscountPercent) : null,
+      workPhotos: Array.isArray(workPhotosArr) ? workPhotosArr : [],
     }
     return res.json(result)
   } catch (err) {
@@ -4640,6 +4855,8 @@ const createProductHandler = async (req, res) => {
         catalogStockStatus:
           tipProdus === 'rezidential' ? parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock' : null,
         reducereProgramIds: tipProdus === 'rezidential' ? parseReducereProgramIds(body.reducereProgramIds) : [],
+        promovarePeContClient: body.promovarePeContClient === true,
+        promovarePeContPartener: body.promovarePeContPartener === true,
         landedPrice,
         salePrice,
         vat,
@@ -4783,6 +5000,11 @@ const updateProductHandler = async (req, res) => {
         data.reducereProgramIds = parseReducereProgramIds(body.reducereProgramIds)
       }
     }
+
+    if (body.promovarePeContClient !== undefined)
+      data.promovarePeContClient = body.promovarePeContClient === true
+    if (body.promovarePeContPartener !== undefined)
+      data.promovarePeContPartener = body.promovarePeContPartener === true
 
     if (title) {
       let baseSlug = slugify(title)
@@ -6787,6 +7009,36 @@ app.get('/health', (req, res) => res.json({ ok: true }))
 app.get('/api/r2-status', (req, res) => {
   const configured = isR2Configured()
   res.json({ configured, message: configured ? 'R2 configurat' : 'R2 neconfigurat (lipsește .env)' })
+})
+
+// ── Document proxy download ────────────────────────────────────────────
+// Fetches a remote PDF server-side and streams it back as an attachment,
+// bypassing browser CORS restrictions and forcing a download.
+app.get('/api/download-proxy', async (req, res) => {
+  const { url } = req.query
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Missing url param' })
+  }
+  // Only allow downloads from our own media CDN
+  let parsed
+  try { parsed = new URL(url) } catch { return res.status(400).json({ error: 'Invalid URL' }) }
+  if (!parsed.hostname.endsWith('baterino.ro')) {
+    return res.status(403).json({ error: 'Not allowed' })
+  }
+  try {
+    const upstream = await fetch(url)
+    if (!upstream.ok) return res.status(502).json({ error: 'Upstream error', status: upstream.status })
+    const filename = parsed.pathname.split('/').pop() || 'document.pdf'
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    const cl = upstream.headers.get('content-length')
+    if (cl) res.setHeader('Content-Length', cl)
+    const { Readable } = require('stream')
+    Readable.fromWeb(upstream.body).pipe(res)
+  } catch (err) {
+    console.error('[download-proxy]', err)
+    res.status(500).json({ error: 'Download failed' })
+  }
 })
 
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────

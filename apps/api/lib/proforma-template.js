@@ -380,11 +380,64 @@ const PROFORMA_CLIENT_BENEFITS_BOXES = [
   },
 ];
 
+/** Pagina 2 — 8 cutii, variantă partener B2B (`orderSource: partner`). */
+const PROFORMA_PARTNER_BENEFITS_BOXES = [
+  {
+    icon: "price",
+    title: "Structură de preț stabilă și predictibilă",
+    text:
+      "Oferim cel mai bun raport calitate-preț din România, cu o structură de prețuri transparentă și stabilă pe termen lung — fără surprize, fără fluctuații.",
+  },
+  {
+    icon: "trending",
+    title: "Marje competitive și reduceri pentru volum",
+    text:
+      "Structura noastră de prețuri este construită în jurul succesului partenerilor. Cu cât vinzi mai mult, cu atât marja ta crește — un model gândit să îți dezvolte afacerea sustenabil.",
+  },
+  {
+    icon: "target",
+    title: "Strategie de prețuri comună",
+    text:
+      "Stabilim împreună strategia de prețuri pentru piața din România, astfel încât să maximizăm vânzările și să protejăm pozițiile comerciale ale fiecărui partener.",
+  },
+  {
+    icon: "warranty",
+    title: "Garanție 10 ani gestionată integral de Baterino",
+    text:
+      "Nu depinzi de producător și nu lași clientul singur. Baterino preia responsabilitatea completă față de clientul final — 10 ani garanție pentru celule și BMS, gestionată direct de noi.",
+  },
+  {
+    icon: "swap",
+    title: "Sistem SWAP — Zero întreruperi pentru clientul tău",
+    text:
+      "În cazul unei defecțiuni, înlocuim bateria imediat, pe durata diagnozei. Clientul tău nu simte nicio întrerupere, iar tu îți protejezi reputația.",
+  },
+  {
+    icon: "support",
+    title: "Service local și suport tehnic 24/7",
+    text:
+      "Echipă de service în România, disponibilă non-stop. Niciun timp mort, nicio dependență de distanța față de producător — rezolvăm problemele rapid, local.",
+  },
+  {
+    icon: "megaphone",
+    title: "Generare activă de lead-uri și clienți",
+    text:
+      "Nu ești singur pe piață — Baterino direcționează activ comenzi și clienți finali către partenerii din rețea, în funcție de zona ta de activitate.",
+  },
+  {
+    icon: "eye",
+    title: "Vizibilitate în platforma și aplicația Baterino",
+    text:
+      "Compania ta apare direct în ecosistemul Baterino, în fața clienților finali care caută instalatori și parteneri locali — expunere națională, fără costuri suplimentare de marketing.",
+  },
+];
+
 /**
  * Iconițe identice cu pagina Beneficii (`ClientBenefits.tsx`):
  * — lucide-react v1.7.0: Percent, Headphones, Shield, ArrowLeftRight, Undo2 (paths din `node_modules/lucide-react/dist/esm/icons/*.js`)
  * — compatibilitate: același desen ca `apps/web/public/images/shared/compatibility-icon.svg`
  * — Globe, BadgeCheck: lucide-react v1.7.0 (noi pe proformă)
+ * — trending, target, megaphone, eye: pictograme partener (stil Lucide)
  */
 function proformaBenefitIconSvg(iconKey) {
   const st =
@@ -392,6 +445,14 @@ function proformaBenefitIconSvg(iconKey) {
   switch (iconKey) {
     case "price":
       return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`;
+    case "trending":
+      return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`;
+    case "target":
+      return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+    case "megaphone":
+      return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>`;
+    case "eye":
+      return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
     case "warranty":
       return `<svg ${st} width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`;
     case "support":
@@ -488,6 +549,7 @@ function buildClientPartyDetailHtml(cl) {
  * @param {string} [params.orderReference]
  * @param {string} [params.qrUrl] - conținut QR (implicit: web furnizor sau FRONTEND_URL)
  * @param {string} [params.footerInvoicingLine] - primul rând din footer (lăsat gol = omis)
+ * @param {'client'|'partner'} [params.benefitsAudience] - pagina 2: beneficii client vs partener
  * @returns {Promise<string>}
  */
 async function buildProformaHtml(params) {
@@ -505,6 +567,7 @@ async function buildProformaHtml(params) {
     qrUrl: qrUrlParam = null,
     footerInvoicingLine: footerInvoicingLineParam = null,
     logoUrl: logoUrlParam = null,
+    benefitsAudience = "client",
   } = params;
 
   const sup = supplier || {};
@@ -575,10 +638,13 @@ async function buildProformaHtml(params) {
     qrDataUrl = "";
   }
 
-  const benefitsAccountQrUrl = "https://baterino.ro";
+  const benefitsQrLandingUrl =
+    benefitsAudience === "partner"
+      ? `${String(process.env.FRONTEND_URL || "https://baterino.ro").trim().replace(/\/$/, "")}/partner`
+      : "https://baterino.ro";
   let benefitsSiteQrDataUrl = "";
   try {
-    benefitsSiteQrDataUrl = await QRCode.toDataURL(benefitsAccountQrUrl, {
+    benefitsSiteQrDataUrl = await QRCode.toDataURL(benefitsQrLandingUrl, {
       width: 220,
       margin: 1,
       errorCorrectionLevel: "M",
@@ -586,6 +652,17 @@ async function buildProformaHtml(params) {
   } catch {
     benefitsSiteQrDataUrl = "";
   }
+  const benefitsQrCaptionLabel = (() => {
+    try {
+      const u = new URL(benefitsQrLandingUrl);
+      const p = u.pathname.replace(/\/$/, "");
+      return p && p !== "/" ? `${u.hostname}${p}` : u.hostname;
+    } catch {
+      return benefitsQrLandingUrl.length > 36
+        ? `${benefitsQrLandingUrl.slice(0, 33)}…`
+        : benefitsQrLandingUrl;
+    }
+  })();
 
   /** Eticheta de jos: dacă QR-ul conține un URL afișăm hostname; altfel chiar payload-ul (ex. numărul comenzii). */
   const qrCaption = (() => {
@@ -640,7 +717,28 @@ async function buildProformaHtml(params) {
     benefitsFooterSupportPhone,
   );
 
-  const clientBenefitsBoxesHtml = PROFORMA_CLIENT_BENEFITS_BOXES.map(
+  const benefitsBoxes =
+    benefitsAudience === "partner"
+      ? PROFORMA_PARTNER_BENEFITS_BOXES
+      : PROFORMA_CLIENT_BENEFITS_BOXES;
+  const benefitsSheetTitleHtml =
+    benefitsAudience === "partner"
+      ? "Beneficiile de a fi partener Baterino"
+      : "Beneficiile de a fi client Baterino";
+  const benefitsCtaTitleHtml =
+    benefitsAudience === "partner"
+      ? "Creează-ți un cont de partener în platforma Baterino."
+      : "Creează-ți un cont în platforma Baterino";
+  const benefitsCtaBodyHtml =
+    benefitsAudience === "partner"
+      ? "Din contul tău de partener beneficiezi de prețuri preferențiale, vizibilitate în timp real asupra stocurilor pentru produsele rezidențiale, medicale și maritime, reduceri personalizate, urmărirea comenzilor, suport tehnic și de service, manuale tehnice, tutoriale video de instalare și multe alte avantaje exclusive."
+      : "Contul tău Baterino îți oferă acces complet la garanțiile produselor tale, istoricul comenzilor, programele de reduceri active și suportul tehnic dedicat — totul într-un singur loc, oricând ai nevoie, de pe orice dispozitiv.";
+  const benefitsQrAlt =
+    benefitsAudience === "partner"
+      ? "QR către zona partener Baterino"
+      : "QR către baterino.ro";
+
+  const clientBenefitsBoxesHtml = benefitsBoxes.map(
     (b) => `
     <div class="benefit-box">
       <div class="benefit-icon" aria-hidden="true">${proformaBenefitIconSvg(b.icon)}</div>
@@ -1718,7 +1816,7 @@ async function buildProformaHtml(params) {
 
     </div>
 
-    <h2 class="benefits-title">Beneficiile de a fi client Baterino</h2>
+    <h2 class="benefits-title">${escapeHtml(benefitsSheetTitleHtml)}</h2>
 
   </div>
 
@@ -1732,9 +1830,9 @@ async function buildProformaHtml(params) {
 
     <div class="benefits-account-cta-text">
 
-      <h3 class="benefits-account-cta-title">Creează-ți un cont în platforma Baterino</h3>
+      <h3 class="benefits-account-cta-title">${escapeHtml(benefitsCtaTitleHtml)}</h3>
 
-      <p>Contul tău Baterino îți oferă acces complet la garanțiile produselor tale, istoricul comenzilor, programele de reduceri active și suportul tehnic dedicat — totul într-un singur loc, oricând ai nevoie, de pe orice dispozitiv.</p>
+      <p>${escapeHtml(benefitsCtaBodyHtml)}</p>
 
     </div>
 
@@ -1742,11 +1840,11 @@ async function buildProformaHtml(params) {
 
       ${
         benefitsSiteQrDataUrl
-          ? `<img class="benefits-account-qr-img" src="${benefitsSiteQrDataUrl}" width="104" height="104" alt="QR către baterino.ro">`
-          : `<span class="benefits-account-qr-fallback">${escapeHtml(benefitsAccountQrUrl)}</span>`
+          ? `<img class="benefits-account-qr-img" src="${benefitsSiteQrDataUrl}" width="104" height="104" alt="${escapeHtml(benefitsQrAlt)}">`
+          : `<span class="benefits-account-qr-fallback">${escapeHtml(benefitsQrLandingUrl)}</span>`
       }
 
-      <span class="benefits-account-qr-caption">baterino.ro</span>
+      <span class="benefits-account-qr-caption">${escapeHtml(benefitsQrCaptionLabel)}</span>
 
     </div>
 
@@ -1980,6 +2078,11 @@ function mapGuestResidentialOrderToProforma(order, company, opts = {}) {
     note: `Email: ${order.email}. Tel: +40 ${order.phone}`,
 
     preparedBy: String(company?.representativeName || "").trim() || "—",
+
+    benefitsAudience:
+      String(order.orderSource || "").toLowerCase() === "partner"
+        ? "partner"
+        : "client",
   };
 }
 
@@ -2149,6 +2252,11 @@ function mapResidentialOrderToProforma(order, company, opts = {}) {
     note: `Email: ${order.email}. Tel: +40 ${order.phone}`,
 
     preparedBy: String(company?.representativeName || "").trim() || "—",
+
+    benefitsAudience:
+      String(order.orderSource || "").toLowerCase() === "partner"
+        ? "partner"
+        : "client",
   };
 }
 
