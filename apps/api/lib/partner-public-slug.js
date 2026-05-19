@@ -33,6 +33,7 @@ const RESERVED_SLUGS = new Set([
   'instalatori',
   'produse',
   'companii',
+  'companii-instalatori-fotovoltaice',
   'comanda',
   'cos',
   'blog',

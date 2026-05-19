@@ -176,6 +176,8 @@ model Partner {
   website               String?
   facebookUrl           String?
   linkedinUrl           String?
+  instagramUrl          String?
+  tiktokUrl             String?
   /** Galerie foto lucrări — JSON array de URL-uri / base64 (max 8). */
   workPhotos            String?
   /** Handle URL public /companii/{publicSlug}; implicit unic din denumirea companiei; prefix „@” e opțional în URL. */
@@ -609,9 +611,15 @@ model SalesAgent {
   county    String   @default("")
   city      String   @default("")
   sector    String   @default("")
+  /** "human" | "ai" — tip agent (uman sau AI). */
+  agentKind String   @default("human")
+  isSuspended Boolean @default(false)
+  deletedAt DateTime?
   userId    String?  @unique
   user      User?    @relation("UserSalesAgent", fields: [userId], references: [id], onDelete: SetNull)
   partners  Partner[] @relation("PartnerAssignedSalesAgent")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([deletedAt])
 }

@@ -317,6 +317,22 @@ function buildReturConditionPhotoKey(orderNumber, returId, photoIndex1Based, mim
   return `${RETUR_PREFIX}/${orderSeg}-${returId}/photo-${String(idx).padStart(2, '0')}${ext}`
 }
 
+/** Broșuri PDF fișă tehnică — „folder” logic în consola R2 (prefix cheie). */
+const PRODUCT_TECHNICAL_BROCHURES_PREFIX = 'Product Technical Brochures'
+
+/**
+ * Cheie R2 stabilă per model (modelNumber unic în DB). Regenerarea suprascrie același obiect.
+ * @param {string} modelNumber
+ * @param {string} modelName
+ * @returns {string}
+ */
+function productTechnicalBrochurePdfKey(modelNumber, modelName) {
+  const label = [String(modelNumber || '').trim(), String(modelName || '').trim()].filter(Boolean).join(' ')
+  let base = sanitizeFolderName(label || 'model')
+  if (!base) base = 'model'
+  return `${PRODUCT_TECHNICAL_BROCHURES_PREFIX}/${base}.pdf`
+}
+
 module.exports = {
   uploadToR2,
   downloadFromR2,
@@ -333,4 +349,5 @@ module.exports = {
   warrantyCertificateKey,
   sanitizeSerialNumber,
   buildReturConditionPhotoKey,
+  productTechnicalBrochurePdfKey,
 }

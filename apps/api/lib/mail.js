@@ -18,6 +18,16 @@ function getPartnerAccountApprovedTemplateRender() {
   return require(resolved).getPartnerAccountApprovedTemplate
 }
 
+function getPartnerAssignedToAgentTemplateRender() {
+  const resolved = require.resolve('../templates/partner-assigned-to-agent-email.js')
+  delete require.cache[resolved]
+  const mod = require(resolved)
+  return {
+    getPartnerAssignedToAgentTemplate: mod.getPartnerAssignedToAgentTemplate,
+    formatLegalAddress: mod.formatLegalAddress,
+  }
+}
+
 function getReferralInviteTemplateRender() {
   const resolved = require.resolve('../templates/referral-invite-email.js')
   delete require.cache[resolved]
@@ -377,6 +387,17 @@ async function sendPartnerApplicationReceivedEmail(email, { contactFirstName, co
 
 const PARTNER_LOGIN_URL = envTrim('PARTNER_LOGIN_URL') || 'https://app.baterino.com/login'
 
+function defaultSalesAgentPanelUrl() {
+  const explicit = envTrim('SALES_AGENT_PANEL_URL')
+  if (explicit) return explicit
+  const base = envTrim('FRONTEND_URL')
+  if (base) return `${base.replace(/\/+$/, '')}/sales-agent`
+  if (PARTNER_LOGIN_URL.endsWith('/login')) {
+    return PARTNER_LOGIN_URL.replace(/\/login\/?$/, '/sales-agent')
+  }
+  return 'https://app.baterino.com/sales-agent'
+}
+
 /**
  * Partener: după aprobarea contului de către echipa Baterino (prima aprobare).
  * @returns {Promise<boolean>} true dacă trimiterea a reușit
@@ -415,6 +436,70 @@ async function sendPartnerAccountApprovedEmail(email) {
     return true
   } catch (err) {
     console.error('[Mail] Partner account approved error:', err?.message)
+    return false
+  }
+}
+
+/**
+ * Agent de vânzări: partener nou aprobat și atribuit (prima aprobare + agent alocat).
+ * @param {string} agentEmail
+ * @param {object} details
+ * @returns {Promise<boolean>}
+ */
+async function sendSalesAgentPartnerAssignedEmail(agentEmail, details) {
+  const to = String(agentEmail || '').trim()
+  if (!to) return false
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping sales agent partner assigned email.')
+    return false
+  }
+
+  const { getPartnerAssignedToAgentTemplate, formatLegalAddress } = getPartnerAssignedToAgentTemplateRender()
+  const companyName = String(details?.companyName || '').trim() || 'Partener'
+  const subject = `Partener nou atribuit: ${companyName} – ${SITE_NAME}`
+  const legalAddress =
+    details.legalAddress != null && String(details.legalAddress).trim()
+      ? String(details.legalAddress).trim()
+      : formatLegalAddress(details)
+  const html = getPartnerAssignedToAgentTemplate({
+    agentFirstName: details?.agentFirstName,
+    companyName: details.companyName,
+    cui: details.cui,
+    tradeRegisterNumber: details.tradeRegisterNumber,
+    legalAddress,
+    activityTypes: details.activityTypes,
+    contactName: details.contactName,
+    contactPhone: details.contactPhone,
+    contactEmail: details.contactEmail,
+    website: details.website,
+    partnerDiscountPercent: details.partnerDiscountPercent ?? null,
+    panelUrl: details.panelUrl || defaultSalesAgentPanelUrl(),
+  })
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend sales agent partner assigned error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Sales agent partner assigned error:', err?.message)
     return false
   }
 }
@@ -721,6 +806,7 @@ module.exports = {
   sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
+  sendSalesAgentPartnerAssignedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,

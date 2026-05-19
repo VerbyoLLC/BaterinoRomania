@@ -17,6 +17,7 @@ const {
   sendReferralInviteEmail,
   sendPartnerApplicationReceivedEmail,
   sendPartnerAccountApprovedEmail,
+  sendSalesAgentPartnerAssignedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,
@@ -31,6 +32,7 @@ const {
   uploadToR2,
   downloadFromR2,
   generateKey,
+  sanitizeFolderName,
   isR2Configured,
   urlToKey,
   deleteFromR2,
@@ -40,6 +42,7 @@ const {
   proformaPdfKey,
   warrantyCertificateKey,
   buildReturConditionPhotoKey,
+  productTechnicalBrochurePdfKey,
 } = require('./lib/r2.js')
 const {
   slugifyCompanyHandle,
@@ -49,6 +52,7 @@ const {
   allocateUniquePartnerSlug,
   MAX_SLUG_LEN,
 } = require('./lib/partner-public-slug.js')
+const { isPartnerPublicProfileFullyComplete } = require('./lib/partner-public-profile-complete.js')
 const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
 const {
   parseSerialFromQrPayload,
@@ -107,6 +111,11 @@ const partnerPublicProfileUploadMiddleware = multer({
 const returUploadMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 6 },
+})
+/** PDF broșură tehnică produs (șabloane admin) — max. ~40MB. */
+const technicalBrochurePdfUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 40 * 1024 * 1024 },
 })
 
 /** Slugify title for URL: lowercase, hyphenated, no diacritics */
@@ -1018,6 +1027,10 @@ app.post('/api/auth/google', async (req, res) => {
       name: g.name,
     })
 
+    const intent = String(body.intent || '').trim().toLowerCase()
+    const intentSignup = intent === 'signup'
+    const intentLogin = intent === 'login'
+
     let user = await prisma.user.findUnique({ where: { googleSub: sub } })
     if (!user) {
       user = await prisma.user.findUnique({ where: { email } })
@@ -1025,7 +1038,6 @@ app.post('/api/auth/google', async (req, res) => {
 
     if (user) {
       /** Înregistrare pe `/signup/clienti`: nu autentifica cont existent și nu împinge în onboarding parteneri. */
-      const intentSignup = String(body.intent || '').trim().toLowerCase() === 'signup'
       if (intentSignup) {
         return res.status(409).json({
           error: 'Există deja un cont cu acest email.',
@@ -1083,6 +1095,15 @@ app.post('/api/auth/google', async (req, res) => {
       }
       const out = await buildGoogleAuthPayload(user.id)
       return res.json(out)
+    }
+
+    /** Pagina `/login`: fără creare cont nou — doar conturi existente (googleSub sau email legat). */
+    if (intentLogin) {
+      return res.status(404).json({
+        error:
+          'Nu există un cont Baterino asociat cu acest cont Google. Înregistrează-te mai întâi sau folosește email și parola.',
+        code: 'GOOGLE_NO_ACCOUNT',
+      })
     }
 
     const acceptedTerms = body.acceptedTerms === true
@@ -3354,6 +3375,22 @@ async function deletePartnerPublicProfileR2Object(urlString) {
   }
 }
 
+/** Salvează doar URL-uri string; acceptă istoric buggy `{ url }` din frontend. */
+function sanitizeWorkPhotosForDb(arr) {
+  if (!Array.isArray(arr)) return null
+  const out = []
+  for (const x of arr.slice(0, 8)) {
+    if (typeof x === 'string') {
+      const t = String(x).trim()
+      if (t) out.push(t)
+    } else if (x != null && typeof x === 'object' && typeof x.url === 'string') {
+      const t = String(x.url).trim()
+      if (t) out.push(t)
+    }
+  }
+  return JSON.stringify(out)
+}
+
 // ── Public: pagină instalator ───────────────────────────────────────────
 app.get('/api/public/companii/:slugSegment', async (req, res) => {
   try {
@@ -3384,6 +3421,8 @@ app.get('/api/public/companii/:slugSegment', async (req, res) => {
         website: true,
         facebookUrl: true,
         linkedinUrl: true,
+        instagramUrl: true,
+        tiktokUrl: true,
         workPhotos: true,
       },
     })
@@ -3461,6 +3500,46 @@ app.post(
     }
   },
 )
+
+// ── Partner: disponibilitate handle pagină publică ───────────────────────
+app.get('/api/partner/public-slug/availability', authMiddleware, async (req, res) => {
+  try {
+    if (req.userRole !== 'partener') {
+      return res.status(403).json({ error: 'Doar partenerii pot accesa acest endpoint.' })
+    }
+    const partner = await prisma.partner.findUnique({
+      where: { userId: req.userId },
+      select: { id: true, publicSlug: true },
+    })
+    if (!partner) {
+      return res.status(404).json({ error: 'Profil partener negăsit.' })
+    }
+
+    const cand = normalizePublicSlugParam(req.query.slug ?? req.query.q ?? '')
+    const current = normalizePublicSlugParam(partner.publicSlug || '')
+
+    if (!cand) {
+      return res.json({ slug: '', available: false, reason: 'empty' })
+    }
+    if (cand === current) {
+      return res.json({ slug: cand, available: true, isCurrent: true })
+    }
+    if (!isValidPublicSlugFormat(cand)) {
+      return res.json({ slug: cand, available: false, reason: 'invalid' })
+    }
+    const clash = await prisma.partner.findFirst({
+      where: { publicSlug: cand, NOT: { id: partner.id } },
+      select: { id: true },
+    })
+    if (clash) {
+      return res.json({ slug: cand, available: false, reason: 'taken' })
+    }
+    return res.json({ slug: cand, available: true })
+  } catch (err) {
+    console.error('Partner public slug availability:', err)
+    res.status(500).json({ error: 'Eroare la verificarea adresei.' })
+  }
+})
 
 // ── Partner profile (protejat, doar parteneri) ──────────────────────────
 app.put('/api/partner/profile', authMiddleware, async (req, res) => {
@@ -3553,9 +3632,11 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       website: body.website,
       facebookUrl: body.facebookUrl,
       linkedinUrl: body.linkedinUrl,
+      instagramUrl: body.instagramUrl,
+      tiktokUrl: body.tiktokUrl,
       isPublic: body.isPublic,
       workPhotos: Array.isArray(body.workPhotos)
-        ? JSON.stringify(body.workPhotos.slice(0, 8))
+        ? sanitizeWorkPhotosForDb(body.workPhotos)
         : body.workPhotos === null
           ? null
           : undefined,
@@ -3608,6 +3689,17 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
         const newSet = new Set(newArr.filter((u) => typeof u === 'string'))
         for (const u of oldArr) {
           if (typeof u === 'string' && !newSet.has(u)) urlsToDeleteAfterUpdate.push(u)
+        }
+      }
+
+      if (body.isPublic === true) {
+        const mergedForPublic = { ...existing, ...data }
+        if (!isPartnerPublicProfileFullyComplete(mergedForPublic)) {
+          return res.status(400).json({
+            error:
+              'Completează profilul public la 100% înainte de a-l face vizibil. Verifică lista „Completare profil”.',
+            code: 'PUBLIC_PROFILE_INCOMPLETE',
+          })
         }
       }
 
@@ -3714,6 +3806,9 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
             email: true,
             phone: true,
             whatsapp: true,
+            agentKind: true,
+            isSuspended: true,
+            deletedAt: true,
           },
         },
       },
@@ -3752,8 +3847,11 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
     if (withSlug.workPhotos) {
       try { workPhotosArr = JSON.parse(withSlug.workPhotos) } catch (_) { workPhotosArr = [] }
     }
+    const visibleAgent = salesAgentPublicFields(withSlug.assignedSalesAgent)
     const result = {
       ...withSlug,
+      assignedSalesAgent: visibleAgent,
+      assignedSalesAgentId: visibleAgent ? withSlug.assignedSalesAgentId : null,
       partnerDiscountPercent: withSlug.partnerDiscountPercent != null ? Number(withSlug.partnerDiscountPercent) : null,
       workPhotos: Array.isArray(workPhotosArr) ? workPhotosArr : [],
     }
@@ -4135,9 +4233,84 @@ app.get('/admin/department-phones', authMiddleware, adminAuthMiddleware, listDep
 app.put('/api/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
 app.put('/admin/department-phones', authMiddleware, adminAuthMiddleware, putDepartmentPhonesHandler)
 
+const SALES_AGENT_KINDS = new Set(['human', 'ai'])
+
+/** Agent vizibil partenerilor (suport) — exclus suspendat / șters. */
+function salesAgentPublicFields(agent) {
+  if (!agent || agent.deletedAt || agent.isSuspended) return null
+  return {
+    id: agent.id,
+    firstName: agent.firstName,
+    lastName: agent.lastName,
+    email: agent.email,
+    phone: agent.phone,
+    whatsapp: agent.whatsapp,
+    agentKind: agent.agentKind === 'ai' ? 'ai' : 'human',
+  }
+}
+
+function parseSalesAgentBody(body) {
+  const lastName = String(body.lastName ?? '').trim()
+  const firstName = String(body.firstName ?? '').trim()
+  const phone = String(body.phone ?? '').replace(/\D/g, '')
+  const whatsapp = String(body.whatsapp ?? '').replace(/\D/g, '')
+  const email = String(body.email ?? '').trim().toLowerCase()
+  const program = String(body.program ?? '').trim()
+  const county = String(body.county ?? '').trim()
+  const city = String(body.city ?? '').trim()
+  const sector = String(body.sector ?? '').trim()
+  const rawKind = String(body.agentKind ?? 'human').trim().toLowerCase()
+  const agentKind = rawKind === 'ai' ? 'ai' : 'human'
+
+  const namePattern = /^[\p{L}\s\-'.]+$/u
+  if (!lastName || !namePattern.test(lastName)) {
+    return { error: 'Nume invalid: folosiți doar litere (inclusiv diacritice), spații și cratime.' }
+  }
+  if (!firstName || !namePattern.test(firstName)) {
+    return { error: 'Prenume invalid: folosiți doar litere (inclusiv diacritice), spații și cratime.' }
+  }
+  if (!phone || phone.length < 9 || phone.length > 15) {
+    return { error: 'Telefon invalid: 9–15 cifre.' }
+  }
+  if (!whatsapp || whatsapp.length < 9 || whatsapp.length > 15) {
+    return { error: 'WhatsApp invalid: 9–15 cifre.' }
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Email invalid.' }
+  }
+  if (!program || program.length > 512) {
+    return { error: 'Program obligatoriu (max. 512 caractere).' }
+  }
+  if (!county || !city) {
+    return { error: 'Județ și oraș obligatorii.' }
+  }
+  if (!SALES_AGENT_SECTORS.has(sector)) {
+    return { error: 'Sector invalid.' }
+  }
+  if (!SALES_AGENT_KINDS.has(agentKind)) {
+    return { error: 'Tip agent invalid (uman sau AI).' }
+  }
+
+  return {
+    data: {
+      lastName,
+      firstName,
+      phone,
+      whatsapp,
+      email,
+      program,
+      county,
+      city,
+      sector,
+      agentKind,
+    },
+  }
+}
+
 const listAdminAgentsHandler = async (req, res) => {
   try {
     const list = await prisma.salesAgent.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { partners: true } },
@@ -4197,60 +4370,93 @@ const SALES_AGENT_SECTORS = new Set(['Toate', 'Industrial', 'Medical', 'Rezident
 
 const createAdminAgentHandler = async (req, res) => {
   try {
-    const body = req.body || {}
-    const lastName = String(body.lastName ?? '').trim()
-    const firstName = String(body.firstName ?? '').trim()
-    const phone = String(body.phone ?? '').replace(/\D/g, '')
-    const whatsapp = String(body.whatsapp ?? '').replace(/\D/g, '')
-    const email = String(body.email ?? '').trim().toLowerCase()
-    const program = String(body.program ?? '').trim()
-    const county = String(body.county ?? '').trim()
-    const city = String(body.city ?? '').trim()
-    const sector = String(body.sector ?? '').trim()
-
-    const namePattern = /^[\p{L}\s\-'.]+$/u
-    if (!lastName || !namePattern.test(lastName)) {
-      return res.status(400).json({ error: 'Nume invalid: folosiți doar litere (inclusiv diacritice), spații și cratime.' })
-    }
-    if (!firstName || !namePattern.test(firstName)) {
-      return res.status(400).json({ error: 'Prenume invalid: folosiți doar litere (inclusiv diacritice), spații și cratime.' })
-    }
-    if (!phone || phone.length < 9 || phone.length > 15) {
-      return res.status(400).json({ error: 'Telefon invalid: 9–15 cifre.' })
-    }
-    if (!whatsapp || whatsapp.length < 9 || whatsapp.length > 15) {
-      return res.status(400).json({ error: 'WhatsApp invalid: 9–15 cifre.' })
-    }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'Email invalid.' })
-    }
-    if (!program || program.length > 512) {
-      return res.status(400).json({ error: 'Program obligatoriu (max. 512 caractere).' })
-    }
-    if (!county || !city) {
-      return res.status(400).json({ error: 'Județ și oraș obligatorii.' })
-    }
-    if (!SALES_AGENT_SECTORS.has(sector)) {
-      return res.status(400).json({ error: 'Sector invalid.' })
-    }
+    const parsed = parseSalesAgentBody(req.body || {})
+    if (parsed.error) return res.status(400).json({ error: parsed.error })
 
     const created = await prisma.salesAgent.create({
-      data: {
-        lastName,
-        firstName,
-        phone,
-        whatsapp,
-        email,
-        program,
-        county,
-        city,
-        sector,
-      },
+      data: parsed.data,
     })
     res.status(201).json({ ...created, partnerCount: 0 })
   } catch (err) {
     console.error('Admin create agent:', err)
     res.status(500).json({ error: err?.message || 'Eroare la creare.' })
+  }
+}
+
+const updateAdminAgentHandler = async (req, res) => {
+  try {
+    const agentId = String(req.params.id || '').trim()
+    if (!agentId) return res.status(400).json({ error: 'ID lipsă.' })
+    const existing = await prisma.salesAgent.findFirst({
+      where: { id: agentId, deletedAt: null },
+    })
+    if (!existing) return res.status(404).json({ error: 'Agent negăsit.' })
+
+    const parsed = parseSalesAgentBody(req.body || {})
+    if (parsed.error) return res.status(400).json({ error: parsed.error })
+
+    const updated = await prisma.salesAgent.update({
+      where: { id: agentId },
+      data: parsed.data,
+      include: { _count: { select: { partners: true } } },
+    })
+    const { _count, ...rest } = updated
+    res.json({ ...rest, partnerCount: _count.partners })
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Agent negăsit.' })
+    console.error('Admin update agent:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+}
+
+const suspendAdminAgentHandler = async (req, res) => {
+  try {
+    const agentId = String(req.params.id || '').trim()
+    if (!agentId) return res.status(400).json({ error: 'ID lipsă.' })
+    const suspended = Boolean(req.body?.suspended)
+    const existing = await prisma.salesAgent.findFirst({
+      where: { id: agentId, deletedAt: null },
+    })
+    if (!existing) return res.status(404).json({ error: 'Agent negăsit.' })
+
+    const updated = await prisma.salesAgent.update({
+      where: { id: agentId },
+      data: { isSuspended: suspended },
+      include: { _count: { select: { partners: true } } },
+    })
+    const { _count, ...rest } = updated
+    res.json({ ...rest, partnerCount: _count.partners })
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Agent negăsit.' })
+    console.error('Admin suspend agent:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+}
+
+const deleteAdminAgentHandler = async (req, res) => {
+  try {
+    const agentId = String(req.params.id || '').trim()
+    if (!agentId) return res.status(400).json({ error: 'ID lipsă.' })
+    const existing = await prisma.salesAgent.findFirst({
+      where: { id: agentId, deletedAt: null },
+    })
+    if (!existing) return res.status(404).json({ error: 'Agent negăsit.' })
+
+    await prisma.$transaction([
+      prisma.partner.updateMany({
+        where: { assignedSalesAgentId: agentId },
+        data: { assignedSalesAgentId: null },
+      }),
+      prisma.salesAgent.update({
+        where: { id: agentId },
+        data: { deletedAt: new Date(), isSuspended: true },
+      }),
+    ])
+    res.json({ ok: true })
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Agent negăsit.' })
+    console.error('Admin delete agent:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
   }
 }
 
@@ -4260,6 +4466,14 @@ app.get('/api/admin/agents/:id/partners', authMiddleware, adminAuthMiddleware, l
 app.get('/admin/agents/:id/partners', authMiddleware, adminAuthMiddleware, listAgentPartnersForAdminHandler)
 app.post('/api/admin/agents', authMiddleware, adminAuthMiddleware, createAdminAgentHandler)
 app.post('/admin/agents', authMiddleware, adminAuthMiddleware, createAdminAgentHandler)
+app.patch('/api/admin/agents/:id', authMiddleware, adminAuthMiddleware, updateAdminAgentHandler)
+app.patch('/admin/agents/:id', authMiddleware, adminAuthMiddleware, updateAdminAgentHandler)
+app.put('/api/admin/agents/:id', authMiddleware, adminAuthMiddleware, updateAdminAgentHandler)
+app.put('/admin/agents/:id', authMiddleware, adminAuthMiddleware, updateAdminAgentHandler)
+app.patch('/api/admin/agents/:id/suspend', authMiddleware, adminAuthMiddleware, suspendAdminAgentHandler)
+app.patch('/admin/agents/:id/suspend', authMiddleware, adminAuthMiddleware, suspendAdminAgentHandler)
+app.delete('/api/admin/agents/:id', authMiddleware, adminAuthMiddleware, deleteAdminAgentHandler)
+app.delete('/admin/agents/:id', authMiddleware, adminAuthMiddleware, deleteAdminAgentHandler)
 
 const salesAgentMeHandler = async (req, res) => {
   try {
@@ -4648,9 +4862,12 @@ app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddlewar
       if (!sid) {
         data.assignedSalesAgentId = null
       } else {
-        const agent = await prisma.salesAgent.findUnique({ where: { id: sid }, select: { id: true } })
+        const agent = await prisma.salesAgent.findFirst({
+          where: { id: sid, deletedAt: null, isSuspended: false },
+          select: { id: true },
+        })
         if (!agent) {
-          return res.status(400).json({ error: 'Agent de vânzări inexistent.' })
+          return res.status(400).json({ error: 'Agent de vânzări inexistent, suspendat sau șters.' })
         }
         data.assignedSalesAgentId = sid
       }
@@ -4665,13 +4882,47 @@ app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddlewar
     const partner = await prisma.partner.update({
       where: { id },
       data,
-      include: { user: { select: { email: true } } },
+      include: {
+        user: { select: { email: true } },
+        assignedSalesAgent: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+      },
     })
-    if (!before.isApproved && before.user?.email) {
+    const isFirstApproval = !before.isApproved
+    if (isFirstApproval && before.user?.email) {
       try {
         await sendPartnerAccountApprovedEmail(before.user.email)
       } catch (err) {
         console.error('[Partner] Account approved email:', err?.message || err)
+      }
+    }
+    if (isFirstApproval && partner.assignedSalesAgentId && partner.assignedSalesAgent?.email) {
+      try {
+        const contactName = [partner.contactFirstName, partner.contactLastName]
+          .map((s) => String(s || '').trim())
+          .filter(Boolean)
+          .join(' ')
+        await sendSalesAgentPartnerAssignedEmail(partner.assignedSalesAgent.email, {
+          agentFirstName: partner.assignedSalesAgent.firstName,
+          companyName: partner.companyName,
+          cui: partner.cui,
+          tradeRegisterNumber: partner.tradeRegisterNumber,
+          companyStreet: partner.companyStreet,
+          companyCity: partner.companyCity,
+          companyCounty: partner.companyCounty,
+          companyPostalCode: partner.companyPostalCode,
+          address: partner.address,
+          activityTypes: partner.activityTypes,
+          contactName,
+          contactPhone: partner.phone,
+          contactEmail: partner.user?.email || '',
+          website: partner.website,
+          partnerDiscountPercent:
+            partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
+        })
+      } catch (err) {
+        console.error('[SalesAgent] Partner assigned email:', err?.message || err)
       }
     }
     const result = {
@@ -7064,6 +7315,61 @@ const patchProductModelAvailableForStockHandler = async (req, res) => {
     return res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
   }
 }
+
+function bufferLooksLikePdf(buf) {
+  if (!buf || buf.length < 5) return false
+  return buf.slice(0, 5).toString('latin1').startsWith('%PDF')
+}
+
+const uploadProductTechnicalBrochureHandler = async (req, res) => {
+  try {
+    if (!req.file?.buffer) return res.status(400).json({ error: 'Fișier PDF lipsă.' })
+    if (!bufferLooksLikePdf(req.file.buffer)) {
+      return res.status(400).json({ error: 'Conținutul nu este un PDF valid (%PDF).' })
+    }
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'Tip fișier: trimite un PDF (application/pdf).' })
+    }
+    if (!isR2Configured()) {
+      return res.status(503).json({ error: 'Stocare R2 neconfigurată. Verifică variabilele din .env.' })
+    }
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID model lipsă.' })
+    const row = await prisma.productModel.findUnique({ where: { id } })
+    if (!row) return res.status(404).json({ error: 'Model negăsit.' })
+    const key = productTechnicalBrochurePdfKey(row.modelNumber, row.name)
+    const safeBase = sanitizeFolderName(`${row.modelNumber} ${row.name}`).slice(0, 180) || 'brochure'
+    const safeFilename = `${safeBase}.pdf`.replace(/"/g, '')
+    const url = await uploadToR2(req.file.buffer, key, 'application/pdf', {
+      contentDisposition: `inline; filename="${safeFilename}"`,
+      cacheControl: 'public, max-age=120',
+    })
+    return res.json({
+      url,
+      key,
+      modelNumber: row.modelNumber,
+      modelName: row.name,
+    })
+  } catch (err) {
+    console.error('Upload product technical brochure error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea broșurii PDF.' })
+  }
+}
+
+app.post(
+  '/api/admin/product-models/:id/technical-brochure',
+  authMiddleware,
+  adminAuthMiddleware,
+  technicalBrochurePdfUploadMiddleware.single('file'),
+  uploadProductTechnicalBrochureHandler,
+)
+app.post(
+  '/admin/product-models/:id/technical-brochure',
+  authMiddleware,
+  adminAuthMiddleware,
+  technicalBrochurePdfUploadMiddleware.single('file'),
+  uploadProductTechnicalBrochureHandler,
+)
 
 app.get('/api/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 app.get('/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
