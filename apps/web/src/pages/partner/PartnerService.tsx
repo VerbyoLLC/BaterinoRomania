@@ -1,12 +1,14 @@
+import { useLanguage } from '../../contexts/LanguageContext'
+import { getPartnerServiceTranslations } from '../../i18n/partner/service'
+
 export default function PartnerService() {
+  const { language } = useLanguage()
+  const tr = getPartnerServiceTranslations(language.code)
+
   return (
     <div className="p-6 sm:p-8 lg:p-10">
-      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">
-        Reparatii
-      </h1>
-      <p className="text-gray-500 text-sm font-['Inter'] mb-8">
-        Gestionează cererile de service și mentenanță.
-      </p>
+      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+      <p className="text-gray-500 text-sm font-['Inter'] mb-8">{tr.subtitle}</p>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
@@ -18,10 +20,8 @@ export default function PartnerService() {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-2">Service și mentenanță</h2>
-        <p className="text-gray-500 text-sm font-['Inter'] max-w-md mx-auto">
-          Aici vei gestiona cererile de service pentru produsele vândute. Funcționalitate în curând.
-        </p>
+        <h2 className="text-lg font-bold font-['Inter'] text-slate-900 mb-2">{tr.emptyTitle}</h2>
+        <p className="text-gray-500 text-sm font-['Inter'] max-w-md mx-auto">{tr.emptyBody}</p>
       </div>
     </div>
   )

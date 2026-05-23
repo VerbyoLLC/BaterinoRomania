@@ -1,19 +1,32 @@
-import { useCallback, useEffect, useMemo, useState, type TransitionEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type TransitionEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { MoreHorizontal } from 'lucide-react'
 import {
   createAdminAgent,
+  deleteAdminAgent,
   getAdminAgentPartners,
   getAdminAgents,
   getAdminCompany,
   getAuthToken,
   isPublicProfileComplete,
+  suspendAdminAgent,
+  updateAdminAgent,
   type AdminAgentPartnerCompany,
   type AdminCompany,
   type AdminSalesAgent,
+  type SalesAgentKind,
 } from '../../lib/api'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 
 const AGENT_SECTORS = ['Toate', 'Industrial', 'Medical', 'Rezidential', 'Maritim'] as const
+const AGENT_KIND_OPTIONS: { id: SalesAgentKind; label: string }[] = [
+  { id: 'human', label: 'Uman' },
+  { id: 'ai', label: 'AI' },
+]
+
+function agentKindLabel(kind: SalesAgentKind | string | undefined): string {
+  return kind === 'ai' ? 'AI' : 'Uman'
+}
 
 function cell(s: string | null | undefined): string {
   const t = String(s ?? '').trim()
@@ -59,6 +72,7 @@ const emptyForm = () => ({
   county: '' as string,
   city: '',
   sector: 'Toate' as (typeof AGENT_SECTORS)[number],
+  agentKind: 'human' as SalesAgentKind,
 })
 
 export default function AdminAgents() {
@@ -69,9 +83,13 @@ export default function AdminAgents() {
   const [query, setQuery] = useState('')
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingAgent, setEditingAgent] = useState<AdminSalesAgent | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null)
+  const [rowActionId, setRowActionId] = useState<string | null>(null)
+  const rowMenuRef = useRef<HTMLDivElement | null>(null)
 
   const [partnersContext, setPartnersContext] = useState<AdminSalesAgent | null>(null)
   const [partnerRows, setPartnerRows] = useState<AdminAgentPartnerCompany[]>([])
@@ -152,7 +170,10 @@ export default function AdminAgents() {
         setPartnersContext(null)
         return
       }
-      if (modalOpen && !saving) setModalOpen(false)
+      if (modalOpen && !saving) {
+        setModalOpen(false)
+        setEditingAgent(null)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -165,10 +186,83 @@ export default function AdminAgents() {
     closePartnerCompanyPanel,
   ])
 
+  useEffect(() => {
+    if (!rowMenuId) return
+    const onDoc = (e: MouseEvent) => {
+      if (rowMenuRef.current && !rowMenuRef.current.contains(e.target as Node)) {
+        setRowMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [rowMenuId])
+
   const openModal = () => {
+    setEditingAgent(null)
     setForm(emptyForm())
     setFormError(null)
     setModalOpen(true)
+  }
+
+  const openEditModal = (a: AdminSalesAgent) => {
+    setEditingAgent(a)
+    setForm({
+      lastName: a.lastName,
+      firstName: a.firstName,
+      phone: a.phone,
+      whatsapp: a.whatsapp,
+      email: a.email,
+      program: a.program,
+      county: a.county,
+      city: a.city,
+      sector: (AGENT_SECTORS.includes(a.sector as (typeof AGENT_SECTORS)[number])
+        ? a.sector
+        : 'Toate') as (typeof AGENT_SECTORS)[number],
+      agentKind: a.agentKind === 'ai' ? 'ai' : 'human',
+    })
+    setFormError(null)
+    setRowMenuId(null)
+    setModalOpen(true)
+  }
+
+  const handleToggleSuspend = async (a: AdminSalesAgent) => {
+    setRowMenuId(null)
+    const next = !a.isSuspended
+    const msg = next
+      ? `Suspendați agentul ${[a.firstName, a.lastName].filter(Boolean).join(' ')}? Nu va mai putea fi atribuit partenerilor.`
+      : `Reactivați agentul ${[a.firstName, a.lastName].filter(Boolean).join(' ')}?`
+    if (!window.confirm(msg)) return
+    setRowActionId(a.id)
+    try {
+      const updated = await suspendAdminAgent(a.id, next)
+      setRows((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Eroare.')
+    } finally {
+      setRowActionId(null)
+    }
+  }
+
+  const handleDeleteAgent = async (a: AdminSalesAgent) => {
+    setRowMenuId(null)
+    const label = [a.firstName, a.lastName].filter(Boolean).join(' ').trim() || a.email
+    if (
+      !window.confirm(
+        `Ștergeți definitiv agentul „${label}”? Partenerii atribuiți nu vor mai avea agent în suport.`,
+      )
+    ) {
+      return
+    }
+    setRowActionId(a.id)
+    try {
+      await deleteAdminAgent(a.id)
+      setRows((prev) => prev.filter((x) => x.id !== a.id))
+      if (partnersContext?.id === a.id) setPartnersContext(null)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Eroare la ștergere.')
+    } finally {
+      setRowActionId(null)
+    }
   }
 
   const openPartnersModal = (a: AdminSalesAgent) => {
@@ -221,20 +315,28 @@ export default function AdminAgents() {
 
     setFormError(null)
     setSaving(true)
+    const payload = {
+      lastName,
+      firstName,
+      phone,
+      whatsapp,
+      email,
+      program,
+      county: form.county,
+      city: form.city,
+      sector: form.sector,
+      agentKind: form.agentKind,
+    }
     try {
-      await createAdminAgent({
-        lastName,
-        firstName,
-        phone,
-        whatsapp,
-        email,
-        program,
-        county: form.county,
-        city: form.city,
-        sector: form.sector,
-      })
+      if (editingAgent) {
+        const updated = await updateAdminAgent(editingAgent.id, payload)
+        setRows((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      } else {
+        const created = await createAdminAgent(payload)
+        setRows((prev) => [created, ...prev])
+      }
       setModalOpen(false)
-      await load()
+      setEditingAgent(null)
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Eroare la salvare.')
     } finally {
@@ -257,6 +359,8 @@ export default function AdminAgents() {
         a.county,
         a.city,
         a.sector,
+        a.agentKind,
+        a.isSuspended ? 'suspendat' : 'activ',
         a.partnerCount,
       ]
         .map((x) => String(x ?? '').toLowerCase())
@@ -343,13 +447,16 @@ export default function AdminAgents() {
                 <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Județ</th>
                 <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Oraș</th>
                 <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Sector</th>
+                <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Tip</th>
+                <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Status</th>
                 <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Parteneri</th>
+                <th className="px-3 py-3 font-semibold text-slate-700 w-12" aria-label="Acțiuni" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={13} className="px-4 py-12 text-center text-slate-500">
                     {rows.length === 0
                       ? 'Nu există încă agenți în baza de date. Rulează migrarea Prisma dacă tabelul lipsește.'
                       : 'Niciun rezultat pentru căutare.'}
@@ -367,15 +474,73 @@ export default function AdminAgents() {
                     <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{cell(a.county)}</td>
                     <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{cell(a.city)}</td>
                     <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{cell(a.sector)}</td>
+                    <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{agentKindLabel(a.agentKind)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {a.isSuspended ? (
+                        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                          Suspendat
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-900">
+                          Activ
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-slate-700">
                       <button
                         type="button"
                         onClick={() => openPartnersModal(a)}
-                        className="min-w-[2.75rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 tabular-nums shadow-sm hover:bg-slate-50 font-['Inter']"
+                        disabled={rowActionId === a.id}
+                        className="min-w-[2.75rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 tabular-nums shadow-sm hover:bg-slate-50 font-['Inter'] disabled:opacity-50"
                         title="Vezi parteneri atribuiți"
                       >
                         {a.partnerCount ?? 0}
                       </button>
+                    </td>
+                    <td className="px-2 py-3 text-right relative">
+                      <div ref={rowMenuId === a.id ? rowMenuRef : undefined} className="relative inline-block">
+                        <button
+                          type="button"
+                          aria-label="Acțiuni agent"
+                          aria-expanded={rowMenuId === a.id}
+                          disabled={rowActionId === a.id}
+                          onClick={() => setRowMenuId((id) => (id === a.id ? null : a.id))}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <MoreHorizontal className="h-5 w-5" aria-hidden />
+                        </button>
+                        {rowMenuId === a.id ? (
+                          <div
+                            role="menu"
+                            className="absolute right-0 top-full z-20 mt-1 min-w-[11rem] rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="block w-full px-4 py-2 text-left text-sm text-slate-800 hover:bg-slate-50 font-['Inter']"
+                              onClick={() => openEditModal(a)}
+                            >
+                              Editează
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="block w-full px-4 py-2 text-left text-sm text-slate-800 hover:bg-slate-50 font-['Inter']"
+                              onClick={() => void handleToggleSuspend(a)}
+                            >
+                              {a.isSuspended ? 'Activează' : 'Suspendă'}
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50 font-['Inter']"
+                              onClick={() => void handleDeleteAgent(a)}
+                            >
+                              Șterge
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -738,7 +903,12 @@ export default function AdminAgents() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 overflow-y-auto"
           role="presentation"
-          onClick={() => !saving && setModalOpen(false)}
+          onClick={() => {
+            if (!saving) {
+              setModalOpen(false)
+              setEditingAgent(null)
+            }
+          }}
         >
           <div
             className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl my-auto"
@@ -747,9 +917,11 @@ export default function AdminAgents() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="add-agent-modal-title" className="text-lg font-bold text-slate-900 font-['Inter']">
-              Agent nou
+              {editingAgent ? 'Editează agent' : 'Agent nou'}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 font-['Inter']">Completați câmpurile obligatorii.</p>
+            <p className="mt-1 text-sm text-slate-500 font-['Inter']">
+              {editingAgent ? 'Modificați datele și salvați.' : 'Completați câmpurile obligatorii.'}
+            </p>
 
             <div className="mt-4 space-y-3 max-h-[min(70vh,560px)] overflow-y-auto pr-1">
               <label className="block text-sm font-medium text-slate-700 font-['Inter']">
@@ -877,6 +1049,25 @@ export default function AdminAgents() {
                   ))}
                 </select>
               </label>
+              <label className="block text-sm font-medium text-slate-700 font-['Inter']">
+                Tip agent
+                <select
+                  value={form.agentKind}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      agentKind: e.target.value as SalesAgentKind,
+                    }))
+                  }
+                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/15"
+                >
+                  {AGENT_KIND_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             {formError ? (
@@ -890,7 +1081,12 @@ export default function AdminAgents() {
                 type="button"
                 disabled={saving}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']"
-                onClick={() => !saving && setModalOpen(false)}
+                onClick={() => {
+                  if (!saving) {
+                    setModalOpen(false)
+                    setEditingAgent(null)
+                  }
+                }}
               >
                 Anulează
               </button>

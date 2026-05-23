@@ -5,6 +5,7 @@ const { getVerifyLinkTemplate } = require('../templates/signup-verify-link-email
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
+const { getSalesLeadCreatedNotificationTemplate } = require('../templates/sales-lead-created-email.js')
 /** Reîncarcă modulul la fiecare trimitere — evită cache-ul Node `require` (altfel rămâne textul vechi până la restart API). */
 function getPartnerApplicationReceivedTemplateRender() {
   const resolved = require.resolve('../templates/partner-application-received-email.js')
@@ -762,6 +763,50 @@ async function sendReturRequestReceivedEmail(params) {
   }
 }
 
+async function sendSalesLeadCreatedNotification({ createdByName, lead, recipients }) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping sales lead notification.')
+    return
+  }
+
+  const toList = Array.isArray(recipients)
+    ? [...new Set(recipients.map((e) => String(e || '').trim().toLowerCase()).filter(Boolean))]
+    : []
+  if (toList.length === 0) {
+    console.warn('[Mail] No recipients for sales lead notification.')
+    return
+  }
+
+  const creatorName = String(createdByName || 'Unknown').trim() || 'Unknown'
+  const subject = `New lead added by ${creatorName}`
+  const html = getSalesLeadCreatedNotificationTemplate({ createdByName: creatorName, lead })
+
+  for (const to of toList) {
+    try {
+      if (useResend()) {
+        const { error } = await resend.emails.send({
+          from: RESEND_FROM,
+          to,
+          subject,
+          html,
+        })
+        if (error) {
+          console.error('[Mail] Resend sales lead notification error:', error)
+        }
+      } else {
+        await transporter.sendMail({
+          from: MAIL_FROM,
+          to,
+          subject,
+          html,
+        })
+      }
+    } catch (err) {
+      console.error('[Mail] Sales lead notification to', to, err?.message)
+    }
+  }
+}
+
 async function sendInquiryConfirmation(inquiry) {
   if (!isMailConfigured()) {
     console.warn('[Mail] No mail configured – skipping inquiry confirmation.')
@@ -810,6 +855,7 @@ module.exports = {
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,
+  sendSalesLeadCreatedNotification,
   isMailConfigured,
   getMailProvider,
   getMailFrom,

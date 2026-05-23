@@ -242,7 +242,7 @@ export default function SignupParteneriProfil() {
       } catch {
         /* ignore */
       }
-      navigate('/signup/parteneri/profil-public')
+      navigate('/signup/parteneri/profil-public', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eroare la salvarea profilului.')
     } finally {

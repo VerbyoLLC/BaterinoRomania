@@ -1,0 +1,318 @@
+import type { AdminCompanyData } from '../../lib/api'
+import './admin-benefits-client-a4.css'
+
+const SITE_WEB = 'www.baterino.ro'
+const SITE_LABEL = 'baterino.ro'
+const CONTACT_EMAIL = 'vanzari@baterino.ro'
+const CONTACT_PHONE = '+40 770 106 374'
+const FOOTER_WEB = 'WWW.BATERINO.RO'
+const FOOTER_EMAIL = 'VANZARI@BATERINO.RO'
+const FOOTER_PHONE = '+40 770 106 374'
+const DEFAULT_COMPANY_NAME = 'Baterino Energy SRL'
+const DEFAULT_ADDRESS = 'Str. 23 August 244–43A, Otopeni, Ilfov, România'
+
+function clientSignupUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/signup/clienti`
+  }
+  return 'https://baterino.ro/signup/clienti'
+}
+
+function qrDataUrl(payload: string, sizePx = 120): string {
+  const n = Math.min(300, Math.max(60, Math.round(sizePx)))
+  const data = encodeURIComponent(payload)
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${n}x${n}&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${data}`
+}
+
+const CLIENT_SIGNUP_QR_PX = 88
+
+const BENEFIT_ICONS = {
+  warranty: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  ),
+  phone: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  swap: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <polyline points="17 1 21 5 17 9" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <polyline points="7 23 3 19 7 15" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  ),
+  return: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  wifi: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <circle cx="12" cy="20" r="1" fill="#1e46b4" stroke="none" />
+    </svg>
+  ),
+  official: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      <line x1="12" y1="12" x2="12" y2="16" />
+      <line x1="10" y1="14" x2="14" y2="14" />
+    </svg>
+  ),
+  verified: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <polyline points="9 11 12 14 22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  ),
+  price: (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+} as const
+
+const CLIENT_BENEFITS = [
+  {
+    icon: 'warranty' as const,
+    title: 'Garanție oficială 10 ani',
+    desc: 'Certificat oficial de garanție la fiecare produs. Piese și manoperă acoperite complet — verificabil oricând online.',
+    tag: 'Cea mai bună garanție din România',
+  },
+  {
+    icon: 'phone' as const,
+    title: 'Suport tehnic în România',
+    desc: 'O echipă reală, în română, disponibilă 24/7. Indiferent că ai o întrebare sau o problemă — cineva îți răspunde imediat.',
+    tag: '24/7 disponibil',
+  },
+  {
+    icon: 'swap' as const,
+    title: 'Baterino SWAP',
+    desc: 'Dacă bateria ta are o problemă în garanție, nu rămâi fără curent. Îți punem un echipament de schimb pe toată perioada reparației.',
+    tag: 'Fără întreruperi',
+  },
+  {
+    icon: 'return' as const,
+    title: 'Retur în 15 zile',
+    desc: 'Nu ești sigur? Testezi și dacă nu e ce te așteptai — returnezi în 15 zile, fără discuții complicate sau costuri ascunse.',
+    tag: 'Fără stres',
+  },
+  {
+    icon: 'wifi' as const,
+    title: '99% compatibilitate invertoare',
+    desc: 'Funcționează cu aproape orice invertor din România. Verifică marca ta pe baterino.ro — cel mai probabil ești deja acoperit.',
+    tag: 'Verificat pre-livrare',
+  },
+  {
+    icon: 'official' as const,
+    title: 'Importatori oficiali LithTech',
+    desc: 'Cumperi direct de la sursa autorizată. Fără intermediari, fără produse gri — trasabilitate completă de la fabrică până la tine.',
+    tag: 'Produs autentic',
+  },
+  {
+    icon: 'verified' as const,
+    title: 'Produse verificate înainte de livrare',
+    desc: 'Fiecare baterie trece printr-un proces de verificare tehnică înainte să ajungă la tine. Zero surprize.',
+    tag: 'Testat și certificat',
+  },
+  {
+    icon: 'price' as const,
+    title: 'Program de reduceri active',
+    desc: 'Reduceri pentru seniori, zone rurale și recomandări între clienți. Înregistrează-te pe platformă pentru ofertele active.',
+    tag: 'Economii suplimentare',
+  },
+]
+
+function IconGlobe() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  )
+}
+
+function IconPhoneSmall() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+}
+
+function IconMail() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <polyline points="22,6 12,13 2,6" />
+    </svg>
+  )
+}
+
+function IconPin() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+function IconBuilding() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+    </svg>
+  )
+}
+
+export type AdminBenefitsClientA4Props = {
+  company?: AdminCompanyData | null
+}
+
+export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4Props) {
+  const companyName = company?.name?.trim() || DEFAULT_COMPANY_NAME
+  const address = company?.address?.trim() || DEFAULT_ADDRESS
+  const cui = company?.cui?.trim()
+  const cuiLabel = cui ? (cui.toUpperCase().startsWith('RO') ? cui : `RO${cui}`) : ''
+
+  return (
+    <div className="admin-benefits-client-a4">
+      <div className="abb-top" />
+
+      <div className="abb-header">
+        <div>
+          <img
+            className="abb-logo-img"
+            src="/images/shared/baterino-logo-black.svg"
+            alt="Baterino"
+            width={180}
+            height={32}
+          />
+          <div className="abb-logo-sub">Energy Storage Infrastructure</div>
+        </div>
+        <div>
+          <div className="abb-doc-title">Beneficiile Clienților</div>
+          <div className="abb-doc-sub">
+            {SITE_LABEL} &nbsp;·&nbsp; De ce să alegi Baterino
+          </div>
+        </div>
+      </div>
+
+      <div className="abb-intro">
+        <div className="abb-intro-eyebrow">De ce să alegi Baterino</div>
+        <div className="abb-intro-title">
+          Beneficiile de a fi client <span>Baterino</span>
+        </div>
+        <div className="abb-intro-body">
+          Mai mult decât o baterie — o relație pe termen lung. Cumperi o dată și ai acoperire completă,
+          suport real și o echipă locală care răspunde mereu. Fiecare client Baterino beneficiază de
+          servicii și garanții care nu se regăsesc la alți distribuitori.
+        </div>
+      </div>
+
+      <div className="abb-benefits">
+        {CLIENT_BENEFITS.map((b) => (
+          <div key={b.title} className="abb-ben">
+            <div className="abb-ben-icon">{BENEFIT_ICONS[b.icon]}</div>
+            <div>
+              <div className="abb-ben-title">{b.title}</div>
+              <div className="abb-ben-desc">{b.desc}</div>
+              <div className="abb-ben-tag">{b.tag}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="abb-cta">
+        <div className="abb-cta-body">
+          <div className="abb-cta-title">Creează-ți un cont pe platforma Baterino</div>
+          <div className="abb-cta-sub">
+            Gestionezi garanțiile, comenzile și programele de reduceri — totul într-un singur loc, de pe
+            orice dispozitiv.
+          </div>
+          <div className="abb-cta-contacts">
+            <div className="abb-cta-item">
+              <IconGlobe />
+              <span>{SITE_LABEL}</span>
+            </div>
+            <div className="abb-cta-item">
+              <IconPhoneSmall />
+              <span>{CONTACT_PHONE}</span>
+            </div>
+            <div className="abb-cta-item">
+              <IconMail />
+              <span>{CONTACT_EMAIL}</span>
+            </div>
+          </div>
+        </div>
+        <div className="abb-cta-qr" aria-hidden>
+          <img
+            src={qrDataUrl(clientSignupUrl(), CLIENT_SIGNUP_QR_PX)}
+            alt=""
+            width={CLIENT_SIGNUP_QR_PX}
+            height={CLIENT_SIGNUP_QR_PX}
+          />
+        </div>
+      </div>
+
+      <div className="abb-sheet-end">
+        <div className="abb-footer">
+          <div>
+            <div className="abb-f-lbl">Companie</div>
+            <div className="abb-f-brand">
+              BATER<span>I</span>NO
+            </div>
+            <div className="abb-f-brand-sub">Energy Storage Infrastructure</div>
+            <div className="abb-f-row">
+              <IconGlobe />
+              <span>{SITE_WEB}</span>
+            </div>
+            <div className="abb-f-row">
+              <IconPhoneSmall />
+              <span>{CONTACT_PHONE}</span>
+            </div>
+            <div className="abb-f-row">
+              <IconMail />
+              <span>{CONTACT_EMAIL}</span>
+            </div>
+          </div>
+          <div>
+            <div className="abb-f-lbl">Adresă</div>
+            <div className="abb-f-addr-title">Adresa Baterino România</div>
+            <div className="abb-f-addr-entity">{companyName}</div>
+            <div className="abb-f-row">
+              <IconPin />
+              <span>{address}</span>
+            </div>
+            {cuiLabel ? (
+              <div className="abb-f-row" style={{ marginTop: 3 }}>
+                <IconBuilding />
+                <span>CUI: {cuiLabel}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="abb-bottom">
+          <span className="abb-bottom-contact">
+            {FOOTER_WEB} · {FOOTER_EMAIL} · {FOOTER_PHONE}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}

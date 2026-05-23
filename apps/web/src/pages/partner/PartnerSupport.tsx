@@ -7,6 +7,8 @@ import {
 import { WhatsAppGlyph } from '../../components/WhatsAppGlyph'
 import { departmentRow, ensurePublicDepartmentPhones } from '../../lib/departmentPhones'
 import { digitsForWaMe, telHrefFromStored } from '../../lib/contactWhatsApp'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { getPartnerSupportTranslations } from '../../i18n/partner/support'
 
 function agentInitials(agent: PartnerAssignedSalesAgent): string {
   const a = agent.firstName.trim().charAt(0) || ''
@@ -25,6 +27,8 @@ function formatAgentPhoneDisplay(raw: string): string {
 }
 
 export default function PartnerSupport() {
+  const { language } = useLanguage()
+  const tr = getPartnerSupportTranslations(language.code)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [agent, setAgent] = useState<PartnerAssignedSalesAgent | null>(null)
@@ -67,7 +71,7 @@ export default function PartnerSupport() {
       })
       .catch((e) => {
         if (cancelled) return
-        setError(e instanceof Error ? e.message : 'Eroare la încărcare.')
+        setError(e instanceof Error ? e.message : tr.loadErrorFallback)
         setAgent(null)
       })
       .finally(() => {
@@ -76,22 +80,19 @@ export default function PartnerSupport() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [tr.loadErrorFallback])
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-4xl w-full">
-      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">
-        Suport
-      </h1>
-      <p className="text-gray-500 text-sm font-['Inter'] mb-8">
-        Ai nevoie de ajutor? Contactează echipa Baterino.
-      </p>
+      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+      <p className="text-gray-500 text-sm font-['Inter'] mb-8">{tr.subtitle}</p>
 
       <div className="flex flex-col gap-4">
-        {/* Agent — above general email / phone */}
+        {/* Agent — hidden when none assigned or agent suspended/deleted */}
+        {(loading || agent) ? (
         <div className="flex flex-col gap-2">
           <h2 className="text-base font-bold font-['Inter'] text-slate-900">
-            Agentul tău dedicat
+            {tr.dedicatedAgent}
           </h2>
           <div
             className="rounded-2xl border border-slate-200/80 px-6 pb-6 pt-4 shadow-sm"
@@ -101,7 +102,7 @@ export default function PartnerSupport() {
               <div
                 className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 sm:items-center"
                 aria-busy="true"
-                aria-label="Se încarcă detaliile agentului"
+                aria-label={tr.agentLoadingAria}
               >
                 <div className="flex flex-col items-center gap-4 sm:items-start">
                   <div
@@ -128,19 +129,7 @@ export default function PartnerSupport() {
                   </div>
                 </div>
               </div>
-            ) : error ? (
-              <p className="text-sm text-red-600 font-['Inter']" role="alert">
-                {error}
-              </p>
-            ) : !agent ? (
-              <p className="text-sm text-slate-600 font-['Inter']">
-                Încă nu ai un agent de vânzări atribuit. Poți folosi contactele de mai jos sau scrie la{' '}
-                <a href="mailto:parteneri@baterino.ro" className="text-slate-900 font-semibold underline">
-                  parteneri@baterino.ro
-                </a>
-                .
-              </p>
-            ) : (
+            ) : agent ? (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 sm:items-center">
                 <div className="flex flex-col items-center gap-4 sm:items-start">
                   <div
@@ -197,13 +186,14 @@ export default function PartnerSupport() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
-        </div>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-2">
           <h2 className="text-base font-bold font-['Inter'] text-slate-900">
-            Contact general
+            {tr.generalContact}
           </h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-4 md:items-stretch">
             <a
@@ -214,7 +204,7 @@ export default function PartnerSupport() {
                 <Mail className="w-6 h-6 text-slate-600" aria-hidden />
               </div>
               <div className="min-w-0">
-                <h3 className="text-base font-bold font-['Inter'] text-slate-900">Email</h3>
+                <h3 className="text-base font-bold font-['Inter'] text-slate-900">{tr.email}</h3>
                 <p className="text-gray-500 text-sm font-['Inter'] mt-1 break-all">
                   parteneri@baterino.ro
                 </p>
@@ -226,7 +216,7 @@ export default function PartnerSupport() {
                 <Phone className="w-6 h-6 text-slate-600" aria-hidden />
               </div>
               <div className="min-w-0 flex flex-col gap-3">
-                <h3 className="text-base font-bold font-['Inter'] text-slate-900">Telefon</h3>
+                <h3 className="text-base font-bold font-['Inter'] text-slate-900">{tr.phone}</h3>
                 {generalPhonesLoading ? (
                   <div className="space-y-2" aria-hidden>
                     <div className="h-4 w-[11rem] max-w-full rounded-md bg-slate-200/90 animate-pulse" />
@@ -272,11 +262,11 @@ export default function PartnerSupport() {
                 <Clock className="w-6 h-6 text-slate-600" aria-hidden />
               </div>
               <div className="min-w-0">
-                <h3 className="text-base font-bold font-['Inter'] text-slate-900">Program suport</h3>
+                <h3 className="text-base font-bold font-['Inter'] text-slate-900">{tr.supportHours}</h3>
                 <p className="text-gray-600 text-sm font-['Inter'] mt-1">
-                  Luni – Vineri: 09:00 – 18:00
+                  {tr.supportHoursWeekdays}
                   <br />
-                  Sâmbătă – Duminică: Închis
+                  {tr.supportHoursWeekend}
                 </p>
               </div>
             </div>

@@ -6,6 +6,8 @@ import {
   type PublicPartnerCompanyProfile,
   getPublicPartnerCompanyProfile,
 } from '../lib/api'
+import { normalizePartnerWorkPhotos } from '../lib/partner-work-photos'
+import { publicInstallerProfileCanonical, PUBLIC_INSTALLER_PROFILE_PATH_SEGMENT } from '../lib/public-installer-profile-path'
 
 export default function PartnerCompanyPublicPage() {
   const { handle } = useParams<{ handle: string }>()
@@ -31,7 +33,11 @@ export default function PartnerCompanyPublicPage() {
       setError('')
       try {
         const p = await getPublicPartnerCompanyProfile(slugNormalized)
-        if (!cancelled) setData(p)
+        if (!cancelled)
+          setData({
+            ...p,
+            workPhotos: normalizePartnerWorkPhotos(p.workPhotos),
+          })
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Profil indisponibil.')
       } finally {
@@ -43,7 +49,7 @@ export default function PartnerCompanyPublicPage() {
     }
   }, [slugNormalized])
 
-  const canonicalPath = slugNormalized ? `/companii/${slugNormalized}` : '/companii'
+  const canonicalPath = slugNormalized ? publicInstallerProfileCanonical(slugNormalized) : `/${PUBLIC_INSTALLER_PROFILE_PATH_SEGMENT}`
 
   if (!slugNormalized) {
     return (
@@ -153,6 +159,8 @@ export default function PartnerCompanyPublicPage() {
             website={data.website ?? ''}
             facebookUrl={data.facebookUrl ?? ''}
             linkedinUrl={data.linkedinUrl ?? ''}
+            instagramUrl={data.instagramUrl ?? ''}
+            tiktokUrl={data.tiktokUrl ?? ''}
             isPublic
             workPhotos={data.workPhotos}
           />

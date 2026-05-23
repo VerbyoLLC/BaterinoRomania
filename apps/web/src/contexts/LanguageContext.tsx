@@ -1,13 +1,16 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { LANGUAGES, type LangCode } from '../i18n/menu'
 
 const STORAGE_KEY = 'baterino-lang'
 
+/** Site-wide default; Romanian when no saved preference exists. */
+export const DEFAULT_LANG: LangCode = 'ro'
+
 function getStoredLang(): LangCode {
-  if (typeof window === 'undefined') return 'ro'
+  if (typeof window === 'undefined') return DEFAULT_LANG
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'ro' || stored === 'en' || stored === 'zh') return stored
-  return 'ro'
+  return DEFAULT_LANG
 }
 
 type LanguageEntry = (typeof LANGUAGES)[number]
@@ -21,9 +24,20 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<LanguageEntry>(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem(STORAGE_KEY)) {
+      try {
+        localStorage.setItem(STORAGE_KEY, DEFAULT_LANG)
+      } catch {
+        /* ignore quota / private mode */
+      }
+    }
     const code = getStoredLang()
-    return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0]
+    return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES.find((l) => l.code === DEFAULT_LANG)!
   })
+
+  useEffect(() => {
+    document.documentElement.lang = language.code
+  }, [language.code])
 
   const setLanguage = useCallback((lang: LanguageEntry) => {
     setLanguageState(lang)

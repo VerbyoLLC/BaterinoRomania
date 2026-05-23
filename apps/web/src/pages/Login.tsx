@@ -44,11 +44,7 @@ function navigateAfterLogin(
     return
   }
   if (user.role === 'partener') {
-    if (partnerGoogle?.needsPartnerProfile) {
-      navigate(partnerGoogle.partnerSignupPath ?? '/signup/parteneri/profil')
-    } else {
-      navigate('/partner')
-    }
+    void getPartnerPostLoginPath().then((path) => navigate(path))
     return
   }
   if (user.role === 'client') {
@@ -67,13 +63,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  /** După primul eșec GOOGLE_TERMS_REQUIRED sau dacă utilizatorul bifează înainte de a încerca din nou. */
-  const [googleTermsAccepted, setGoogleTermsAccepted] = useState(false)
-  const [googleTermsPromptVisible, setGoogleTermsPromptVisible] = useState(false)
   const submitRef = useRef<HTMLButtonElement>(null)
 
-  /** Rol implicit pentru conturi Google noi: site instalatori → partener, altfel client. */
-  const googleSignupRole = INSTALATORI_ONLY ? 'partener' : 'client'
+  /** Rol trimis la API pentru partener pe site-ul instalatori (pe login nu se mai creează cont Google nou). */
+  const googleAuthRole = INSTALATORI_ONLY ? 'partener' : 'client'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -102,11 +95,9 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(
-        idToken,
-        googleSignupRole,
-        googleTermsAccepted ? { acceptedTerms: true } : undefined,
-      )
+      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, googleAuthRole, {
+        intent: 'login',
+      })
       setAuthToken(token)
       navigateAfterLogin(
         navigate,
@@ -118,15 +109,7 @@ export default function Login() {
       )
     } catch (err) {
       const e = err as Error & { apiCode?: string }
-      if (e.apiCode === 'GOOGLE_TERMS_REQUIRED') {
-        setGoogleTermsPromptVisible(true)
-        setError(
-          e.message ||
-            'Trebuie să accepți Termenii și Condițiile pentru un cont nou. Bifează caseta de mai jos și încearcă din nou.',
-        )
-      } else {
-        setError(e instanceof Error ? e.message : 'Eroare la autentificare cu Google.')
-      }
+      setError(e instanceof Error ? e.message : 'Eroare la autentificare cu Google.')
     } finally {
       setLoading(false)
     }
@@ -230,44 +213,6 @@ export default function Login() {
         <span className="text-xs text-gray-400 font-['Inter']">sau</span>
         <div className="flex-1 h-px bg-gray-200" />
       </div>
-
-      {(googleTermsPromptVisible || googleTermsAccepted) && (
-        <div
-          className={`mb-3 rounded-[10px] p-3 ${
-            googleTermsPromptVisible && !googleTermsAccepted
-              ? 'border-2 border-red-500 bg-red-50/80'
-              : 'border border-transparent'
-          }`}
-        >
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={googleTermsAccepted}
-              onChange={(e) => {
-                setGoogleTermsAccepted(e.target.checked)
-                if (e.target.checked) setError('')
-              }}
-              aria-invalid={googleTermsPromptVisible && !googleTermsAccepted}
-              className={`mt-0.5 h-4 w-4 shrink-0 rounded accent-slate-900 ${
-                googleTermsPromptVisible && !googleTermsAccepted
-                  ? 'border-red-600 ring-2 ring-red-200'
-                  : 'border-gray-300'
-              }`}
-            />
-            <span className="text-sm leading-snug text-gray-600 font-['Inter']">
-              Sunt de acord cu{' '}
-              <Link to="/termeni-si-conditii" className="font-semibold text-gray-900 hover:underline">
-                Termenii și Condițiile
-              </Link>{' '}
-              și{' '}
-              <Link to="/politica-confidentialitate" className="font-semibold text-gray-900 hover:underline">
-                Politica de Confidențialitate
-              </Link>{' '}
-              (necesar la crearea unui cont nou cu Google).
-            </span>
-          </label>
-        </div>
-      )}
 
       <GoogleSignupButton
         label="Conectează-te cu Google"

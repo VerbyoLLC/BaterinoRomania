@@ -56,11 +56,12 @@ async function renderWarrantyPdf(html, options = {}) {
   const browser = await getBrowser()
   const page = await browser.newPage()
   try {
-    /* `domcontentloaded` + `networkidle0` ne asigurăm că fonturile Google /
-       imaginile (logo, QR code data: URI) sunt încărcate înainte de print. */
-    await page.setContent(html, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: timeoutMs })
-    /* Forţăm aşteptarea fonturilor (evităm fallback la system font). */
-    await page.evaluateHandle('document.fonts.ready')
+    /* `load` + fonts.ready — evităm `networkidle0` care poate bloca la infinit (Google Fonts). */
+    await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs })
+    await Promise.race([
+      page.evaluateHandle('document.fonts.ready'),
+      new Promise((resolve) => setTimeout(resolve, 12_000)),
+    ])
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,

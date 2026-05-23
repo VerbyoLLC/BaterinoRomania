@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Printer, RotateCcw } from 'lucide-react'
 import {
   buildWarrantyCertificateHtml,
@@ -63,7 +64,13 @@ export default function AdminWarrantyCertificatePreview() {
     <div className="flex flex-col gap-6 p-6 sm:p-8 lg:p-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900 font-['Inter'] sm:text-3xl">
+          <Link
+            to="/admin/setari/sabloane"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 font-['Inter']"
+          >
+            ← Înapoi la șabloane
+          </Link>
+          <h1 className="mt-2 text-2xl font-bold text-slate-900 font-['Inter'] sm:text-3xl">
             Certificat de garanție – Preview
           </h1>
           <p className="mt-1 text-sm text-slate-600 font-['Inter']">

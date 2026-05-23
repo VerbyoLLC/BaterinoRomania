@@ -6,6 +6,17 @@
   --max-width-site: 1440px;
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes voltage-enter {
   from {
     opacity: 0;
@@ -164,6 +175,23 @@
     min-height: 100dvh;
     width: 100%;
     overflow-x: clip;
+  }
+
+  /* Admin / partner dashboards: one scroll region inside the layout shell */
+  html.admin-shell,
+  html.partner-shell,
+  body.admin-shell,
+  body.partner-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  html.admin-shell #root,
+  html.partner-shell #root {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
   *, *::before, *::after {
     box-sizing: inherit;

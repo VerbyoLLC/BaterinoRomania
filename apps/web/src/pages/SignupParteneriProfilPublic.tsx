@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentProps } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
-import { savePartnerProfile, getPartnerProfile, getAuthToken } from '../lib/api'
+import { savePartnerProfile, getPartnerProfile, getAuthToken, getPartnerOnboardingRedirect } from '../lib/api'
 import {
   PARTNER_SIGNUP_ACTIVITY_DRAFT_KEY,
   type PartnerActivityDraft,
@@ -143,6 +143,8 @@ export default function SignupParteneriProfilPublic() {
       }
       try {
         const p = (await getPartnerProfile()) as {
+          companyName?: string | null
+          cui?: string | null
           activityTypes?: string | null
           contactFirstName?: string | null
           contactLastName?: string | null
@@ -150,6 +152,10 @@ export default function SignupParteneriProfilPublic() {
           website?: string | null
         }
         if (cancelled) return
+        if (getPartnerOnboardingRedirect(p) === '/signup/parteneri/profil') {
+          navigate('/signup/parteneri/profil', { replace: true })
+          return
+        }
         const parts = String(p?.activityTypes ?? '')
           .split(',')
           .map((s) => s.trim())
@@ -170,7 +176,7 @@ export default function SignupParteneriProfilPublic() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     if (!draftHydrated || !getAuthToken()) return

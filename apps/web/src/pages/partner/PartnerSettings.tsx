@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Building2, MapPin, KeyRound, Mail, Shield, Trash2 } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
+import {
+  getPartnerSettingsTranslations,
+  getPartnerSettingsActivityLabel,
+  type PartnerSettingsActivityId,
+} from '../../i18n/partner/settings'
+import type { LangCode } from '../../i18n/menu'
 import {
   deletePartnerAccount,
   clearAuth,
@@ -18,27 +25,8 @@ import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counti
 
 type SettingsSectionKey = 'personal' | 'company' | 'delivery' | 'password' | 'email' | 'twoFactor' | 'delete'
 
-type ActivityType = 'instalator' | 'distribuitor' | 'integrator' | 'altul'
-const ACTIVITY_OPTIONS: { id: ActivityType; label: string }[] = [
-  { id: 'instalator', label: 'Instalator' },
-  { id: 'distribuitor', label: 'Distribuitor' },
-  { id: 'integrator', label: 'Integrator sisteme' },
-  { id: 'altul', label: 'Altul' },
-]
-
-const NAV_ITEMS: {
-  key: SettingsSectionKey
-  label: string
-  icon: typeof User
-}[] = [
-  { key: 'personal', label: 'Date personale', icon: User },
-  { key: 'company', label: 'Date companie', icon: Building2 },
-  { key: 'delivery', label: 'Adresa de livrare', icon: MapPin },
-  { key: 'password', label: 'Schimbă parola', icon: KeyRound },
-  { key: 'email', label: 'Schimbă email', icon: Mail },
-  { key: 'twoFactor', label: 'Autentificare în doi pași', icon: Shield },
-  { key: 'delete', label: 'Șterge contul', icon: Trash2 },
-]
+type ActivityType = PartnerSettingsActivityId
+const ACTIVITY_IDS: ActivityType[] = ['instalator', 'distribuitor', 'integrator', 'altul']
 
 const SECTION_IDS: Record<SettingsSectionKey, string> = {
   personal: 'partner-settings-personal',
@@ -185,9 +173,9 @@ function FieldSkeleton({ className = '' }: { className?: string }) {
   )
 }
 
-function DetaliiFirmaFormSkeleton() {
+function DetaliiFirmaFormSkeleton({ ariaLabel }: { ariaLabel: string }) {
   return (
-    <div className="pointer-events-none flex flex-col gap-4 select-none" aria-busy aria-label="Se încarcă datele firmei">
+    <div className="pointer-events-none flex flex-col gap-4 select-none" aria-busy aria-label={ariaLabel}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FieldSkeleton />
         <FieldSkeleton />
@@ -215,6 +203,22 @@ function DetaliiFirmaFormSkeleton() {
 
 export default function PartnerSettings() {
   const navigate = useNavigate()
+  const { language } = useLanguage()
+  const tr = getPartnerSettingsTranslations(language.code as LangCode)
+
+  const navItems: { key: SettingsSectionKey; label: string; icon: typeof User }[] = useMemo(
+    () => [
+      { key: 'personal', label: tr.navPersonal, icon: User },
+      { key: 'company', label: tr.navCompany, icon: Building2 },
+      { key: 'delivery', label: tr.navDelivery, icon: MapPin },
+      { key: 'password', label: tr.navPassword, icon: KeyRound },
+      { key: 'email', label: tr.navEmail, icon: Mail },
+      { key: 'twoFactor', label: tr.navTwoFactor, icon: Shield },
+      { key: 'delete', label: tr.navDelete, icon: Trash2 },
+    ],
+    [tr],
+  )
+
   const [activeSection, setActiveSection] = useState<SettingsSectionKey>('personal')
 
   const [isSuspended, setIsSuspended] = useState(false)
@@ -305,7 +309,7 @@ export default function PartnerSettings() {
         setCompanyCounty(String(p?.companyCounty ?? '').trim())
         setCompanyPostalCode(String(p?.companyPostalCode ?? '').trim())
         setTradeRegisterNumber(String(p?.tradeRegisterNumber ?? '').trim())
-        const actIds: ActivityType[] = ['instalator', 'distribuitor', 'integrator', 'altul']
+        const actIds: ActivityType[] = [...ACTIVITY_IDS]
         const fromApi = p?.activityTypes
           ? String(p.activityTypes)
               .split(',')
@@ -323,7 +327,7 @@ export default function PartnerSettings() {
         setDeliveryPostalCode(String(p?.deliveryPostalCode ?? '').trim())
       })
       .catch((err) => {
-        if (!cancelled) setProfileError(err instanceof Error ? err.message : 'Nu am putut încărca profilul.')
+        if (!cancelled) setProfileError(err instanceof Error ? err.message : tr.profileLoadError)
       })
       .finally(() => {
         if (!cancelled) setProfileLoading(false)
@@ -345,11 +349,11 @@ export default function PartnerSettings() {
     const ln = sanitizePersonName(contactLastName).trim()
     const phoneDigits = phone.replace(/\D/g, '').slice(0, 9)
     if (!fn || !ln) {
-      setPersonalError('Completează numele și prenumele.')
+      setPersonalError(tr.personalErrorName)
       return
     }
     if (phoneDigits.length !== 9) {
-      setPersonalError('Introdu exact 9 cifre pentru telefon (fără prefix +40 în câmp).')
+      setPersonalError(tr.personalErrorPhone)
       return
     }
     setSavingPersonal(true)
@@ -361,7 +365,7 @@ export default function PartnerSettings() {
       })
       setSavePersonalOk(true)
     } catch (err) {
-      setPersonalError(err instanceof Error ? err.message : 'Eroare la salvare.')
+      setPersonalError(err instanceof Error ? err.message : tr.saveErrorFallback)
     } finally {
       setSavingPersonal(false)
     }
@@ -373,12 +377,12 @@ export default function PartnerSettings() {
     setSaveCompanyOk(false)
     setCompanyError('')
     if (!companyName.trim() || !cui.trim() || activities.length === 0) {
-      setCompanyError('Completează denumirea, CUI și cel puțin un tip de activitate.')
+      setCompanyError(tr.companyErrorRequired)
       return
     }
     const cpCheck = companyPostalCode.trim()
     if (cpCheck && !/^\d{6}$/.test(cpCheck)) {
-      setCompanyError('Codul poștal (sediu) trebuie să aibă exact 6 cifre.')
+      setCompanyError(tr.companyErrorPostal)
       return
     }
     setSavingCompany(true)
@@ -401,7 +405,7 @@ export default function PartnerSettings() {
       })
       setSaveCompanyOk(true)
     } catch (err) {
-      setCompanyError(err instanceof Error ? err.message : 'Eroare la salvare.')
+      setCompanyError(err instanceof Error ? err.message : tr.saveErrorFallback)
     } finally {
       setSavingCompany(false)
     }
@@ -418,11 +422,11 @@ export default function PartnerSettings() {
     const dp = deliveryPostalCode.trim()
     const anyFilled = ds || dcounty || dcity || dp
     if (anyFilled && (!ds || !dcounty || !dcity || !dp)) {
-      setDeliveryError('Completează toate câmpurile pentru adresă livrare sau golește-le pentru a elimina adresa salvată.')
+      setDeliveryError(tr.deliveryErrorRequired)
       return
     }
     if (dp && !/^\d{6}$/.test(dp)) {
-      setDeliveryError('Codul poștal trebuie să aibă exact 6 cifre.')
+      setDeliveryError(tr.deliveryErrorPostal)
       return
     }
     setSavingDelivery(true)
@@ -441,7 +445,7 @@ export default function PartnerSettings() {
         setDeliveryPostalCode('')
       }
     } catch (err) {
-      setDeliveryError(err instanceof Error ? err.message : 'Eroare la salvare.')
+      setDeliveryError(err instanceof Error ? err.message : tr.saveErrorFallback)
     } finally {
       setSavingDelivery(false)
     }
@@ -456,14 +460,14 @@ export default function PartnerSettings() {
       clearAuth()
       navigate('/login', { replace: true })
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Eroare la ștergerea contului.')
+      setDeleteError(err instanceof Error ? err.message : tr.deleteErrorFallback)
     } finally {
       setDeleting(false)
     }
   }
 
   useEffect(() => {
-    const sections = NAV_ITEMS.map(({ key }) => document.getElementById(SECTION_IDS[key])).filter(
+    const sections = navItems.map(({ key }) => document.getElementById(SECTION_IDS[key])).filter(
       (el): el is HTMLElement => el != null,
     )
     if (sections.length === 0) return undefined
@@ -480,7 +484,7 @@ export default function PartnerSettings() {
     )
     sections.forEach((el) => observer.observe(el))
     return () => observer.disconnect()
-  }, [])
+  }, [navItems])
 
   function scrollToSection(key: SettingsSectionKey) {
     document.getElementById(SECTION_IDS[key])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -497,9 +501,9 @@ export default function PartnerSettings() {
 
   const settingsSections = (
     <>
-      <SettingsPanel sectionId={SECTION_IDS.personal} title="Date personale" icon={<User className="h-5 w-5" strokeWidth={1.75} />}>
+      <SettingsPanel sectionId={SECTION_IDS.personal} title={tr.personalTitle} icon={<User className="h-5 w-5" strokeWidth={1.75} />}>
           {profileLoading ? (
-            <div className="flex flex-col gap-4" aria-busy aria-label="Se încarcă">
+            <div className="flex flex-col gap-4" aria-busy aria-label={tr.personalLoadingAria}>
               <FieldSkeleton />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FieldSkeleton />
@@ -510,19 +514,17 @@ export default function PartnerSettings() {
           ) : (
             <form className="flex flex-col gap-5" onSubmit={handleSavePersonal}>
               <Field
-                label="Email curent"
+                label={tr.currentEmail}
                 placeholder="email@exemplu.ro"
                 value={accountEmail ?? ''}
                 readOnly
               />
-              <p className="-mt-2 text-xs text-gray-500 font-['Inter']">
-                Emailul nu poate fi editat aici. Pentru schimbare folosește secțiunea „Schimbă email”.
-              </p>
+              <p className="-mt-2 text-xs text-gray-500 font-['Inter']">{tr.emailReadonlyHint}</p>
               {profileError ? <p className="text-sm text-red-600 font-['Inter']">{profileError}</p> : null}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
-                  label="Nume"
-                  placeholder="Popescu"
+                  label={tr.lastName}
+                  placeholder={tr.lastNamePlaceholder}
                   value={contactLastName}
                   onChange={(v) => {
                     setContactLastName(sanitizePersonName(v))
@@ -531,8 +533,8 @@ export default function PartnerSettings() {
                   required
                 />
                 <Field
-                  label="Prenume"
-                  placeholder="Ion"
+                  label={tr.firstName}
+                  placeholder={tr.firstNamePlaceholder}
                   value={contactFirstName}
                   onChange={(v) => {
                     setContactFirstName(sanitizePersonName(v))
@@ -542,10 +544,10 @@ export default function PartnerSettings() {
                 />
               </div>
               <Field
-                label="Telefon"
+                label={tr.phone}
                 type="tel"
-                placeholder="7xx xxx xxx"
-                hint="Prefix +40 (fix); introdu exact 9 cifre."
+                placeholder={tr.phonePlaceholder}
+                hint={tr.phoneHint}
                 value={formatRoNational9Display(phone)}
                 onChange={(v) => {
                   setPhone(v.replace(/\D/g, '').slice(0, 9))
@@ -558,97 +560,93 @@ export default function PartnerSettings() {
                   {personalError}
                 </div>
               ) : null}
-              {savePersonalOk ? <p className="text-sm text-green-700 font-['Inter']">Modificările au fost salvate.</p> : null}
+              {savePersonalOk ? <p className="text-sm text-green-700 font-['Inter']">{tr.personalSaved}</p> : null}
               <button type="submit" disabled={formsLocked || savingPersonal} className={`${primaryBtn} w-fit`}>
-                {savingPersonal ? 'Se salvează...' : 'Salvează modificările'}
+                {savingPersonal ? tr.saving : tr.saveChanges}
               </button>
             </form>
           )}
         </SettingsPanel>
 
-      <SettingsPanel sectionId={SECTION_IDS.company} title="Date companie" icon={<Building2 className="h-5 w-5" strokeWidth={1.75} />}>
-          <p className="-mt-2 mb-5 text-sm text-gray-500 font-['Inter']">
-            Date legale și sediu social (vizibile pentru Echipa Baterino).
-          </p>
+      <SettingsPanel sectionId={SECTION_IDS.company} title={tr.companyTitle} icon={<Building2 className="h-5 w-5" strokeWidth={1.75} />}>
+          <p className="-mt-2 mb-5 text-sm text-gray-500 font-['Inter']">{tr.companyIntro}</p>
           {profileLoading ? (
             <div>
-              <p className="mb-4 text-sm text-gray-500 font-['Inter']">Se încarcă câmpurile…</p>
-              <DetaliiFirmaFormSkeleton />
+              <p className="mb-4 text-sm text-gray-500 font-['Inter']">{tr.companyFieldsLoading}</p>
+              <DetaliiFirmaFormSkeleton ariaLabel={tr.companyLoadingAria} />
             </div>
           ) : (
             <form className="flex flex-col gap-4" onSubmit={handleSaveCompany}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
-                  label="Denumire firmă"
-                  placeholder="S.C. Firma SRL"
+                  label={tr.companyName}
+                  placeholder={tr.companyNamePlaceholder}
                   value={companyName}
                   onChange={setCompanyName}
                   required
                 />
-                <Field label="CUI / CIF" placeholder="RO12345678" value={cui} onChange={setCui} required />
+                <Field label={tr.cui} placeholder={tr.cuiPlaceholder} value={cui} onChange={setCui} required />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 font-['Inter']">
-                Adresă sediu social
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 font-['Inter']">{tr.registeredOffice}</p>
               <Field
-                label="Stradă și număr"
-                placeholder="ex: Str. Exemplu nr 10"
+                label={tr.street}
+                placeholder={tr.streetPlaceholder}
                 value={companyStreet}
                 onChange={(v) => setCompanyStreet(sanitizeStreetLine(v))}
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <SelectField
-                  label="Județ"
+                  label={tr.county}
                   options={[...ROMANIAN_COUNTIES]}
                   value={companyCounty}
                   onChange={handleCompanyCountyChange}
-                  placeholder="Selectează"
+                  placeholder={tr.selectCounty}
                 />
                 <SelectField
-                  label="Oraș"
+                  label={tr.city}
                   options={citiesForCompanyCounty}
                   value={companyCity}
                   onChange={setCompanyCity}
-                  placeholder="Selectează orașul"
+                  placeholder={tr.selectCity}
                   disabled={!companyCounty}
                 />
               </div>
               <Field
-                label="Cod poștal"
-                placeholder="010001"
+                label={tr.postalCode}
+                placeholder={tr.postalPlaceholder}
                 value={companyPostalCode}
                 onChange={(v) => setCompanyPostalCode(sanitizeRoPostalCode(v))}
                 maxLength={6}
                 inputMode="numeric"
               />
               <Field
-                label="Nr. Registrul Comerțului"
-                placeholder="J00/000/2020"
+                label={tr.tradeRegister}
+                placeholder={tr.tradeRegisterPlaceholder}
                 value={tradeRegisterNumber}
                 onChange={setTradeRegisterNumber}
               />
               <div className="my-4 border-y border-gray-200 py-6 sm:my-6 sm:py-8">
                 <label className="mb-2 block text-sm font-semibold font-['Inter'] text-gray-700">
-                  Tip activitate <span className="text-red-500">*</span>
+                  {tr.activityType} <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {ACTIVITY_OPTIONS.map((opt) => (
+                  {ACTIVITY_IDS.map((id) => (
                     <button
-                      key={opt.id}
+                      key={id}
                       type="button"
-                      onClick={() => toggleActivity(opt.id)}
+                      onClick={() => toggleActivity(id)}
                       className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors font-['Inter'] ${
-                        activities.includes(opt.id)
+                        activities.includes(id)
                           ? 'border-slate-900 bg-slate-900 text-white'
                           : 'border-gray-300 text-gray-600 hover:border-gray-500'
                       }`}
                     >
-                      {activities.includes(opt.id) && (
+                      {activities.includes(id) && (
                         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
-                      {opt.label}
+                      {getPartnerSettingsActivityLabel(language.code as LangCode, id)}
                     </button>
                   ))}
                 </div>
@@ -658,21 +656,18 @@ export default function PartnerSettings() {
                   {companyError}
                 </div>
               ) : null}
-              {saveCompanyOk ? <p className="text-sm text-green-700 font-['Inter']">Datele firmei au fost salvate.</p> : null}
+              {saveCompanyOk ? <p className="text-sm text-green-700 font-['Inter']">{tr.companySaved}</p> : null}
               <button type="submit" disabled={formsLocked || savingCompany} className={`${primaryBtn} w-fit`}>
-                {savingCompany ? 'Se salvează...' : 'Salvează modificările'}
+                {savingCompany ? tr.saving : tr.saveChanges}
               </button>
             </form>
           )}
         </SettingsPanel>
 
-      <SettingsPanel sectionId={SECTION_IDS.delivery} title="Adresa de livrare" icon={<MapPin className="h-5 w-5" strokeWidth={1.75} />}>
-          <p className="-mt-2 mb-5 text-sm text-gray-500 font-['Inter']">
-            Magazin, depozit sau punct unde primiți livrările; este folosită la precompletarea checkout-ului. Golește toate
-            câmpurile și salvează pentru a elimina adresa din sistem.
-          </p>
+      <SettingsPanel sectionId={SECTION_IDS.delivery} title={tr.deliveryTitle} icon={<MapPin className="h-5 w-5" strokeWidth={1.75} />}>
+          <p className="-mt-2 mb-5 text-sm text-gray-500 font-['Inter']">{tr.deliveryIntro}</p>
           {profileLoading ? (
-            <div className="flex flex-col gap-4" aria-busy aria-label="Se încarcă adresa de livrare">
+            <div className="flex flex-col gap-4" aria-busy aria-label={tr.deliveryLoadingAria}>
               <FieldSkeleton />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FieldSkeleton />
@@ -695,11 +690,11 @@ export default function PartnerSettings() {
                 disabled={formsLocked}
                 className="w-fit text-sm font-semibold text-blue-700 underline-offset-2 hover:underline font-['Inter'] disabled:pointer-events-none disabled:opacity-50"
               >
-                Copiază din sediu social
+                {tr.copyFromRegisteredOffice}
               </button>
               <Field
-                label="Stradă și număr"
-                placeholder="ex: Str. Depozit nr 5"
+                label={tr.street}
+                placeholder={tr.deliveryStreetPlaceholder}
                 value={deliveryStreet}
                 onChange={(v) => {
                   setDeliveryStreet(sanitizeStreetLine(v))
@@ -708,30 +703,30 @@ export default function PartnerSettings() {
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <SelectField
-                  label="Județ"
+                  label={tr.county}
                   options={[...ROMANIAN_COUNTIES]}
                   value={deliveryCounty}
                   onChange={(v) => {
                     handleDeliveryCountyChange(v)
                     setSaveDeliveryOk(false)
                   }}
-                  placeholder="Selectează"
+                  placeholder={tr.selectCounty}
                 />
                 <SelectField
-                  label="Oraș"
+                  label={tr.city}
                   options={citiesForDeliveryCounty}
                   value={deliveryCity}
                   onChange={(v) => {
                     setDeliveryCity(v)
                     setSaveDeliveryOk(false)
                   }}
-                  placeholder="Selectează orașul"
+                  placeholder={tr.selectCity}
                   disabled={!deliveryCounty}
                 />
               </div>
               <Field
-                label="Cod poștal"
-                placeholder="010001"
+                label={tr.postalCode}
+                placeholder={tr.postalPlaceholder}
                 value={deliveryPostalCode}
                 onChange={(v) => {
                   setDeliveryPostalCode(sanitizeRoPostalCode(v))
@@ -745,77 +740,67 @@ export default function PartnerSettings() {
                   {deliveryError}
                 </div>
               ) : null}
-              {saveDeliveryOk ? <p className="text-sm text-green-700 font-['Inter']">Adresa de livrare a fost salvată.</p> : null}
+              {saveDeliveryOk ? <p className="text-sm text-green-700 font-['Inter']">{tr.deliverySaved}</p> : null}
               <button type="submit" disabled={formsLocked || savingDelivery} className={`${primaryBtn} w-fit`}>
-                {savingDelivery ? 'Se salvează...' : 'Salvează adresa de livrare'}
+                {savingDelivery ? tr.saving : tr.saveDeliveryAddress}
               </button>
             </form>
           )}
         </SettingsPanel>
 
-      <SettingsPanel sectionId={SECTION_IDS.password} title="Schimbă parola" icon={<KeyRound className="h-5 w-5" strokeWidth={1.75} />}>
+      <SettingsPanel sectionId={SECTION_IDS.password} title={tr.passwordTitle} icon={<KeyRound className="h-5 w-5" strokeWidth={1.75} />}>
           <div className={`flex flex-col gap-4 ${formsLocked ? 'pointer-events-none opacity-50' : ''}`}>
             <Field
-              label="Parola actuală"
+              label={tr.currentPassword}
               type="password"
-              placeholder="••••••••"
+              placeholder={tr.passwordPlaceholder}
               value={passwordCurrent}
               onChange={setPasswordCurrent}
             />
-            <Field label="Parola nouă" type="password" placeholder="••••••••" value={passwordNew} onChange={setPasswordNew} />
+            <Field label={tr.newPassword} type="password" placeholder={tr.passwordPlaceholder} value={passwordNew} onChange={setPasswordNew} />
             <Field
-              label="Confirmă parola nouă"
+              label={tr.confirmPassword}
               type="password"
-              placeholder="••••••••"
+              placeholder={tr.passwordPlaceholder}
               value={passwordConfirm}
               onChange={setPasswordConfirm}
             />
             <button type="button" disabled className={`${primaryBtn} w-fit cursor-not-allowed opacity-70`}>
-              Actualizează parola
+              {tr.updatePassword}
             </button>
           </div>
-          <p className="mt-4 text-xs text-amber-800 font-['Inter']">
-            Funcția va fi disponibilă după conectarea la sistemul de conturi. Până atunci folosește recuperarea parolei de pe pagina de autentificare dacă e nevoie.
-          </p>
+          <p className="mt-4 text-xs text-amber-800 font-['Inter']">{tr.passwordComingSoon}</p>
         </SettingsPanel>
 
-      <SettingsPanel sectionId={SECTION_IDS.email} title="Schimbă email" icon={<Mail className="h-5 w-5" strokeWidth={1.75} />}>
-          <p className="text-sm leading-relaxed text-gray-600 font-['Inter']">
-            Pentru schimbarea adresei de email folosite la autentificare, te rugăm să contactezi echipa Baterino prin
-            secțiunea <strong className="font-semibold text-slate-800">Suport</strong> din meniul principal. Vom valida
-            identitatea și îți vom actualiza contul în siguranță.
-          </p>
+      <SettingsPanel sectionId={SECTION_IDS.email} title={tr.emailTitle} icon={<Mail className="h-5 w-5" strokeWidth={1.75} />}>
+          <p className="text-sm leading-relaxed text-gray-600 font-['Inter']">{tr.emailBody}</p>
           <p className="mt-3 text-sm text-gray-500 font-['Inter']">
-            Email curent:{' '}
+            {tr.currentEmailLabel}{' '}
             <span className="font-medium text-slate-900">{accountEmail || '—'}</span>
           </p>
         </SettingsPanel>
 
       <SettingsPanel
         sectionId={SECTION_IDS.twoFactor}
-        title="Autentificare în doi pași"
+        title={tr.twoFactorTitle}
         icon={<Shield className="h-5 w-5" strokeWidth={1.75} />}
       >
-          <p className="text-sm leading-relaxed text-gray-600 font-['Inter']">
-            Funcționalitatea de autentificare în doi pași (2FA) pentru conturile partener va fi disponibilă în curând.
-          </p>
+          <p className="text-sm leading-relaxed text-gray-600 font-['Inter']">{tr.twoFactorBody}</p>
         </SettingsPanel>
 
       <SettingsPanel
         sectionId={SECTION_IDS.delete}
-        title="Șterge contul"
+        title={tr.deleteTitle}
         icon={<Trash2 className="h-5 w-5 text-red-600" strokeWidth={1.75} />}
       >
-          <p className="-mt-2 mb-5 text-sm text-gray-600 font-['Inter']">
-            Odată ce ștergi contul, nu există cale de întoarcere. Toate datele vor fi eliminate permanent.
-          </p>
+          <p className="-mt-2 mb-5 text-sm text-gray-600 font-['Inter']">{tr.deleteIntro}</p>
           {!showDeleteConfirm ? (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               className="h-11 rounded-xl border border-red-300 px-6 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 font-['Inter']"
             >
-              Șterge contul
+              {tr.deleteAccount}
             </button>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -824,7 +809,7 @@ export default function PartnerSettings() {
                 onClick={() => setShowDeleteConfirm(false)}
                 className="h-11 rounded-xl border border-gray-300 px-6 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 font-['Inter']"
               >
-                Anulează
+                {tr.cancel}
               </button>
               <button
                 type="button"
@@ -835,7 +820,7 @@ export default function PartnerSettings() {
                 }}
                 className="h-11 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition-colors hover:bg-red-700 font-['Inter']"
               >
-                Confirmă ștergerea
+                {tr.confirmDeletion}
               </button>
             </div>
           )}
@@ -846,15 +831,12 @@ export default function PartnerSettings() {
   return (
     <div className="min-h-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
       <div className="w-full max-w-6xl">
-        <h1 className="mb-2 text-2xl font-extrabold text-slate-900 font-['Inter']">Setări</h1>
-        <p className="mb-8 max-w-2xl text-sm text-gray-500 font-['Inter']">
-          Gestionează datele contului, adresa de livrare și securitatea autentificării.
-        </p>
+        <h1 className="mb-2 text-2xl font-extrabold text-slate-900 font-['Inter']">{tr.pageTitle}</h1>
+        <p className="mb-8 max-w-2xl text-sm text-gray-500 font-['Inter']">{tr.pageSubtitle}</p>
 
         {settingsLockedPending && (
           <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 font-['Inter']">
-            Contul tău este în curs de verificare. Poți folosi <strong className="font-semibold">Suport</strong> din meniu
-            și poți șterge contul mai jos dacă renunți. Celelalte secțiuni vor fi disponibile după aprobare.
+            {tr.pendingBanner}
           </div>
         )}
 
@@ -862,10 +844,10 @@ export default function PartnerSettings() {
           {/* Sidebar — sticky right on desktop; first in DOM stays top on mobile */}
           <nav
             className="shrink-0 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:top-6 lg:w-[min(100%,280px)]"
-            aria-label="Secțiuni setări"
+            aria-label={tr.navSectionsAria}
           >
             <ul className="m-0 flex list-none flex-row gap-1 overflow-x-auto p-0 lg:flex-col lg:overflow-visible">
-              {NAV_ITEMS.map(({ key, label, icon: Icon }) => {
+              {navItems.map(({ key, label, icon: Icon }) => {
                 const active = activeSection === key
                 const disabled = navDisabled(key)
                 return (
@@ -912,18 +894,14 @@ export default function PartnerSettings() {
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 text-lg font-bold text-slate-900 font-['Inter']">Ștergere cont</h3>
-            <p className="mb-4 text-sm text-gray-600 font-['Inter']">
-              Ești pe cale să ștergi contul. Această acțiune este permanentă și nu poate fi anulată.
-            </p>
+            <h3 className="mb-2 text-lg font-bold text-slate-900 font-['Inter']">{tr.deleteModalTitle}</h3>
+            <p className="mb-4 text-sm text-gray-600 font-['Inter']">{tr.deleteModalBody}</p>
             <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-gray-700 font-['Inter']">
-              <li>Toate datele personale vor fi șterse permanent</li>
-              <li>Nu vei mai primi niciun fel de corespondență din partea noastră</li>
+              <li>{tr.deleteModalBullet1}</li>
+              <li>{tr.deleteModalBullet2}</li>
             </ul>
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-semibold font-['Inter'] text-gray-700">
-                Introdu <span className="rounded bg-gray-100 px-1 font-mono">DELETE</span> pentru a confirma
-              </label>
+              <label className="mb-2 block text-sm font-semibold font-['Inter'] text-gray-700">{tr.deleteConfirmLabel}</label>
               <input
                 type="text"
                 value={deleteConfirmText}
@@ -943,7 +921,7 @@ export default function PartnerSettings() {
                 }}
                 className="h-11 flex-1 rounded-xl border border-gray-300 px-6 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 font-['Inter']"
               >
-                Anulează
+                {tr.cancel}
               </button>
               <button
                 type="button"
@@ -951,7 +929,7 @@ export default function PartnerSettings() {
                 disabled={deleteConfirmText !== 'DELETE' || deleting}
                 className="h-11 flex-1 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 font-['Inter']"
               >
-                {deleting ? 'Se șterge...' : 'Șterge contul'}
+                {deleting ? tr.deleting : tr.deleteAccount}
               </button>
             </div>
           </div>

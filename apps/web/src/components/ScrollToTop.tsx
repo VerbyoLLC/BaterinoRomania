@@ -5,6 +5,13 @@ import { useLocation } from 'react-router-dom'
 export default function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
+    const layoutScroll =
+      document.getElementById('admin-layout-scroll') ??
+      document.getElementById('partner-layout-scroll')
+    if (layoutScroll) {
+      layoutScroll.scrollTop = 0
+      return
+    }
     window.scrollTo(0, 0)
   }, [pathname])
   return null

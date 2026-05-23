@@ -23,6 +23,11 @@ import {
   normalizeIndustrialTechnicalSpecs,
   type IndustrialTechnicalSpecsData,
 } from '../../lib/industrialTechnicalSpec'
+import {
+  formatPriceInputDisplay,
+  parsePriceInput,
+  sanitizePriceInputTyping,
+} from '../../lib/formInputSanitize'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 
 const MAX_IMAGES = 5
@@ -320,8 +325,8 @@ export default function AdminProducts() {
     const land = (row as { landedPrice?: string | number }).landedPrice
     const sale = row.salePrice
     const v = (row as { vat?: string | number }).vat
-    setLandedPrice(land != null ? String(land).replace('.', ',') : '')
-    setSalePrice(sale != null ? String(sale).replace('.', ',') : '')
+    setLandedPrice(land != null && String(land).trim() ? formatPriceInputDisplay(String(land)) : '')
+    setSalePrice(sale != null && String(sale).trim() ? formatPriceInputDisplay(String(sale)) : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
     const pv = String((row as { priceVisibility?: string }).priceVisibility || 'public')
     setPriceVisibility(
@@ -600,6 +605,14 @@ export default function AdminProducts() {
     setter(formatWithThousand(filtered))
   }
 
+  const handlePriceInput = (value: string, setter: (v: string) => void) => {
+    setter(sanitizePriceInputTyping(value))
+  }
+
+  const handlePriceBlur = (value: string, setter: (v: string) => void) => {
+    setter(formatPriceInputDisplay(value))
+  }
+
   /** Numbers only (no decimals) - for Wh, Ah, A fields */
   const handleIntegerOnly = (value: string, setter: (v: string) => void) => {
     const filtered = value.replace(/\D/g, '')
@@ -870,8 +883,8 @@ export default function AdminProducts() {
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
       seoOgImage: seoOgImageOut,
-      landedPrice: parseFormattedNumber(landedPrice) || '0',
-      salePrice: parseFormattedNumber(salePrice) || '0',
+      landedPrice: String(parsePriceInput(landedPrice) || 0),
+      salePrice: String(parsePriceInput(salePrice) || 0),
       vat: parseFormattedNumber(vat) || '19',
       energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
       capacitate: carouselTemplate ? undefined : capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
@@ -1701,8 +1714,9 @@ export default function AdminProducts() {
                       type="text"
                       inputMode="decimal"
                       value={landedPrice}
-                      onChange={(e) => handleNumericInput(e.target.value, setLandedPrice)}
-                      placeholder="Ex: 15.000"
+                      onChange={(e) => handlePriceInput(e.target.value, setLandedPrice)}
+                      onBlur={() => handlePriceBlur(landedPrice, setLandedPrice)}
+                      placeholder="20,000.00"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
@@ -1715,8 +1729,9 @@ export default function AdminProducts() {
                       type="text"
                       inputMode="decimal"
                       value={salePrice}
-                      onChange={(e) => handleNumericInput(e.target.value, setSalePrice)}
-                      placeholder="Ex: 15.840"
+                      onChange={(e) => handlePriceInput(e.target.value, setSalePrice)}
+                      onBlur={() => handlePriceBlur(salePrice, setSalePrice)}
+                      placeholder="20,000.00"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>

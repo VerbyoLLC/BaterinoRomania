@@ -1,0 +1,417 @@
+/*
+ * PDF export overrides — native A4 (794×1123), no zoom, readable typography.
+ * Applied only when generating PDF (Puppeteer / html2canvas), not screen preview.
+ */
+body .aco-a4 {
+  width: 794px !important;
+  max-width: 794px !important;
+  min-height: 1123px !important;
+  zoom: 1 !important;
+}
+
+body .admin-product-sheet {
+  width: 794px !important;
+  max-width: 794px !important;
+  min-height: 1123px !important;
+  height: auto !important;
+  zoom: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+body .admin-benefits-client-a4,
+body .admin-benefits-partner-a4 {
+  width: 794px !important;
+  max-width: 794px !important;
+  min-height: 1123px !important;
+  height: auto !important;
+  zoom: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+body .admin-product-sheet .aps-footer {
+  margin-top: auto !important;
+}
+
+body .admin-benefits-client-a4 .abb-footer,
+body .admin-benefits-partner-a4 .abp-footer {
+  margin-top: auto !important;
+}
+
+/* ── Commercial offer: horizontal rhythm (794 / 920 ≈ 0.863) ── */
+body .aco-a4 .aco-top-bar {
+  height: 38px;
+  padding: 0 32px;
+}
+
+body .aco-a4 .aco-header {
+  padding: 18px 32px 14px;
+  gap: 12px 16px;
+}
+
+body .aco-a4 .aco-divider {
+  margin: 0 32px;
+}
+
+body .aco-a4 .aco-parties {
+  padding: 14px 32px;
+}
+
+body .aco-a4 .aco-products-section {
+  padding: 0 32px 14px;
+}
+
+body .aco-a4 .aco-totals-row {
+  padding: 12px 32px 4px;
+}
+
+body .aco-a4 .aco-totals-box {
+  width: 300px;
+  min-width: 300px;
+}
+
+body .aco-a4 .aco-notes-section {
+  padding: 28px 32px 0;
+}
+
+body .aco-a4 .aco-footer-section {
+  padding: 14px 32px 12px;
+}
+
+body .aco-a4 .aco-bottom-bar {
+  padding: 8px 14px;
+}
+
+body .aco-a4 .aco-logo-img {
+  height: 42px;
+}
+
+body .aco-a4 .aco-footer-logo-img {
+  height: 26px;
+}
+
+/* ── Commercial offer: readable type (aligned with preview) ── */
+body .aco-a4 .aco-top-bar span {
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+body .aco-a4 .aco-logo-sub {
+  font-size: 10px;
+}
+
+body .aco-a4 .aco-offer-title {
+  font-size: 20px;
+}
+
+body .aco-a4 .aco-offer-num {
+  font-size: 11px;
+}
+
+body .aco-a4 .aco-pill {
+  font-size: 11px;
+  padding: 4px 9px;
+}
+
+body .aco-a4 .aco-party-label,
+body .aco-a4 .aco-section-label,
+body .aco-a4 .aco-note-label,
+body .aco-a4 .aco-made-by-label {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+}
+
+body .aco-a4 .aco-party-name {
+  font-size: 15px;
+}
+
+body .aco-a4 .aco-party-company {
+  font-size: 13px;
+}
+
+body .aco-a4 .aco-party-row span,
+body .aco-a4 .aco-footer-detail span,
+body .aco-a4 .aco-made-by-detail span {
+  font-size: 12px;
+}
+
+body .aco-a4 .aco-party-row--address-continued {
+  padding-left: 16px;
+}
+
+body .aco-a4 .aco-prod-table th {
+  font-size: 10px;
+  padding: 8px 9px;
+}
+
+body .aco-a4 .aco-prod-table td {
+  font-size: 13px;
+  padding: 8px 9px;
+}
+
+body .aco-a4 .aco-prod-name {
+  font-size: 13px;
+}
+
+body .aco-a4 .aco-prod-desc {
+  font-size: 11px;
+}
+
+body .aco-a4 .aco-total-line {
+  font-size: 13px;
+  padding: 8px 14px;
+  gap: 16px;
+}
+
+body .aco-a4 .aco-total-line span:last-child {
+  white-space: nowrap;
+}
+
+body .aco-a4 .aco-total-line.grand span:last-child {
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+body .aco-a4 .aco-prod-table td:not(:first-child) {
+  white-space: nowrap;
+}
+
+body .aco-a4 .aco-note-text {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+body .aco-a4 .aco-note-text strong {
+  font-weight: 700;
+}
+
+body .aco-a4 .aco-made-by-name {
+  font-size: 15px;
+}
+
+body .aco-a4 .aco-bottom-bar span {
+  font-size: 10px;
+}
+
+/* ── Product sheet: layout (compact for single A4 page) ── */
+body .admin-product-sheet .aps-top-bar {
+  height: 36px;
+  padding: 0 24px;
+}
+
+body .admin-product-sheet .aps-top-logo {
+  height: 22px;
+}
+
+body .admin-product-sheet .aps-hero {
+  min-height: 0;
+  height: auto;
+  padding-top: 16px;
+}
+
+body .admin-product-sheet .aps-body-grid {
+  margin-top: 20px;
+}
+
+body .admin-product-sheet .aps-hero-left {
+  width: 405px;
+  padding: 10px 24px;
+}
+
+body .admin-product-sheet .aps-hero-right {
+  padding: 10px 24px 10px 10px;
+}
+
+body .admin-product-sheet .aps-hero-right img {
+  max-height: 320px;
+}
+
+body .admin-product-sheet .aps-brand-tag {
+  margin-bottom: 4px;
+}
+
+body .admin-product-sheet .aps-product-kind {
+  margin-bottom: 2px;
+}
+
+body .admin-product-sheet .aps-product-sub {
+  margin-bottom: 8px;
+}
+
+body .admin-product-sheet .aps-kpi-row {
+  margin-bottom: 8px;
+}
+
+body .admin-product-sheet .aps-kpi {
+  padding: 7px 9px;
+}
+
+body .admin-product-sheet .aps-warranty-block {
+  margin-bottom: 8px;
+  padding: 8px 11px;
+}
+
+body .admin-product-sheet .aps-spec-panel {
+  width: 431px;
+  padding: 0 20px 8px 24px;
+}
+
+body .admin-product-sheet .aps-feats-panel {
+  padding: 0 20px 8px 16px;
+}
+
+body .admin-product-sheet .aps-panel-title {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+}
+
+body .admin-product-sheet .aps-panel-title.aps-stats-section-title {
+  margin-top: 8px;
+}
+
+body .admin-product-sheet .aps-feat-grid {
+  gap: 5px;
+}
+
+body .admin-product-sheet .aps-feat {
+  padding: 8px 10px;
+}
+
+body .admin-product-sheet .aps-footer {
+  min-height: 38px;
+  padding: 8px 24px;
+}
+
+body .admin-product-sheet .aps-footer-contact {
+  font-size: 10px;
+  letter-spacing: 1.6px;
+}
+
+body .admin-benefits-client-a4 .abb-bottom,
+body .admin-benefits-partner-a4 .abp-bottom {
+  min-height: 38px;
+  padding: 8px 24px;
+}
+
+body .admin-benefits-client-a4 .abb-bottom-contact,
+body .admin-benefits-partner-a4 .abp-bottom-contact {
+  font-size: 10px;
+  letter-spacing: 1.6px;
+}
+
+/* ── Product sheet: readable type ── */
+body .admin-product-sheet .aps-top-bar-brand,
+body .admin-product-sheet .aps-top-bar-doc {
+  font-size: 11px;
+}
+
+body .admin-product-sheet .aps-brand-tag {
+  font-size: 11px;
+}
+
+body .admin-product-sheet .aps-product-kind {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
+
+body .admin-product-sheet .aps-product-name {
+  font-size: 22px;
+}
+
+body .admin-product-sheet .aps-manufacturer-badge-text {
+  font-size: 11px;
+}
+
+body .admin-product-sheet .aps-product-sub {
+  font-size: 11px;
+}
+
+body .admin-product-sheet .aps-kpi-val {
+  font-size: 17px;
+}
+
+body .admin-product-sheet .aps-kpi-unit,
+body .admin-product-sheet .aps-kpi-lbl {
+  font-size: 10px;
+}
+
+body .admin-product-sheet .aps-warranty-title {
+  font-size: 13px;
+}
+
+body .admin-product-sheet .aps-warranty-title span,
+body .admin-product-sheet .aps-warranty-sub {
+  font-size: 10px;
+}
+
+body .admin-product-sheet .aps-cert {
+  font-size: 10.5px;
+}
+
+body .admin-product-sheet .aps-panel-title {
+  font-size: 10px;
+}
+
+body .admin-product-sheet .aps-spec-table td {
+  font-size: 11px;
+  padding: 4px 8px;
+  line-height: 1.25;
+}
+
+body .admin-product-sheet .aps-spec-table td.aps-hl {
+  font-size: 12px !important;
+}
+
+body .admin-product-sheet .aps-spec-section td {
+  font-size: 10px !important;
+  padding: 5px 8px !important;
+}
+
+body .admin-product-sheet .aps-feat-title {
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+body .admin-product-sheet .aps-feat-desc {
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+body .admin-product-sheet .aps-stats-grid .aps-feat-title {
+  font-size: 11.5px;
+  text-transform: none;
+}
+
+body .admin-product-sheet .aps-stats-grid .aps-feat-desc {
+  font-size: 10px;
+}
+
+/* Product sheet: page-break hints (Puppeteer + html2pdf) */
+body .admin-product-sheet .aps-hero,
+body .admin-product-sheet .aps-footer,
+body .admin-product-sheet .aps-feat,
+body .admin-product-sheet .aps-spec-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+body .admin-product-sheet .aps-spec-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+body .admin-product-sheet .aps-body-grid {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+body .admin-benefits-client-a4 .abb-cta,
+body .admin-benefits-client-a4 .abb-footer,
+body .admin-benefits-client-a4 .abb-ben,
+body .admin-benefits-partner-a4 .abp-cta,
+body .admin-benefits-partner-a4 .abp-footer,
+body .admin-benefits-partner-a4 .abp-ben {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}

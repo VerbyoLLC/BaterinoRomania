@@ -41,6 +41,10 @@ model User {
   residentialOrders         ResidentialOrder[]
   salesAgentProfile         SalesAgent? @relation("UserSalesAgent")
   retururi                  Retur[]
+  adminCommercialOffers     AdminCommercialOffer[]
+  salesLeadsCreated         SalesLead[]
+  salesLeadActivities       SalesLeadActivity[]
+  salesLeadUserStates       SalesLeadUserState[]
 }
 
 /** Profil livrare/facturare pentru conturi client (1:1 User). */
@@ -618,8 +622,109 @@ model SalesAgent {
   userId    String?  @unique
   user      User?    @relation("UserSalesAgent", fields: [userId], references: [id], onDelete: SetNull)
   partners  Partner[] @relation("PartnerAssignedSalesAgent")
+  salesLeads SalesLead[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([deletedAt])
+}
+
+/** Ofertă comercială generată din admin — PDF în R2 + metadate pentru listă. */
+model AdminCommercialOffer {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  /** draft | generated */
+  status          String   @default("generated")
+  /** person | company */
+  buyerType       String
+  clientLabel     String
+  clientEmail     String   @default("")
+  clientPhone     String   @default("")
+  /** Contact client la generare (fallback listă dacă coloanele dedicate sunt goale). */
+  draftSnapshot   Json?
+  amountGross     Decimal  @db.Decimal(14, 2)
+  currency        String
+  productCount    Int
+  pdfUrl          String
+  createdByUserId String?
+  createdBy       User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([buyerType])
+  @@index([status])
+  @@map("admin_commercial_offer")
+}
+
+/** Lead comercial — creat de agent vânzări sau (viitor) din alte surse. */
+model SalesLead {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  name            String
+  email           String      @default("")
+  phone           String      @default("")
+  source          String      @default("Manual")
+  /** nou | contactat | oferta | inchis */
+  status          String      @default("nou")
+  customerType    String      @default("")
+  productLine     String      @default("")
+  monthlyVolume   String      @default("")
+  whatsapp        String      @default("")
+  message         String      @default("")
+  companyName     String      @default("")
+  workEmail       String      @default("")
+  jobTitle        String      @default("")
+  country         String      @default("")
+  website         String      @default("")
+  salesAgentId    String?
+  salesAgent      SalesAgent? @relation(fields: [salesAgentId], references: [id], onDelete: SetNull)
+  createdByUserId String?
+  createdBy       User?       @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  activities      SalesLeadActivity[]
+  userStates      SalesLeadUserState[]
+
+  @@index([createdAt])
+  @@index([salesAgentId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@map("sales_lead")
+}
+
+/** Comentariu sau schimbare status pe un lead (contribuții agent). */
+model SalesLeadActivity {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  leadId     String
+  lead       SalesLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** comment | status_change */
+  type       String
+  comment    String    @default("")
+  fromStatus String    @default("")
+  toStatus   String    @default("")
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([type])
+  @@map("sales_lead_activity")
+}
+
+/** Stare citire lead per utilizator (admin / agent). */
+model SalesLeadUserState {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId         String
+  lead           SalesLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  /** Prima deschidere panou detalii. */
+  viewedAt       DateTime?
+  /** Ultima deschidere panou comentarii. */
+  commentsSeenAt DateTime?
+
+  @@unique([userId, leadId])
+  @@index([userId])
+  @@index([leadId])
+  @@map("sales_lead_user_state")
 }

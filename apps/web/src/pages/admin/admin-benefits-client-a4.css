@@ -1,0 +1,365 @@
+/*
+ * Client benefits sheet — design canvas 920px; PDF/print scales to 794px A4.
+ */
+
+.admin-benefits-client-a4 {
+  font-family: 'DM Sans', Arial, sans-serif;
+  background: #ffffff;
+  width: 920px;
+  max-width: 920px;
+  margin-inline: auto;
+  min-height: 1123px;
+  height: 1123px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: #0a0e1a;
+  flex-shrink: 0;
+}
+
+@media print {
+  .admin-benefits-client-a4 {
+    width: 794px;
+    max-width: 794px;
+    min-height: 1123px;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.admin-benefits-client-a4 *,
+.admin-benefits-client-a4 *::before,
+.admin-benefits-client-a4 *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-benefits-client-a4 .abb-top {
+  background: #0a0e1a;
+  height: 5px;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-header {
+  padding: 18px 44px 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-logo-img {
+  height: 32px;
+  width: auto;
+  max-width: 180px;
+  display: block;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.admin-benefits-client-a4 .abb-logo-sub {
+  font-size: 7.5px;
+  letter-spacing: 2.5px;
+  color: #c0c8d8;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.admin-benefits-client-a4 .abb-doc-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0a0e1a;
+  letter-spacing: -0.3px;
+  margin-bottom: 2px;
+  text-align: right;
+}
+
+.admin-benefits-client-a4 .abb-doc-sub {
+  font-size: 9px;
+  color: #c0c8d8;
+  letter-spacing: 0.5px;
+  text-align: right;
+}
+
+.admin-benefits-client-a4 .abb-intro {
+  padding: 18px 44px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-intro-eyebrow {
+  font-size: 7.5px;
+  letter-spacing: 3px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.admin-benefits-client-a4 .abb-intro-title {
+  font-size: 21px;
+  font-weight: 700;
+  color: #0a0e1a;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.admin-benefits-client-a4 .abb-intro-title span {
+  color: #1e46b4;
+}
+
+.admin-benefits-client-a4 .abb-intro-body {
+  font-size: 11px;
+  color: #6a7a90;
+  line-height: 1.65;
+  max-width: 580px;
+}
+
+.admin-benefits-client-a4 .abb-benefits {
+  padding: 14px 44px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, auto);
+  gap: 9px;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.admin-benefits-client-a4 .abb-ben {
+  border: 1px solid #f0f0f0;
+  border-radius: 7px;
+  padding: 14px 16px 12px;
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+
+.admin-benefits-client-a4 .abb-ben-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #eef2ff;
+}
+
+.admin-benefits-client-a4 .abb-ben-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #1e46b4;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-benefits-client-a4 .abb-ben-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 4px;
+}
+
+.admin-benefits-client-a4 .abb-ben-desc {
+  font-size: 10.5px;
+  color: #8090a8;
+  line-height: 1.5;
+}
+
+.admin-benefits-client-a4 .abb-ben-tag {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #1e46b4;
+  background: #eef2ff;
+  border-radius: 3px;
+  padding: 3px 8px;
+}
+
+.admin-benefits-client-a4 .abb-cta {
+  margin: 20px 44px;
+  background: #ffffff;
+  border: 1.5px solid #1e46b4;
+  border-radius: 8px;
+  padding: 22px 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-benefits-client-a4 .abb-cta-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-benefits-client-a4 .abb-cta-qr {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e0e4f0;
+  border-radius: 6px;
+}
+
+.admin-benefits-client-a4 .abb-cta-qr img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.admin-benefits-client-a4 .abb-cta-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 6px;
+}
+
+.admin-benefits-client-a4 .abb-cta-sub {
+  font-size: 10.5px;
+  color: #6a7a90;
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+.admin-benefits-client-a4 .abb-cta-contacts {
+  display: flex;
+  gap: 22px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-benefits-client-a4 .abb-cta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-benefits-client-a4 .abb-cta-item svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: #1e46b4;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-benefits-client-a4 .abb-cta-item span {
+  font-size: 10.5px;
+  color: #0a0e1a;
+  font-weight: 500;
+}
+
+.admin-benefits-client-a4 .abb-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 12px 44px 10px;
+  border-top: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-sheet-end {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-f-lbl {
+  font-size: 7.5px;
+  letter-spacing: 3px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.admin-benefits-client-a4 .abb-f-brand {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 1px;
+}
+
+.admin-benefits-client-a4 .abb-f-brand span {
+  color: #1e46b4;
+}
+
+.admin-benefits-client-a4 .abb-f-brand-sub {
+  font-size: 7.5px;
+  letter-spacing: 2px;
+  color: #c0c8d8;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.admin-benefits-client-a4 .abb-f-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.admin-benefits-client-a4 .abb-f-row svg {
+  width: 9px;
+  height: 9px;
+  fill: none;
+  stroke: #c0c8d8;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-f-row span {
+  font-size: 9px;
+  color: #6a7a90;
+}
+
+.admin-benefits-client-a4 .abb-f-addr-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 1px;
+}
+
+.admin-benefits-client-a4 .abb-f-addr-entity {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #1e46b4;
+  margin-bottom: 7px;
+}
+
+.admin-benefits-client-a4 .abb-bottom {
+  background: #0a0e1a;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 28px;
+  flex-shrink: 0;
+}
+
+.admin-benefits-client-a4 .abb-bottom-contact {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}

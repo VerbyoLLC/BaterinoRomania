@@ -3,6 +3,8 @@ import type { LucideIcon } from 'lucide-react'
 import { ChevronDown, Cable, Percent, Megaphone, LineChart, BadgeCheck, Handshake } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
+import { getPartnerSidebarTranslations } from '../../i18n/partner/sidebar'
+import type { LangCode } from '../../i18n/menu'
 
 /** Elevated surfaces — no border stroke; soft blurred shadow */
 const PARTNER_SURFACE_SHADOW =
@@ -26,16 +28,18 @@ export function ReducerePartenerBox({
   discountPercent: number | null
   loading: boolean
 }) {
+  const { language } = useLanguage()
+  const tr = getPartnerSidebarTranslations(language.code as LangCode)
   const fmt = (n: number) => (n % 1 === 0 ? Math.round(n) : n.toFixed(1))
 
   return (
     <div
-      className={`rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/75 p-3.5 shadow-[0_12px_40px_-14px_rgba(245,158,11,0.24),0_4px_18px_-10px_rgba(15,23,42,0.07)] sm:p-4 ${className ?? ''}`}
+      className={`rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/75 p-3.5 sm:p-4 ${className ?? ''}`}
     >
       {/* Two columns: icon | 3 stacked text rows */}
       <div className="flex items-start gap-3">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/80 text-amber-700 shadow-[0_5px_18px_-8px_rgba(15,23,42,0.10)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/80 text-amber-700"
           aria-hidden
         >
           <svg className="h-5 w-5 text-amber-700/90" viewBox="0 0 20 20" fill="currentColor">
@@ -55,21 +59,24 @@ export function ReducerePartenerBox({
             </div>
           ) : discountPercent != null && discountPercent > 0 ? (
             <div className="flex flex-col">
-              <h2 className={`${quickPanelEyebrowCls} text-amber-900`}>Reducere partener</h2>
+              <h2 className={`${quickPanelEyebrowCls} text-amber-900`}>{tr.reducereEyebrow}</h2>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className={`${quickPanelTitleCls} inline tabular-nums`}>-{fmt(discountPercent)}%</span>
-                <span className={`${quickPanelTitleCls} inline uppercase tracking-wide text-amber-900/90`}>Reducere</span>
+                <span className={`${quickPanelTitleCls} inline uppercase tracking-wide text-amber-900/90`}>
+                  {tr.reducereTitle}
+                </span>
               </div>
               <p className={`${quickPanelBodyCls}`}>
-                Beneficiezi de o reducere de{' '}
-                <span className="font-bold text-slate-900">{fmt(discountPercent)}%</span> la toate produsele.
+                {tr.reducereBenefit.split('{pct}')[0]}
+                <span className="font-bold text-slate-900">{fmt(discountPercent)}%</span>
+                {tr.reducereBenefit.split('{pct}')[1]}
               </p>
             </div>
           ) : (
-            <div className="rounded-lg bg-white/80 px-2.5 py-2 shadow-[0_4px_14px_-8px_rgba(15,23,42,0.07)]">
-              <p className={`${quickPanelBodyCls} mt-0 text-slate-600`}>Nicio reducere configurată momentan.</p>
+            <div className="rounded-lg bg-white/80 px-2.5 py-2">
+              <p className={`${quickPanelBodyCls} mt-0 text-slate-600`}>{tr.reducereNoDiscount}</p>
               <p className="mt-1.5 m-0 text-sm leading-snug text-slate-400 font-['Inter'] sm:text-[15px]">
-                Contactați-ne pentru a stabili condițiile de parteneriat.
+                {tr.reducereContact}
               </p>
             </div>
           )}
@@ -89,26 +96,13 @@ export function PartnerInverterCompatibilityBox({
   onOpenSearch?: () => void
 }) {
   const { language } = useLanguage()
-  const lang = language.code
-
-  const title =
-    lang === 'en' ? 'Inverter compatibility' : lang === 'zh' ? '逆变器兼容性' : 'Compatibilitate invertoare'
-  const body =
-    lang === 'en'
-      ? 'Check whether our batteries are compatible with your customers\' inverters.'
-      : lang === 'zh'
-        ? '核对我们的储能电池是否与您的客户使用的逆变器匹配。'
-        : 'Verifică dacă bateriile noastre sunt compatibile cu invertoarele clienților tăi.'
-
-  const openLabel =
-    lang === 'en'
-      ? 'Open inverter compatibility search'
-      : lang === 'zh'
-        ? '打开逆变器兼容性搜索'
-        : 'Deschide căutarea de compatibilitate invertoare'
+  const tr = getPartnerSidebarTranslations(language.code as LangCode)
+  const title = tr.inverterTitle
+  const body = tr.inverterBody
+  const openLabel = tr.inverterOpenLabel
 
   const baseCard =
-    'group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-violet-50/70 p-3.5 text-left shadow-[0_10px_36px_-14px_rgba(79,70,229,0.16),0_4px_18px_-10px_rgba(15,23,42,0.06)] transition-all duration-200 hover:shadow-[0_18px_46px_-14px_rgba(79,70,229,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f7f7] sm:p-4'
+    'group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-violet-50/70 p-3.5 text-left transition-colors duration-200 hover:from-indigo-100/50 hover:via-white hover:to-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f7f7] sm:p-4'
 
   return (
     <button
@@ -121,7 +115,7 @@ export function PartnerInverterCompatibilityBox({
     >
       <div className="flex items-start gap-3">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/90 text-indigo-700 shadow-[0_5px_18px_-8px_rgba(15,23,42,0.10)] transition group-hover:bg-white group-hover:shadow-[0_8px_22px_-10px_rgba(79,70,229,0.18)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/90 text-indigo-700 transition group-hover:bg-white"
           aria-hidden
         >
           <Cable className="h-5 w-5 transition group-hover:text-indigo-800" strokeWidth={1.75} />
@@ -138,94 +132,39 @@ export function PartnerInverterCompatibilityBox({
 /** Dashboard: ce câștigi ca partener (aliniat cu Siguranța clientului) */
 export function AvantajePartenerDashboardBox() {
   const { language } = useLanguage()
-  const lang = language.code === 'zh' ? 'zh' : language.code === 'en' ? 'en' : 'ro'
+  const tr = getPartnerSidebarTranslations(language.code as LangCode)
 
-  type Row = {
-    Icon: LucideIcon
-    label: Record<'ro' | 'en' | 'zh', string>
-    sub: Record<'ro' | 'en' | 'zh', string>
-  }
-
-  const rows: Row[] = [
-    {
-      Icon: Percent,
-      label: {
-        ro: 'Reduceri parteneri',
-        en: 'Partner discounts',
-        zh: '合作伙伴折扣',
-      },
-      sub: {
-        ro: 'Prețuri preferențiale și condiții clare dedicate partenerilor Baterino.',
-        en: 'Preferential pricing and transparent terms for Baterino partners.',
-        zh: 'Baterino 合作伙伴享受更优拿货价与清晰条款。',
-      },
-    },
-    {
-      Icon: Megaphone,
-      label: {
-        ro: 'Promovare afacere',
-        en: 'Business promotion',
-        zh: '业务推广',
-      },
-      sub: {
-        ro: 'Vizibilitate pe platformă și acces la clienți din zona ta care caută instalatori.',
-        en: 'Platform visibility and homeowner demand in your service area.',
-        zh: '在平台获得曝光并触达附近有需求的终端用户。',
-      },
-    },
-    {
-      Icon: LineChart,
-      label: {
-        ro: 'Prețuri predictibile',
-        en: 'Predictable pricing',
-        zh: '可预期的价格体系',
-      },
-      sub: {
-        ro: 'Structură stabilă și marje ușor de anticipat pentru fiecare proiect.',
-        en: 'Stable structures and margins you can plan around on every job.',
-        zh: '价格与利润空间稳定，便于项目核算与备货。',
-      },
-    },
-    {
-      Icon: BadgeCheck,
-      label: {
-        ro: 'Produse de calitate',
-        en: 'Quality products',
-        zh: '优质产品',
-      },
-      sub: {
-        ro: 'Baterii certificate, verificate tehnic și acoperite de garanție extinsă.',
-        en: 'Certified batteries, technically validated with strong warranty backing.',
-        zh: '产品通过认证与技术验证，并享有扎实的质保。',
-      },
-    },
-  ]
-
-  const cardTitle =
-    lang === 'en' ? 'Partner advantages' : lang === 'zh' ? '合作优势' : 'Avantaje Partener'
+  const advantageIcons: LucideIcon[] = [Percent, Megaphone, LineChart, BadgeCheck]
 
   const titleRow = (
     <div className="flex items-center gap-2">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 shadow-[0_4px_12px_-6px_rgba(245,158,11,0.25)]">
         <Handshake className="h-4 w-4 text-amber-800" strokeWidth={1.9} aria-hidden />
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-amber-900/90 font-['Inter']">{cardTitle}</h2>
+      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-amber-900/90 font-['Inter']">
+        {tr.partnerAdvantagesTitle}
+      </h2>
     </div>
   )
 
   const list = (
     <div className="flex flex-col divide-y divide-slate-100">
-      {rows.map(({ Icon, label, sub }) => (
-        <div key={label.ro} className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 shadow-[0_4px_14px_-8px_rgba(15,23,42,0.09)]">
-            <Icon className="h-[1.375rem] w-[1.375rem] text-slate-700" strokeWidth={1.75} aria-hidden />
+      {tr.partnerAdvantageRows.map((row, i) => {
+        const Icon = advantageIcons[i] ?? Percent
+        return (
+          <div key={row.label} className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 shadow-[0_4px_14px_-8px_rgba(15,23,42,0.09)]">
+              <Icon className="h-[1.375rem] w-[1.375rem] text-slate-700" strokeWidth={1.75} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter'] sm:text-[15px]">{row.label}</p>
+              <p className="mt-1 m-0 text-sm leading-snug text-slate-500 font-['Inter'] sm:text-[15px] sm:leading-relaxed">
+                {row.sub}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter'] sm:text-[15px]">{label[lang]}</p>
-            <p className="mt-1 m-0 text-sm leading-snug text-slate-500 font-['Inter'] sm:text-[15px] sm:leading-relaxed">{sub[lang]}</p>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 
@@ -307,14 +246,15 @@ export function SigurantaClientuluiBox({
   stackPosition?: 'upper' | 'lower'
 }) {
   const { language } = useLanguage()
-  const tr = getProductDetailTranslations(language.code)
+  const productTr = getProductDetailTranslations(language.code)
+  const sidebarTr = getPartnerSidebarTranslations(language.code as LangCode)
   const [expanded, setExpanded] = useCollapsibleExpandedForCart(collapsible, cartHasItems, stackPosition)
 
   const items = [
-    { icon: '/images/shared/testing-icon.svg',       label: tr.badgeGarantie,        sub: 'Produsele sunt acoperite de garanție extinsă de 10 ani.' },
-    { icon: '/images/shared/compatibility-icon.svg', label: tr.badgeCompatibilitate,  sub: 'Compatibile cu 99% dintre invertoarele de pe piață.' },
-    { icon: '/images/shared/delivery-icon.svg',      label: tr.badgeRetur,            sub: 'Retur gratuit în primele 15 zile de la achiziție.' },
-    { icon: '/images/shared/swap-icon.svg',          label: tr.badgeSwap,             sub: 'Înlocuire rapidă a bateriei în caz de defecțiune.' },
+    { icon: '/images/shared/testing-icon.svg', label: productTr.badgeGarantie, sub: sidebarTr.sigurantaItems[0]?.sub ?? '' },
+    { icon: '/images/shared/compatibility-icon.svg', label: productTr.badgeCompatibilitate, sub: sidebarTr.sigurantaItems[1]?.sub ?? '' },
+    { icon: '/images/shared/delivery-icon.svg', label: productTr.badgeRetur, sub: sidebarTr.sigurantaItems[2]?.sub ?? '' },
+    { icon: '/images/shared/swap-icon.svg', label: productTr.badgeSwap, sub: sidebarTr.sigurantaItems[3]?.sub ?? '' },
   ]
 
   const titleRow = (
@@ -324,9 +264,7 @@ export function SigurantaClientuluiBox({
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-slate-700 font-['Inter']">
-        Siguranța Clientului Tău
-      </h2>
+      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-slate-700 font-['Inter']">{sidebarTr.sigurantaTitle}</h2>
     </div>
   )
 
@@ -392,65 +330,13 @@ export function SuportTehnicBox({
   stackPosition?: 'upper' | 'lower'
 }) {
   const { language } = useLanguage()
-  const lang = language.code === 'zh' ? 'zh' : language.code === 'en' ? 'en' : 'ro'
+  const tr = getPartnerSidebarTranslations(language.code as LangCode)
   const [expanded, setExpanded] = useCollapsibleExpandedForCart(collapsible, cartHasItems, stackPosition)
 
-  type TL = Record<'ro' | 'en' | 'zh', string>
-  const items: { id: string; icon: string; label: TL; sub: TL }[] = [
-    {
-      id: 'service',
-      icon: '/images/shared/maintance-icon.svg',
-      label: {
-        ro: 'Suport & Service',
-        en: 'Support & service',
-        zh: '支持与服务',
-      },
-      sub: {
-        ro: 'Echipă dedicată pentru întrebări tehnice și service în România.',
-        en: 'Dedicated team for technical questions and servicing in Romania.',
-        zh: '专属团队为您解答技术问题并提供罗马尼亚本地的售后支持。',
-      },
-    },
-    {
-      id: 'install',
-      icon: '/images/shared/instalare-icon.svg',
-      label: {
-        ro: 'Asistență instalare',
-        en: 'Installation assistance',
-        zh: '安装协助',
-      },
-      sub: {
-        ro: 'Sprijin la montaj, verificarea conexiunilor și punerea în funcțiune pentru fiecare proiect.',
-        en: 'Help with mounting, connection checks and commissioning on every installation.',
-        zh: '提供安装布线检查与上电调试等现场级协助，适配每个项目。',
-      },
-    },
-    {
-      id: 'docs',
-      icon: '/images/shared/download-icon.svg',
-      label: {
-        ro: 'Documentație tehnică',
-        en: 'Technical documentation',
-        zh: '技术资料',
-      },
-      sub: {
-        ro: 'Fișe de montaj, datasheet-uri și proceduri actualizate, disponibile la cerere.',
-        en: 'Mounting guides, datasheets and up-to-date procedures available on request.',
-        zh: '可按需提供安装手册、规格书及最新操作规程。',
-      },
-    },
-  ]
-
-  const sectionTitle: TL = {
-    ro: 'Suport Tehnic',
-    en: 'Technical support',
-    zh: '技术支持',
-  }
-
-  const ctaLabel: TL = {
-    ro: 'Contactează suportul →',
-    en: 'Contact support →',
-    zh: '联系技术支持 →',
+  const itemIcons: Record<string, string> = {
+    service: '/images/shared/maintance-icon.svg',
+    install: '/images/shared/instalare-icon.svg',
+    docs: '/images/shared/download-icon.svg',
   }
 
   const titleRow = (
@@ -460,21 +346,21 @@ export function SuportTehnicBox({
           <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-sky-800 font-['Inter']">{sectionTitle[lang]}</h2>
+      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-sky-800 font-['Inter']">{tr.suportTitle}</h2>
     </div>
   )
 
   const body = (
     <>
       <div className="flex flex-col divide-y divide-sky-50">
-        {items.map(({ id, icon, label, sub }) => (
+        {tr.suportItems.map(({ id, label, sub }) => (
           <div key={id} className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 shadow-[0_4px_14px_-8px_rgba(14,165,233,0.18)]">
-              <img src={icon} alt="" aria-hidden className="h-6 w-6 object-contain" />
+              <img src={itemIcons[id] ?? '/images/shared/maintance-icon.svg'} alt="" aria-hidden className="h-6 w-6 object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter'] sm:text-[15px]">{label[lang]}</p>
-              <p className="mt-1 m-0 text-sm leading-snug text-slate-500 font-['Inter'] sm:text-[15px] sm:leading-relaxed">{sub[lang]}</p>
+              <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter'] sm:text-[15px]">{label}</p>
+              <p className="mt-1 m-0 text-sm leading-snug text-slate-500 font-['Inter'] sm:text-[15px] sm:leading-relaxed">{sub}</p>
             </div>
           </div>
         ))}
@@ -483,7 +369,7 @@ export function SuportTehnicBox({
         href="/partner/suport"
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-50 px-3 py-2.5 text-sm font-semibold text-sky-800 shadow-[0_4px_14px_-8px_rgba(14,165,233,0.18)] transition hover:bg-sky-100 hover:shadow-[0_8px_22px_-10px_rgba(14,165,233,0.22)] font-['Inter']"
       >
-        {ctaLabel[lang]}
+        {tr.suportCta}
       </a>
     </>
   )

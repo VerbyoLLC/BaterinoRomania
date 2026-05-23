@@ -21,6 +21,7 @@ const {
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,
+  sendSalesLeadCreatedNotification,
   isMailConfigured,
   getMailProvider,
   getMailFrom,
@@ -43,6 +44,7 @@ const {
   warrantyCertificateKey,
   buildReturConditionPhotoKey,
   productTechnicalBrochurePdfKey,
+  commercialOfferPdfKey,
 } = require('./lib/r2.js')
 const {
   slugifyCompanyHandle,
@@ -54,6 +56,7 @@ const {
 } = require('./lib/partner-public-slug.js')
 const { isPartnerPublicProfileFullyComplete } = require('./lib/partner-public-profile-complete.js')
 const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
+const { renderCommercialOfferPdfFromHtml } = require('./lib/commercial-offer-pdf.js')
 const {
   parseSerialFromQrPayload,
   normalizeWarehouseSerialNumber,
@@ -512,7 +515,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }))
-app.use(express.json())
+/** Limită mărită pentru export PDF ofertă (HTML self-contained în body JSON). */
+app.use(express.json({ limit: '8mb' }))
 
 // Explicit OPTIONS for admin products (CORS preflight)
 app.options('/api/admin/products', (_, res) => res.status(204).end())
@@ -4493,7 +4497,571 @@ const salesAgentMeHandler = async (req, res) => {
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
   }
 }
+
+const updateSalesAgentMeHandler = async (req, res) => {
+  try {
+    const agent = await prisma.salesAgent.findFirst({
+      where: { userId: req.userId, deletedAt: null },
+    })
+    if (!agent) {
+      return res.status(400).json({
+        error: 'Contul nu este legat unei fișe de agent. Contactează administratorul.',
+      })
+    }
+    if (agent.isSuspended) {
+      return res.status(403).json({ error: 'Contul de agent este suspendat.' })
+    }
+
+    const parsed = parseSalesAgentBody({ ...(req.body || {}), agentKind: agent.agentKind })
+    if (parsed.error) return res.status(400).json({ error: parsed.error })
+
+    const { agentKind: _kind, ...profileData } = parsed.data
+
+    const [updatedAgent] = await prisma.$transaction([
+      prisma.salesAgent.update({
+        where: { id: agent.id },
+        data: profileData,
+      }),
+      prisma.user.update({
+        where: { id: req.userId },
+        data: {
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          phone: profileData.phone,
+        },
+      }),
+    ])
+
+    res.json({
+      user: await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { id: true, email: true, role: true, firstName: true, lastName: true, phone: true },
+      }),
+      agent: updatedAgent,
+    })
+  } catch (err) {
+    console.error('Sales agent update me:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
 app.get('/api/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, salesAgentMeHandler)
+app.patch('/api/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, updateSalesAgentMeHandler)
+app.put('/api/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, updateSalesAgentMeHandler)
+app.get('/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, salesAgentMeHandler)
+app.patch('/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, updateSalesAgentMeHandler)
+app.put('/sales-agent/me', authMiddleware, salesAgentAuthMiddleware, updateSalesAgentMeHandler)
+
+const SALES_LEAD_STATUSES = new Set(['nou', 'contactat', 'oferta', 'inchis', 'dead'])
+const SALES_LEAD_STATUS_SELECT = ['nou', 'contactat', 'dead']
+
+function formatUserDisplayName(user) {
+  if (!user) return ''
+  const full = [user.firstName, user.lastName]
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .join(' ')
+  return full || String(user.email || '').trim()
+}
+
+const SALES_LEAD_LIST_INCLUDE = {
+  createdBy: { select: { id: true, email: true, firstName: true, lastName: true } },
+  _count: { select: { activities: true } },
+}
+
+function serializeSalesLeadRow(row, flags = {}) {
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    source: row.source,
+    status: row.status,
+    customerType: row.customerType,
+    productLine: row.productLine,
+    monthlyVolume: row.monthlyVolume,
+    whatsapp: row.whatsapp,
+    message: row.message,
+    companyName: row.companyName,
+    workEmail: row.workEmail,
+    jobTitle: row.jobTitle,
+    country: row.country,
+    website: row.website,
+    createdByUserId: row.createdByUserId ?? null,
+    createdByName: formatUserDisplayName(row.createdBy),
+    createdByEmail: row.createdBy?.email?.trim() ?? '',
+    activityCount: row._count?.activities ?? 0,
+    isNew: flags.isNew ?? false,
+    hasUnreadComments: flags.hasUnreadComments ?? false,
+  }
+}
+
+function serializeSalesLeadActivity(row) {
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    type: row.type,
+    comment: row.comment,
+    fromStatus: row.fromStatus,
+    toStatus: row.toStatus,
+    userId: row.userId,
+    userName: formatUserDisplayName(row.user),
+    userEmail: row.user?.email?.trim() ?? '',
+  }
+}
+
+async function fetchAllSalesLeads() {
+  return prisma.salesLead.findMany({
+    include: SALES_LEAD_LIST_INCLUDE,
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+  })
+}
+
+async function markSalesLeadCreatorSeen(userId, leadId) {
+  if (!userId || !leadId) return
+  const now = new Date()
+  await prisma.salesLeadUserState.upsert({
+    where: { userId_leadId: { userId, leadId } },
+    create: { userId, leadId, viewedAt: now, commentsSeenAt: now },
+    update: { viewedAt: now, commentsSeenAt: now },
+  })
+}
+
+function leadHasUnreadComments(leadId, userId, commentsSeenAt, commentRows) {
+  return commentRows.some(
+    (c) =>
+      c.leadId === leadId &&
+      c.userId !== userId &&
+      (!commentsSeenAt || c.createdAt > commentsSeenAt),
+  )
+}
+
+async function enrichLeadsForUser(rows, userId) {
+  if (!userId || rows.length === 0) {
+    return rows.map((row) => serializeSalesLeadRow(row, { isNew: true, hasUnreadComments: false }))
+  }
+
+  const leadIds = rows.map((r) => r.id)
+  const [states, commentRows] = await Promise.all([
+    prisma.salesLeadUserState.findMany({
+      where: { userId, leadId: { in: leadIds } },
+    }),
+    prisma.salesLeadActivity.findMany({
+      where: { leadId: { in: leadIds }, type: 'comment' },
+      select: { leadId: true, userId: true, createdAt: true },
+    }),
+  ])
+  const stateByLead = new Map(states.map((s) => [s.leadId, s]))
+
+  return rows.map((row) => {
+    const state = stateByLead.get(row.id)
+    const isNew = !state?.viewedAt
+    const hasUnreadComments = leadHasUnreadComments(row.id, userId, state?.commentsSeenAt ?? null, commentRows)
+    return serializeSalesLeadRow(row, { isNew, hasUnreadComments })
+  })
+}
+
+async function loadSalesLeadRow(leadId) {
+  return prisma.salesLead.findUnique({
+    where: { id: leadId },
+    include: SALES_LEAD_LIST_INCLUDE,
+  })
+}
+
+async function serializeLeadForUser(row, userId) {
+  if (!row) return null
+  const [enriched] = await enrichLeadsForUser([row], userId)
+  return enriched
+}
+
+function parseSalesLeadCreatePayload(body) {
+  const name = String(body?.name ?? '').trim().slice(0, 200)
+  if (!name) return { error: 'Numele este obligatoriu.' }
+  const rawStatus = String(body?.status ?? 'nou').trim().toLowerCase()
+  const status = SALES_LEAD_STATUSES.has(rawStatus) ? rawStatus : 'nou'
+  return {
+    data: {
+      name,
+      email: String(body?.email ?? '').trim().slice(0, 254),
+      phone: String(body?.phone ?? '').trim().slice(0, 32),
+      source: String(body?.source ?? 'Manual').trim().slice(0, 120) || 'Manual',
+      status,
+      customerType: String(body?.customerType ?? '').trim().slice(0, 120),
+      productLine: String(body?.productLine ?? '').trim().slice(0, 120),
+      monthlyVolume: String(body?.monthlyVolume ?? '').trim().slice(0, 120),
+      whatsapp: String(body?.whatsapp ?? '').trim().slice(0, 32),
+      message: String(body?.message ?? '').trim().slice(0, 4000),
+      companyName: String(body?.companyName ?? '').trim().slice(0, 200),
+      workEmail: String(body?.workEmail ?? '').trim().slice(0, 254),
+      jobTitle: String(body?.jobTitle ?? '').trim().slice(0, 120),
+      country: String(body?.country ?? '').trim().slice(0, 80),
+      website: String(body?.website ?? '').trim().slice(0, 500),
+    },
+  }
+}
+
+async function resolveSalesAgentIdForUser(userId) {
+  const agent = await prisma.salesAgent.findFirst({
+    where: { userId, deletedAt: null, isSuspended: false },
+    select: { id: true },
+  })
+  return agent?.id ?? null
+}
+
+async function fetchSalesLeadNotificationRecipientEmails(excludeUserId) {
+  const users = await prisma.user.findMany({
+    where: {
+      role: { in: ['admin', 'sales_agent'] },
+      ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+    },
+    select: {
+      email: true,
+      role: true,
+      salesAgentProfile: { select: { isSuspended: true, deletedAt: true } },
+    },
+  })
+
+  const emails = []
+  const seen = new Set()
+  for (const user of users) {
+    const email = String(user.email || '').trim().toLowerCase()
+    if (!email || seen.has(email)) continue
+    if (user.role === 'sales_agent') {
+      const agent = user.salesAgentProfile
+      if (agent && (agent.isSuspended || agent.deletedAt)) continue
+    }
+    seen.add(email)
+    emails.push(email)
+  }
+  return emails
+}
+
+function salesLeadRowForEmail(row) {
+  return {
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    whatsapp: row.whatsapp,
+    source: row.source,
+    status: row.status,
+    customerType: row.customerType,
+    productLine: row.productLine,
+    monthlyVolume: row.monthlyVolume,
+    companyName: row.companyName,
+    workEmail: row.workEmail,
+    jobTitle: row.jobTitle,
+    country: row.country,
+    website: row.website,
+    message: row.message,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+  }
+}
+
+async function notifyOthersOfNewSalesLead(created, excludeUserId) {
+  try {
+    const recipients = await fetchSalesLeadNotificationRecipientEmails(excludeUserId)
+    if (recipients.length === 0) return
+    await sendSalesLeadCreatedNotification({
+      createdByName: formatUserDisplayName(created.createdBy),
+      lead: salesLeadRowForEmail(created),
+      recipients,
+    })
+  } catch (err) {
+    console.error('[SalesLead] Notification error:', err?.message || err)
+  }
+}
+
+async function listSalesAgentLeadsHandler(req, res) {
+  try {
+    const rows = await fetchAllSalesLeads()
+    const leads = await enrichLeadsForUser(rows, req.userId)
+    return res.json({ leads })
+  } catch (err) {
+    console.error('List sales agent leads error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la listarea leads.' })
+  }
+}
+
+async function listAdminSalesLeadsHandler(req, res) {
+  try {
+    const rows = await fetchAllSalesLeads()
+    const leads = await enrichLeadsForUser(rows, req.userId)
+    return res.json({ leads })
+  } catch (err) {
+    console.error('List admin sales leads error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la listarea leads.' })
+  }
+}
+
+async function salesAgentLeadStatsHandler(req, res) {
+  try {
+    const userId = req.userId
+
+    const [totalLeads, yourLeads, contributionGroups] = await Promise.all([
+      prisma.salesLead.count(),
+      userId
+        ? prisma.salesLead.count({ where: { createdByUserId: userId } })
+        : Promise.resolve(0),
+      userId
+        ? prisma.salesLeadActivity.groupBy({
+            by: ['leadId'],
+            where: {
+              userId,
+              type: { in: ['comment', 'status_change'] },
+            },
+          })
+        : Promise.resolve([]),
+    ])
+
+    return res.json({
+      stats: {
+        totalLeads,
+        yourLeads,
+        contributions: contributionGroups.length,
+      },
+    })
+  } catch (err) {
+    console.error('Sales agent lead stats error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la statisticile leads.' })
+  }
+}
+
+async function createSalesAgentLeadHandler(req, res) {
+  try {
+    const agentId = await resolveSalesAgentIdForUser(req.userId)
+    if (!agentId) {
+      return res.status(400).json({
+        error: 'Contul nu este legat unei fișe de agent. Contactează administratorul.',
+      })
+    }
+    const parsed = parseSalesLeadCreatePayload(req.body)
+    if (parsed.error) return res.status(400).json({ error: parsed.error })
+
+    const created = await prisma.salesLead.create({
+      data: {
+        ...parsed.data,
+        salesAgentId: agentId,
+        createdByUserId: req.userId || null,
+      },
+      include: SALES_LEAD_LIST_INCLUDE,
+    })
+    await markSalesLeadCreatorSeen(req.userId, created.id)
+    notifyOthersOfNewSalesLead(created, req.userId).catch((e) =>
+      console.error('[SalesLead] Notification error:', e?.message),
+    )
+    const lead = await serializeLeadForUser(created, req.userId)
+    return res.status(201).json({ lead })
+  } catch (err) {
+    console.error('Create sales agent lead error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la crearea lead-ului.' })
+  }
+}
+
+async function createAdminSalesLeadHandler(req, res) {
+  try {
+    const parsed = parseSalesLeadCreatePayload(req.body)
+    if (parsed.error) return res.status(400).json({ error: parsed.error })
+
+    const created = await prisma.salesLead.create({
+      data: {
+        ...parsed.data,
+        salesAgentId: null,
+        createdByUserId: req.userId || null,
+      },
+      include: SALES_LEAD_LIST_INCLUDE,
+    })
+    await markSalesLeadCreatorSeen(req.userId, created.id)
+    notifyOthersOfNewSalesLead(created, req.userId).catch((e) =>
+      console.error('[SalesLead] Notification error:', e?.message),
+    )
+    const lead = await serializeLeadForUser(created, req.userId)
+    return res.status(201).json({ lead })
+  } catch (err) {
+    console.error('Create admin sales lead error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la crearea lead-ului.' })
+  }
+}
+
+async function markSalesLeadViewedHandler(req, res) {
+  try {
+    const leadId = String(req.params.id || '').trim()
+    const userId = req.userId
+    if (!leadId) return res.status(400).json({ error: 'ID lipsă.' })
+
+    const lead = await prisma.salesLead.findUnique({ where: { id: leadId } })
+    if (!lead) return res.status(404).json({ error: 'Lead negăsit.' })
+
+    const existingState = await prisma.salesLeadUserState.findUnique({
+      where: { userId_leadId: { userId, leadId } },
+    })
+    const now = new Date()
+
+    await prisma.salesLeadUserState.upsert({
+      where: { userId_leadId: { userId, leadId } },
+      create: { userId, leadId, viewedAt: now },
+      update: { viewedAt: existingState?.viewedAt ?? now },
+    })
+
+    const row = await loadSalesLeadRow(leadId)
+    const leadJson = await serializeLeadForUser(row, userId)
+    return res.json({ lead: leadJson })
+  } catch (err) {
+    console.error('Mark sales lead viewed error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la marcarea lead-ului.' })
+  }
+}
+
+async function markSalesLeadCommentsSeenHandler(req, res) {
+  try {
+    const leadId = String(req.params.id || '').trim()
+    const userId = req.userId
+    if (!leadId) return res.status(400).json({ error: 'ID lipsă.' })
+
+    const lead = await prisma.salesLead.findUnique({ where: { id: leadId }, select: { id: true } })
+    if (!lead) return res.status(404).json({ error: 'Lead negăsit.' })
+
+    const now = new Date()
+    const existingState = await prisma.salesLeadUserState.findUnique({
+      where: { userId_leadId: { userId, leadId } },
+    })
+
+    await prisma.salesLeadUserState.upsert({
+      where: { userId_leadId: { userId, leadId } },
+      create: { userId, leadId, commentsSeenAt: now, viewedAt: now },
+      update: {
+        commentsSeenAt: now,
+        viewedAt: existingState?.viewedAt ?? now,
+      },
+    })
+
+    const row = await loadSalesLeadRow(leadId)
+    const leadJson = await serializeLeadForUser(row, userId)
+    return res.json({ lead: leadJson })
+  } catch (err) {
+    console.error('Mark sales lead comments seen error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la marcarea comentariilor.' })
+  }
+}
+
+async function patchSalesLeadStatusHandler(req, res) {
+  try {
+    const leadId = String(req.params.id || '').trim()
+    const userId = req.userId
+    const rawStatus = String(req.body?.status ?? '').trim().toLowerCase()
+    if (!leadId) return res.status(400).json({ error: 'ID lipsă.' })
+    if (!SALES_LEAD_STATUSES.has(rawStatus)) {
+      return res.status(400).json({ error: 'Status invalid.' })
+    }
+
+    const lead = await prisma.salesLead.findUnique({ where: { id: leadId } })
+    if (!lead) return res.status(404).json({ error: 'Lead negăsit.' })
+
+    if (lead.status !== rawStatus) {
+      await prisma.salesLead.update({
+        where: { id: leadId },
+        data: { status: rawStatus },
+      })
+      await prisma.salesLeadActivity.create({
+        data: {
+          leadId,
+          userId,
+          type: 'status_change',
+          fromStatus: lead.status,
+          toStatus: rawStatus,
+        },
+      })
+    }
+
+    const row = await loadSalesLeadRow(leadId)
+    const leadJson = await serializeLeadForUser(row, userId)
+    return res.json({ lead: leadJson })
+  } catch (err) {
+    console.error('Patch sales lead status error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la actualizarea statusului.' })
+  }
+}
+
+async function getSalesLeadActivitiesHandler(req, res) {
+  try {
+    const leadId = String(req.params.id || '').trim()
+    if (!leadId) return res.status(400).json({ error: 'ID lipsă.' })
+    const lead = await prisma.salesLead.findUnique({ where: { id: leadId }, select: { id: true } })
+    if (!lead) return res.status(404).json({ error: 'Lead negăsit.' })
+    const rows = await prisma.salesLeadActivity.findMany({
+      where: { leadId },
+      include: {
+        user: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+    })
+    return res.json({ activities: rows.map(serializeSalesLeadActivity) })
+  } catch (err) {
+    console.error('Get sales lead activities error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comentariilor.' })
+  }
+}
+
+async function postSalesLeadCommentHandler(req, res) {
+  try {
+    const leadId = String(req.params.id || '').trim()
+    const comment = String(req.body?.comment ?? '').trim().slice(0, 4000)
+    if (!leadId) return res.status(400).json({ error: 'ID lipsă.' })
+    if (!comment) return res.status(400).json({ error: 'Comentariul este obligatoriu.' })
+    const lead = await prisma.salesLead.findUnique({ where: { id: leadId }, select: { id: true } })
+    if (!lead) return res.status(404).json({ error: 'Lead negăsit.' })
+    const created = await prisma.salesLeadActivity.create({
+      data: {
+        leadId,
+        userId: req.userId,
+        type: 'comment',
+        comment,
+      },
+      include: {
+        user: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
+      },
+    })
+    return res.status(201).json({ activity: serializeSalesLeadActivity(created) })
+  } catch (err) {
+    console.error('Post sales lead comment error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea comentariului.' })
+  }
+}
+
+app.get('/api/sales-agent/leads/stats', authMiddleware, salesAgentAuthMiddleware, salesAgentLeadStatsHandler)
+app.get('/sales-agent/leads/stats', authMiddleware, salesAgentAuthMiddleware, salesAgentLeadStatsHandler)
+app.get('/api/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, listSalesAgentLeadsHandler)
+app.get('/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, listSalesAgentLeadsHandler)
+app.get('/api/sales-agent/leads/:id/activities', authMiddleware, salesAgentAuthMiddleware, getSalesLeadActivitiesHandler)
+app.get('/sales-agent/leads/:id/activities', authMiddleware, salesAgentAuthMiddleware, getSalesLeadActivitiesHandler)
+app.post('/api/sales-agent/leads/:id/viewed', authMiddleware, salesAgentAuthMiddleware, markSalesLeadViewedHandler)
+app.post('/sales-agent/leads/:id/viewed', authMiddleware, salesAgentAuthMiddleware, markSalesLeadViewedHandler)
+app.post('/api/sales-agent/leads/:id/comments-seen', authMiddleware, salesAgentAuthMiddleware, markSalesLeadCommentsSeenHandler)
+app.post('/sales-agent/leads/:id/comments-seen', authMiddleware, salesAgentAuthMiddleware, markSalesLeadCommentsSeenHandler)
+app.patch('/api/sales-agent/leads/:id/status', authMiddleware, salesAgentAuthMiddleware, patchSalesLeadStatusHandler)
+app.patch('/sales-agent/leads/:id/status', authMiddleware, salesAgentAuthMiddleware, patchSalesLeadStatusHandler)
+app.post('/api/sales-agent/leads/:id/comments', authMiddleware, salesAgentAuthMiddleware, postSalesLeadCommentHandler)
+app.post('/sales-agent/leads/:id/comments', authMiddleware, salesAgentAuthMiddleware, postSalesLeadCommentHandler)
+app.post('/api/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, createSalesAgentLeadHandler)
+app.post('/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, createSalesAgentLeadHandler)
+
+app.get('/api/admin/leads', authMiddleware, adminAuthMiddleware, listAdminSalesLeadsHandler)
+app.get('/admin/leads', authMiddleware, adminAuthMiddleware, listAdminSalesLeadsHandler)
+app.post('/api/admin/leads', authMiddleware, adminAuthMiddleware, createAdminSalesLeadHandler)
+app.post('/admin/leads', authMiddleware, adminAuthMiddleware, createAdminSalesLeadHandler)
+app.get('/api/admin/leads/:id/activities', authMiddleware, adminAuthMiddleware, getSalesLeadActivitiesHandler)
+app.get('/admin/leads/:id/activities', authMiddleware, adminAuthMiddleware, getSalesLeadActivitiesHandler)
+app.post('/api/admin/leads/:id/viewed', authMiddleware, adminAuthMiddleware, markSalesLeadViewedHandler)
+app.post('/admin/leads/:id/viewed', authMiddleware, adminAuthMiddleware, markSalesLeadViewedHandler)
+app.post('/api/admin/leads/:id/comments-seen', authMiddleware, adminAuthMiddleware, markSalesLeadCommentsSeenHandler)
+app.post('/admin/leads/:id/comments-seen', authMiddleware, adminAuthMiddleware, markSalesLeadCommentsSeenHandler)
+app.patch('/api/admin/leads/:id/status', authMiddleware, adminAuthMiddleware, patchSalesLeadStatusHandler)
+app.patch('/admin/leads/:id/status', authMiddleware, adminAuthMiddleware, patchSalesLeadStatusHandler)
+app.post('/api/admin/leads/:id/comments', authMiddleware, adminAuthMiddleware, postSalesLeadCommentHandler)
+app.post('/admin/leads/:id/comments', authMiddleware, adminAuthMiddleware, postSalesLeadCommentHandler)
 
 // ── Public: telefoane pe departament (fără auth — pentru site) ─────────
 const publicDepartmentPhonesHandler = async (req, res) => {
@@ -6289,6 +6857,139 @@ app.get(
   adminServiceDashboardSummaryHandler,
 )
 
+/** Panou admin: notificări + statistici agregate (un singur request). */
+const adminDashboardSummaryHandler = async (req, res) => {
+  try {
+    const userId = req.userId
+    const NEW_ORDER_STATUS = 'de_platit'
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+    const [
+      resNewBySource,
+      legNewBySource,
+      serviceOpen,
+      returPending,
+      unreadMessages,
+      partnersPending,
+      partnersApproved,
+      totalClients,
+      newClients30d,
+      totalLeads,
+      offerDrafts,
+      offersGenerated7d,
+      totalOffersGenerated,
+      totalAgents,
+      allLeadIds,
+      viewedLeadStates,
+    ] = await Promise.all([
+      prisma.residentialOrder.groupBy({
+        by: ['orderSource'],
+        where: { fulfillmentStatus: NEW_ORDER_STATUS },
+        _count: { _all: true },
+      }),
+      prisma.guestResidentialOrder.groupBy({
+        by: ['orderSource'],
+        where: { fulfillmentStatus: NEW_ORDER_STATUS },
+        _count: { _all: true },
+      }),
+      prisma.serviceRequest.count({ where: { status: 'open' } }),
+      prisma.retur.count({ where: { status: 'pending' } }),
+      prisma.inquiry.count({ where: { isRead: false } }),
+      prisma.partner.count({ where: { isApproved: false } }),
+      prisma.partner.count({ where: { isApproved: true } }),
+      prisma.user.count({ where: { role: 'client' } }),
+      prisma.user.count({ where: { role: 'client', createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.salesLead.count(),
+      prisma.adminCommercialOffer.count({ where: { status: 'draft' } }),
+      prisma.adminCommercialOffer.count({
+        where: { status: 'generated', createdAt: { gte: sevenDaysAgo } },
+      }),
+      prisma.adminCommercialOffer.count({ where: { status: 'generated' } }),
+      prisma.salesAgent.count(),
+      prisma.salesLead.findMany({ select: { id: true }, take: 500 }),
+      userId
+        ? prisma.salesLeadUserState.findMany({
+            where: { userId, viewedAt: { not: null } },
+            select: { leadId: true, commentsSeenAt: true },
+          })
+        : Promise.resolve([]),
+    ])
+
+    const bucketSource = (src) => {
+      const s = String(src || 'guest').toLowerCase()
+      if (s === 'client') return 'client'
+      if (s === 'partner' || s === 'partener') return 'partner'
+      return 'guest'
+    }
+    const newBySource = { client: 0, partner: 0, guest: 0 }
+    for (const row of resNewBySource) {
+      newBySource[bucketSource(row.orderSource)] += row._count._all
+    }
+    for (const row of legNewBySource) {
+      newBySource[bucketSource(row.orderSource)] += row._count._all
+    }
+    const newOrdersTotal = newBySource.client + newBySource.partner + newBySource.guest
+
+    const viewedLeadIds = new Set(viewedLeadStates.map((s) => s.leadId))
+    const newLeads = allLeadIds.filter((l) => !viewedLeadIds.has(l.id)).length
+
+    let leadsWithUnreadComments = 0
+    if (userId && allLeadIds.length > 0) {
+      const leadIds = allLeadIds.map((l) => l.id)
+      const commentsSeenByLead = new Map(viewedLeadStates.map((s) => [s.leadId, s.commentsSeenAt]))
+      const commentRows = await prisma.salesLeadActivity.findMany({
+        where: { leadId: { in: leadIds }, type: 'comment' },
+        select: { leadId: true, userId: true, createdAt: true },
+      })
+      for (const leadId of leadIds) {
+        const commentsSeenAt = commentsSeenByLead.get(leadId) ?? null
+        if (leadHasUnreadComments(leadId, userId, commentsSeenAt, commentRows)) {
+          leadsWithUnreadComments += 1
+        }
+      }
+    }
+
+    res.set('Cache-Control', 'no-store')
+    return res.json({
+      notifications: {
+        newOrders: newOrdersTotal,
+        offerDrafts,
+        offersRecent: offersGenerated7d,
+        newLeads,
+        leadsUnreadComments: leadsWithUnreadComments,
+        serviceRequests: serviceOpen,
+        returRequests: returPending,
+        unreadMessages,
+        partnersPending,
+        newClients: newClients30d,
+      },
+      statistics: {
+        clients: totalClients,
+        partners: partnersApproved,
+        partnersPending,
+        leads: totalLeads,
+        offersGenerated: totalOffersGenerated,
+        agents: totalAgents,
+        newOrders: newOrdersTotal,
+      },
+      orders: {
+        newOrders: {
+          total: newOrdersTotal,
+          client: newBySource.client,
+          partner: newBySource.partner,
+          guest: newBySource.guest,
+        },
+      },
+    })
+  } catch (err) {
+    console.error('Admin dashboard summary error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la agregate dashboard.' })
+  }
+}
+app.get('/api/admin/dashboard-summary', authMiddleware, adminAuthMiddleware, adminDashboardSummaryHandler)
+app.get('/admin/dashboard-summary', authMiddleware, adminAuthMiddleware, adminDashboardSummaryHandler)
+
 const patchAdminOrderFulfillmentStatusHandler = async (req, res) => {
   try {
     const orderId = String(req.params.orderId || '').trim()
@@ -7355,6 +8056,386 @@ const uploadProductTechnicalBrochureHandler = async (req, res) => {
     return res.status(500).json({ error: err?.message || 'Eroare la salvarea broșurii PDF.' })
   }
 }
+
+function normalizeCommercialOfferSaveRecord(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const buyerType =
+    raw.buyerType === 'company' ? 'company' : raw.buyerType === 'person' ? 'person' : null
+  if (!buyerType) return null
+  const clientLabel = String(raw.clientLabel ?? '').trim().slice(0, 300)
+  if (!clientLabel) return null
+  const currency = raw.currency === 'EUR' ? 'EUR' : raw.currency === 'RON' ? 'RON' : null
+  if (!currency) return null
+  const amountGross = Number(raw.amountGross)
+  if (!Number.isFinite(amountGross) || amountGross < 0) return null
+  const productCount = Math.floor(Number(raw.productCount))
+  if (!Number.isFinite(productCount) || productCount < 0) return null
+  const clientEmail = String(raw.clientEmail ?? '').trim().slice(0, 254)
+  const clientPhone = String(raw.clientPhone ?? '').trim().slice(0, 32)
+  return {
+    buyerType,
+    clientLabel,
+    clientEmail,
+    clientPhone,
+    currency,
+    amountGross: Math.round(amountGross * 100) / 100,
+    productCount,
+  }
+}
+
+function sanitizeOfferDraftSnapshot(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const buyerType =
+    raw.buyerType === 'company' ? 'company' : raw.buyerType === 'person' ? 'person' : null
+  if (!buyerType) return null
+  if (buyerType === 'person') {
+    const p = raw.clientPerson
+    if (!p || typeof p !== 'object') return null
+    return {
+      buyerType,
+      clientPerson: {
+        email: String(p.email ?? '').trim().slice(0, 254),
+        telefon: String(p.telefon ?? '').trim().slice(0, 32),
+      },
+    }
+  }
+  const c = raw.clientCompany
+  if (!c || typeof c !== 'object') return null
+  return {
+    buyerType,
+    clientCompany: {
+      contactEmail: String(c.contactEmail ?? '').trim().slice(0, 254),
+      contactTelefon: String(c.contactTelefon ?? '').trim().slice(0, 32),
+    },
+  }
+}
+
+function resolveOfferRowClientContact(row) {
+  let email = String(row.clientEmail ?? '').trim()
+  let phone = String(row.clientPhone ?? '').trim()
+  const snap = row.draftSnapshot
+  if (snap && typeof snap === 'object') {
+    const formSnap = snap.kind === 'adminOfferForm' ? snap.form : null
+    if (formSnap && typeof formSnap === 'object') {
+      if (formSnap.buyerType === 'company' && formSnap.clientCompany) {
+        if (!email) email = String(formSnap.clientCompany.contactEmail ?? '').trim()
+        if (!phone) phone = String(formSnap.clientCompany.contactTelefon ?? '').trim()
+      } else if (formSnap.buyerType === 'person' && formSnap.clientPerson) {
+        if (!email) email = String(formSnap.clientPerson.email ?? '').trim()
+        if (!phone) phone = String(formSnap.clientPerson.telefon ?? '').trim()
+      }
+    } else if (snap.buyerType === 'company' && snap.clientCompany) {
+      if (!email) email = String(snap.clientCompany.contactEmail ?? '').trim()
+      if (!phone) phone = String(snap.clientCompany.contactTelefon ?? '').trim()
+    } else if (snap.buyerType === 'person' && snap.clientPerson) {
+      if (!email) email = String(snap.clientPerson.email ?? '').trim()
+      if (!phone) phone = String(snap.clientPerson.telefon ?? '').trim()
+    }
+  }
+  return { clientEmail: email, clientPhone: phone }
+}
+
+function sanitizeAdminOfferFormPersistedSnapshot(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const form = raw.form
+  if (!form || typeof form !== 'object') return null
+  const buyerType =
+    form.buyerType === 'company' ? 'company' : form.buyerType === 'person' ? 'person' : null
+  if (!buyerType) return null
+  const language =
+    form.language === 'en' || form.language === 'de' || form.language === 'ro' ? form.language : 'ro'
+  const currency = form.offerCurrency === 'EUR' ? 'EUR' : 'RON'
+  const lines = Array.isArray(form.offerProductLines)
+    ? form.offerProductLines
+        .filter((row) => row && typeof row === 'object' && typeof row.id === 'string')
+        .slice(0, 50)
+        .map((row) => ({
+          id: String(row.id).slice(0, 80),
+          productModelId: String(row.productModelId ?? '').slice(0, 80),
+          priceWithoutVat: String(row.priceWithoutVat ?? '').slice(0, 32),
+          qty: String(row.qty ?? '1').slice(0, 8),
+          vatPercent: String(row.vatPercent ?? '21').slice(0, 4),
+          discountPercent: String(row.discountPercent ?? '0').slice(0, 4),
+        }))
+    : []
+  const trimStr = (v, max) => String(v ?? '').trim().slice(0, max)
+  const person = form.clientPerson && typeof form.clientPerson === 'object' ? form.clientPerson : {}
+  const company = form.clientCompany && typeof form.clientCompany === 'object' ? form.clientCompany : {}
+  return {
+    version: 1,
+    kind: 'adminOfferForm',
+    form: {
+      version: 1,
+      buyerType,
+      language,
+      clientPerson: {
+        nume: trimStr(person.nume, 120),
+        prenume: trimStr(person.prenume, 120),
+        adresa: trimStr(person.adresa, 300),
+        judet: trimStr(person.judet, 80),
+        oras: trimStr(person.oras, 120),
+        tara: trimStr(person.tara, 80) || 'România',
+        codPostal: trimStr(person.codPostal, 16),
+        email: trimStr(person.email, 254),
+        telefon: trimStr(person.telefon, 32),
+      },
+      clientCompany: {
+        companyName: trimStr(company.companyName, 200),
+        cui: trimStr(company.cui, 32),
+        strada: trimStr(company.strada, 300),
+        judet: trimStr(company.judet, 80),
+        oras: trimStr(company.oras, 120),
+        codPostal: trimStr(company.codPostal, 16),
+        tara: trimStr(company.tara, 80) || 'România',
+        contactNume: trimStr(company.contactNume, 120),
+        contactPrenume: trimStr(company.contactPrenume, 120),
+        contactEmail: trimStr(company.contactEmail, 254),
+        contactTelefon: trimStr(company.contactTelefon, 32),
+      },
+      offerProductLines: lines,
+      offerValidityDays: trimStr(form.offerValidityDays, 3) || '30',
+      offerCurrency: currency,
+      offerPreparedByAgentId: trimStr(form.offerPreparedByAgentId, 80),
+      offerDeliveryNotes: trimStr(form.offerDeliveryNotes, 500),
+      offerPaymentConditions: trimStr(form.offerPaymentConditions, 500),
+      offerIncludeProductTechnicalDetails: Boolean(form.offerIncludeProductTechnicalDetails),
+      offerIncludeBaterinoBenefits: Boolean(form.offerIncludeBaterinoBenefits),
+    },
+  }
+}
+
+function normalizeCommercialOfferDraftMeta(raw) {
+  const base = normalizeCommercialOfferSaveRecord(raw)
+  if (!base) return null
+  if (!base.clientLabel || base.clientLabel === '—') {
+    return { ...base, clientLabel: 'Ciornă' }
+  }
+  return base
+}
+
+function serializeAdminCommercialOfferRow(row) {
+  const contact = resolveOfferRowClientContact(row)
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : row.createdAt.toISOString(),
+    status: row.status === 'draft' ? 'draft' : 'generated',
+    buyerType: row.buyerType,
+    clientLabel: row.clientLabel,
+    clientEmail: contact.clientEmail,
+    clientPhone: contact.clientPhone,
+    amountGross: row.amountGross != null ? String(row.amountGross) : '0',
+    currency: row.currency,
+    productCount: row.productCount,
+    pdfUrl: row.pdfUrl,
+  }
+}
+
+async function listAdminCommercialOffersHandler(req, res) {
+  try {
+    const rows = await prisma.adminCommercialOffer.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    })
+    return res.json({ offers: rows.map(serializeAdminCommercialOfferRow) })
+  } catch (err) {
+    console.error('List commercial offers error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la listarea ofertelor.' })
+  }
+}
+
+async function getAdminCommercialOfferHandler(req, res) {
+  try {
+    const id = String(req.params?.id ?? '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const row = await prisma.adminCommercialOffer.findUnique({ where: { id } })
+    if (!row) return res.status(404).json({ error: 'Oferta nu a fost găsită.' })
+    return res.json({
+      offer: {
+        ...serializeAdminCommercialOfferRow(row),
+        draftSnapshot: row.draftSnapshot ?? null,
+      },
+    })
+  } catch (err) {
+    console.error('Get commercial offer error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea ofertei.' })
+  }
+}
+
+async function saveAdminCommercialOfferDraftHandler(req, res) {
+  try {
+    const formSnapshot = sanitizeAdminOfferFormPersistedSnapshot(req.body?.formSnapshot)
+    if (!formSnapshot) return res.status(400).json({ error: 'Date formular invalide.' })
+    const meta = normalizeCommercialOfferDraftMeta(req.body?.meta)
+    if (!meta) return res.status(400).json({ error: 'Metadate ofertă invalide.' })
+    const id = String(req.body?.id ?? '').trim() || null
+
+    const data = {
+      status: 'draft',
+      buyerType: meta.buyerType,
+      clientLabel: meta.clientLabel,
+      clientEmail: meta.clientEmail,
+      clientPhone: meta.clientPhone,
+      amountGross: meta.amountGross,
+      currency: meta.currency,
+      productCount: meta.productCount,
+      draftSnapshot: formSnapshot,
+      pdfUrl: '',
+    }
+
+    if (id) {
+      const existing = await prisma.adminCommercialOffer.findUnique({ where: { id } })
+      if (!existing) return res.status(404).json({ error: 'Ciorna nu a fost găsită.' })
+      if (existing.status !== 'draft') {
+        return res.status(400).json({ error: 'Doar ciornele pot fi actualizate ca draft.' })
+      }
+      const row = await prisma.adminCommercialOffer.update({
+        where: { id },
+        data,
+      })
+      return res.json({ offer: serializeAdminCommercialOfferRow(row) })
+    }
+
+    const row = await prisma.adminCommercialOffer.create({
+      data: {
+        ...data,
+        createdByUserId: req.userId || null,
+      },
+    })
+    return res.status(201).json({ offer: serializeAdminCommercialOfferRow(row) })
+  } catch (err) {
+    console.error('Save commercial offer draft error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea ciornei.' })
+  }
+}
+
+async function adminCommercialOfferPdfHandler(req, res) {
+  try {
+    const html = String(req.body?.html ?? '').trim()
+    if (!html) return res.status(400).json({ error: 'HTML lipsă.' })
+    const filename = String(req.body?.filename ?? '').trim() || undefined
+    const saveMeta = normalizeCommercialOfferSaveRecord(req.body?.saveRecord)
+    const draftSnapshot = sanitizeOfferDraftSnapshot(req.body?.draftSnapshot)
+    const offerId = String(req.body?.offerId ?? '').trim() || null
+    const { buffer, filename: outName } = await renderCommercialOfferPdfFromHtml(html, { filename })
+
+    if (saveMeta) {
+      if (!isR2Configured()) {
+        console.warn('[Commercial offer] saveRecord ignored: R2 not configured')
+      } else if (!bufferLooksLikePdf(buffer)) {
+        console.warn('[Commercial offer] saveRecord ignored: invalid PDF buffer')
+      } else {
+        try {
+          const safeFilename = String(outName || 'oferta-comerciala.pdf')
+            .replace(/[/\\]/g, '')
+            .replace(/[^a-zA-Z0-9._-]/g, '_')
+            .slice(0, 120) || 'oferta-comerciala.pdf'
+          const pdfPayload = {
+            buyerType: saveMeta.buyerType,
+            clientLabel: saveMeta.clientLabel,
+            clientEmail: saveMeta.clientEmail,
+            clientPhone: saveMeta.clientPhone,
+            amountGross: saveMeta.amountGross,
+            currency: saveMeta.currency,
+            productCount: saveMeta.productCount,
+            status: 'generated',
+          }
+          let targetId = offerId
+          if (targetId) {
+            const existing = await prisma.adminCommercialOffer.findUnique({ where: { id: targetId } })
+            if (!existing || existing.status !== 'draft') targetId = null
+          }
+          let created
+          if (targetId) {
+            created = await prisma.adminCommercialOffer.update({
+              where: { id: targetId },
+              data: {
+                ...pdfPayload,
+                draftSnapshot: draftSnapshot ?? undefined,
+                pdfUrl: '',
+              },
+            })
+          } else {
+            created = await prisma.adminCommercialOffer.create({
+              data: {
+                ...pdfPayload,
+                draftSnapshot: draftSnapshot ?? undefined,
+                pdfUrl: '',
+                createdByUserId: req.userId || null,
+              },
+            })
+          }
+          const key = commercialOfferPdfKey(created.id, safeFilename)
+          const pdfUrl = await uploadToR2(buffer, key, 'application/pdf', {
+            contentDisposition: `attachment; filename="${safeFilename.replace(/"/g, '')}"`,
+            cacheControl: 'private, max-age=31536000',
+          })
+          await prisma.adminCommercialOffer.update({
+            where: { id: created.id },
+            data: { pdfUrl },
+          })
+        } catch (saveErr) {
+          console.error('Commercial offer save error:', saveErr)
+        }
+      }
+    }
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${outName}"`)
+    res.setHeader('Cache-Control', 'no-store')
+    return res.send(buffer)
+  } catch (err) {
+    console.error('Commercial offer PDF error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la generarea PDF-ului.' })
+  }
+}
+
+app.get(
+  '/api/admin/commercial-offers',
+  authMiddleware,
+  adminAuthMiddleware,
+  listAdminCommercialOffersHandler,
+)
+app.get('/admin/commercial-offers', authMiddleware, adminAuthMiddleware, listAdminCommercialOffersHandler)
+
+app.get(
+  '/api/admin/commercial-offers/:id',
+  authMiddleware,
+  adminAuthMiddleware,
+  getAdminCommercialOfferHandler,
+)
+app.get(
+  '/admin/commercial-offers/:id',
+  authMiddleware,
+  adminAuthMiddleware,
+  getAdminCommercialOfferHandler,
+)
+
+app.post(
+  '/api/admin/commercial-offers/draft',
+  authMiddleware,
+  adminAuthMiddleware,
+  saveAdminCommercialOfferDraftHandler,
+)
+app.post(
+  '/admin/commercial-offers/draft',
+  authMiddleware,
+  adminAuthMiddleware,
+  saveAdminCommercialOfferDraftHandler,
+)
+
+app.post(
+  '/api/admin/commercial-offer/pdf',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminCommercialOfferPdfHandler,
+)
+app.post(
+  '/admin/commercial-offer/pdf',
+  authMiddleware,
+  adminAuthMiddleware,
+  adminCommercialOfferPdfHandler,
+)
 
 app.post(
   '/api/admin/product-models/:id/technical-brochure',

@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
 import { HelmetProvider } from 'react-helmet-async'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { ToastProvider } from './contexts/ToastContext'
 import Layout from './components/Layout'
 import AuthWrapper from './components/AuthWrapper'
 import HomeEntry from './pages/HomeEntry'
@@ -41,6 +42,16 @@ import AdminAgents from './pages/admin/AdminAgents'
 import AdminChangePassword from './pages/admin/AdminChangePassword'
 import AdminAccountDetails from './pages/admin/AdminAccountDetails'
 import AdminOrders from './pages/admin/AdminOrders'
+import AdminOffersNew from './pages/admin/AdminOffersNew'
+import { adminOfferNewFreshPath } from './lib/commercialOfferDraft'
+import AdminOffersList from './pages/admin/AdminOffersList'
+import AdminOffersLeads from './pages/admin/AdminOffersLeads'
+import AdminOffersLeadNew from './pages/admin/AdminOffersLeadNew'
+import AdminOffersTemplates from './pages/admin/AdminOffersTemplates'
+import AdminOffersBenefitsTemplates from './pages/admin/AdminOffersBenefitsTemplates'
+import AdminTemplatesHub from './pages/admin/AdminTemplatesHub'
+import AdminOffersProformaTemplate from './pages/admin/AdminOffersProformaTemplate'
+import AdminOfferCommercialPreview from './pages/admin/AdminOfferCommercialPreview'
 import AdminService from './pages/admin/AdminService'
 import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
@@ -66,6 +77,9 @@ import PartnerService from './pages/partner/PartnerService'
 import PartnerSupport from './pages/partner/PartnerSupport'
 import SalesAgentLayout from './pages/sales-agent/SalesAgentLayout'
 import SalesAgentDashboard from './pages/sales-agent/SalesAgentDashboard'
+import SalesAgentLeads from './pages/sales-agent/SalesAgentLeads'
+import SalesAgentLeadNew from './pages/sales-agent/SalesAgentLeadNew'
+import SalesAgentSettings from './pages/sales-agent/SalesAgentSettings'
 import { INSTALATORI_ONLY } from './lib/siteMode'
 import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
 import { CartProvider } from './contexts/CartContext'
@@ -81,11 +95,18 @@ import CartPage from './pages/CartPage'
 import VerificareGarantie from './pages/VerificareGarantie'
 import ReturnareProduse from './pages/ReturnareProduse'
 import PartnerCompanyPublicPage from './pages/PartnerCompanyPublicPage'
+import { publicInstallerProfileUrlPath } from './lib/public-installer-profile-path'
+
+function LegacyCompaniiInstallerRedirect() {
+  const { handle } = useParams<{ handle: string }>()
+  return <Navigate to={publicInstallerProfileUrlPath(handle ?? '')} replace />
+}
 
 export default function App() {
   return (
     <HelmetProvider>
     <BrowserRouter>
+      <ToastProvider>
       <CartProvider>
       <CatalogCurrencyProvider>
       <ScrollToTop />
@@ -105,6 +126,17 @@ export default function App() {
           <Route path="stocuri/add-item" element={<AdminStocuriAddItem />} />
           <Route path="stocuri/lista" element={<AdminStocuriLista />} />
           <Route path="orders"    element={<AdminOrders />} />
+          <Route path="oferte" element={<Navigate to={adminOfferNewFreshPath()} replace />} />
+          <Route path="oferte/noua" element={<AdminOffersNew />} />
+          <Route path="oferte/lista" element={<AdminOffersList />} />
+          <Route path="oferte/leads" element={<AdminOffersLeads />} />
+          <Route path="oferte/leads/nou" element={<AdminOffersLeadNew />} />
+          <Route path="oferte/trimise" element={<Navigate to="/admin/oferte/lista" replace />} />
+          <Route path="oferte/previzualizare-comerciala" element={<AdminOfferCommercialPreview />} />
+          <Route path="oferte/sabloane" element={<AdminOffersTemplates />} />
+          <Route path="oferte/sabloane-beneficii" element={<AdminOffersBenefitsTemplates />} />
+          <Route path="setari/sabloane" element={<AdminTemplatesHub />} />
+          <Route path="setari/sabloane-proforma" element={<AdminOffersProformaTemplate />} />
           <Route path="service"   element={<AdminService />} />
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="change-password" element={<AdminChangePassword />} />
@@ -140,6 +172,9 @@ export default function App() {
 
         <Route path="/sales-agent" element={<LanguageProvider><SalesAgentLayout /></LanguageProvider>}>
           <Route index element={<SalesAgentDashboard />} />
+          <Route path="leads" element={<SalesAgentLeads />} />
+          <Route path="leads/nou" element={<SalesAgentLeadNew />} />
+          <Route path="settings" element={<SalesAgentSettings />} />
         </Route>
 
         {/* ── QR code links ── */}
@@ -155,7 +190,11 @@ export default function App() {
             <>
               <Route index element={<InstalatoriOnlyIndex />} />
               <Route path="instalatori" element={<Instalatori />} />
-              <Route path="companii/:handle" element={<PartnerCompanyPublicPage />} />
+              <Route path="companii/:handle" element={<LegacyCompaniiInstallerRedirect />} />
+              <Route
+                path="companii-instalatori-fotovoltaice/:handle"
+                element={<PartnerCompanyPublicPage />}
+              />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
@@ -175,7 +214,11 @@ export default function App() {
             <>
               <Route index element={<HomeEntry />} />
               <Route path="produse" element={<Produse />} />
-              <Route path="companii/:handle" element={<PartnerCompanyPublicPage />} />
+              <Route path="companii/:handle" element={<LegacyCompaniiInstallerRedirect />} />
+              <Route
+                path="companii-instalatori-fotovoltaice/:handle"
+                element={<PartnerCompanyPublicPage />}
+              />
               <Route path="produse/:slug" element={<ProductRezidential />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
@@ -218,6 +261,7 @@ export default function App() {
       </Routes>
       </CatalogCurrencyProvider>
       </CartProvider>
+      </ToastProvider>
     </BrowserRouter>
     </HelmetProvider>
   )

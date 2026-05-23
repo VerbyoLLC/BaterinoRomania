@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   clearAuth,
@@ -8,6 +8,7 @@ import {
   getAdminAccount,
   getAdminInquiriesUnreadCount,
 } from '../../lib/api'
+import { adminOfferNewFreshPath } from '../../lib/commercialOfferDraft'
 
 function formatSidebarName(
   firstName: string,
@@ -151,6 +152,27 @@ function IconOrders() {
     </svg>
   )
 }
+function IconOffers() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v4h4" />
+    </svg>
+  )
+}
+function IconLeads() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M22 11l-2-2m0 0l-2 2m2-2v6" />
+    </svg>
+  )
+}
 function IconService() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -246,15 +268,15 @@ function IconAgents() {
     </svg>
   )
 }
-function IconWarrantyCertificate() {
+function IconTemplates() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M12 3l8 3v6c0 4.5-3.2 8.4-8 9-4.8-.6-8-4.5-8-9V6l8-3z"
+        d="M4 5a2 2 0 012-2h4l2 2h8a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
       />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h8M8 15h5" />
     </svg>
   )
 }
@@ -298,7 +320,21 @@ const SETARI_PATHS = [
   '/admin/phone-numbers',
   '/admin/agents',
   '/admin/warranty-certificate-preview',
+  '/admin/setari/sabloane',
+  '/admin/setari/sabloane-proforma',
+  '/admin/oferte/sabloane',
+  '/admin/oferte/sabloane-beneficii',
 ] as const
+
+const ADMIN_SETARI_LINKS: { to: string; label: string; icon: ReactNode }[] = [
+  { to: '/admin/setari/sabloane', label: 'Șabloane', icon: <IconTemplates /> },
+  { to: '/admin/change-password', label: 'Schimbă parola', icon: <IconLockPassword /> },
+  { to: '/admin/account', label: 'Detalii cont', icon: <IconAccountDetails /> },
+  { to: '/admin/currency', label: 'Currency', icon: <IconCurrency /> },
+  { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
+  { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
+  { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },
+]
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const
 const INVENTAR_PATHS = ['/admin/products', '/admin/product-models'] as const
@@ -307,6 +343,18 @@ const STOCURI_PATHS = ['/admin/stocuri'] as const
 const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
   { kind: 'link', to: '/admin', label: 'Dashboard', icon: <IconDashboard />, end: true },
   { kind: 'link', to: '/admin/orders', label: 'Comenzi', icon: <IconOrders />, end: false },
+  {
+    kind: 'group',
+    id: 'oferte',
+    label: 'Oferte',
+    icon: <IconOffers />,
+    children: [
+      { to: adminOfferNewFreshPath(), label: 'Ofertă nouă', icon: <IconAddItem /> },
+      { to: '/admin/oferte/lista', label: 'Lista oferte', icon: <IconLista /> },
+      { to: '/admin/oferte/leads', label: 'Leads', icon: <IconLeads /> },
+      { to: '/admin/setari/sabloane', label: 'Șabloane', icon: <IconTemplates /> },
+    ],
+  },
   { kind: 'link', to: '/admin/service', label: 'Service', icon: <IconService />, end: false },
   { kind: 'link', to: '/admin/messages', label: 'Messages', icon: <IconMessages />, end: false },
   {
@@ -350,25 +398,6 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
       { to: '/admin/discounts', label: 'Reduceri', icon: <IconDiscounts /> },
     ],
   },
-  {
-    kind: 'group',
-    id: 'setari',
-    label: 'Setări',
-    icon: <IconSettings />,
-    children: [
-      { to: '/admin/change-password', label: 'Schimbă parola', icon: <IconLockPassword /> },
-      { to: '/admin/account', label: 'Detalii cont', icon: <IconAccountDetails /> },
-      { to: '/admin/currency', label: 'Currency', icon: <IconCurrency /> },
-      { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
-      { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
-      { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },
-      {
-        to: '/admin/warranty-certificate-preview',
-        label: 'Certificat garanție',
-        icon: <IconWarrantyCertificate />,
-      },
-    ],
-  },
 ]
 
 function pathUnderSetari(pathname: string) {
@@ -391,6 +420,125 @@ function pathUnderStocuri(pathname: string) {
   return STOCURI_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
+function pathUnderOferte(pathname: string) {
+  return pathname === '/admin/oferte' || pathname.startsWith('/admin/oferte/')
+}
+
+function AdminTopBar({
+  authEmail,
+  avatarLetter,
+  displayName,
+  settingsMenuOpen,
+  setSettingsMenuOpen,
+  settingsMenuRef,
+  settingsActive,
+  onOpenSidebar,
+  onLogout,
+}: {
+  authEmail: string | null
+  avatarLetter: string
+  displayName: string
+  settingsMenuOpen: boolean
+  setSettingsMenuOpen: (open: boolean | ((prev: boolean) => boolean)) => void
+  settingsMenuRef: React.RefObject<HTMLDivElement | null>
+  settingsActive: boolean
+  onOpenSidebar: () => void
+  onLogout: () => void
+}) {
+  return (
+    <header className="relative z-40 flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2.5 lg:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          className="-ml-1 rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
+          aria-label="Deschide meniul"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span className="hidden text-xs font-medium uppercase tracking-wider text-slate-400 font-['Inter'] lg:inline">
+          Panou administrare
+        </span>
+      </div>
+
+      <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+        <div className="relative" ref={settingsMenuRef}>
+          <button
+            type="button"
+            onClick={() => setSettingsMenuOpen((o) => !o)}
+            aria-expanded={settingsMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Setări"
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium font-['Inter'] transition-colors sm:gap-2 sm:px-3 [&>svg:first-child]:h-4 [&>svg:first-child]:w-4 ${
+              settingsActive || settingsMenuOpen
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            <IconSettings />
+            <span className="hidden sm:inline">Setări</span>
+            <IconChevronNav open={settingsMenuOpen} />
+          </button>
+          {settingsMenuOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+            >
+              {ADMIN_SETARI_LINKS.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  role="menuitem"
+                  onClick={() => setSettingsMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2.5 text-sm font-['Inter'] font-medium transition-colors ${
+                      isActive
+                        ? 'bg-slate-100 text-slate-900'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  <span className="flex-shrink-0 text-slate-500">{link.icon}</span>
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <NavLink
+          to="/admin/account"
+          title={authEmail ?? displayName}
+          className={({ isActive }) =>
+            `flex min-w-0 max-w-[min(100%,12rem)] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors sm:max-w-xs sm:px-2.5 sm:py-2 ${
+              isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+            }`
+          }
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+            {avatarLetter}
+          </span>
+          <span className="hidden min-w-0 truncate text-sm font-medium font-['Inter'] sm:inline">
+            {authEmail ?? displayName}
+          </span>
+        </NavLink>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          aria-label="Deconectare"
+          title="Deconectare"
+          className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+        >
+          <IconLogout />
+        </button>
+      </div>
+    </header>
+  )
+}
+
 export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -403,11 +551,13 @@ export default function AdminLayout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
-  const [setariOpen, setSetariOpen] = useState(() => pathUnderSetari(location.pathname))
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
+  const settingsMenuRef = useRef<HTMLDivElement>(null)
   const [parteneriOpen, setParteneriOpen] = useState(() => pathUnderParteneri(location.pathname))
   const [mediaOpen, setMediaOpen] = useState(() => pathUnderMedia(location.pathname))
   const [inventarOpen, setInventarOpen] = useState(() => pathUnderInventar(location.pathname))
   const [stocuriOpen, setStocuriOpen] = useState(() => pathUnderStocuri(location.pathname))
+  const [oferteOpen, setOferteOpen] = useState(() => pathUnderOferte(location.pathname))
 
   useEffect(() => {
     if (location.pathname === '/admin/login') return
@@ -435,11 +585,33 @@ export default function AdminLayout() {
   }, [location.pathname])
 
   useEffect(() => {
-    if (pathUnderSetari(location.pathname)) setSetariOpen(true)
+    setSettingsMenuOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!settingsMenuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
+        setSettingsMenuOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSettingsMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [settingsMenuOpen])
+
+  useEffect(() => {
     if (pathUnderParteneri(location.pathname)) setParteneriOpen(true)
     if (pathUnderMedia(location.pathname)) setMediaOpen(true)
     if (pathUnderInventar(location.pathname)) setInventarOpen(true)
     if (pathUnderStocuri(location.pathname)) setStocuriOpen(true)
+    if (pathUnderOferte(location.pathname)) setOferteOpen(true)
   }, [location.pathname])
 
   const loadSidebarAccount = useCallback(() => {
@@ -465,8 +637,24 @@ export default function AdminLayout() {
     return () => window.removeEventListener('admin-account-updated', onUpdated)
   }, [loadSidebarAccount])
 
+  useEffect(() => {
+    document.documentElement.classList.add('admin-shell')
+    document.body.classList.add('admin-shell')
+    return () => {
+      document.documentElement.classList.remove('admin-shell')
+      document.body.classList.remove('admin-shell')
+    }
+  }, [])
+
+  const settingsActive = pathUnderSetari(location.pathname)
+
+  function handleLogout() {
+    clearAuth()
+    navigate('/admin/login')
+  }
+
   return (
-    <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
+    <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-gray-50">
 
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
@@ -478,7 +666,7 @@ export default function AdminLayout() {
       )}
 
       {/* ── Sidebar ── */}
-      <aside className={`w-64 flex-shrink-0 bg-slate-900 flex flex-col h-screen lg:h-full fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-transform duration-200 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`w-64 flex-shrink-0 bg-slate-900 flex flex-col h-[100dvh] lg:h-full lg:max-h-none fixed lg:relative top-0 left-0 z-50 lg:z-auto transform transition-transform duration-200 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full py-6 px-4">
 
           {/* Logo → admin dashboard */}
@@ -532,28 +720,28 @@ export default function AdminLayout() {
                 (c) => location.pathname === c.to || location.pathname.startsWith(`${c.to}/`)
               )
               const groupOpen =
-                item.id === 'setari'
-                  ? setariOpen
-                  : item.id === 'parteneri'
-                    ? parteneriOpen
-                    : item.id === 'media'
-                      ? mediaOpen
-                      : item.id === 'inventar'
-                        ? inventarOpen
-                        : item.id === 'stocuri'
-                          ? stocuriOpen
+                item.id === 'parteneri'
+                  ? parteneriOpen
+                  : item.id === 'media'
+                    ? mediaOpen
+                    : item.id === 'inventar'
+                      ? inventarOpen
+                      : item.id === 'stocuri'
+                        ? stocuriOpen
+                        : item.id === 'oferte'
+                          ? oferteOpen
                           : false
               const setGroupOpen =
-                item.id === 'setari'
-                  ? setSetariOpen
-                  : item.id === 'parteneri'
-                    ? setParteneriOpen
-                    : item.id === 'media'
-                      ? setMediaOpen
-                      : item.id === 'inventar'
-                        ? setInventarOpen
-                        : item.id === 'stocuri'
-                          ? setStocuriOpen
+                item.id === 'parteneri'
+                  ? setParteneriOpen
+                  : item.id === 'media'
+                    ? setMediaOpen
+                    : item.id === 'inventar'
+                      ? setInventarOpen
+                      : item.id === 'stocuri'
+                        ? setStocuriOpen
+                        : item.id === 'oferte'
+                          ? setOferteOpen
                           : () => {}
               return (
                 <div key={item.id} className="flex flex-col gap-0.5">
@@ -598,53 +786,28 @@ export default function AdminLayout() {
             })}
           </nav>
 
-          {/* User + Logout */}
-          <div className="pt-6 border-t border-slate-700/50 flex flex-col gap-1">
-            <div className="flex items-start gap-3 px-4 py-3">
-              <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                {avatarLetter}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-semibold font-['Inter'] truncate">{displayName}</p>
-                <p className="text-slate-500 text-xs font-['Inter'] truncate mt-0.5" title={authEmail ?? undefined}>
-                  {authEmail ?? '—'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                clearAuth()
-                navigate('/admin/login')
-              }}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left"
-            >
-              <IconLogout />
-              Deconectare
-            </button>
-          </div>
         </div>
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            aria-label="Deschide meniul"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <a href="/" className="flex-shrink-0">
-            <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
-          </a>
-          <div className="w-10" />
+      <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden">
+        <AdminTopBar
+          authEmail={authEmail}
+          avatarLetter={avatarLetter}
+          displayName={displayName}
+          settingsMenuOpen={settingsMenuOpen}
+          setSettingsMenuOpen={setSettingsMenuOpen}
+          settingsMenuRef={settingsMenuRef}
+          settingsActive={settingsActive}
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onLogout={handleLogout}
+        />
+        <div
+          id="admin-layout-scroll"
+          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-clip overscroll-y-contain [&>*]:shrink-0"
+        >
+          <Outlet />
         </div>
-        <Outlet />
       </main>
     </div>
   )

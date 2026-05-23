@@ -5,9 +5,12 @@ import {
   MessageCircle,
   ChevronRight,
   Building2,
-  Star,
+  BadgeCheck,
 } from 'lucide-react'
-import { PARTNER_SERVICII_OPTIONS } from '../../lib/partner-servicii-options'
+import { useLanguage } from '../../contexts/LanguageContext'
+import type { LangCode } from '../../i18n/menu'
+import { getPartnerProfileCardTranslations } from '../../i18n/partner/profile-card'
+import { getPartnerServiciiOptions } from '../../i18n/partner/servicii'
 
 function IconFacebook({ className }: { className?: string }) {
   return (
@@ -26,7 +29,22 @@ function IconLinkedin({ className }: { className?: string }) {
   )
 }
 
-/** href pentru URL extern fără schemă */
+function IconInstagram({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm6.5-.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z" />
+    </svg>
+  )
+}
+
+function IconTiktok({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M16 3a5 5 0 0 0 5 5v2h-3a2 2 0 0 1-2-2V6.1A4.1 4.1 0 0 0 12.9 2H11v13.5a2.5 2.5 0 1 1-2.4-2.5 2.5 2.5 0 0 1 2.5 2.5V22a6 6 0 0 1-6-6V9h2v7a4 4 0 0 0 8 0V3h-1z" />
+    </svg>
+  )
+}
+
 function webHref(raw: string) {
   const t = raw.trim()
   if (!t) return '#'
@@ -48,11 +66,13 @@ export type PartnerPublicProfileCardProps = {
   website: string
   facebookUrl: string
   linkedinUrl: string
+  instagramUrl: string
+  tiktokUrl: string
   isPublic: boolean
   workPhotos: string[]
+  partnerProfileAdministrativelyVerified?: boolean
 }
 
-/** Card unic: previzualizare în zona partenerilor sau pagină publică /companii/… */
 export default function PartnerPublicProfileCard(props: PartnerPublicProfileCardProps) {
   const {
     variant,
@@ -68,19 +88,31 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
     website,
     facebookUrl,
     linkedinUrl,
+    instagramUrl,
+    tiktokUrl,
     isPublic,
     workPhotos,
+    partnerProfileAdministrativelyVerified,
   } = props
+
+  const { language } = useLanguage()
+  const lang = language.code as LangCode
+  const tr = getPartnerProfileCardTranslations(lang)
+  const serviciiOptions = getPartnerServiciiOptions(lang)
+
+  const verifiedForTrustBadge =
+    partnerProfileAdministrativelyVerified ?? variant === 'public'
 
   const displayName =
     variant === 'public'
-      ? publicName.trim() || companyName?.trim() || 'Instalator'
-      : publicName.trim() || companyName?.trim() || 'Numele companiei tale'
+      ? publicName.trim() || companyName?.trim() || tr.defaultNamePublic
+      : publicName.trim() || companyName?.trim() || tr.defaultNamePreview
 
   const location = [city.trim(), county.trim()].filter(Boolean).join(', ')
   const serviceLabels = servicii.map(
-    (id) => PARTNER_SERVICII_OPTIONS.find((o) => o.id === id)?.label ?? id,
+    (id) => serviciiOptions.find((o) => o.id === id)?.label ?? id,
   )
+  const servicePlaceholders = [tr.servicePlaceholder1, tr.servicePlaceholder2, tr.servicePlaceholder3]
   const showWhatsappChip = !!(whatsapp || !publicPhone)
   const ctaHref = publicPhone.trim()
     ? `tel:${publicPhone.replace(/\s+/g, '')}`
@@ -93,8 +125,12 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
       <div className="h-24 bg-gradient-to-br from-slate-800 to-slate-600" />
 
       <div className="-mt-12 flex items-end gap-4 px-5 pb-0">
-        <div className="relative">
-          <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-slate-100 shadow-lg">
+        <div className="relative shrink-0">
+          <div
+            className={`h-20 w-20 overflow-hidden rounded-2xl border-4 bg-slate-100 shadow-lg ${
+              verifiedForTrustBadge ? 'border-emerald-500' : 'border-white'
+            }`}
+          >
             {logoUrl ? (
               <img src={logoUrl} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -103,27 +139,33 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
               </div>
             )}
           </div>
+          {verifiedForTrustBadge ? (
+            <span
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md ring-2 ring-white"
+              aria-hidden
+            >
+              <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+          ) : null}
         </div>
         <div className="mb-2 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {variant === 'owner-preview' ? (
-              <>
-                {isPublic ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 font-['Inter']">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Public
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 font-['Inter']">
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                    Privat
-                  </span>
-                )}
-              </>
+              isPublic ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 font-['Inter']">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {tr.badgePublic}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 font-['Inter']">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  {tr.badgePrivate}
+                </span>
+              )
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 font-['Inter']">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Instalator Baterino — profil activ
+                {tr.badgeActiveInstaller}
               </span>
             )}
           </div>
@@ -133,6 +175,17 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
       <div className="px-5 pb-5 pt-3">
         <h1 className="text-lg font-extrabold leading-snug text-slate-900 font-['Inter']">{displayName}</h1>
 
+        <div
+          className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-slate-50/90 px-2 py-1.5"
+          role="status"
+          aria-label={tr.partnerBadgeAria}
+        >
+          <BadgeCheck className="h-4 w-4 shrink-0 text-slate-900" strokeWidth={2} aria-hidden />
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-900 font-['Inter']">
+            {tr.partnerBadgeLabel}
+          </span>
+        </div>
+
         {location ? (
           <div className="mt-1 flex items-center gap-1 text-sm text-slate-500 font-['Inter']">
             <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
@@ -141,16 +194,9 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
         ) : (
           <div className="mt-1 flex items-center gap-1 text-sm text-slate-300 font-['Inter']">
             <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-            Locație
+            {tr.locationPlaceholder}
           </div>
         )}
-
-        <div className="mt-2 flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className="h-3.5 w-3.5 text-amber-400" fill="currentColor" strokeWidth={0} />
-          ))}
-          <span className="ml-1 text-xs text-slate-500 font-['Inter']">5.0 · Instalator verificat</span>
-        </div>
 
         <p
           className={`mt-3 text-sm leading-relaxed font-['Inter'] ${
@@ -158,15 +204,13 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
           }`}
         >
           {description.trim() ||
-            (variant === 'public'
-              ? 'Fără descriere publică disponibilă momentan.'
-              : 'Descrierea companiei tale va apărea aici — prezintă experiența și valorile echipei tale.')}
+            (variant === 'public' ? tr.noDescriptionPublic : tr.noDescriptionPreview)}
         </p>
 
         {serviceLabels.length > 0 ? (
           <div className="mt-4">
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-['Inter']">
-              Servicii oferite
+              {tr.servicesHeading}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {serviceLabels.map((label) => (
@@ -183,10 +227,10 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
           variant === 'owner-preview' && (
             <div className="mt-4">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-300 font-['Inter']">
-                Servicii oferite
+                {tr.servicesHeading}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {['Serviciu 1', 'Serviciu 2', 'Serviciu 3'].map((l) => (
+                {servicePlaceholders.map((l) => (
                   <span
                     key={l}
                     className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-300 font-['Inter']"
@@ -209,7 +253,7 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
             }`}
           >
             <Phone className="h-4 w-4 shrink-0" strokeWidth={2} />
-            {publicPhone || 'Telefon'}
+            {publicPhone || tr.phoneFallback}
           </a>
           {showWhatsappChip && (
             <a
@@ -237,26 +281,50 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
           )}
         </div>
 
-        {(facebookUrl || linkedinUrl) && (
-          <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3">
+        {(facebookUrl || linkedinUrl || instagramUrl || tiktokUrl) && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
             {facebookUrl && (
               <a
-                href={facebookUrl}
+                href={webHref(facebookUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition hover:bg-blue-100"
+                aria-label="Facebook"
               >
                 <IconFacebook className="h-4 w-4" />
               </a>
             )}
+            {instagramUrl && (
+              <a
+                href={webHref(instagramUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-50 text-pink-600 transition hover:bg-pink-100"
+                aria-label="Instagram"
+              >
+                <IconInstagram className="h-4 w-4" />
+              </a>
+            )}
             {linkedinUrl && (
               <a
-                href={linkedinUrl}
+                href={webHref(linkedinUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-700 transition hover:bg-sky-100"
+                aria-label="LinkedIn"
               >
                 <IconLinkedin className="h-4 w-4" />
+              </a>
+            )}
+            {tiktokUrl && (
+              <a
+                href={webHref(tiktokUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white transition hover:bg-slate-800"
+                aria-label="TikTok"
+              >
+                <IconTiktok className="h-4 w-4" />
               </a>
             )}
           </div>
@@ -265,12 +333,12 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
         {workPhotos.length > 0 && (
           <div className="mt-5">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-['Inter']">
-              Lucrări realizate
+              {tr.workGalleryHeading}
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {workPhotos.slice(0, 6).map((src, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
-                  <img src={src} alt={`Lucrare ${i + 1}`} className="h-full w-full object-cover" />
+                  <img src={src} alt={`${tr.workPhotoAlt} ${i + 1}`} className="h-full w-full object-cover" />
                   {i === 5 && workPhotos.length > 6 && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                       <span className="text-base font-bold text-white font-['Inter']">
@@ -289,7 +357,7 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
             type="button"
             className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 font-['Inter']"
           >
-            Contactează instalatorul
+            {tr.contactCta}
             <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.5} />
           </button>
         ) : (
@@ -297,7 +365,7 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
             href={ctaHref}
             className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 font-['Inter']"
           >
-            Contactează instalatorul
+            {tr.contactCta}
             <ChevronRight className="h-4 w-4 shrink-0 text-white" strokeWidth={2.5} />
           </a>
         )}
@@ -305,3 +373,4 @@ export default function PartnerPublicProfileCard(props: PartnerPublicProfileCard
     </div>
   )
 }
+

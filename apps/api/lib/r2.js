@@ -333,6 +333,22 @@ function productTechnicalBrochurePdfKey(modelNumber, modelName) {
   return `${PRODUCT_TECHNICAL_BROCHURES_PREFIX}/${base}.pdf`
 }
 
+const COMMERCIAL_OFFERS_PREFIX = 'offers'
+
+/**
+ * PDF ofertă comercială admin: `offers/<offerId>/<filename>`.
+ * @param {string} offerId
+ * @param {string} [filename]
+ */
+function commercialOfferPdfKey(offerId, filename = 'oferta-comerciala.pdf') {
+  const id = String(offerId || '').trim()
+  const safe = String(filename || 'oferta-comerciala.pdf')
+    .replace(/[/\\]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 120) || 'oferta-comerciala.pdf'
+  return `${COMMERCIAL_OFFERS_PREFIX}/${id}/${safe}`
+}
+
 module.exports = {
   uploadToR2,
   downloadFromR2,
@@ -350,4 +366,5 @@ module.exports = {
   sanitizeSerialNumber,
   buildReturConditionPhotoKey,
   productTechnicalBrochurePdfKey,
+  commercialOfferPdfKey,
 }

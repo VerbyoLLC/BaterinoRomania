@@ -15,6 +15,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { getGuestCheckoutTranslations } from '../../i18n/guest-checkout'
 import type { LangCode } from '../../i18n/menu'
+import { getPartnerCheckoutTranslations } from '../../i18n/partner/checkout'
 import { getProductPricingTranslations } from '../../i18n/product-pricing'
 import {
   getPartnerProfile,
@@ -98,39 +99,16 @@ export default function PartnerCheckout() {
   const { language } = useLanguage()
   const lang = language.code as LangCode
   const tr = getGuestCheckoutTranslations(lang)
+  const trPartner = getPartnerCheckoutTranslations(lang)
   const { currency } = useCatalogCurrency()
   const p = getProductPricingTranslations(lang, currency)
 
   const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
   const fmtMoney = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
 
-  const partnerBadge = lang === 'en' ? 'Partner' : lang === 'zh' ? '合作伙伴' : 'Partener'
-  const partnerSubline =
-    lang === 'en'
-      ? 'Company billing and delivery. Order confirmation is sent to your partner account email.'
-      : lang === 'zh'
-        ? '公司账单与收货信息，订单确认将发送至合作伙伴账户邮箱。'
-        : 'Datele de facturare și livrare pentru firma ta. Confirmarea comenzii este trimisă pe emailul contului partener.'
-
-  const partnerCheckoutStepTitles = useMemo(() => {
-    if (lang === 'en') {
-      return [
-        'Step 1: Contact person',
-        'Step 2: Billing details',
-        'Step 3: Delivery address',
-        'Step 4: Complete order',
-      ] as const
-    }
-    if (lang === 'zh') {
-      return ['第 1 步：联系人', '第 2 步：开票信息', '第 3 步：收货地址', '第 4 步：提交订单'] as const
-    }
-    return [
-      'Pasul 1: Persoană de contact',
-      'Pasul 2: Date de facturare',
-      'Pasul 3: Adresa de livrare',
-      'Pasul 4: Finalizare comandă',
-    ] as const
-  }, [lang])
+  const partnerBadge = trPartner.partnerBadge
+  const partnerSubline = trPartner.partnerSubline
+  const partnerCheckoutStepTitles = trPartner.stepTitles
 
   const [activeStep, setActiveStep] = useState<CheckoutStep>(1)
   const [maxReachedStep, setMaxReachedStep] = useState<CheckoutStep>(1)
@@ -288,7 +266,7 @@ export default function PartnerCheckout() {
     const cuiClean = companyCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
 
     if (!emailFromAccount.trim()) {
-      setSubmitError(lang === 'en' ? 'Invalid session. Sign in again.' : 'Sesiune invalidă. Autentifică-te din nou.')
+      setSubmitError(trPartner.invalidSession)
       return
     }
     if (phoneDigits.length !== 9) {
@@ -418,11 +396,7 @@ export default function PartnerCheckout() {
         </p>
         {partnerDiscountPct != null && partnerDiscountPct > 0 ? (
           <p className="mt-2 text-xs leading-snug text-emerald-700 font-['Inter']">
-            {lang === 'en'
-              ? `Partner discount ${partnerDiscountPct}% applied to catalog net (per commercial policy).`
-              : lang === 'zh'
-                ? `已按商务政策应用 ${partnerDiscountPct}% 合作伙伴折扣（目录净价）。`
-                : `Reducere partener ${partnerDiscountPct}% aplicată la prețul net din catalog (conform politicii comerciale).`}
+            {trPartner.partnerDiscountApplied.replace('{pct}', String(partnerDiscountPct))}
           </p>
         ) : cartSummaryVatLabel ? (
           <p className="mt-2 text-xs leading-snug text-slate-500 font-['Inter']">{cartSummaryVatLabel}</p>
@@ -614,11 +588,7 @@ export default function PartnerCheckout() {
               className={`order-2 min-h-[44px] sm:order-1 ${checkoutBackButtonClass}`}
             >
               ←{' '}
-              {lang === 'en'
-                ? 'Back to contact person'
-                : lang === 'zh'
-                  ? '返回联系人信息'
-                  : 'Înapoi la persoană de contact'}
+              {trPartner.backToContact}
             </button>
             <button
               type="button"
@@ -655,11 +625,7 @@ export default function PartnerCheckout() {
               setDelPostal(fiscalPostal)
             }}
           >
-            {lang === 'en'
-              ? 'Copy from billing address'
-              : lang === 'zh'
-                ? '从账单地址复制'
-                : 'Copiază din adresa fiscală'}
+            {trPartner.copyFromBilling}
           </button>
           <label className="block min-w-0">
             <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldAddress}</span>
@@ -736,11 +702,7 @@ export default function PartnerCheckout() {
               className={`order-2 min-h-[44px] sm:order-1 ${checkoutBackButtonClass}`}
             >
               ←{' '}
-              {lang === 'en'
-                ? 'Back to billing details'
-                : lang === 'zh'
-                  ? '返回开票信息'
-                  : 'Înapoi la datele de facturare'}
+              {trPartner.backToBilling}
             </button>
             <button
               type="button"

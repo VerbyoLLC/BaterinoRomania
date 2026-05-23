@@ -4,7 +4,7 @@ import AuthLayout from '../components/AuthLayout'
 import GoogleSignupButton from '../components/GoogleSignupButton'
 import PasswordInput from '../components/PasswordInput'
 import SignupPendingEmail, { type SignupUserType } from '../components/SignupPendingEmail'
-import { signup, checkApiHealth, googleAuth, setAuthToken } from '../lib/api'
+import { signup, checkApiHealth, googleAuth, setAuthToken, getPartnerPostLoginPath } from '../lib/api'
 
 function safeSignupNextParam(raw: string | null): string | undefined {
   if (!raw) return undefined
@@ -118,14 +118,13 @@ export default function SignupClienti() {
       setTermsAckMissing(false)
       setErrors({})
       setLoading(true)
-      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, tab, {
+      const { token, user } = await googleAuth(idToken, tab, {
         acceptedTerms: true,
+        intent: 'signup',
       })
       setAuthToken(token)
       if (user.role === 'partener') {
-        navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
-          replace: true,
-        })
+        navigate(await getPartnerPostLoginPath(), { replace: true })
       } else {
         navigate(nextPath ?? '/produse', { replace: true })
       }

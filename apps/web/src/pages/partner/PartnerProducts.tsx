@@ -17,6 +17,7 @@ import {
   Factory,
   Anchor,
 } from 'lucide-react'
+import type { LangCode } from '../../i18n/menu'
 import {
   getProducts,
   getProduct,
@@ -34,6 +35,15 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
+import {
+  partnerCartLoadingLabel,
+  partnerCartTotalsLabels,
+  partnerCatalogSectionLabels,
+  partnerToolbarLabels,
+  formatPartnerCatalogSectionCount,
+  getPartnerProductsTranslations,
+  type PartnerCatalogSectionId,
+} from '../../i18n/partner/products'
 import ProductDetailRightSection from '../../components/ProductDetailRightSection'
 import { ReducerePartenerBox } from './PartnerSidebarBoxes'
 import {
@@ -78,25 +88,7 @@ function computePartnerCartTotals(items: CartItem[]): { net: number; vat: number
   return { net, vat }
 }
 
-function partnerCartTotalsLabels(langCode: string) {
-  if (langCode === 'en') {
-    return { net: 'Subtotal (excl. VAT)', vat: 'VAT', gross: 'Total (incl. VAT)' }
-  }
-  if (langCode === 'zh') {
-    return { net: '小计（不含增值税）', vat: '增值税', gross: '含税合计' }
-  }
-  return { net: 'Total fără TVA', vat: 'TVA', gross: 'Total cu TVA' }
-}
-
-function partnerCartLoadingLabel(langCode: string): string {
-  if (langCode === 'en') return 'Loading cart…'
-  if (langCode === 'zh') return '正在加载购物车…'
-  return 'Se încarcă coșul…'
-}
-
 /** Vertical catalog sections on partner Produse (one bucket per product). */
-type PartnerCatalogSectionId = 'rezidential' | 'micro_grid' | 'comercial_medical' | 'industrial' | 'maritim'
-
 const PARTNER_CATALOG_SECTION_ORDER: PartnerCatalogSectionId[] = [
   'rezidential',
   'micro_grid',
@@ -141,69 +133,6 @@ function getPartnerCatalogSection(p: PublicProduct): PartnerCatalogSectionId {
   const tip = String(p.tipProdus || '').toLowerCase()
   if (tip === 'industrial') return 'industrial'
   return 'rezidential'
-}
-
-function partnerCatalogSectionLabels(langCode: string): Record<PartnerCatalogSectionId, string> {
-  if (langCode === 'en') {
-    return {
-      rezidential: 'Residential',
-      micro_grid: 'Commercial · Micro-grids',
-      comercial_medical: 'Commercial & Medical',
-      industrial: 'Industrial',
-      maritim: 'Marine',
-    }
-  }
-  if (langCode === 'zh') {
-    return {
-      rezidential: '住宅',
-      micro_grid: '商用 · 微电网',
-      comercial_medical: '商用与医疗',
-      industrial: '工业',
-      maritim: '海事',
-    }
-  }
-  return {
-    rezidential: 'Rezidențial',
-    micro_grid: 'Comercial · Micro-griduri',
-    comercial_medical: 'Comercial & Medical',
-    industrial: 'Industrial',
-    maritim: 'Maritim',
-  }
-}
-
-/** Top toolbar ( căutare / iconițe dreapta ) — aceleași limbi ca secțiunile catalogului. */
-function partnerToolbarLabels(langCode: string) {
-  if (langCode === 'en') {
-    return {
-      searchProducts: 'Search products…',
-      clearSearch: 'Clear search',
-      openSearchPanel: 'Open search',
-      closeSearchPanel: 'Close search',
-      notifications: 'Notifications',
-      notificationsEmptyTitle: 'No new notifications',
-      notificationsEmptySubtitle: 'Order updates and alerts will appear here.',
-    }
-  }
-  if (langCode === 'zh') {
-    return {
-      searchProducts: '搜索产品…',
-      clearSearch: '清除搜索',
-      openSearchPanel: '打开搜索',
-      closeSearchPanel: '关闭搜索',
-      notifications: '通知',
-      notificationsEmptyTitle: '暂无新通知',
-      notificationsEmptySubtitle: '订单动态与提醒将在此处显示。',
-    }
-  }
-  return {
-    searchProducts: 'Caută produs…',
-    clearSearch: 'Șterge căutarea',
-    openSearchPanel: 'Deschide căutarea',
-    closeSearchPanel: 'Închide căutarea',
-    notifications: 'Notificări',
-    notificationsEmptyTitle: 'Nicio notificare nouă',
-    notificationsEmptySubtitle: 'Actualizări de comandă și alerte vor fi afișate aici.',
-  }
 }
 
 const PARTNER_TOOLBAR_ICON_BTN =
@@ -310,10 +239,11 @@ function PartnerCartPanel({
   onRemove: (productId: string) => void
   onDismiss?: () => void
   onCheckout?: () => void
-  langCode: string
+  langCode: LangCode
   currency: string
   loading?: boolean
 }) {
+  const tr = getPartnerProductsTranslations(langCode)
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
   const hasPricedItems = items.some((i) => !Number.isNaN(getPartnerDisplayUnitPriceWithVat(i.product)))
 
@@ -321,7 +251,7 @@ function PartnerCartPanel({
 
   return (
     <section
-      aria-label="Coș de cumpărături"
+      aria-label={tr.cartAria}
       aria-busy={loading}
       className={
         variant === 'sidebar'
@@ -335,7 +265,7 @@ function PartnerCartPanel({
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
               <ShoppingBag className="h-5 w-5 shrink-0 text-slate-700" strokeWidth={2} aria-hidden />
-              <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">Coș de cumpărături</h2>
+              <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">{tr.cartTitle}</h2>
               <span className="h-5 min-w-[1.5rem] shrink-0 rounded-full bg-slate-200 animate-pulse motion-reduce:animate-none" aria-hidden />
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -344,7 +274,7 @@ function PartnerCartPanel({
                 <button
                   type="button"
                   onClick={onDismiss}
-                  aria-label="Închide coșul"
+                  aria-label={tr.cartCloseAria}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 >
                   <X className="h-4 w-4" strokeWidth={2} />
@@ -357,7 +287,7 @@ function PartnerCartPanel({
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <ShoppingBag className="h-5 w-5 shrink-0 text-slate-700" strokeWidth={2} aria-hidden />
-          <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">Coș de cumpărături</h2>
+          <h2 className="m-0 truncate text-sm font-bold text-slate-900 font-['Inter']">{tr.cartTitle}</h2>
           {totalItems > 0 && (
             <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-bold text-white font-['Inter']">
               {totalItems}
@@ -368,7 +298,7 @@ function PartnerCartPanel({
           <button
             type="button"
             onClick={onDismiss}
-            aria-label="Închide coșul"
+            aria-label={tr.cartCloseAria}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
           >
             <X className="h-4 w-4" strokeWidth={2} />
@@ -385,14 +315,14 @@ function PartnerCartPanel({
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
               <ShoppingBag className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
             </div>
-            <p className="m-0 text-sm font-medium text-slate-500 font-['Inter']">Coșul este gol.</p>
+            <p className="m-0 text-sm font-medium text-slate-500 font-['Inter']">{tr.cartEmpty}</p>
             {(variant === 'mobile' || variant === 'sidebar') && onDismiss ? (
               <button
                 type="button"
                 onClick={onDismiss}
                 className="rounded-xl border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 font-['Inter']"
               >
-                Continuă cumpărăturile
+                {tr.cartContinueShopping}
               </button>
             ) : null}
           </div>
@@ -412,7 +342,9 @@ function PartnerCartPanel({
                   <div className="min-w-0 flex-1">
                     <p className="m-0 line-clamp-2 text-xs font-semibold leading-snug text-slate-900 font-['Inter']">{product.title}</p>
                     {unitPriceDisplay && (
-                      <p className="mt-0.5 m-0 text-[11px] text-slate-400 font-['Inter']">{unitPriceDisplay} / buc.</p>
+                      <p className="mt-0.5 m-0 text-[11px] text-slate-400 font-['Inter']">
+                        {unitPriceDisplay} {tr.cartPerUnit}
+                      </p>
                     )}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <div className="flex items-stretch overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -439,7 +371,7 @@ function PartnerCartPanel({
                       <button
                         type="button"
                         onClick={() => onRemove(product.id)}
-                        aria-label="Șterge din coș"
+                        aria-label={tr.cartRemoveItem}
                         className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
                       >
                         <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
@@ -497,7 +429,7 @@ function PartnerCartPanel({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 active:bg-slate-950 font-['Inter']"
           >
             <ShoppingBag className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-            Plasează comanda
+            {tr.cartCheckout}
           </button>
           {variant === 'mobile' && onDismiss ? (
             <button
@@ -505,7 +437,7 @@ function PartnerCartPanel({
               onClick={onDismiss}
               className="w-full rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 font-['Inter']"
             >
-              Continuă cumpărăturile
+              {tr.cartContinueShopping}
             </button>
           ) : null}
         </div>
@@ -566,7 +498,7 @@ function PartnerProductCard({
             className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
             loading="lazy"
           />
-        </div>
+      </div>
         <div className="absolute left-3 top-3">
           <StockBadge
             product={product}
@@ -645,32 +577,32 @@ function PartnerProductCard({
               className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                type="button"
-                onClick={() => onQuantityChange(-1)}
+          <button
+            type="button"
+            onClick={() => onQuantityChange(-1)}
                 aria-label="−"
                 className="flex flex-1 items-center justify-center py-2 text-slate-600 transition hover:bg-slate-50 active:bg-slate-100"
-              >
+          >
                 <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
+          </button>
               <span
                 className="flex w-12 items-center justify-center border-x border-slate-200 text-sm font-bold tabular-nums text-slate-900 font-['Inter']"
                 aria-live="polite"
               >
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => onQuantityChange(1)}
+            {quantity}
+          </span>
+          <button
+            type="button"
+            onClick={() => onQuantityChange(1)}
                 aria-label="+"
                 className="flex flex-1 items-center justify-center py-2 text-slate-600 transition hover:bg-slate-50 active:bg-slate-100"
-              >
+          >
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
-            </div>
+          </button>
+        </div>
             {/* Row 2: details */}
-            <button
-              type="button"
+        <button
+          type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onViewDetails()
@@ -691,8 +623,8 @@ function PartnerProductCard({
             >
               <ShoppingCart className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
               Adaugă în coș
-            </button>
-          </div>
+        </button>
+      </div>
         )}
       </div>
     </li>
@@ -766,14 +698,14 @@ function ProductDetailPanel({
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-4">
-          <ProductDetailRightSection
-            product={product}
-            tr={tr}
-            langCode={langCode}
-            compact
+      <ProductDetailRightSection
+        product={product}
+        tr={tr}
+        langCode={langCode}
+        compact
             hideBadges
-            partnerTab={activeTab}
-          />
+        partnerTab={activeTab}
+      />
         </div>
       </div>
     </div>
@@ -788,15 +720,16 @@ export default function PartnerProducts() {
   const { currency } = useCatalogCurrency()
   const tr = getProductDetailTranslations(language.code)
   const trProduse = getProduseTranslations(language.code)
+  const trProducts = getPartnerProductsTranslations(language.code)
 
   const partnerDetailTabs = useMemo(
     () => [
-      { id: 'detalii' as const, label: 'Detalii' },
+      { id: 'detalii' as const, label: trProducts.detailTabDetails },
       { id: 'tehnice' as const, label: tr.techSpecsTab },
-      { id: 'manuale' as const, label: 'Manuale' },
-      { id: 'videos' as const, label: 'Video' },
+      { id: 'manuale' as const, label: trProducts.detailTabManuals },
+      { id: 'videos' as const, label: trProducts.detailTabVideos },
     ],
-    [tr],
+    [tr, trProducts],
   )
 
   const [products, setProducts] = useState<PublicProduct[]>([])
@@ -1026,20 +959,22 @@ export default function PartnerProducts() {
       <div className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white px-5 py-2.5 shadow-sm sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 xl:flex-1 xl:min-w-0">
-            <h1 className="shrink-0 text-2xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:text-3xl">Produse</h1>
+            <h1 className="shrink-0 text-2xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:text-3xl">
+              {trProducts.pageTitle}
+            </h1>
             <nav
               className="flex min-w-0 flex-wrap items-center gap-1.5 sm:flex-1 sm:flex-nowrap sm:overflow-x-auto sm:pb-0.5 xl:flex-initial xl:overflow-visible xl:pb-0 [scrollbar-width:thin]"
               role="navigation"
-              aria-label="Secțiuni catalog"
+              aria-label={trProducts.catalogNavAria}
             >
               {PARTNER_CATALOG_SECTION_ORDER.map((sid) => {
                 const count = sectionBuckets[sid].length
                 const label = catalogSectionLabels[sid]
-                return (
-                  <button
+              return (
+                <button
                     key={sid}
-                    type="button"
-                    onClick={() => {
+                  type="button"
+                  onClick={() => {
                       document.getElementById(`partner-catalog-${sid}`)?.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start',
@@ -1051,9 +986,9 @@ export default function PartnerProducts() {
                     {count > 0 ? (
                       <span className="ml-1 shrink-0 tabular-nums text-slate-400">({count})</span>
                     ) : null}
-                  </button>
-                )
-              })}
+                </button>
+              )
+            })}
             </nav>
           </div>
 
@@ -1174,7 +1109,7 @@ export default function PartnerProducts() {
                     setCartOpen(true)
                   }
                 }}
-                aria-label={`Coș (${cartTotalItems} produse)`}
+                aria-label={trProducts.cartAriaWithCount.replace('{count}', String(cartTotalItems))}
                 className={PARTNER_TOOLBAR_ICON_BTN}
               >
                 <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -1187,7 +1122,7 @@ export default function PartnerProducts() {
             </div>
           </div>
         </div>
-      </div>
+          </div>
 
       {/* ── Main area: grid + right sidebar (info + basket) ── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -1203,7 +1138,7 @@ export default function PartnerProducts() {
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
                 <Search className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
-              </div>
+            </div>
               <p className="text-sm text-slate-500 font-['Inter']">{trProduse.noResults}</p>
               {search ? (
                 <button
@@ -1243,19 +1178,15 @@ export default function PartnerProducts() {
                         <span className="min-w-0">{catalogSectionLabels[sectionId]}</span>
                       </h2>
                       <span className="text-xs font-medium tabular-nums text-slate-400 font-['Inter']">
-                        {language.code === 'en'
-                          ? `${list.length} ${list.length === 1 ? 'product' : 'products'}`
-                          : language.code === 'zh'
-                            ? `${list.length} 款产品`
-                            : `${list.length} ${list.length === 1 ? 'produs' : 'produse'}`}
+                        {formatPartnerCatalogSectionCount(language.code, list.length)}
                       </span>
                     </div>
                     <ul className={productGridClass}>
                       {list.map((product) => (
                         <PartnerProductCard
-                          key={product.id}
-                          product={product}
-                          selected={selectedId === product.id}
+                  key={product.id}
+                  product={product}
+                  selected={selectedId === product.id}
                           quantity={qty(product.id)}
                           trProduse={trProduse}
                           currency={currency}
@@ -1263,8 +1194,8 @@ export default function PartnerProducts() {
                           onQuantityChange={(delta) => changeQty(product.id, delta)}
                           onAddToCart={() => addToCart(product, qty(product.id))}
                           onViewDetails={() => setSelectedId(product.id)}
-                        />
-                      ))}
+                />
+              ))}
                     </ul>
                   </section>
                 )
@@ -1287,7 +1218,7 @@ export default function PartnerProducts() {
                 langCode={language.code}
                 currency={currency}
               />
-            </div>
+      </div>
 
             <ReducerePartenerBox discountPercent={discountPercent} loading={discountLoading} />
           </div>
@@ -1315,15 +1246,15 @@ export default function PartnerProducts() {
 
       {/* ── Detail drawer ── */}
       <div
-        aria-hidden
+            aria-hidden
         onClick={() => dismissProductDetailPanel()}
         className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
           selectedId != null ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
         aria-label="Detalii produs"
         className={`fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-4xl flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
           selectedId != null ? 'translate-x-0' : 'translate-x-full'
@@ -1426,8 +1357,8 @@ export default function PartnerProducts() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                            <button
-                              type="button"
+                <button
+                  type="button"
                               onClick={() => changeQty(p.id, -1)}
                               aria-label="−"
                               className="flex flex-1 items-center justify-center py-2 text-slate-600 transition hover:bg-slate-50 active:bg-slate-100"
@@ -1469,41 +1400,41 @@ export default function PartnerProducts() {
             <button
               type="button"
               onClick={() => dismissProductDetailPanel()}
-              aria-label="Închide"
+                  aria-label="Închide"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            >
+                >
               <X className="h-4 w-4" strokeWidth={2} />
-            </button>
-          </div>
+                </button>
+              </div>
           <div className="flex gap-0 overflow-x-auto px-4 sm:px-6" role="tablist">
             {partnerDetailTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={detailPanelTab === tab.id}
-                onClick={() => setDetailPanelTab(tab.id)}
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={detailPanelTab === tab.id}
+                    onClick={() => setDetailPanelTab(tab.id)}
                 className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors font-['Inter'] -mb-px ${
-                  detailPanelTab === tab.id
-                    ? 'border-slate-900 text-slate-900'
+                      detailPanelTab === tab.id
+                        ? 'border-slate-900 text-slate-900'
                     : 'border-transparent text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <ProductDetailPanel
-            product={selectedProduct}
-            loading={detailLoading}
-            tr={tr}
-            langCode={language.code}
-            activeTab={detailPanelTab}
-          />
-        </div>
-      </aside>
+                <ProductDetailPanel
+                  product={selectedProduct}
+                  loading={detailLoading}
+                  tr={tr}
+                  langCode={language.code}
+                  activeTab={detailPanelTab}
+                />
+            </div>
+          </aside>
 
     </div>
   )

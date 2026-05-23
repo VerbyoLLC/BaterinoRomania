@@ -1,5 +1,6 @@
 import type { ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
+import { isPartnerPublicProfileFullyComplete } from './partner-public-profile-complete'
 
 /**
  * Origine pentru `${API_BASE}/admin/...` → server Express `/api/admin/...`.
@@ -29,7 +30,7 @@ function resolveApiBase(): string {
   return '/api'
 }
 
-const API_BASE = resolveApiBase()
+export const API_BASE = resolveApiBase()
 
 /** Payload pentru trimiterea formularului de contact */
 export type InquiryPayload = {
@@ -792,6 +793,8 @@ export async function login(email: string, password: string) {
 export type GoogleAuthOptions = {
   /** Obligatoriu la crearea unui cont nou cu Google (semnal explicit din UI). */
   acceptedTerms?: boolean
+  /** `signup`: email deja înregistrat → 409. `login`: fără cont existent → 404 (nicio creare de cont). */
+  intent?: 'signup' | 'login'
 }
 
 export async function googleAuth(
@@ -807,6 +810,9 @@ export async function googleAuth(
   const payload: Record<string, unknown> = { idToken, role }
   if (options?.acceptedTerms === true) {
     payload.acceptedTerms = true
+  }
+  if (options?.intent === 'signup' || options?.intent === 'login') {
+    payload.intent = options.intent
   }
   const res = await fetch(`${API_BASE}/auth/google`, {
     method: 'POST',
@@ -1768,10 +1774,12 @@ export type PartnerProfile = {
   website?: string
   facebookUrl?: string
   linkedinUrl?: string
+  instagramUrl?: string
+  tiktokUrl?: string
   isPublic?: boolean
   /** Galerie foto lucrări — array de URL-uri / base64 (max 8). */
   workPhotos?: string[] | null
-  /** Handle pagină publică /companii/{publicSlug} */
+  /** Handle pagină publică /companii-instalatori-fotovoltaice/{publicSlug}; API-ul rămâne /public/companii/… */
   publicSlug?: string | null
 }
 
@@ -1791,6 +1799,8 @@ export type PublicPartnerCompanyProfile = {
   website?: string | null
   facebookUrl?: string | null
   linkedinUrl?: string | null
+  instagramUrl?: string | null
+  tiktokUrl?: string | null
   workPhotos: string[]
 }
 
@@ -1816,7 +1826,27 @@ export async function savePartnerProfile(data: PartnerProfile) {
   return json
 }
 
+/** Încarcă logo sau foto lucrări în R2: `PublicProfiles/<nume-firma>/`. Necesită numele companiei setat în profil. */
+export async function uploadPartnerPublicMedia(file: File, kind: 'logo' | 'work'): Promise<{ url: string }> {
+  const token = getAuthToken()
+  const form = new FormData()
+  form.append('file', file)
+  form.append('kind', kind)
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/partner/public-profile/media`, {
+    method: 'POST',
+    headers,
+    body: form,
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea fișierului.')
+  return json as { url: string }
+}
+
 /** Agent de vânzări atribuit partenerului — inclus în GET /partner/profile când există. */
+export type SalesAgentKind = 'human' | 'ai'
+
 export type PartnerAssignedSalesAgent = {
   id: string
   firstName: string
@@ -1824,6 +1854,7 @@ export type PartnerAssignedSalesAgent = {
   email: string
   phone: string
   whatsapp: string
+  agentKind?: SalesAgentKind
 }
 
 /** GET /partner/profile — profil partener + flag-uri și agent atribuit. */
@@ -1846,27 +1877,54 @@ export async function getPartnerProfile(): Promise<PartnerProfileGetResponse> {
   return json as PartnerProfileGetResponse
 }
 
+export type PartnerPublicSlugAvailability = {
+  slug: string
+  available: boolean
+  isCurrent?: boolean
+  reason?: 'empty' | 'invalid' | 'taken'
+}
+
+/** Verifică dacă handle-ul paginii publice este liber (sau e cel curent al partenerului). */
+export async function checkPartnerPublicSlugAvailability(slug: string): Promise<PartnerPublicSlugAvailability> {
+  const q = encodeURIComponent(String(slug ?? '').trim())
+  const res = await fetch(`${API_BASE}/partner/public-slug/availability?slug=${q}`, {
+    headers: authHeaders(),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((json as { error?: string }).error || 'Eroare la verificarea adresei.')
+  return json as PartnerPublicSlugAvailability
+}
+
+export type PartnerProfileOnboardingFields = {
+  companyName?: string | null
+  cui?: string | null
+  activityTypes?: string | null
+  contactFirstName?: string | null
+  phone?: string | null
+}
+
+/** Ruta de onboarding dacă profilul e incomplet; `null` dacă poate intra în panou. */
+export function getPartnerOnboardingRedirect(
+  p: PartnerProfileOnboardingFields,
+): '/signup/parteneri/profil' | '/signup/parteneri/profil-public' | null {
+  if (!String(p.companyName || '').trim() || !String(p.cui || '').trim()) {
+    return '/signup/parteneri/profil'
+  }
+  if (
+    !String(p.activityTypes || '').trim() ||
+    !String(p.contactFirstName || '').trim() ||
+    !String(p.phone || '').trim()
+  ) {
+    return '/signup/parteneri/profil-public'
+  }
+  return null
+}
+
 /** După login cu parolă: unde merge un partener (onboarding vs dashboard). Necesită token deja setat. */
 export async function getPartnerPostLoginPath(): Promise<string> {
   try {
-    const p = (await getPartnerProfile()) as {
-      companyName?: string | null
-      cui?: string | null
-      activityTypes?: string | null
-      contactFirstName?: string | null
-      phone?: string | null
-    }
-    if (!String(p.companyName || '').trim() || !String(p.cui || '').trim()) {
-      return '/signup/parteneri/profil'
-    }
-    if (
-      !String(p.activityTypes || '').trim() ||
-      !String(p.contactFirstName || '').trim() ||
-      !String(p.phone || '').trim()
-    ) {
-      return '/signup/parteneri/profil-public'
-    }
-    return '/partner'
+    const p = (await getPartnerProfile()) as PartnerProfileOnboardingFields
+    return getPartnerOnboardingRedirect(p) ?? '/partner'
   } catch {
     return '/signup/parteneri/profil'
   }
@@ -1925,7 +1983,11 @@ export type AdminCompany = {
   website: string | null
   facebookUrl: string | null
   linkedinUrl: string | null
+  instagramUrl?: string | null
+  tiktokUrl?: string | null
   logoUrl: string | null
+  publicSlug?: string | null
+  workPhotos?: string | null
   isPublic: boolean
   isSuspended: boolean
   isApproved: boolean
@@ -1966,16 +2028,25 @@ export async function updateAdminCompanyDiscount(id: string, discountPercent: nu
   return json
 }
 
-/** Profilul public e complet când partenerul a completat câmpurile obligatorii. */
+/** Profilul public e complet (aceleași reguli ca în panoul partener / toggle „Profil public”). */
 export function isPublicProfileComplete(c: AdminCompany): boolean {
-  return !!(
-    c.publicName?.trim() &&
-    c.street?.trim() &&
-    c.county?.trim() &&
-    c.city?.trim() &&
-    c.description?.trim() &&
-    (c.services?.trim() || c.publicPhone?.trim())
-  )
+  return isPartnerPublicProfileFullyComplete({
+    publicSlug: c.publicSlug,
+    logoUrl: c.logoUrl,
+    publicName: c.publicName,
+    street: c.street,
+    county: c.county,
+    city: c.city,
+    description: c.description,
+    services: c.services,
+    publicPhone: c.publicPhone,
+    website: c.website,
+    facebookUrl: c.facebookUrl,
+    linkedinUrl: c.linkedinUrl,
+    instagramUrl: c.instagramUrl,
+    tiktokUrl: c.tiktokUrl,
+    workPhotos: c.workPhotos,
+  })
 }
 
 export async function suspendAdminCompany(id: string, suspended: boolean): Promise<AdminCompany> {
@@ -2491,6 +2562,195 @@ export async function getAdminProductModels(): Promise<AdminProductModelRow[]> {
   }))
 }
 
+export type UploadProductTechnicalBrochureResponse = {
+  url: string
+  key: string
+  modelNumber: string
+  modelName: string
+}
+
+/** Încarcă PDF-ul broșurii tehnice în R2 la `Product Technical Brochures/<nume-model>.pdf` (suprascriere la regenerare). */
+export async function uploadAdminProductTechnicalBrochurePdf(
+  modelId: string,
+  pdfFile: File,
+): Promise<UploadProductTechnicalBrochureResponse> {
+  const token = getAuthToken()
+  if (!token) throw new Error('Trebuie să fii autentificat.')
+  const formData = new FormData()
+  formData.append('file', pdfFile)
+  const res = await fetch(
+    `${API_BASE}/admin/product-models/${encodeURIComponent(modelId)}/technical-brochure`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    },
+  )
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<UploadProductTechnicalBrochureResponse>
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea broșurii PDF.')
+  }
+  return json as UploadProductTechnicalBrochureResponse
+}
+
+/** Generează PDF A4 pentru ofertă comercială (Puppeteer pe server, ca proforma). */
+export async function downloadAdminCommercialOfferPdf(params: {
+  html: string
+  filename: string
+  /** Implicit true — la generare din formular (salvare în listă) poate fi false. */
+  downloadToBrowser?: boolean
+  saveRecord?: {
+    buyerType: 'person' | 'company'
+    clientLabel: string
+    clientEmail?: string
+    clientPhone?: string
+    amountGross: number
+    currency: 'RON' | 'EUR'
+    productCount: number
+  }
+  draftSnapshot?: {
+    buyerType: 'person' | 'company'
+    clientPerson?: { email: string; telefon: string } | null
+    clientCompany?: { contactEmail: string; contactTelefon: string } | null
+  } | null
+  /** Dacă se generează dintr-o ciornă existentă — actualizează rândul în loc de insert. */
+  offerId?: string
+}): Promise<void> {
+  const token = getAuthToken()
+  if (!token) throw new Error('Trebuie să fii autentificat.')
+  const res = await fetch(`${API_BASE}/admin/commercial-offer/pdf`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      html: params.html,
+      filename: params.filename,
+      ...(params.saveRecord ? { saveRecord: params.saveRecord } : {}),
+      ...(params.draftSnapshot ? { draftSnapshot: params.draftSnapshot } : {}),
+      ...(params.offerId ? { offerId: params.offerId } : {}),
+    }),
+  })
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Nu s-a putut genera PDF-ul ofertei.')
+  }
+  if (params.downloadToBrowser === false) {
+    await res.arrayBuffer()
+    return
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = params.filename.replace(/[^\w.-]+/g, '_') || 'oferta-comerciala.pdf'
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000)
+}
+
+export type AdminCommercialOfferRow = {
+  id: string
+  createdAt: string
+  updatedAt: string
+  status: 'draft' | 'generated'
+  buyerType: 'person' | 'company'
+  clientLabel: string
+  clientEmail: string
+  clientPhone: string
+  amountGross: string
+  currency: string
+  productCount: number
+  pdfUrl: string
+}
+
+export type AdminCommercialOfferDetail = AdminCommercialOfferRow & {
+  draftSnapshot: unknown
+}
+
+export async function getAdminCommercialOffers(): Promise<AdminCommercialOfferRow[]> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers`, {
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    offers?: AdminCommercialOfferRow[]
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Nu s-au putut încărca ofertele.')
+  }
+  return Array.isArray(json.offers) ? json.offers : []
+}
+
+export async function getAdminCommercialOffer(id: string): Promise<AdminCommercialOfferDetail> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    offer?: AdminCommercialOfferDetail
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Oferta nu a fost găsită.')
+    throw new Error(json.error || 'Nu s-a putut încărca oferta.')
+  }
+  if (!json.offer) throw new Error('Răspuns invalid de la server.')
+  return json.offer
+}
+
+export async function saveAdminCommercialOfferDraft(params: {
+  id?: string
+  formSnapshot: {
+    version: 1
+    kind: 'adminOfferForm'
+    form: Record<string, unknown>
+  }
+  meta: {
+    buyerType: 'person' | 'company'
+    clientLabel: string
+    clientEmail?: string
+    clientPhone?: string
+    amountGross: number
+    currency: 'RON' | 'EUR'
+    productCount: number
+  }
+}): Promise<AdminCommercialOfferRow> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers/draft`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...(params.id ? { id: params.id } : {}),
+      formSnapshot: params.formSnapshot,
+      meta: params.meta,
+    }),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    offer?: AdminCommercialOfferRow
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Nu s-a putut salva ciorna.')
+  }
+  if (!json.offer) throw new Error('Răspuns invalid de la server.')
+  return json.offer
+}
+
 export async function updateAdminProductModel(
   id: string,
   payload: UpdateAdminProductModelPayload,
@@ -2660,6 +2920,85 @@ export type AdminOrdersDashboardSummary = {
 export type AdminServiceDashboardSummary = {
   service: { newOpen: number }
   retur: { newPending: number }
+}
+
+export type AdminDashboardSummary = {
+  notifications: {
+    newOrders: number
+    offerDrafts: number
+    offersRecent: number
+    newLeads: number
+    leadsUnreadComments: number
+    serviceRequests: number
+    returRequests: number
+    unreadMessages: number
+    partnersPending: number
+    newClients: number
+  }
+  statistics: {
+    clients: number
+    partners: number
+    partnersPending: number
+    leads: number
+    offersGenerated: number
+    agents: number
+    newOrders: number
+  }
+  orders: {
+    newOrders: {
+      total: number
+      client: number
+      partner: number
+      guest: number
+    }
+  }
+}
+
+export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary> {
+  const res = await fetch(`${API_BASE}/admin/dashboard-summary`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = (await res.json().catch(() => ({}))) as AdminDashboardSummary & { error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea dashboard-ului.')
+  }
+  const n = json.notifications && typeof json.notifications === 'object' ? json.notifications : {}
+  const s = json.statistics && typeof json.statistics === 'object' ? json.statistics : {}
+  const o = json.orders?.newOrders && typeof json.orders.newOrders === 'object' ? json.orders.newOrders : {}
+  return {
+    notifications: {
+      newOrders: Number(n.newOrders) || 0,
+      offerDrafts: Number(n.offerDrafts) || 0,
+      offersRecent: Number(n.offersRecent) || 0,
+      newLeads: Number(n.newLeads) || 0,
+      leadsUnreadComments: Number(n.leadsUnreadComments) || 0,
+      serviceRequests: Number(n.serviceRequests) || 0,
+      returRequests: Number(n.returRequests) || 0,
+      unreadMessages: Number(n.unreadMessages) || 0,
+      partnersPending: Number(n.partnersPending) || 0,
+      newClients: Number(n.newClients) || 0,
+    },
+    statistics: {
+      clients: Number(s.clients) || 0,
+      partners: Number(s.partners) || 0,
+      partnersPending: Number(s.partnersPending) || 0,
+      leads: Number(s.leads) || 0,
+      offersGenerated: Number(s.offersGenerated) || 0,
+      agents: Number(s.agents) || 0,
+      newOrders: Number(s.newOrders) || 0,
+    },
+    orders: {
+      newOrders: {
+        total: Number(o.total) || 0,
+        client: Number(o.client) || 0,
+        partner: Number(o.partner) || 0,
+        guest: Number(o.guest) || 0,
+      },
+    },
+  }
 }
 
 export async function getAdminServiceDashboardSummary(): Promise<AdminServiceDashboardSummary> {
@@ -2846,11 +3185,17 @@ export type AdminSalesAgent = {
   county: string
   city: string
   sector: string
+  agentKind: SalesAgentKind
+  isSuspended: boolean
   userId?: string | null
   /** Număr parteneri cu assignedSalesAgentId = acest agent. */
   partnerCount?: number
   createdAt: string
   updatedAt: string
+}
+
+export function isAdminAgentAssignable(a: AdminSalesAgent): boolean {
+  return a.isSuspended !== true
 }
 
 export type AdminAgentPartnerCompany = {
@@ -2891,6 +3236,293 @@ export async function getSalesAgentMe(): Promise<SalesAgentMeResponse> {
     throw new Error(json.error || `Eroare la încărcarea profilului (${res.status})`)
   }
   return json as SalesAgentMeResponse
+}
+
+export type UpdateSalesAgentProfilePayload = {
+  lastName: string
+  firstName: string
+  phone: string
+  whatsapp: string
+  email: string
+  program: string
+  county: string
+  city: string
+  sector: string
+}
+
+export async function updateSalesAgentProfile(payload: UpdateSalesAgentProfilePayload): Promise<SalesAgentMeResponse> {
+  const res = await fetch(`${API_BASE}/sales-agent/me`, {
+    method: 'PATCH',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error((json as { error?: string }).error || 'Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Nu s-au putut salva datele.')
+  }
+  return json as SalesAgentMeResponse
+}
+
+export type SalesLeadRow = {
+  id: string
+  createdAt: string
+  updatedAt: string
+  name: string
+  email: string
+  phone: string
+  source: string
+  status: 'nou' | 'contactat' | 'oferta' | 'inchis' | 'dead'
+  customerType: string
+  productLine: string
+  monthlyVolume: string
+  whatsapp: string
+  message: string
+  companyName: string
+  workEmail: string
+  jobTitle: string
+  country: string
+  website: string
+  createdByUserId: string | null
+  createdByName: string
+  createdByEmail: string
+  activityCount: number
+  isNew: boolean
+  hasUnreadComments: boolean
+}
+
+export type SalesLeadActivity = {
+  id: string
+  createdAt: string
+  type: 'comment' | 'status_change'
+  comment: string
+  fromStatus: string
+  toStatus: string
+  userId: string
+  userName: string
+  userEmail: string
+}
+
+export type SalesLeadsAudience = 'admin' | 'sales-agent'
+
+export type CreateSalesLeadPayload = {
+  name: string
+  email?: string
+  phone?: string
+  source?: string
+  status?: SalesLeadRow['status']
+  customerType?: string
+  productLine?: string
+  monthlyVolume?: string
+  whatsapp?: string
+  message?: string
+  companyName?: string
+  workEmail?: string
+  jobTitle?: string
+  country?: string
+  website?: string
+}
+
+export type SalesLeadStats = {
+  totalLeads: number
+  yourLeads: number
+  contributions: number
+}
+
+export async function getSalesAgentLeadStats(): Promise<SalesLeadStats> {
+  const res = await fetch(`${API_BASE}/sales-agent/leads/stats`, { headers: authHeaders() })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; stats?: SalesLeadStats }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || 'Nu s-au putut încărca statisticile leads.')
+  }
+  const stats = json.stats
+  return {
+    totalLeads: stats?.totalLeads ?? 0,
+    yourLeads: stats?.yourLeads ?? 0,
+    contributions: stats?.contributions ?? 0,
+  }
+}
+
+export async function getSalesAgentLeads(): Promise<SalesLeadRow[]> {
+  const res = await fetch(`${API_BASE}/sales-agent/leads`, { headers: authHeaders() })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; leads?: SalesLeadRow[] }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || 'Nu s-au putut încărca leads.')
+  }
+  return Array.isArray(json.leads) ? json.leads : []
+}
+
+export async function getAdminSalesLeads(): Promise<SalesLeadRow[]> {
+  const res = await fetch(`${API_BASE}/admin/leads`, { headers: authHeaders() })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; leads?: SalesLeadRow[] }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || 'Nu s-au putut încărca leads.')
+  }
+  return Array.isArray(json.leads) ? json.leads : []
+}
+
+function salesLeadsApiBase(audience: SalesLeadsAudience): string {
+  return audience === 'admin' ? `${API_BASE}/admin/leads` : `${API_BASE}/sales-agent/leads`
+}
+
+export async function getSalesLeadActivities(
+  leadId: string,
+  audience: SalesLeadsAudience,
+): Promise<SalesLeadActivity[]> {
+  const id = String(leadId || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  const res = await fetch(`${salesLeadsApiBase(audience)}/${encodeURIComponent(id)}/activities`, {
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; activities?: SalesLeadActivity[] }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Lead negăsit.')
+    throw new Error(json.error || 'Nu s-au putut încărca comentariile.')
+  }
+  return Array.isArray(json.activities) ? json.activities : []
+}
+
+export async function postSalesLeadComment(
+  leadId: string,
+  comment: string,
+  audience: SalesLeadsAudience,
+): Promise<SalesLeadActivity> {
+  const id = String(leadId || '').trim()
+  const text = String(comment || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  if (!text) throw new Error('Comentariul este obligatoriu.')
+  const res = await fetch(`${salesLeadsApiBase(audience)}/${encodeURIComponent(id)}/comments`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ comment: text }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; activity?: SalesLeadActivity }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Lead negăsit.')
+    throw new Error(json.error || 'Nu s-a putut salva comentariul.')
+  }
+  if (!json.activity) throw new Error('Răspuns invalid de la server.')
+  return json.activity
+}
+
+export async function markSalesLeadViewed(leadId: string, audience: SalesLeadsAudience): Promise<SalesLeadRow> {
+  const id = String(leadId || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  const res = await fetch(`${salesLeadsApiBase(audience)}/${encodeURIComponent(id)}/viewed`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Lead negăsit.')
+    throw new Error(json.error || 'Nu s-a putut marca lead-ul.')
+  }
+  if (!json.lead) throw new Error('Răspuns invalid de la server.')
+  return json.lead
+}
+
+export async function markSalesLeadCommentsSeen(
+  leadId: string,
+  audience: SalesLeadsAudience,
+): Promise<SalesLeadRow> {
+  const id = String(leadId || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  const res = await fetch(`${salesLeadsApiBase(audience)}/${encodeURIComponent(id)}/comments-seen`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Lead negăsit.')
+    throw new Error(json.error || 'Nu s-a putut marca comentariile.')
+  }
+  if (!json.lead) throw new Error('Răspuns invalid de la server.')
+  return json.lead
+}
+
+export async function patchSalesLeadStatus(
+  leadId: string,
+  status: SalesLeadRow['status'],
+  audience: SalesLeadsAudience,
+): Promise<SalesLeadRow> {
+  const id = String(leadId || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  const res = await fetch(`${salesLeadsApiBase(audience)}/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    if (res.status === 404) throw new Error(json.error || 'Lead negăsit.')
+    throw new Error(json.error || 'Nu s-a putut actualiza statusul.')
+  }
+  if (!json.lead) throw new Error('Răspuns invalid de la server.')
+  return json.lead
+}
+
+export async function createAdminLead(payload: CreateSalesLeadPayload): Promise<SalesLeadRow> {
+  const res = await fetch(`${API_BASE}/admin/leads`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || 'Nu s-a putut crea lead-ul.')
+  }
+  if (!json.lead) throw new Error('Răspuns invalid de la server.')
+  return json.lead
+}
+
+export async function createSalesAgentLead(payload: CreateSalesLeadPayload): Promise<SalesLeadRow> {
+  const res = await fetch(`${API_BASE}/sales-agent/leads`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
+    throw new Error(json.error || 'Nu s-a putut crea lead-ul.')
+  }
+  if (!json.lead) throw new Error('Răspuns invalid de la server.')
+  return json.lead
 }
 
 export async function getAdminAgents(): Promise<AdminSalesAgent[]> {
@@ -2939,7 +3571,10 @@ export type CreateAdminAgentPayload = {
   county: string
   city: string
   sector: string
+  agentKind: SalesAgentKind
 }
+
+export type UpdateAdminAgentPayload = CreateAdminAgentPayload
 
 export async function createAdminAgent(payload: CreateAdminAgentPayload): Promise<AdminSalesAgent> {
   let res: Response
@@ -2959,6 +3594,70 @@ export async function createAdminAgent(payload: CreateAdminAgentPayload): Promis
     throw new Error((json as { error?: string }).error || `Eroare la crearea agentului (${res.status})`)
   }
   return json as AdminSalesAgent
+}
+
+export async function updateAdminAgent(id: string, payload: UpdateAdminAgentPayload): Promise<AdminSalesAgent> {
+  const agentId = String(id || '').trim()
+  if (!agentId) throw new Error('ID agent lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents/${encodeURIComponent(agentId)}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la actualizarea agentului (${res.status})`)
+  }
+  return json as AdminSalesAgent
+}
+
+export async function suspendAdminAgent(id: string, suspended: boolean): Promise<AdminSalesAgent> {
+  const agentId = String(id || '').trim()
+  if (!agentId) throw new Error('ID agent lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents/${encodeURIComponent(agentId)}/suspend`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ suspended }),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la suspendare (${res.status})`)
+  }
+  return json as AdminSalesAgent
+}
+
+export async function deleteAdminAgent(id: string): Promise<void> {
+  const agentId = String(id || '').trim()
+  if (!agentId) throw new Error('ID agent lipsă.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/admin/agents/${encodeURIComponent(agentId)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+  } catch {
+    throw new Error('Nu s-a putut conecta la API. Pornește API-ul: cd apps/api && node index.js')
+  }
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot accesa această pagină.')
+    throw new Error((json as { error?: string }).error || `Eroare la ștergerea agentului (${res.status})`)
+  }
 }
 
 /** Șterge un cont client din admin (testare). */

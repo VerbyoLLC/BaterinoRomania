@@ -1,0 +1,697 @@
+/*
+ * BATERINO — Commercial offer A4. Design canvas 920px; PDF/print scales to 794px (A4 @ 96dpi).
+ * Scoped under .aco-a4.
+ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+.aco-a4 *,
+.aco-a4 *::before,
+.aco-a4 *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.aco-a4 {
+  font-family: 'DM Sans', Arial, sans-serif;
+  background: #ffffff;
+  width: 920px;
+  max-width: 920px;
+  margin-inline: auto;
+  min-height: 1123px;
+  height: auto;
+  /* Evită scroll orizontal când rânduri flex (ex. bară contact) depășesc lățimea foi */
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  color: #0a0e1a;
+  flex-shrink: 0;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  .aco-a4 {
+    width: 794px;
+    max-width: 794px;
+    margin-inline: auto;
+    min-height: 1123px;
+    height: auto;
+    overflow: visible;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .aco-a4 .aco-flex-spacer {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.aco-a4 .aco-top-bar {
+  background: #0a0e1a;
+  height: 38px;
+  padding: 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-top-bar span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #fff;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.aco-a4 .aco-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 16px 38px 12px;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-header-left {
+  justify-self: start;
+  min-width: 0;
+}
+
+.aco-a4 .aco-header-right {
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.aco-a4 .aco-header-right-cluster {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.aco-a4 .aco-header-right-copy {
+  text-align: right;
+  min-width: 0;
+}
+
+.aco-a4 .aco-qr-wrap-framed {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #9ca3af;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #fff;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .aco-a4 .aco-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .aco-a4 .aco-header-left {
+    justify-self: center;
+  }
+
+  .aco-a4 .aco-header-right {
+    justify-self: center;
+    width: 100%;
+  }
+
+  .aco-a4 .aco-header-right-cluster {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .aco-a4 .aco-header-right-copy {
+    text-align: center;
+    width: 100%;
+  }
+
+  .aco-a4 .aco-offer-title,
+  .aco-a4 .aco-offer-num {
+    text-align: center;
+  }
+
+  .aco-a4 .aco-meta-pills {
+    justify-content: center;
+  }
+}
+
+.aco-a4 .aco-logo-img {
+  height: 42px;
+  width: auto;
+  max-width: 220px;
+  display: block;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.aco-a4 .aco-footer-logo-img {
+  height: 26px;
+  width: auto;
+  max-width: 160px;
+  display: block;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 5px;
+}
+
+.aco-a4 .aco-logo-sub {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #8090b0;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.aco-a4 .aco-offer-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 3px;
+  text-align: right;
+}
+
+.aco-a4 .aco-offer-num {
+  font-size: 11px;
+  color: #8090b0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.aco-a4 .aco-meta-pills {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.aco-a4 .aco-pill {
+  border: 1px solid #e0e4f0;
+  border-radius: 4px;
+  padding: 4px 9px;
+  font-size: 11px;
+  color: #4a5a80;
+}
+
+.aco-a4 .aco-pill strong {
+  color: #0a0e1a;
+  font-weight: 600;
+}
+
+.aco-a4 .aco-divider {
+  height: 1px;
+  background: #e0e4f0;
+  margin: 0 38px;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-parties {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12px 38px;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-party {
+  flex: 1;
+}
+
+.aco-a4 .aco-party + .aco-party {
+  border-left: 1px solid #e0e4f0;
+  padding-left: 20px;
+  margin-left: 20px;
+}
+
+.aco-a4 .aco-party-label {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e0e4f0;
+}
+
+.aco-a4 .aco-party-name {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+
+.aco-a4 .aco-party--supplier .aco-party-name {
+  color: #1e46b4;
+}
+
+.aco-a4 .aco-party--client .aco-party-name {
+  color: #0f766e;
+}
+
+.aco-a4 .aco-party-company {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.aco-a4 .aco-party--client .aco-party-company {
+  color: #0f766e;
+}
+
+.aco-a4 .aco-party-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.aco-a4 .aco-party-row svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #8090b0;
+}
+
+.aco-a4 .aco-party-row span {
+  font-size: 12px;
+  color: #4a5060;
+  line-height: 1.45;
+}
+
+.aco-a4 .aco-party-row--address-continued {
+  padding-left: 16px;
+}
+
+.aco-a4 .aco-products-section {
+  padding: 0 38px 12px;
+  flex-shrink: 0;
+  margin-top: 12px;
+}
+
+.aco-a4 .aco-section-label {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e0e4f0;
+}
+
+.aco-a4 .aco-prod-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e4f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.aco-a4 .aco-prod-table thead tr {
+  background: #f5f6fa;
+}
+
+.aco-a4 .aco-prod-table th {
+  padding: 8px 9px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #8090b0;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-align: left;
+}
+
+.aco-a4 .aco-prod-table th:not(:first-child) {
+  text-align: right;
+}
+
+.aco-a4 .aco-prod-table td {
+  padding: 8px 9px;
+  font-size: 13px;
+  border-top: 1px solid #eef0f8;
+  color: #0a0e1a;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aco-a4 .aco-prod-table td:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.aco-a4 .aco-prod-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.aco-a4 .aco-prod-desc {
+  font-size: 11px;
+  color: #8090b0;
+  margin-top: 1px;
+}
+
+.aco-a4 .aco-totals-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 38px 0;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-totals-box {
+  width: 320px;
+  min-width: 320px;
+  max-width: 100%;
+  border: 1px solid #e0e4f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.aco-a4 .aco-total-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid #eef0f8;
+}
+
+.aco-a4 .aco-total-line:last-child {
+  border-bottom: none;
+}
+
+.aco-a4 .aco-total-line span:first-child {
+  color: #8090b0;
+  min-width: 0;
+}
+
+.aco-a4 .aco-total-line span:last-child {
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.aco-a4 .aco-total-line.grand {
+  background: #0a0e1a;
+}
+
+.aco-a4 .aco-total-line.grand span:first-child {
+  color: #8090b0;
+  font-weight: 600;
+}
+
+.aco-a4 .aco-total-line.grand span:last-child {
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.aco-a4 .aco-notes-section {
+  padding: 28px 38px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-note-box {
+  flex: 1;
+  border: 1px solid #e0e4f0;
+  border-radius: 5px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.aco-a4 .aco-note-box.warranty {
+  border-left: 3px solid #1e46b4;
+  background: #f5f7ff;
+}
+
+.aco-a4 .aco-note-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aco-a4 .aco-note-label svg {
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-note-text {
+  font-size: 12px;
+  color: #4a5060;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.aco-a4 .aco-note-text strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+.aco-a4 .aco-flex-spacer {
+  flex: 1;
+  min-height: 0;
+}
+
+.aco-a4 .aco-footer-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: flex-start;
+  gap: 14px 22px;
+  padding: 12px 38px 10px;
+  border-top: 1px solid #e0e4f0;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-footer-made-by-with-wa {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+}
+
+.aco-a4 .aco-made-by-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 14px 18px;
+}
+
+.aco-a4 .aco-made-by-author-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.aco-a4 .aco-made-by-contact-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  justify-self: end;
+}
+
+.aco-a4 .aco-contact-qr-head {
+  width: 100%;
+}
+
+.aco-a4 .aco-contact-qr-head .aco-made-by-label {
+  text-align: left;
+  margin-bottom: 0;
+}
+
+.aco-a4 .aco-contact-qr-row {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: flex-start;
+  gap: 8px;
+  justify-content: start;
+}
+
+.aco-a4 .aco-made-by-row-head {
+  width: 100%;
+}
+
+.aco-a4 .aco-made-by-row-head .aco-made-by-label {
+  text-align: left;
+  margin-bottom: 0;
+}
+
+.aco-a4 .aco-made-by-text-block {
+  min-width: 0;
+  max-width: min(100%, 320px);
+}
+
+.aco-a4 .aco-made-by-qr-col {
+  justify-self: start;
+  align-self: start;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-qr-with-logo {
+  position: relative;
+  flex-shrink: 0;
+  margin-inline: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.aco-a4 .aco-qr-with-logo .aco-qr-pixelated {
+  width: 100%;
+  height: 100%;
+}
+
+.aco-a4 .aco-qr-logo-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28%;
+  height: 28%;
+  min-width: 17px;
+  min-height: 17px;
+  max-width: 26px;
+  max-height: 26px;
+  background: #fff;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(224, 228, 240, 0.95);
+}
+
+.aco-a4 .aco-qr-logo-center .aco-wa-glyph {
+  display: block;
+}
+
+.aco-a4 .aco-tel-qr-center-icon {
+  color: #4a5060;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-qr-pixelated {
+  image-rendering: pixelated;
+}
+.aco-a4 .aco-footer-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.aco-a4 .aco-footer-detail svg {
+  flex-shrink: 0;
+  color: #8090b0;
+}
+
+.aco-a4 .aco-footer-detail span {
+  font-size: 12px;
+  color: #4a5060;
+}
+
+.aco-a4 .aco-made-by-label {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e0e4f0;
+}
+
+.aco-a4 .aco-made-by-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0a0e1a;
+  margin-bottom: 5px;
+}
+
+.aco-a4 .aco-made-by-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.aco-a4 .aco-made-by-detail svg {
+  flex-shrink: 0;
+  color: #8090b0;
+}
+
+.aco-a4 .aco-made-by-detail span {
+  font-size: 12px;
+  color: #4a5060;
+}
+
+@media print {
+  .aco-a4 .aco-footer-section {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+}
+
+.aco-a4 .aco-bottom-bar {
+  background: #0a0e1a;
+  min-height: 30px;
+  height: auto;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  flex-shrink: 0;
+}
+
+.aco-a4 .aco-bottom-bar span {
+  font-size: 10px;
+  color: #4a5a80;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  max-width: 100%;
+  text-align: center;
+}
+
+.aco-a4 .aco-bottom-bar span strong {
+  color: #fff;
+}
+
+/* Previzualizare ofertă + fișe tehnice (print): fiecare fișă începe pe pagină nouă */
+.aco-offer-preview-sheet-break {
+  margin-top: 2rem;
+}
+
+@media print {
+  .aco-offer-preview-sheet-break {
+    break-before: page;
+    page-break-before: always;
+    margin-top: 0;
+  }
+}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getAdminCompanies,
   getAdminAgents,
+  isAdminAgentAssignable,
   getAuthToken,
   testApiDb,
   suspendAdminCompany,
@@ -995,9 +996,10 @@ export default function AdminCompanies() {
                   className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/15"
                 >
                   <option value="">— Selectează agentul —</option>
-                  {salesAgents.map((a) => (
+                  {salesAgents.filter(isAdminAgentAssignable).map((a) => (
                     <option key={a.id} value={a.id}>
                       {[a.firstName, a.lastName].filter(Boolean).join(' ').trim() || a.email || a.id}
+                      {a.agentKind === 'ai' ? ' (AI)' : ''}
                     </option>
                   ))}
                 </select>

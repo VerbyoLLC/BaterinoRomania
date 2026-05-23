@@ -1,0 +1,478 @@
+/*
+ * Product sheet — admin preview (~920px design canvas; PDF scales to 794px A4 width).
+ * Fișa poate fi exportată la PDF cu viewport/lățime aliniată la aceste valori.
+ */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  .admin-product-sheet {
+    width: 794px;
+    max-width: 794px;
+    margin-inline: auto;
+    min-height: 1123px;
+    height: auto;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+  }
+}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+.admin-product-sheet {
+  font-family: 'DM Sans', Arial, sans-serif;
+  background: #ffffff;
+  width: 920px;
+  min-height: 1123px;
+  height: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  color: #0a0e1a;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet *,
+.admin-product-sheet *::before,
+.admin-product-sheet *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-product-sheet .aps-top-bar {
+  background: #0a0e1a;
+  height: 38px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.admin-product-sheet .aps-top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-product-sheet .aps-top-bar-brand {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #fff;
+  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-product-sheet .aps-top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-top-logo {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.admin-product-sheet .aps-top-bar-doc {
+  font-size: 10px;
+  color: #fff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.admin-product-sheet .aps-hero {
+  display: flex;
+  align-items: stretch;
+  min-height: 400px;
+  height: auto;
+  flex-shrink: 0;
+  padding-top: 18px;
+}
+
+.admin-product-sheet .aps-hero-left {
+  width: 470px;
+  flex-shrink: 0;
+  padding: 16px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.admin-product-sheet .aps-hero-right {
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 28px 16px 12px;
+  overflow: hidden;
+}
+
+.admin-product-sheet .aps-hero-right img {
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 6px 18px rgba(10, 14, 26, 0.08));
+}
+
+.admin-product-sheet .aps-brand-tag {
+  font-size: 9.5px;
+  letter-spacing: 2.5px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.admin-product-sheet .aps-product-kind {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4a5060;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  margin-bottom: 4px;
+}
+
+.admin-product-sheet .aps-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.admin-product-sheet .aps-product-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0a0e1a;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.admin-product-sheet .aps-manufacturer-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f1f4;
+  border: 1px solid #d8dae4;
+  border-radius: 4px;
+  padding: 3px 9px;
+}
+
+.admin-product-sheet .aps-manufacturer-badge-text {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0a0e1a;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.admin-product-sheet .aps-product-sub {
+  font-size: 10px;
+  color: #8090b0;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 13px;
+}
+
+.admin-product-sheet .aps-kpi-row {
+  display: flex;
+  border: 1px solid #e0e4f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.admin-product-sheet .aps-kpi {
+  padding: 9px 12px;
+  flex: 1;
+  border-right: 1px solid #e0e4f0;
+}
+
+.admin-product-sheet .aps-kpi:last-child {
+  border-right: none;
+}
+
+.admin-product-sheet .aps-kpi-val {
+  font-size: 19px;
+  font-weight: 700;
+  color: #0a0e1a;
+  line-height: 1;
+}
+
+.admin-product-sheet .aps-kpi-unit {
+  font-size: 9.5px;
+  color: #1e46b4;
+  font-weight: 700;
+}
+
+.admin-product-sheet .aps-kpi-lbl {
+  font-size: 8.5px;
+  color: #8090b0;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-product-sheet .aps-warranty-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0f1f4;
+  border: 1px solid #d8dae4;
+  border-left: 4px solid #1e46b4;
+  border-radius: 7px;
+  padding: 10px 13px;
+  margin-bottom: 12px;
+}
+
+.admin-product-sheet .aps-warranty-icon-box {
+  width: 38px;
+  height: 38px;
+  background: #1e46b4;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-warranty-icon-box svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-product-sheet .aps-warranty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0a0e1a;
+  line-height: 1;
+}
+
+.admin-product-sheet .aps-warranty-title span {
+  font-size: 8.5px;
+  color: #4a5a80;
+  font-weight: 600;
+  margin-left: 6px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.admin-product-sheet .aps-warranty-sub {
+  font-size: 9.5px;
+  color: #4a5060;
+  margin-top: 2px;
+}
+
+.admin-product-sheet .aps-cert-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.admin-product-sheet .aps-cert {
+  border: 1px solid #d0d8f0;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 9.5px;
+  color: #1e46b4;
+  font-weight: 700;
+}
+
+.admin-product-sheet .aps-body-grid {
+  display: flex;
+  min-height: 0;
+  height: auto;
+  flex-shrink: 0;
+  align-items: stretch;
+  margin-top: 22px;
+}
+
+.admin-product-sheet .aps-spec-panel {
+  width: 500px;
+  padding: 2px 22px 12px 28px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.admin-product-sheet .aps-feats-panel {
+  flex: 1;
+  padding: 2px 22px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.admin-product-sheet .aps-panel-title {
+  font-size: 8.5px;
+  letter-spacing: 3px;
+  color: #1e46b4;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e0e4f0;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-spec-scroll {
+  overflow: visible;
+}
+
+.admin-product-sheet .aps-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e4f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.admin-product-sheet .aps-spec-table tr {
+  border-bottom: 1px solid #eef0f8;
+}
+
+.admin-product-sheet .aps-spec-table tr:last-child {
+  border-bottom: none;
+}
+
+.admin-product-sheet .aps-spec-table td {
+  padding: 5.5px 10px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.admin-product-sheet .aps-spec-table td:first-child {
+  color: #8090b0;
+  width: 48%;
+}
+
+.admin-product-sheet .aps-spec-table td:last-child {
+  color: #0a0e1a;
+  font-weight: 500;
+}
+
+.admin-product-sheet .aps-spec-table td.aps-hl {
+  color: #0a0e1a !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+.admin-product-sheet .aps-spec-section td {
+  background: #f7f8fb;
+  font-weight: 700;
+  color: #0a0e1a !important;
+  font-size: 10px !important;
+  letter-spacing: 0.5px;
+}
+
+.admin-product-sheet .aps-feat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, auto);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-feat {
+  border: 1px solid #e0e4f0;
+  border-radius: 6px;
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-product-sheet .aps-feat svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: #1e46b4;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  margin-bottom: 5px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-feat-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0a0e1a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-feat-desc {
+  font-size: 10.5px;
+  color: #8090b0;
+  line-height: 1.45;
+}
+
+.admin-product-sheet .aps-panel-title.aps-stats-section-title {
+  margin-top: 12px;
+}
+
+.admin-product-sheet .aps-stats-grid {
+  grid-template-rows: repeat(2, auto);
+}
+
+.admin-product-sheet .aps-stats-grid .aps-feat-title {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+
+.admin-product-sheet .aps-stats-grid .aps-feat-desc {
+  font-size: 10.5px;
+}
+
+.admin-product-sheet .aps-footer {
+  background: #0a0e1a;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 28px;
+  flex-shrink: 0;
+}
+
+.admin-product-sheet .aps-footer-contact {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
