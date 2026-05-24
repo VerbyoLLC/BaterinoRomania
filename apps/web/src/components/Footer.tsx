@@ -48,6 +48,9 @@ function Footer() {
               <Link to="/returnare-produse" className={linkClass}>
                 {t.returnareProduse}
               </Link>
+              <Link to="/intrebari-frecvente" className={linkClass}>
+                {t.intrebariFrecvente}
+              </Link>
               <Link to="/login" className={linkClass}>{t.clienti}</Link>
             </nav>
           </div>
@@ -91,6 +94,7 @@ function Footer() {
               <Link to="/siguranta" className={linkClass}>{t.sigurantaClientului}</Link>
               <Link to="/verificare-garantie" className={linkClass}>{t.verificareGarantie}</Link>
               <Link to="/returnare-produse" className={linkClass}>{t.returnareProduse}</Link>
+              <Link to="/intrebari-frecvente" className={linkClass}>{t.intrebariFrecvente}</Link>
               <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
               <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
               <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>

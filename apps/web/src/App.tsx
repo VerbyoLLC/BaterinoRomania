@@ -65,6 +65,7 @@ import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiPrograme
 import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
 import Cariere from './pages/Cariere'
 import Contact from './pages/Contact'
+import IntrebariFrecvente from './pages/IntrebariFrecvente'
 import SliderExamples from './pages/SliderExamples'
 import PartnerLayout from './pages/partner/PartnerLayout'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
@@ -199,6 +200,7 @@ export default function App() {
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
+              <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />
@@ -224,6 +226,7 @@ export default function App() {
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
+              <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="produse" element={<ClientMyProducts />} />
