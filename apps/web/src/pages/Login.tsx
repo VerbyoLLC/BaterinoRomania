@@ -29,7 +29,7 @@ function navigateAfterLogin(
   navigate: NavigateFunction,
   user: AuthUser,
   nextPath: string | undefined,
-  partnerGoogle?: PartnerGoogleOnboarding,
+  _partnerGoogle?: PartnerGoogleOnboarding,
 ) {
   if (user.role === 'admin') {
     const dest =

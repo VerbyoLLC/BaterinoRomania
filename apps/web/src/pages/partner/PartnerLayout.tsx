@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { getAuthEmail, getPartnerOnboardingRedirect, getPartnerProfile } from '../../lib/api'
+import { getAuthEmail, getPartnerOnboardingRedirect, getPartnerProfile, type PartnerProfileGetResponse } from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { LANGUAGES } from '../../i18n/menu'
 import { getPartnerLayoutTranslations } from '../../i18n/partner/layout'
@@ -213,15 +213,7 @@ export default function PartnerLayout() {
 
   useEffect(() => {
     getPartnerProfile()
-      .then((p: {
-        isSuspended?: boolean
-        isApproved?: boolean
-        companyName?: string | null
-        cui?: string | null
-        activityTypes?: string | null
-        contactFirstName?: string | null
-        phone?: string | null
-      }) => {
+      .then((p: PartnerProfileGetResponse) => {
         const onboardingPath = getPartnerOnboardingRedirect(p)
         if (onboardingPath) {
           navigate(onboardingPath, { replace: true })

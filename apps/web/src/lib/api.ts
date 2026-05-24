@@ -1898,9 +1898,14 @@ export async function checkPartnerPublicSlugAvailability(slug: string): Promise<
 export type PartnerProfileOnboardingFields = {
   companyName?: string | null
   cui?: string | null
-  activityTypes?: string | null
+  activityTypes?: string | string[] | null
   contactFirstName?: string | null
   phone?: string | null
+}
+
+function partnerActivityTypesFilled(activityTypes: PartnerProfileOnboardingFields['activityTypes']): boolean {
+  if (Array.isArray(activityTypes)) return activityTypes.some((t) => String(t || '').trim())
+  return Boolean(String(activityTypes || '').trim())
 }
 
 /** Ruta de onboarding dacă profilul e incomplet; `null` dacă poate intra în panou. */
@@ -1911,7 +1916,7 @@ export function getPartnerOnboardingRedirect(
     return '/signup/parteneri/profil'
   }
   if (
-    !String(p.activityTypes || '').trim() ||
+    !partnerActivityTypesFilled(p.activityTypes) ||
     !String(p.contactFirstName || '').trim() ||
     !String(p.phone || '').trim()
   ) {
@@ -1923,7 +1928,7 @@ export function getPartnerOnboardingRedirect(
 /** După login cu parolă: unde merge un partener (onboarding vs dashboard). Necesită token deja setat. */
 export async function getPartnerPostLoginPath(): Promise<string> {
   try {
-    const p = (await getPartnerProfile()) as PartnerProfileOnboardingFields
+    const p = await getPartnerProfile()
     return getPartnerOnboardingRedirect(p) ?? '/partner'
   } catch {
     return '/signup/parteneri/profil'
@@ -2965,9 +2970,15 @@ export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary>
     if (res.status === 403) throw new Error('Acces restricționat.')
     throw new Error(json.error || 'Eroare la încărcarea dashboard-ului.')
   }
-  const n = json.notifications && typeof json.notifications === 'object' ? json.notifications : {}
-  const s = json.statistics && typeof json.statistics === 'object' ? json.statistics : {}
-  const o = json.orders?.newOrders && typeof json.orders.newOrders === 'object' ? json.orders.newOrders : {}
+  const n = (json.notifications && typeof json.notifications === 'object'
+    ? json.notifications
+    : {}) as Partial<AdminDashboardSummary['notifications']>
+  const s = (json.statistics && typeof json.statistics === 'object'
+    ? json.statistics
+    : {}) as Partial<AdminDashboardSummary['statistics']>
+  const o = (json.orders?.newOrders && typeof json.orders.newOrders === 'object'
+    ? json.orders.newOrders
+    : {}) as Partial<AdminDashboardSummary['orders']['newOrders']>
   return {
     notifications: {
       newOrders: Number(n.newOrders) || 0,

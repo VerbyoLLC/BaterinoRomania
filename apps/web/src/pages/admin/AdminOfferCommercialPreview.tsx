@@ -382,7 +382,6 @@ function CommercialOfferPreviewCore({
 
   const clientBlock = useMemo(() => {
     if (!draft) return null
-    const postal = (code: string) => (code.trim() ? `${t.postalPrefix} ${code.trim()}` : '')
     if (draft.buyerType === 'person' && draft.clientPerson) {
       const p = draft.clientPerson
       const fullName = `${p.prenume} ${p.nume}`.trim()

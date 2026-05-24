@@ -30,7 +30,6 @@ export default function PartnerSupport() {
   const { language } = useLanguage()
   const tr = getPartnerSupportTranslations(language.code)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [agent, setAgent] = useState<PartnerAssignedSalesAgent | null>(null)
   const [generalPhonesLoading, setGeneralPhonesLoading] = useState(true)
   const [generalPhone, setGeneralPhone] = useState('')
@@ -63,15 +62,13 @@ export default function PartnerSupport() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setError(null)
     getPartnerProfile()
       .then((p) => {
         if (cancelled) return
         setAgent(p.assignedSalesAgent ?? null)
       })
-      .catch((e) => {
+      .catch(() => {
         if (cancelled) return
-        setError(e instanceof Error ? e.message : tr.loadErrorFallback)
         setAgent(null)
       })
       .finally(() => {
