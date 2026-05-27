@@ -3643,11 +3643,9 @@ export async function createSalesAgentLead(payload: CreateSalesLeadPayload): Pro
     },
     body: JSON.stringify(payload),
   })
-  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow }
+  const json = (await res.json().catch(() => ({}))) as { error?: string; lead?: SalesLeadRow; path?: string }
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Sesiune expirată.')
-    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
-    throw new Error(json.error || 'Nu s-a putut crea lead-ul.')
+    throw salesAgentLeadsApiError(res, json, 'Nu s-a putut crea lead-ul.')
   }
   if (!json.lead) throw new Error('Răspuns invalid de la server.')
   return json.lead
