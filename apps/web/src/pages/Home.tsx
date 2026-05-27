@@ -27,12 +27,6 @@ import {
   ResidentialCatalogProductCard,
 } from '../components/product/CatalogProductCard'
 
-function renderBold(text: string) {
-  return text.split(/\*\*(.*?)\*\*/g).map((part, i) =>
-    i % 2 === 1 ? <strong key={i}>{part}</strong> : <span key={i}>{part}</span>
-  )
-}
-
 function renderBaterinoGlobalLink(text: string) {
   return text.split('Baterino Global').map((part, i, arr) =>
     i < arr.length - 1 ? (
