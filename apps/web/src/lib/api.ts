@@ -3450,13 +3450,26 @@ export type SalesLeadStats = {
   contributions: number
 }
 
+function salesAgentLeadsApiError(
+  res: Response,
+  json: { error?: string; path?: string },
+  fallback: string,
+): Error {
+  if (res.status === 401) return new Error('Sesiune expirată.')
+  if (res.status === 403) return new Error(json.error || 'Acces restricționat.')
+  if (res.status === 404 && json.path) {
+    return new Error(
+      `${json.error || 'Rută negăsită pe API'} — path: ${json.path}. Backend-ul de producție nu are încă rutele Leads; redeploy API-ul (Railway) cu ultima versiune.`,
+    )
+  }
+  return new Error(json.error || fallback)
+}
+
 export async function getSalesAgentLeadStats(): Promise<SalesLeadStats> {
   const res = await fetch(`${API_BASE}/sales-agent/leads/stats`, { headers: authHeaders() })
-  const json = (await res.json().catch(() => ({}))) as { error?: string; stats?: SalesLeadStats }
+  const json = (await res.json().catch(() => ({}))) as { error?: string; stats?: SalesLeadStats; path?: string }
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Sesiune expirată.')
-    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
-    throw new Error(json.error || 'Nu s-au putut încărca statisticile leads.')
+    throw salesAgentLeadsApiError(res, json, 'Nu s-au putut încărca statisticile leads.')
   }
   const stats = json.stats
   return {
@@ -3468,11 +3481,9 @@ export async function getSalesAgentLeadStats(): Promise<SalesLeadStats> {
 
 export async function getSalesAgentLeads(): Promise<SalesLeadRow[]> {
   const res = await fetch(`${API_BASE}/sales-agent/leads`, { headers: authHeaders() })
-  const json = (await res.json().catch(() => ({}))) as { error?: string; leads?: SalesLeadRow[] }
+  const json = (await res.json().catch(() => ({}))) as { error?: string; leads?: SalesLeadRow[]; path?: string }
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Sesiune expirată.')
-    if (res.status === 403) throw new Error(json.error || 'Acces restricționat.')
-    throw new Error(json.error || 'Nu s-au putut încărca leads.')
+    throw salesAgentLeadsApiError(res, json, 'Nu s-au putut încărca leads.')
   }
   return Array.isArray(json.leads) ? json.leads : []
 }
