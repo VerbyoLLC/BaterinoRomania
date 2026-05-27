@@ -22,11 +22,9 @@ function HowToApply({ title, steps }: { title: string; steps: string[] }) {
       <div className="flex flex-col gap-6 w-full flex-1 justify-around">
         {steps.map((step, i) => (
           <div key={i} className="flex flex-col items-center gap-2 text-center">
-            {/* Number circle on top */}
             <div className="size-12 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-lg font-extrabold font-['Inter']">{i + 1}</span>
             </div>
-            {/* Text below */}
             <p className="text-black text-lg font-semibold font-['Inter'] leading-7">
               {step}
             </p>

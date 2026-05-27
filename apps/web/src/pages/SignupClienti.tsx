@@ -52,6 +52,7 @@ export default function SignupClienti() {
   const [emailInput, setEmailInput] = useState('')
   const [password, setPassword] = useState('')
   const [agreed, setAgreed] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   /** După click pe Google fără bifă — chenar roșu + mesaj la checkbox. */
   const [termsAckMissing, setTermsAckMissing] = useState(false)
   const [errors, setErrors] = useState<{ password?: string; submit?: string }>({})
@@ -100,7 +101,9 @@ export default function SignupClienti() {
     setErrors({})
     setLoading(true)
     try {
-      const out = await signup(emailInput, password, tab, nextPath)
+      const out = await signup(emailInput, password, tab, nextPath, {
+        marketingEmailOptIn: marketingOptIn,
+      })
       setEmail(emailInput)
       setVerificationSent(out.verificationSent !== false)
       setStep(2)
@@ -120,6 +123,7 @@ export default function SignupClienti() {
       setLoading(true)
       const { token, user } = await googleAuth(idToken, tab, {
         acceptedTerms: true,
+        marketingEmailOptIn: marketingOptIn,
         intent: 'signup',
       })
       setAuthToken(token)
@@ -211,9 +215,9 @@ export default function SignupClienti() {
               />
               {errors.password && <p className={errorClass}>{errors.password}</p>}
             </div>
-            {/* Terms */}
+            {/* Terms + marketing opt-in */}
             <div
-              className={`rounded-[10px] p-3 transition-colors ${
+              className={`flex flex-col gap-2 rounded-[10px] p-3 transition-colors ${
                 termsAckMissing
                   ? 'border-2 border-red-500 bg-red-50/80'
                   : 'border border-transparent'
@@ -250,6 +254,19 @@ export default function SignupClienti() {
                   <Link to="/politica-confidentialitate" className="font-semibold text-black hover:underline">
                     Politica de Confidențialitate
                   </Link>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 accent-slate-900"
+                />
+                <span className="text-sm font-['Inter'] leading-5 text-gray-600">
+                  Doresc să primesc comunicări comerciale și oferte de la Baterino prin email.{' '}
+                  <span className="text-gray-500">(Opțional)</span>
                 </span>
               </label>
             </div>

@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer')
 const { Resend } = require('resend')
-const { getClientTemplate, getPartnerTemplate } = require('../templates/verification-email.js')
+const { getClientTemplate, getPartnerTemplate, getEmailChangeVerificationTemplate } = require('../templates/verification-email.js')
 const { getVerifyLinkTemplate } = require('../templates/signup-verify-link-email.js')
 const { getPasswordResetTemplate } = require('../templates/password-reset-email.js')
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
@@ -235,6 +235,41 @@ async function sendVerificationCode(email, code, role) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: email,
+    subject,
+    html,
+  })
+}
+
+async function sendEmailChangeVerificationCode(currentEmail, code, newEmail) {
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping email change code. Code:', code)
+    return
+  }
+
+  const subject = `Confirmă schimbarea emailului – ${SITE_NAME}`
+  const html = getEmailChangeVerificationTemplate({
+    code,
+    currentEmail,
+    newEmail,
+  })
+
+  if (useResend()) {
+    const { error } = await resend.emails.send({
+      from: RESEND_FROM,
+      to: currentEmail,
+      subject,
+      html,
+    })
+    if (error) {
+      console.error('[Mail] Resend error:', error)
+      throw new Error('Eroare la trimiterea emailului.')
+    }
+    return
+  }
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: currentEmail,
     subject,
     html,
   })
@@ -844,6 +879,7 @@ async function sendInquiryConfirmation(inquiry) {
 module.exports = {
   sendSignupVerificationLink,
   sendVerificationCode,
+  sendEmailChangeVerificationCode,
   sendPasswordResetEmail,
   sendAccountDeletedEmail,
   sendInquiryNotification,

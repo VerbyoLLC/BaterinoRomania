@@ -695,13 +695,21 @@ export async function signup(
   password: string,
   role: 'client' | 'partener',
   nextPath?: string,
+  options?: { marketingEmailOptIn?: boolean },
 ): Promise<SignupResponse> {
   let res: Response
   try {
     res = await fetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role, ...(nextPath ? { next: nextPath } : {}) }),
+      body: JSON.stringify({
+        email,
+        password,
+        role,
+        acceptedTerms: true,
+        ...(nextPath ? { next: nextPath } : {}),
+        ...(options?.marketingEmailOptIn === true ? { marketingEmailOptIn: true } : {}),
+      }),
     })
   } catch {
     throw new Error(`Nu s-a putut conecta la API (${API_BASE}). Pornește API-ul: npm run dev:api`)
@@ -793,6 +801,8 @@ export async function login(email: string, password: string) {
 export type GoogleAuthOptions = {
   /** Obligatoriu la crearea unui cont nou cu Google (semnal explicit din UI). */
   acceptedTerms?: boolean
+  /** Consimțământ explicit pentru comunicări comerciale prin email. */
+  marketingEmailOptIn?: boolean
   /** `signup`: email deja înregistrat → 409. `login`: fără cont existent → 404 (nicio creare de cont). */
   intent?: 'signup' | 'login'
 }
@@ -810,6 +820,9 @@ export async function googleAuth(
   const payload: Record<string, unknown> = { idToken, role }
   if (options?.acceptedTerms === true) {
     payload.acceptedTerms = true
+  }
+  if (options?.marketingEmailOptIn === true) {
+    payload.marketingEmailOptIn = true
   }
   if (options?.intent === 'signup' || options?.intent === 'login') {
     payload.intent = options.intent
@@ -862,6 +875,61 @@ export type ClientProfileDto = ClientProfilePayload
 
 export type ClientProfileSaveSection = 'personal' | 'address' | 'company'
 
+export type EmailNotificationPreferences = {
+  marketingEmailOptIn: boolean
+}
+
+export async function getEmailNotificationPreferences(): Promise<EmailNotificationPreferences> {
+  const res = await fetch(`${API_BASE}/account/email-notifications`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return {
+    marketingEmailOptIn: (json as EmailNotificationPreferences).marketingEmailOptIn === true,
+  }
+}
+
+export async function patchEmailNotificationPreferences(
+  prefs: EmailNotificationPreferences,
+): Promise<EmailNotificationPreferences> {
+  const res = await fetch(`${API_BASE}/account/email-notifications`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ marketingEmailOptIn: prefs.marketingEmailOptIn === true }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvare.')
+  }
+  return {
+    marketingEmailOptIn: (json as EmailNotificationPreferences).marketingEmailOptIn === true,
+  }
+}
+
+/** Jurnal consimțământ cookie (best-effort; preferința locală rămâne sursa pentru UI). */
+export async function recordCookieConsent(analytics: boolean): Promise<void> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getAuthToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  try {
+    await fetch(`${API_BASE}/consent/cookie`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ analytics }),
+    })
+  } catch {
+    /* ignore — banner choice still stored in cookie */
+  }
+}
+
 export async function getClientProfile(): Promise<{
   createdAt: string
   email: string
@@ -879,14 +947,16 @@ export async function getClientProfile(): Promise<{
     if (res.status === 403) throw new Error('Acces restricționat.')
     throw new Error((json as { error?: string }).error || 'Eroare.')
   }
-  return json as {
-    createdAt: string
-    email: string
-    referralCode: string | null
-    referralInviteEmailsSent: number
-    referralCodeRedemptionsCount: number
-    hasPassword: boolean
-    profile: ClientProfileDto | null
+  return {
+    ...(json as {
+      createdAt: string
+      email: string
+      referralCode: string | null
+      referralInviteEmailsSent: number
+      referralCodeRedemptionsCount: number
+      profile: ClientProfileDto | null
+    }),
+    hasPassword: (json as { hasPassword?: boolean }).hasPassword === true,
   }
 }
 
@@ -1073,7 +1143,10 @@ export async function postClientChangeEmail(
   const res = await fetch(`${API_BASE}/client/change-email`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ newEmail: newEmail.trim(), currentPassword }),
+    body: JSON.stringify({
+      newEmail: newEmail.trim(),
+      currentPassword,
+    }),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
@@ -1943,6 +2016,39 @@ export async function deletePartnerAccount() {
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la ștergerea contului.')
   return json
+}
+
+export function clientDataExportFilename(email: string): string {
+  const safe = String(email || 'cont')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9@._+-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 120)
+  return `baterino-datele-mele-${safe || 'cont'}.json`
+}
+
+/** GDPR Art. 20 — descarcă JSON cu toate datele personale ale clientului. */
+export async function downloadClientDataExport(
+  accountEmail?: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${API_BASE}/client/export-data`, {
+    method: 'GET',
+    headers: authHeaders(),
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error((json as { error?: string }).error || 'Eroare la exportul datelor.')
+  }
+  const blob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') || ''
+  const quoted = /filename="([^"]+)"/i.exec(cd)
+  const filename =
+    quoted?.[1] ||
+    (accountEmail?.trim() ? clientDataExportFilename(accountEmail) : 'baterino-datele-mele.json')
+  return { blob, filename }
 }
 
 /** Șterge definitiv contul client. Parola e necesară doar dacă există parolă locală (nu cont doar Google). */

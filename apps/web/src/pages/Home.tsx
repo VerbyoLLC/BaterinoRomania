@@ -17,6 +17,10 @@ import {
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
+import HomeHeroV2 from '../components/home/HomeHeroV2'
+import HomeInverterSearch from '../components/home/HomeInverterSearch'
+import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
+import HomeInstalledCapacityCounters from '../components/home/HomeInstalledCapacityCounters'
 import {
   CatalogProductCardSkeleton,
   IndustrialCatalogProductCard,
@@ -120,18 +124,14 @@ export default function Home() {
   const tr = getHomeTranslations(language.code)
 
   const [activeTab,  setActiveTab]  = useState<string>('rezidential')
-  const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
-  const [voltageExiting, setVoltageExiting] = useState(false)
-  const [heroSlide,  setHeroSlide]  = useState(0)
   const [reduceriVisibleCount, setReduceriVisibleCount] = useState(2)
   const [isMobile, setIsMobile] = useState(true)
-  const [featuresActiveIndex, setFeaturesActiveIndex] = useState(0)
 
   const [divisionsActiveIndex, setDivisionsActiveIndex] = useState(0)
   const divisionsSliderRef = useRef<HTMLDivElement>(null)
-
-  const [heroMobileActiveIndex, setHeroMobileActiveIndex] = useState(0)
-  const heroMobileSliderRef = useRef<HTMLDivElement>(null)
+  const CARD_GAP = 10
+  const DIVISIONS_COUNT = 4
+  const DIVISIONS_CARD_WIDTH = 324
 
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
@@ -188,42 +188,6 @@ export default function Home() {
     setShowWelcomeModal(false)
   }
 
-  const HERO_SLIDES = [
-    { label: tr.heroSliderRez, image: '/images/home/slider-apple/slide1-baterii-rezidential.jpg' },
-    { label: tr.heroSliderInd, image: '/images/home/slider-apple/slide2-baterii-industrial.jpg' },
-    { label: tr.heroSliderMed, image: '/images/home/slider-apple/slide3-baterii-medical.jpg' },
-    { label: tr.heroSliderInst, image: '/images/home/slider-apple/slide4-instalatori.jpg' },
-  ]
-
-  const HERO_MOBILE_SLIDES_BASE = [
-    { id: 'rezidential' as const, label: tr.heroSliderRez, image: '/images/home/slider-1-mobile.jpg' },
-    { id: 'industrial' as const, label: tr.heroSliderInd, image: '/images/home/slider-2-mobile.jpg' },
-    { id: 'medical' as const, label: tr.heroSliderMed, image: '/images/home/slider-3-mobile.jpg' },
-    { id: 'instalatori' as const, label: tr.heroSliderInst, image: '/images/home/instalatori-mobile.jpg' },
-  ]
-  const instSlide = HERO_MOBILE_SLIDES_BASE.find((s) => s.id === 'instalatori')!
-  const restSlides = HERO_MOBILE_SLIDES_BASE.filter((s) => s.id !== 'instalatori')
-  const HERO_MOBILE_SLIDES = userType === 'profesionist' ? [instSlide, ...restSlides] : [...restSlides, instSlide]
-  const HERO_MOBILE_COUNT = 4
-  const HERO_MOBILE_CARD_WIDTH = 324
-  const featuresSliderRef = useRef<HTMLDivElement>(null)
-  const FEATURES_COUNT = 7
-  const FEATURES_CARD_WIDTH = 324
-  const CARD_GAP = 10
-  const DIVISIONS_COUNT = 4
-  const DIVISIONS_CARD_WIDTH = 324
-
-  useEffect(() => {
-    const el = featuresSliderRef.current
-    if (!el) return
-    const onScroll = () => {
-      const index = Math.round(el.scrollLeft / (FEATURES_CARD_WIDTH + CARD_GAP))
-      setFeaturesActiveIndex(Math.min(Math.max(0, index), FEATURES_COUNT - 1))
-    }
-    el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [])
-
   useEffect(() => {
     const el = divisionsSliderRef.current
     if (!el) return
@@ -234,32 +198,6 @@ export default function Home() {
     el.addEventListener('scroll', onScroll)
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
-
-  useEffect(() => {
-    const el = heroMobileSliderRef.current
-    if (!el) return
-    const onScroll = () => {
-      const index = Math.round(el.scrollLeft / (HERO_MOBILE_CARD_WIDTH + CARD_GAP))
-      setHeroMobileActiveIndex(Math.min(Math.max(0, index), HERO_MOBILE_COUNT - 1))
-    }
-    el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    const el = heroMobileSliderRef.current
-    if (!el) return
-    el.scrollTo({ left: 0, behavior: 'auto' })
-    setHeroMobileActiveIndex(0)
-  }, [userType])
-
-  function slideFeatures(dir: 'left' | 'right') {
-    if (!featuresSliderRef.current) return
-    const cardWidth = featuresSliderRef.current.firstElementChild
-      ? (featuresSliderRef.current.firstElementChild as HTMLElement).offsetWidth + CARD_GAP
-      : featuresSliderRef.current.offsetWidth / 3
-    featuresSliderRef.current.scrollBy({ left: dir === 'right' ? cardWidth : -cardWidth, behavior: 'smooth' })
-  }
 
   const featuredProducts = useMemo(() => {
     const filtered = products.filter((p) => {
@@ -278,16 +216,10 @@ export default function Home() {
       } else {
         return false
       }
-      if (activeTab === 'rezidential' && voltageFilter) {
-        const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
-        if (Number.isNaN(v)) return false
-        if (voltageFilter === 'low' && v >= 100) return false
-        if (voltageFilter === 'high' && v < 100) return false
-      }
       return true
     })
     return filtered.slice(0, 3)
-  }, [products, activeTab, voltageFilter])
+  }, [products, activeTab])
 
   const tabs = [
     { id: 'rezidential', label: tr.productsTabRez },
@@ -314,309 +246,20 @@ export default function Home() {
         lang={language.code}
       />
 
-      <div className="max-w-content mx-auto px-5 lg:px-3 pt-6 lg:pt-10 pb-24">
+      <div className="pt-6 lg:pt-10">
+        <HomeHeroV2 tr={tr} userType={userType} />
+      </div>
 
-        {/* ── HERO ── */}
-        <section className="mb-16 lg:mb-24">
-          {/* Mobile: horizontal slider (like diviziile baterino) */}
-          <div className="lg:hidden">
-            <div className="-mx-5 w-[calc(100%+2.5rem)]">
-              <div
-                ref={heroMobileSliderRef}
-                className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 pr-5"
-                style={{
-                  scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
-                  scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
-                }}
-              >
-                {HERO_MOBILE_SLIDES.map((slide) => {
-                  const titleMap: Record<string, string> = {
-                    rezidential: tr.heroMobile0Title,
-                    industrial: tr.heroMobile1Title,
-                    medical: tr.heroMobile2Title,
-                    instalatori: tr.heroSlideInstTitle,
-                  }
-                  const descMap: Record<string, string> = {
-                    rezidential: tr.heroMobile0Desc,
-                    industrial: tr.heroMobile1Desc,
-                    medical: tr.heroMobile2Desc,
-                    instalatori: tr.heroMobileInstDesc,
-                  }
-                  const title = titleMap[slide.id]
-                  const desc = descMap[slide.id]
-                  const isInstalatori = slide.id === 'instalatori'
-                  return (
-                    <div
-                      key={slide.image}
-                      className="relative flex-shrink-0 w-[324px] h-[466px] rounded-[10px] overflow-hidden bg-zinc-300 snap-center"
-                    >
-                      <img
-                        src={slide.image}
-                        alt={`${tr.heroImageAlt} – ${slide.label}`}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40" />
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center flex flex-col items-center">
-                        <h1 className={`text-white text-2xl sm:text-3xl font-bold font-['Inter'] uppercase leading-8 sm:leading-9 mb-2 ${isInstalatori ? 'whitespace-pre-line' : ''}`}>
-                          {title}
-                        </h1>
-                        <p className="text-white text-base sm:text-xl font-bold font-['Inter'] leading-6 sm:leading-7 mb-3">
-                          {isInstalatori ? renderBold(desc) : desc}
-                        </p>
-                        {slide.id === 'industrial' ? (
-                          <Link
-                            to="/divizii/industrial"
-                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
-                          >
-                            {tr.heroSlideIndCta}
-                          </Link>
-                        ) : slide.id === 'medical' ? (
-                          <Link
-                            to="/divizii/medical"
-                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
-                          >
-                            {tr.heroSlideMedCta}
-                          </Link>
-                        ) : slide.id === 'instalatori' ? (
-                          <Link
-                            to="/instalatori"
-                            className="w-full max-w-[200px] h-12 px-6 bg-white rounded-[10px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors mt-4"
-                          >
-                            {tr.heroSlideInstCta}
-                          </Link>
-                        ) : (
-                          <svg className="w-6 h-6 text-white shrink-0 animate-arrow-bounce-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            <path d="M12 5v14M19 12l-7 7-7-7" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-                <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
-              </div>
-            </div>
-            {/* Dot indicators – mobile only */}
-            <div className="flex justify-center gap-2 mt-5">
-              {Array.from({ length: HERO_MOBILE_COUNT }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    const el = heroMobileSliderRef.current
-                    if (el) el.scrollTo({ left: i * (HERO_MOBILE_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
-                  }}
-                  aria-label={`Slide ${i + 1}`}
-                  className={`size-2.5 rounded-full transition-colors ${i === heroMobileActiveIndex ? 'bg-black' : 'bg-black/30'}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Desktop: crossfade hero with tabs */}
-          <div className="hidden lg:block relative rounded-[10px] overflow-hidden h-[600px] w-full bg-zinc-300">
-            {/* Slide images – crossfade */}
-            {HERO_SLIDES.map((slide, i) => (
-              <img
-                key={slide.image}
-                src={slide.image}
-                alt={`${tr.heroImageAlt} – ${slide.label}`}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-                  heroSlide === i ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            ))}
-
-            {/* Bottom gradient for text legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent" />
-
-
-            {/* ── Slide tab bar – top center ── */}
-            <div className="hidden lg:block absolute top-8 left-1/2 -translate-x-1/2 w-[793px] max-w-[calc(100%-4.5rem)]">
-              <div className="relative h-10 rounded-[20px] overflow-hidden">
-                {/* White frosted glass background */}
-                <div className="absolute inset-0 bg-white/50 backdrop-blur-sm" />
-                {/* Permanent black pill locked to INSTALATORI slot – hidden when it's the active tab */}
-                <div
-                  className={`absolute top-0 h-10 rounded-[20px] bg-black transition-opacity duration-300 ${
-                    heroSlide === 3 ? 'opacity-0' : 'opacity-100'
-                  }`}
-                  style={{ width: '25%', transform: 'translateX(300%)' }}
-                />
-                {/* Sliding white pill – always tracks the active tab */}
-                <div
-                  className="absolute top-0 h-10 rounded-[20px] bg-white transition-transform duration-300 ease-in-out"
-                  style={{ width: '25%', transform: `translateX(${heroSlide * 100}%)` }}
-                />
-                <div className="relative flex h-full">
-                  {HERO_SLIDES.map((slide, i) => (
-                    <button
-                      key={slide.label}
-                      type="button"
-                      onClick={() => setHeroSlide(i)}
-                      className={`flex-1 text-sm font-semibold font-['Inter'] uppercase transition-colors duration-300 ${
-                        heroSlide === i
-                          ? 'text-black'
-                          : i === 3
-                            ? 'text-white'
-                            : 'text-black/60 hover:text-black'
-                      }`}
-                    >
-                      {slide.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Bottom content – per-slide ── */}
-            <div className="absolute bottom-14 left-14 right-14 flex flex-col items-center lg:items-stretch">
-
-              {/* REZIDENTIAL slide content – slide 0 */}
-              {heroSlide === 0 && (
-                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
-                  {/* Left: logo + headline + description */}
-                  <div className="flex flex-col gap-3 items-center lg:items-start">
-                    <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[510px] whitespace-pre-line">
-                      {tr.heroSlideRezTitle}
-                    </h1>
-                    <p className="text-white text-lg font-normal font-['Inter'] leading-7 max-w-[612px]">
-                      {renderBold(tr.heroSlideRezDesc)}
-                    </p>
-                  </div>
-
-                  {/* Right: CTA + Powered by */}
-                  <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
-                    <button
-                      onClick={() =>
-                        document.getElementById('produse-section')?.scrollIntoView({ behavior: 'smooth' })
-                      }
-                      className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
-                    >
-                      {tr.heroCardCta}
-                    </button>
-                    <div className="flex items-center gap-2 opacity-50 p-[5px]">
-                      <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
-                      <img
-                        src="/images/shared/lithtech-logo-white.png"
-                        alt="LithTech"
-                        className="h-5 w-auto object-contain"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* INDUSTRIAL slide content – slide 1 */}
-              {heroSlide === 1 && (
-                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
-                  <div className="flex flex-col gap-3 items-center lg:items-start">
-                    <img
-                      src="/images/divizii/industrial/baterino-pro-industrial-logo-white.png"
-                      alt="Baterino Industrial"
-                      className="h-6 w-auto object-contain object-center lg:object-left"
-                    />
-                    <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[612px]">
-                      {tr.heroSlideIndTitle}
-                    </h1>
-                    <p className="text-white text-xl font-['Inter'] leading-8 max-w-[612px]">
-                      {renderBold(tr.heroSlideIndDesc)}
-                    </p>
-                  </div>
-                  <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
-                    <Link
-                      to="/divizii/industrial"
-                      className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
-                    >
-                      {tr.heroSlideIndCta}
-                    </Link>
-                    <div className="flex items-center gap-2 opacity-50 p-[5px]">
-                      <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
-                      <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Default content – slide 4 (INSTALATORI) */}
-              {heroSlide === 3 && (
-                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
-                  <div className="flex flex-col gap-3 items-center lg:items-start">
-                    <h1 className="text-white text-3xl font-bold font-['Inter'] leading-10 max-w-[532px] whitespace-pre-line">
-                      {tr.heroSlideInstTitle}
-                    </h1>
-                    <p className="text-white text-xl font-normal font-['Inter'] leading-8 max-w-[690px]">
-                      {renderBold(tr.heroSlideInstDesc)}
-                    </p>
-                  </div>
-                  <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
-                    <Link
-                      to="/instalatori"
-                      className="w-60 h-12 px-2.5 py-[5px] bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] uppercase hover:bg-neutral-100 transition-colors"
-                    >
-                      {tr.heroSlideInstCta}
-                    </Link>
-                    <div className="flex items-center gap-2 opacity-50 p-[5px]">
-                      <span className="text-white text-xs font-normal font-['Inter'] leading-5">
-                        {tr.heroSlideInstImportatori}
-                      </span>
-                      <img
-                        src="/images/shared/lithtech-logo-white.png"
-                        alt="LithTech"
-                        className="h-5 w-auto object-contain"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* MEDICAL slide content – slide 2 */}
-              {heroSlide === 2 && (
-                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
-                  {/* Left: logo + headline + description */}
-                  <div className="flex flex-col gap-3 items-center lg:items-start">
-                    <img
-                      src="/images/divizii/medical/baterino-medical-logo-white.png"
-                      alt="Baterino Medical"
-                      className="h-6 w-auto object-contain object-center lg:object-left"
-                    />
-                    <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[510px]">
-                      {tr.heroSlideMedTitle}
-                    </h1>
-                    <p className="text-white text-lg font-normal font-['Inter'] leading-7 max-w-[612px]">
-                      {tr.heroSlideMedDesc}
-                    </p>
-                  </div>
-
-                  {/* Right: CTA + Powered by */}
-                  <div className="hidden lg:flex flex-col items-center gap-3 flex-shrink-0">
-                    <Link
-                      to="/divizii/medical"
-                      className="w-60 h-12 bg-white rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center text-black text-base font-semibold font-['Inter'] transition-all duration-150 hover:bg-neutral-100 hover:scale-105 active:scale-95 active:bg-neutral-200 whitespace-nowrap"
-                    >
-                      {tr.heroSlideMedCta}
-                    </Link>
-                    <div className="flex items-center gap-2 opacity-50 p-[5px]">
-                      <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
-                      <img
-                        src="/images/shared/lithtech-logo-white.png"
-                        alt="LithTech"
-                        className="h-5 w-auto object-contain"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </section>
-
+      <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] my-6 sm:my-8 lg:my-10">
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5">
             {tr.productsSectionTitle}
           </h2>
+
+          <div className="flex justify-center mb-6 sm:mb-8 lg:mb-10">
+            <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
+          </div>
 
           {/* Filters left + Vezi tot right */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 lg:mb-10">
@@ -629,13 +272,7 @@ export default function Home() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => {
-                    if (activeTab === 'rezidential' && tab.id !== 'rezidential') {
-                      setVoltageExiting(true)
-                    }
-                    setActiveTab(tab.id)
-                    if (tab.id !== 'rezidential') setVoltageFilter('')
-                  }}
+                  onClick={() => setActiveTab(tab.id)}
                   aria-pressed={activeTab === tab.id}
                   aria-label={tab.label}
                   className={`h-12 sm:h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 sm:w-auto ${
@@ -649,37 +286,8 @@ export default function Home() {
                   {tab.label}
                 </button>
               ))}
-              {(activeTab === 'rezidential' || voltageExiting) && (
-                <div
-                  className={`hidden md:flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
-                  onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
-                >
-                  <span className="flex items-center text-gray-400 px-1" aria-hidden>
-                    <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="shrink-0">
-                      <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  <select
-                    value={voltageFilter}
-                    onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
-                    aria-label={tr.productsVoltageAll}
-                    className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[160px]"
-                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
-                  >
-                    <option value="">{tr.productsVoltageAll}</option>
-                    <option value="low">{tr.productsVoltageLow}</option>
-                    <option value="high">{tr.productsVoltageHigh}</option>
-                  </select>
-                </div>
-              )}
             </div>
             <div className="hidden sm:flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
-              <Link
-                to="/produse"
-                className="inline-flex items-center justify-center h-10 px-6 border-2 border-gray-200 rounded-[10px] font-semibold font-['Inter'] text-sm text-black hover:bg-gray-50 hover:border-gray-300 transition-colors"
-              >
-                {tr.productsHowToChoose}
-              </Link>
               <Link
                 to="/produse"
                 className="inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
@@ -774,134 +382,10 @@ export default function Home() {
 
       </div>
 
-      {/* ── FEATURES – De ce să îți cumperi baterie de la noi ── */}
-      <section className="mb-16 lg:mb-24">
-
-        {/* Title – centered on mobile; title + button centered on desktop, vertically aligned */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 my-8 sm:my-10 px-5 lg:px-0 lg:pl-[var(--grid-edge)] lg:pr-[var(--grid-edge)]">
-          <h2
-            className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 text-center lg:text-left mx-auto lg:mx-0"
-            style={{ width: '676px', maxWidth: '100%' }}
-          >
-            {tr.featuresSectionTitle}
-          </h2>
-          <Link
-            to="/siguranta"
-            className="hidden lg:inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors shrink-0"
-          >
-            {tr.productsSafetyLink}
-          </Link>
-        </div>
-
-        {/* Scrollable card track – center snap on mobile */}
-        <div
-          ref={featuresSliderRef}
-          className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          style={{
-            paddingLeft: 'var(--grid-edge)',
-            scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
-            scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
-          }}
-        >
-          {([
-            { icon: '/images/shared/battery-full-icon.svg', title: tr.f1Title, desc: tr.f1Desc },
-            { icon: '/images/shared/service-icon.svg',       title: tr.f2Title, desc: tr.f2Desc },
-            { icon: '/images/shared/swap-icon.svg',          title: tr.f3Title, desc: tr.f3Desc },
-            { icon: '/images/shared/compatibility-icon.svg', title: tr.f4Title, desc: tr.f4Desc },
-            { icon: '/images/shared/testing-icon.svg',       title: tr.f5Title, desc: tr.f5Desc },
-            { icon: '/images/shared/delivery-icon.svg',      title: tr.f6Title, desc: tr.f6Desc },
-            { icon: '/images/shared/swap-icon.svg',          title: tr.f7Title, desc: tr.f7Desc },
-          ] as const).map((f, i) => (
-            <div
-              key={i}
-              className="relative flex-shrink-0 w-[324px] h-80 rounded-[10px] snap-center"
-            >
-              {/* Mobile: absolute layout per spec */}
-              <div className="lg:hidden absolute inset-0">
-                <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
-                <img src={f.icon} alt="" aria-hidden className="size-14 sm:size-16 object-contain absolute left-[32px] sm:left-[40px] top-[32px] sm:top-[40px]" />
-                <h3 className="absolute left-[32px] sm:left-[47px] top-[100px] sm:top-[115px] w-48 sm:w-56 text-black text-xl sm:text-2xl font-semibold font-['Inter'] leading-7 sm:leading-8">
-                  {f.title}
-                </h3>
-                <p className="absolute left-[32px] sm:left-[47px] top-[170px] sm:top-[196px] w-56 sm:w-64 text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6">
-                  {f.desc}
-                </p>
-              </div>
-              {/* Desktop: flow layout with border */}
-              <div className="hidden lg:block relative h-full border border-zinc-200 rounded-[10px] px-[35px] pt-[35px] pb-5">
-                <img src={f.icon} alt="" aria-hidden className="size-12 object-contain mb-5" />
-                <p className="text-black text-2xl font-semibold font-['Inter'] leading-8 mb-3 max-w-[224px]">
-                  {f.title}
-                </p>
-                <p className="text-black text-lg font-normal font-['Inter'] leading-6 max-w-[256px]">
-                  {f.desc}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => slideFeatures('right')}
-                aria-label={tr.ariaNext}
-                className="hidden lg:flex absolute bottom-5 right-5 size-12 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95 z-10 items-center justify-center"
-              >
-                <img
-                  src="/images/shared/round-arrow-icon.svg"
-                  alt=""
-                  aria-hidden
-                  className="w-full h-full"
-                />
-              </button>
-            </div>
-          ))}
-          {/* Right-end spacer */}
-          <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
-        </div>
-
-        {/* Dot indicators – below cards, mobile only */}
-        <div className="flex justify-center gap-2 mt-5 lg:hidden">
-          {Array.from({ length: FEATURES_COUNT }).map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => {
-                const el = featuresSliderRef.current
-                if (el) el.scrollTo({ left: i * (FEATURES_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
-              }}
-              aria-label={`Card ${i + 1}`}
-              className={`size-2.5 rounded-full transition-colors ${
-                i === featuresActiveIndex ? 'bg-black' : 'bg-black/30'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Arrows – below cards, right-aligned to container, desktop only */}
-        <div
-          className="hidden lg:flex justify-end gap-2 mt-5"
-          style={{ paddingRight: 'var(--grid-edge)' }}
-        >
-          <button
-            onClick={() => slideFeatures('left')}
-            aria-label={tr.ariaPrev}
-            className="size-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
-          >
-            <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M7 1L1 7l6 6" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <button
-            onClick={() => slideFeatures('right')}
-            aria-label={tr.ariaNext}
-            className="size-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
-          >
-            <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-        </div>
-
-      </section>
-
-      {/* ── DIVIDER ── */}
-      <hr className="border-gray-200 mb-16 lg:mb-24 w-full lg:max-w-[1100px] lg:mx-auto" />
+      <HomeFeaturesGrid tr={tr} />
 
       {/* ── REDUCERI – Programe de reduceri ── */}
-      <section className="mb-16 lg:mb-24 max-w-content mx-auto px-5 lg:px-3">
+      <section className="mb-0 max-w-content mx-auto px-5 lg:px-3">
         <div className="flex flex-col gap-4 my-6 sm:my-8 text-center sm:text-left items-center sm:items-stretch">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full">
             <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10">
@@ -922,7 +406,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {reduceriVisibleCards.map((card, i) => (
             <Link key={i} to="/reduceri" className="group block">
-              <div className="w-full aspect-[3/4] min-h-[400px] sm:min-h-0 sm:max-h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+              <div className="w-full h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                 <img
                   src={card.img}
                   alt=""
@@ -958,10 +442,178 @@ export default function Home() {
         )}
       </section>
 
+      <hr className="border-gray-200 my-16 lg:my-24 w-full lg:max-w-[1100px] lg:mx-auto" />
+
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
 
-        {/* ── DIVIDER ── */}
-        <hr className="border-gray-200 mb-16 lg:mb-24 w-full lg:max-w-[1100px] lg:mx-auto" />
+        {/* ── RESPONSABILITATE & COMUNITATE ── */}
+        <section className="mb-16 lg:mb-24">
+          {/* ── Mobile: Responsabilitate + map ── */}
+          <section className="lg:hidden flex flex-col items-center text-center mb-8">
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
+              {tr.divisionsSectionTitle}
+            </h2>
+            <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
+              {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
+            </p>
+            <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
+              <img src="/images/home/harta-romania.png" alt="" aria-hidden className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
+              <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
+            </div>
+            <Link
+              to="/companie/viziune"
+              className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
+            >
+              <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
+            </Link>
+          </section>
+
+          {/* ── Desktop grid ── */}
+          <div className="hidden lg:grid grid-cols-12 gap-x-4 gap-y-10">
+            <div className="col-span-6 flex flex-col pt-5 pb-4">
+              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-5 max-w-[513px]">
+                {tr.divisionsSectionTitle}
+              </h2>
+              <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[483px]">
+                {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
+              </p>
+              <Link
+                to="/companie/viziune"
+                className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
+              >
+                <span className="text-black text-base font-semibold font-['Inter']">
+                  {tr.divisionsSectionBtn}
+                </span>
+              </Link>
+            </div>
+
+            <div className="col-span-6 w-full max-w-[578px] h-96 relative flex items-center justify-start">
+              <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
+              <div className="relative z-10 flex items-center justify-start gap-8 w-full pl-0 pr-5">
+                <img
+                  className="size-80 shrink-0 object-contain"
+                  src="/images/home/harta-romania.png"
+                  alt=""
+                  aria-hidden
+                />
+                <div className="flex flex-col gap-4">
+                  <p className="text-black text-3xl font-bold font-['Inter'] leading-9">
+                    {tr.netTitle}
+                  </p>
+                  <p className="text-black text-base font-normal font-['Inter'] leading-5 max-w-[256px]">
+                    {tr.netBody}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── DIVIZIILE BATERINO ── */}
+        <section className="mb-16 lg:mb-24">
+          <div>
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4 text-center lg:text-left">
+              {tr.diviziileNoastreTitle}
+            </h2>
+            <p className="text-gray-700 text-base sm:text-lg font-medium font-['Inter'] leading-6 sm:leading-8 mb-6 sm:mb-8 max-w-[894px] text-center lg:text-left mx-auto lg:mx-0">
+              {tr.diviziileNoastreSubtitle}
+            </p>
+
+            {/* Desktop: 4 cards in grid */}
+            <div className="hidden lg:grid grid-cols-4 gap-6">
+              <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-logo-white.png" alt="Baterino" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[21px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/industrial" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/industrial-baterii-lifepo4.jpg" alt={tr.divIndTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-pro-industrial-logo.png" alt="Baterino Industrial" className="absolute top-5 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[22px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/medical" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/medical-baterii-lifepo4.jpg" alt={tr.divMedTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-medical-logo-white.png" alt="Baterino Medical" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[18px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/maritim" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[31px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px]">{tr.divMarDesc}</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Mobile: slider */}
+            <div className="lg:hidden">
+              <div className="-mx-5 w-[calc(100%+2.5rem)]">
+                <div
+                  ref={divisionsSliderRef}
+                  className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 pr-5"
+                  style={{
+                    scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
+                    scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
+                  }}
+                >
+                  {[
+                    { img: '/images/home/rezidential-baterii-lifepo4.jpg', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.png' },
+                    { img: '/images/home/industrial-baterii-lifepo4.jpg', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.png' },
+                    { img: '/images/home/medical-baterii-lifepo4.jpg', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.png' },
+                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png' },
+                  ].map((d, i) => (
+                    <Link
+                      key={i}
+                      to={d.to}
+                      className="relative flex-shrink-0 w-[324px] h-[450px] rounded-[10px] overflow-hidden bg-zinc-300 group block snap-center"
+                    >
+                      <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-black/40" />
+                      <img src={d.logo} alt="" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
+                      <div className="absolute bottom-5 sm:bottom-6 left-[16px] sm:left-[21px]">
+                        <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
+                        <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 max-w-[220px] sm:max-w-[240px]">{d.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                  <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
+                </div>
+              </div>
+              {/* Dot indicators – mobile only */}
+              <div className="flex justify-center gap-2 mt-5">
+                {Array.from({ length: DIVISIONS_COUNT }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      const el = divisionsSliderRef.current
+                      if (el) el.scrollTo({ left: i * (DIVISIONS_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
+                    }}
+                    aria-label={`Division ${i + 1}`}
+                    className={`size-2.5 rounded-full transition-colors ${i === divisionsActiveIndex ? 'bg-black' : 'bg-black/30'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <HomeInstalledCapacityCounters tr={tr} />
 
         {/* ── LITHTECH ── */}
         <section className="mb-16 lg:mb-24">
@@ -1065,184 +717,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-        </section>
-
-        {/* ── DIVIDER ── */}
-        <hr className="border-gray-200 mb-16 lg:mb-24 w-full lg:max-w-[1100px] lg:mx-auto" />
-
-        {/* ── DIVISIONS ── */}
-        <section className="mb-16 lg:mb-24">
-
-          {/* ── Mobile: Responsabilitate + map (shown first on mobile) ── */}
-          <section className="lg:hidden flex flex-col items-center text-center mb-8">
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
-              {tr.divisionsSectionTitle}
-            </h2>
-            <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
-              {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
-            </p>
-            <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
-              <img src="/images/home/harta-romania.png" alt="" aria-hidden className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
-              <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
-            </div>
-            <Link
-              to="/companie/viziune"
-              className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
-            >
-              <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
-            </Link>
-          </section>
-
-          {/* ── Desktop grid ── */}
-          <div className="hidden lg:grid grid-cols-12 gap-x-4 gap-y-10">
-
-            {/* ── ROW 1 ── */}
-
-            {/* Text block – 6 cols */}
-            <div className="col-span-6 flex flex-col pt-5 pb-4">
-              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-5 max-w-[513px]">
-                {tr.divisionsSectionTitle}
-              </h2>
-              <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[483px]">
-                {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
-              </p>
-              <Link
-                to="/companie/viziune"
-                className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
-              >
-                <span className="text-black text-base font-semibold font-['Inter']">
-                  {tr.divisionsSectionBtn}
-                </span>
-              </Link>
-            </div>
-
-            {/* RETEA NATIONALA – 6 cols, h-96 */}
-            <div className="col-span-6 w-full max-w-[578px] h-96 relative flex items-center justify-start">
-              <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
-              <div className="relative z-10 flex items-center justify-start gap-8 w-full pl-0 pr-5">
-                <img
-                  className="size-80 shrink-0 object-contain"
-                  src="/images/home/harta-romania.png"
-                  alt=""
-                  aria-hidden
-                />
-                <div className="flex flex-col gap-4">
-                  <p className="text-black text-3xl font-bold font-['Inter'] leading-9">
-                    {tr.netTitle}
-                  </p>
-                  <p className="text-black text-base font-normal font-['Inter'] leading-5 max-w-[256px]">
-                    {tr.netBody}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* ── DIVIDER ── */}
-          <hr className="border-gray-200 my-16 lg:my-20 w-full lg:max-w-[1100px] lg:mx-auto" />
-
-          {/* ── DIVIZIILE BATERINO – desktop: 4 cards grid; mobile: slider ── */}
-          <div>
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4 text-center lg:text-left">
-              {tr.diviziileNoastreTitle}
-            </h2>
-            <p className="text-gray-700 text-base sm:text-lg font-medium font-['Inter'] leading-6 sm:leading-8 mb-6 sm:mb-8 max-w-[894px] text-center lg:text-left mx-auto lg:mx-0">
-              {tr.diviziileNoastreSubtitle}
-            </p>
-
-            {/* Desktop: 4 cards in grid */}
-            <div className="hidden lg:grid grid-cols-4 gap-6">
-              <Link to="/divizii/rezidential" className="h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-logo-white.png" alt="Baterino" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[21px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/industrial" className="h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/industrial-baterii-lifepo4.jpg" alt={tr.divIndTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-pro-industrial-logo.png" alt="Baterino Industrial" className="absolute top-5 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[22px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/medical" className="h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/medical-baterii-lifepo4.jpg" alt={tr.divMedTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-medical-logo-white.png" alt="Baterino Medical" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[18px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/maritim" className="h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[31px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px]">{tr.divMarDesc}</p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Mobile: slider */}
-            <div className="lg:hidden">
-              <div className="-mx-5 w-[calc(100%+2.5rem)]">
-                <div
-                  ref={divisionsSliderRef}
-                  className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 pr-5"
-                  style={{
-                    scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
-                    scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
-                  }}
-                >
-                  {[
-                    { img: '/images/home/rezidential-baterii-lifepo4.jpg', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.png' },
-                    { img: '/images/home/industrial-baterii-lifepo4.jpg', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.png' },
-                    { img: '/images/home/medical-baterii-lifepo4.jpg', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.png' },
-                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png' },
-                  ].map((d, i) => (
-                    <Link
-                      key={i}
-                      to={d.to}
-                      className="relative flex-shrink-0 w-[324px] h-[466px] rounded-[10px] overflow-hidden bg-zinc-300 group block snap-center"
-                    >
-                      <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-black/40" />
-                      <img src={d.logo} alt="" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
-                      <div className="absolute bottom-5 sm:bottom-6 left-[16px] sm:left-[21px]">
-                        <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
-                        <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 max-w-[220px] sm:max-w-[240px]">{d.desc}</p>
-                      </div>
-                    </Link>
-                  ))}
-                  <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
-                </div>
-              </div>
-              {/* Dot indicators – mobile only */}
-              <div className="flex justify-center gap-2 mt-5">
-                {Array.from({ length: DIVISIONS_COUNT }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      const el = divisionsSliderRef.current
-                      if (el) el.scrollTo({ left: i * (DIVISIONS_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
-                    }}
-                    aria-label={`Division ${i + 1}`}
-                    className={`size-2.5 rounded-full transition-colors ${i === divisionsActiveIndex ? 'bg-black' : 'bg-black/30'}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
         </section>
 
         {/* ── CTA BAR ── */}

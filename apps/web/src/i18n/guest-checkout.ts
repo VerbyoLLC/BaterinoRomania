@@ -108,6 +108,8 @@ export type GuestCheckoutTranslations = {
   authTermsLinkPrivacy: string
   /** Shown if Google signup is attempted without accepting terms (defensive). */
   authTermsRequiredError: string
+  /** Optional marketing email opt-in at signup (unchecked by default). */
+  authMarketingOptInLabel: string
   missingSlugTitle: string
   missingSlugBody: string
   /** No slug and empty cart on `/comanda` */
@@ -258,6 +260,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authTermsLinkPrivacy: 'Politica de Confidențialitate',
     authTermsRequiredError:
       'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a continua cu Google.',
+    authMarketingOptInLabel:
+      'Doresc să primesc comunicări comerciale și oferte de la Baterino prin email. (Opțional)',
     missingSlugTitle: 'Lipsește produsul',
     missingSlugBody: 'Nu s-a putut identifica produsul. Alege un produs din catalog.',
     emptyCheckoutTitle: 'Nu există produse de comandat',
@@ -392,6 +396,8 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authTermsLinkPrivacy: 'Privacy Policy',
     authTermsRequiredError:
       'Please accept the Terms & Conditions and Privacy Policy to continue with Google.',
+    authMarketingOptInLabel:
+      'I would like to receive commercial communications and offers from Baterino by email. (Optional)',
     missingSlugTitle: 'Missing product',
     missingSlugBody: 'We could not tell which product to order. Pick one from the catalogue.',
     emptyCheckoutTitle: 'Nothing to checkout',
@@ -519,6 +525,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     authTermsMiddle: '以及',
     authTermsLinkPrivacy: '隐私政策',
     authTermsRequiredError: '使用 Google 注册前请先同意条款与条件及隐私政策。',
+    authMarketingOptInLabel: '我希望通过电子邮件接收 Baterino 的商业通讯和优惠信息。（可选）',
     missingSlugTitle: '缺少商品',
     missingSlugBody: '无法识别要下单的商品，请从目录中选择。',
     emptyCheckoutTitle: '没有可结算的商品',

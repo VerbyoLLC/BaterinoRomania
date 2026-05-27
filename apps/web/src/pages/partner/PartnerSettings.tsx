@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Building2, MapPin, KeyRound, Mail, Shield, Trash2 } from 'lucide-react'
+import { User, Building2, MapPin, KeyRound, Mail, Shield, Trash2, Bell } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import {
   getPartnerSettingsTranslations,
@@ -22,8 +22,9 @@ import {
   sanitizeStreetLine,
 } from '../../lib/formInputSanitize'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
+import EmailNotificationsSettings from '../../components/settings/EmailNotificationsSettings'
 
-type SettingsSectionKey = 'personal' | 'company' | 'delivery' | 'password' | 'email' | 'twoFactor' | 'delete'
+type SettingsSectionKey = 'personal' | 'company' | 'delivery' | 'password' | 'email' | 'notifications' | 'twoFactor' | 'delete'
 
 type ActivityType = PartnerSettingsActivityId
 const ACTIVITY_IDS: ActivityType[] = ['instalator', 'distribuitor', 'integrator', 'altul']
@@ -34,6 +35,7 @@ const SECTION_IDS: Record<SettingsSectionKey, string> = {
   delivery: 'partner-settings-delivery',
   password: 'partner-settings-password',
   email: 'partner-settings-email',
+  notifications: 'partner-settings-notifications',
   twoFactor: 'partner-settings-2fa',
   delete: 'partner-settings-delete',
 }
@@ -213,6 +215,7 @@ export default function PartnerSettings() {
       { key: 'delivery', label: tr.navDelivery, icon: MapPin },
       { key: 'password', label: tr.navPassword, icon: KeyRound },
       { key: 'email', label: tr.navEmail, icon: Mail },
+      { key: 'notifications', label: tr.navNotifications, icon: Bell },
       { key: 'twoFactor', label: tr.navTwoFactor, icon: Shield },
       { key: 'delete', label: tr.navDelete, icon: Trash2 },
     ],
@@ -781,6 +784,25 @@ export default function PartnerSettings() {
         </SettingsPanel>
 
       <SettingsPanel
+        sectionId={SECTION_IDS.notifications}
+        title={tr.notificationsTitle}
+        icon={<Bell className="h-5 w-5" strokeWidth={1.75} />}
+      >
+          <EmailNotificationsSettings
+            variant="partner"
+            content={{
+              intro: tr.notificationsIntro,
+              marketingLabel: tr.notificationsMarketingLabel,
+              marketingDesc: tr.notificationsMarketingDesc,
+              loadingAria: tr.notificationsLoadingAria,
+              saved: tr.notificationsSaved,
+              loadError: tr.notificationsLoadError,
+              saveError: tr.notificationsSaveError,
+            }}
+          />
+        </SettingsPanel>
+
+      <SettingsPanel
         sectionId={SECTION_IDS.twoFactor}
         title={tr.twoFactorTitle}
         icon={<Shield className="h-5 w-5" strokeWidth={1.75} />}
@@ -899,6 +921,8 @@ export default function PartnerSettings() {
             <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-gray-700 font-['Inter']">
               <li>{tr.deleteModalBullet1}</li>
               <li>{tr.deleteModalBullet2}</li>
+              <li>{tr.deleteModalBullet3}</li>
+              <li>{tr.deleteModalBullet4}</li>
             </ul>
             <div className="mb-4">
               <label className="mb-2 block text-sm font-semibold font-['Inter'] text-gray-700">{tr.deleteConfirmLabel}</label>

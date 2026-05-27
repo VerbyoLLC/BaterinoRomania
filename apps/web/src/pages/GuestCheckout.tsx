@@ -251,6 +251,7 @@ export default function GuestCheckout() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authTermsAgreed, setAuthTermsAgreed] = useState(false)
+  const [authMarketingOptIn, setAuthMarketingOptIn] = useState(false)
   const [authTermsHighlight, setAuthTermsHighlight] = useState(false)
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -582,7 +583,9 @@ export default function GuestCheckout() {
     setAuthLoading(true)
     try {
       const emailNorm = authEmail.trim().toLowerCase()
-      const signupOut = await apiSignup(emailNorm, authPassword, 'client', returnToCheckout)
+      const signupOut = await apiSignup(emailNorm, authPassword, 'client', returnToCheckout, {
+        marketingEmailOptIn: authMarketingOptIn,
+      })
       navigate(`/signup/clienti?tab=client&next=${loginNext}`, {
         state: {
           guestCheckoutSignup: true,
@@ -604,6 +607,7 @@ export default function GuestCheckout() {
     try {
       const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, 'client', {
         acceptedTerms: true,
+        marketingEmailOptIn: authMarketingOptIn,
       })
       setAuthToken(token)
       if (user.role === 'partener') {
@@ -1976,64 +1980,8 @@ export default function GuestCheckout() {
                         </div>
                       </div>
 
-                      <form className="mt-5 flex flex-col gap-3" onSubmit={handleSidebarSignupSubmit}>
-                        {authError ? (
-                          <div className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2.5">
-                            <p className="m-0 text-sm text-red-800 font-['Inter']">{authError}</p>
-                          </div>
-                        ) : null}
-                        <label className="block">
-                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
-                            {tr.authEmail}
-                          </span>
-                          <input
-                            type="email"
-                            required
-                            value={authEmail}
-                            onChange={(e) => setAuthEmail(e.target.value)}
-                            autoComplete="email"
-                            className={inputClass}
-                          />
-                        </label>
-                        <div>
-                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
-                            {tr.authPassword}
-                          </span>
-                          <PasswordInput
-                            value={authPassword}
-                            onChange={setAuthPassword}
-                            autoComplete="new-password"
-                            placeholder=""
-                            inputClassName="h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-['Inter'] focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={authLoading}
-                          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {authLoading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              {tr.authLoading}
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="h-4 w-4 opacity-90" strokeWidth={2.25} aria-hidden />
-                              {tr.authSubmit}
-                            </>
-                          )}
-                        </button>
-                      </form>
-
-                      <div className="my-4 flex items-center gap-3">
-                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
-                        <span className="text-xs font-medium text-slate-400 font-['Inter']">{tr.authDividerOr}</span>
-                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
-                      </div>
-
                       <div
-                        className={`mb-4 rounded-xl p-3 transition-colors ${
+                        className={`mt-5 flex flex-col gap-2 rounded-xl p-3 transition-colors ${
                           authTermsHighlight
                             ? 'border-2 border-red-500 bg-red-50/80'
                             : 'border border-transparent'
@@ -2075,6 +2023,74 @@ export default function GuestCheckout() {
                             </Link>
                           </span>
                         </label>
+
+                        <label className="flex cursor-pointer items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={authMarketingOptIn}
+                            onChange={(e) => setAuthMarketingOptIn(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                          />
+                          <span className="text-sm leading-snug text-slate-700 font-['Inter']">
+                            {tr.authMarketingOptInLabel}
+                          </span>
+                        </label>
+                      </div>
+
+                      <form className="mt-3 flex flex-col gap-3" onSubmit={handleSidebarSignupSubmit}>
+                        {authError ? (
+                          <div className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2.5">
+                            <p className="m-0 text-sm text-red-800 font-['Inter']">{authError}</p>
+                          </div>
+                        ) : null}
+                        <label className="block">
+                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
+                            {tr.authEmail}
+                          </span>
+                          <input
+                            type="email"
+                            required
+                            value={authEmail}
+                            onChange={(e) => setAuthEmail(e.target.value)}
+                            autoComplete="email"
+                            className={inputClass}
+                          />
+                        </label>
+                        <div>
+                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
+                            {tr.authPassword}
+                          </span>
+                          <PasswordInput
+                            value={authPassword}
+                            onChange={setAuthPassword}
+                            autoComplete="new-password"
+                            placeholder=""
+                            inputClassName="h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-['Inter'] focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={authLoading || !authTermsAgreed}
+                          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {authLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              {tr.authLoading}
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="h-4 w-4 opacity-90" strokeWidth={2.25} aria-hidden />
+                              {tr.authSubmit}
+                            </>
+                          )}
+                        </button>
+                      </form>
+
+                      <div className="my-4 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
+                        <span className="text-xs font-medium text-slate-400 font-['Inter']">{tr.authDividerOr}</span>
+                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
                       </div>
 
                       <GoogleSignupButton

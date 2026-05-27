@@ -30,10 +30,17 @@ model User {
   referralCodeRedemptionsCount   Int     @default(0)
   verificationCode          String?
   verificationCodeExpiresAt DateTime?
+  /** Email nou solicitat (schimbare cont Google) — până la confirmarea codului trimis pe emailul curent. */
+  pendingEmailChange        String?
   passwordResetToken        String?
   passwordResetExpiresAt    DateTime?
   /** Coș B2C persistat server-side (JSON linii); folosit doar pentru role client. */
   clientCart                Json?
+  /** Consimțământ explicit pentru comunicări comerciale prin email (GDPR). */
+  marketingEmailOptIn       Boolean   @default(false)
+  marketingEmailOptInAt     DateTime?
+  /** Cont marcat pentru ștergere; acces blocat până la anonimizare definitivă (cron 30 zile). */
+  deletedAt                 DateTime?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   partner                   Partner?
@@ -45,6 +52,8 @@ model User {
   salesLeadsCreated         SalesLead[]
   salesLeadActivities       SalesLeadActivity[]
   salesLeadUserStates       SalesLeadUserState[]
+
+  @@index([deletedAt])
 }
 
 /** Profil livrare/facturare pentru conturi client (1:1 User). */
@@ -727,4 +736,23 @@ model SalesLeadUserState {
   @@index([userId])
   @@index([leadId])
   @@map("sales_lead_user_state")
+}
+
+/**
+ * Jurnal imutabil de consimțământ (GDPR / ANSPDCP).
+ * Fără FK către User — rândurile rămân după ștergerea contului, cu userId intact.
+ */
+model ConsentLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  consentType String
+  granted     Boolean
+  ipAddress   String?  @db.VarChar(45)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([consentType])
+  @@index([createdAt])
+  @@map("consent_log")
 }

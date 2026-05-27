@@ -45,6 +45,9 @@ function Footer() {
               <Link to="/verificare-garantie" className={linkClass}>
                 {warrantyPage.pageTitle}
               </Link>
+              <Link to="/service-lithtech-romania" className={linkClass}>
+                {t.serviceLithtech}
+              </Link>
               <Link to="/returnare-produse" className={linkClass}>
                 {t.returnareProduse}
               </Link>
@@ -93,6 +96,7 @@ function Footer() {
             <nav className="flex flex-col gap-2.5">
               <Link to="/siguranta" className={linkClass}>{t.sigurantaClientului}</Link>
               <Link to="/verificare-garantie" className={linkClass}>{t.verificareGarantie}</Link>
+              <Link to="/service-lithtech-romania" className={linkClass}>{t.serviceLithtech}</Link>
               <Link to="/returnare-produse" className={linkClass}>{t.returnareProduse}</Link>
               <Link to="/intrebari-frecvente" className={linkClass}>{t.intrebariFrecvente}</Link>
               <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>

@@ -28,6 +28,17 @@ const {
   getMailDebugInfo,
   verifySmtpConnection,
 } = require('./lib/mail.js')
+const {
+  softDeleteUserAccount,
+  eraseUserAccount,
+  SOFT_DELETE_RETENTION_DAYS,
+} = require('./lib/account-erasure.js')
+const {
+  CONSENT_TYPES,
+  recordConsentLog,
+  recordConsentLogs,
+  logAccountCreationConsents,
+} = require('./lib/consent-log.js')
 const { verifyGoogleIdToken, googleClientIds, idTokenAudiences } = require('./lib/google-id-token.js')
 const {
   uploadToR2,
@@ -175,6 +186,24 @@ function productToJson(record) {
     console.error('productToJson:', err?.message || err)
     return record
   }
+}
+
+/** Catalog list order: rezidential first, then industrial, then other sectors. */
+function tipProdusSortRank(tipProdus) {
+  const t = String(tipProdus || '').toLowerCase()
+  if (t === 'rezidential') return 0
+  if (t === 'industrial') return 1
+  return 2
+}
+
+function sortProductsResidentialFirst(products) {
+  return [...products].sort((a, b) => {
+    const byTip = tipProdusSortRank(a.tipProdus) - tipProdusSortRank(b.tipProdus)
+    if (byTip !== 0) return byTip
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+    return tb - ta
+  })
 }
 
 function parsePriceVisibility(v) {
@@ -513,6 +542,7 @@ app.use(cors({
   origin: true,
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
+  exposedHeaders: ['Content-Disposition'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }))
 /** Limită mărită pentru export PDF ofertă (HTML self-contained în body JSON). */
@@ -524,7 +554,7 @@ app.options('/api/admin/products/', (_, res) => res.status(204).end())
 app.options('/api/admin/products/:id', (_, res) => res.status(204).end())
 
 // ── Auth middleware (pentru rute protejate) ────────────────────────────
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const auth = req.headers.authorization
   const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
   if (!token) {
@@ -532,12 +562,25 @@ function authMiddleware(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET)
-    req.userId = payload.userId
-    req.userRole = payload.role
-    req.userEmail = payload.email ?? null
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, email: true, role: true, deletedAt: true },
+    })
+    if (!user || user.deletedAt) {
+      return res.status(401).json({
+        error: user?.deletedAt ? 'Contul a fost șters.' : 'Token invalid.',
+      })
+    }
+    req.userId = user.id
+    req.userRole = user.role
+    req.userEmail = user.email
     next()
-  } catch {
-    return res.status(401).json({ error: 'Token invalid.' })
+  } catch (err) {
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token invalid.' })
+    }
+    console.error('authMiddleware error:', err)
+    return res.status(500).json({ error: 'Eroare de autentificare.' })
   }
 }
 
@@ -600,6 +643,16 @@ function safeSignupNext(raw) {
   if (!s.startsWith('/') || s.startsWith('//')) return ''
   if (s.includes('\n') || s.includes('\r')) return ''
   return s.slice(0, 512)
+}
+
+/** Explicit opt-in only — pre-ticked or omitted values are treated as false. */
+function parseMarketingEmailOptIn(body) {
+  return body?.marketingEmailOptIn === true
+}
+
+function marketingEmailOptInCreateData(body) {
+  if (!parseMarketingEmailOptIn(body)) return {}
+  return { marketingEmailOptIn: true, marketingEmailOptInAt: new Date() }
 }
 
 /** Cod numeric 4 cifre (leading zeros) pentru verificare email la înregistrare. */
@@ -674,6 +727,12 @@ app.post('/api/auth/signup', async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: 'Parola trebuie să aibă cel puțin 8 caractere.' })
     }
+    if (body.acceptedTerms !== true) {
+      return res.status(400).json({
+        error:
+          'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a crea contul.',
+      })
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -692,8 +751,11 @@ app.post('/api/auth/signup', async (req, res) => {
         role,
         verificationCode,
         verificationCodeExpiresAt,
+        ...marketingEmailOptInCreateData(body),
       },
     })
+
+    await logAccountCreationConsents(prisma, req, user.id, parseMarketingEmailOptIn(body))
 
     let verificationSent = false
     if (isMailConfigured()) {
@@ -964,6 +1026,9 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Email sau parolă incorectă.' })
     }
+    if (user.deletedAt) {
+      return res.status(401).json({ error: 'Acest cont a fost șters.' })
+    }
 
     if (!user.password) {
       return res.status(401).json({ error: 'Acest cont folosește Conectează-te cu Google.' })
@@ -1041,6 +1106,12 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     if (user) {
+      if (user.deletedAt) {
+        return res.status(401).json({
+          error: 'Acest cont a fost șters.',
+          code: 'ACCOUNT_DELETED',
+        })
+      }
       /** Înregistrare pe `/signup/clienti`: nu autentifica cont existent și nu împinge în onboarding parteneri. */
       if (intentSignup) {
         return res.status(409).json({
@@ -1132,6 +1203,7 @@ app.post('/api/auth/google', async (req, res) => {
         verificationCodeExpiresAt: null,
         firstName: googleNames.firstName,
         lastName: googleNames.lastName,
+        ...marketingEmailOptInCreateData(body),
         ...(effectiveRole === 'client'
           ? {
               clientProfile: {
@@ -1144,6 +1216,7 @@ app.post('/api/auth/google', async (req, res) => {
           : {}),
       },
     })
+    await logAccountCreationConsents(prisma, req, created.id, parseMarketingEmailOptIn(body))
     const out = await buildGoogleAuthPayload(created.id)
     return res.json(out)
   } catch (err) {
@@ -1322,6 +1395,267 @@ app.get('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
   } catch (err) {
     console.error('Client profile GET error:', err)
     res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+function mapReturRowForExport(row) {
+  return {
+    id: row.id,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    submitSource: row.submitSource,
+    lastName: row.lastName,
+    firstName: row.firstName,
+    street: row.street,
+    county: row.county,
+    city: row.city,
+    postal: row.postal,
+    phone: row.phone,
+    email: row.email,
+    orderNumber: row.orderNumber,
+    receiptDate: row.receiptDate,
+    serialNumber: row.serialNumber,
+    productBrand: row.productBrand,
+    productModel: row.productModel,
+    returnReason: row.returnReason,
+    returnReasonOther: row.returnReasonOther,
+    condUninstalled: row.condUninstalled,
+    condSeals: row.condSeals,
+    condPackaging: row.condPackaging,
+    pickupStreet: row.pickupStreet,
+    pickupCounty: row.pickupCounty,
+    pickupCity: row.pickupCity,
+    pickupPostal: row.pickupPostal,
+    refundTitular: row.refundTitular,
+    refundIban: row.refundIban,
+    policyAccepted: row.policyAccepted,
+    declarationAccepted: row.declarationAccepted,
+    locale: row.locale,
+    conditionPhotoUrls: row.conditionPhotoUrls,
+    status: row.status,
+  }
+}
+
+function clientDataExportFilename(email) {
+  const safe = String(email || 'cont')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9@._+-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 120)
+  return `baterino-datele-mele-${safe || 'cont'}.json`
+}
+
+/** GDPR Art. 20 — export JSON al datelor personale ale clientului autentificat. */
+app.get('/api/client/export-data', authMiddleware, clientAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId
+    const emailNorm = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+
+    const [user, profile, modernOrders, legacyOrders, serviceRequests, retururi, consentLogs] =
+      await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            createdAt: true,
+            updatedAt: true,
+            referralCode: true,
+            referralInviteEmailsSent: true,
+            referralCodeRedemptionsCount: true,
+            clientCart: true,
+            marketingEmailOptIn: true,
+            marketingEmailOptInAt: true,
+          },
+        }),
+        prisma.clientProfile.findUnique({ where: { userId } }),
+        prisma.residentialOrder.findMany({
+          where: { OR: [{ userId }, ...(emailNorm ? [{ email: emailNorm }] : [])] },
+          include: { lines: { orderBy: { id: 'asc' } } },
+          orderBy: { createdAt: 'desc' },
+        }),
+        emailNorm
+          ? prisma.guestResidentialOrder.findMany({
+              where: { email: emailNorm, orderSource: 'client' },
+              orderBy: { createdAt: 'desc' },
+            })
+          : Promise.resolve([]),
+        prisma.serviceRequest.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.retur.findMany({
+          where: { OR: [{ userId }, ...(emailNorm ? [{ email: emailNorm }] : [])] },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.consentLog.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            consentType: true,
+            granted: true,
+            ipAddress: true,
+            userAgent: true,
+            createdAt: true,
+          },
+        }),
+      ])
+
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+
+    const referralCode = user.referralCode || (await ensureUserReferralCode(userId))
+
+    const profileDto = profile
+      ? {
+          firstName: pickProfileOrUserName(profile.firstName, user.firstName),
+          lastName: pickProfileOrUserName(profile.lastName, user.lastName),
+          phone: profile.phone,
+          billAddress: profile.billAddress,
+          billCounty: profile.billCounty,
+          billCity: profile.billCity,
+          billPostal: profile.billPostal,
+          deliveryDifferent: profile.deliveryDifferent,
+          delAddress: profile.delAddress,
+          delCounty: profile.delCounty,
+          delCity: profile.delCity,
+          delPostal: profile.delPostal,
+          companyName: profile.companyName,
+          companyCui: profile.companyCui,
+          companyAddress: profile.companyAddress,
+          companyCounty: profile.companyCounty,
+          companyCity: profile.companyCity,
+          companyPostal: profile.companyPostal,
+          createdAt:
+            profile.createdAt instanceof Date ? profile.createdAt.toISOString() : profile.createdAt,
+          updatedAt:
+            profile.updatedAt instanceof Date ? profile.updatedAt.toISOString() : profile.updatedAt,
+        }
+      : null
+
+    const cartLines = Array.isArray(user.clientCart)
+      ? normalizeClientCartLinesFromBody(user.clientCart)
+      : []
+
+    const comenzi = [
+      ...modernOrders.map(mapResidentialOrderToClientJson),
+      ...legacyOrders.map(mapLegacyGuestOrderToClientJson),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    const payload = {
+      exportat_la: new Date().toISOString(),
+      profil: {
+        id: user.id,
+        email: user.email,
+        firstName: pickProfileOrUserName(profile?.firstName, user.firstName),
+        lastName: pickProfileOrUserName(profile?.lastName, user.lastName),
+        phone: String(profile?.phone || user.phone || '').trim(),
+        createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+        updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
+        marketingEmailOptIn: user.marketingEmailOptIn === true,
+        marketingEmailOptInAt:
+          user.marketingEmailOptInAt instanceof Date
+            ? user.marketingEmailOptInAt.toISOString()
+            : user.marketingEmailOptInAt,
+        profil_livrare_facturare: profileDto,
+      },
+      comenzi,
+      cereri_service: serviceRequests.map(mapServiceRequestRow),
+      retururi: retururi.map(mapReturRowForExport),
+      cos_cumparaturi: cartLines.length > 0 ? { lines: cartLines } : null,
+      referral: {
+        referralCode,
+        referralInviteEmailsSent: user.referralInviteEmailsSent ?? 0,
+        referralCodeRedemptionsCount: user.referralCodeRedemptionsCount ?? 0,
+      },
+      consent_log: consentLogs.map((entry) => ({
+        ...entry,
+        createdAt:
+          entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
+      })),
+    }
+
+    const jsonBody = JSON.stringify(payload, null, 2)
+    const filename = clientDataExportFilename(user.email)
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Cache-Control', 'no-store')
+    return res.send(jsonBody)
+  } catch (err) {
+    console.error('Client export-data error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la exportul datelor.' })
+  }
+})
+
+// ── Consent: jurnal imutabil (GDPR) ───────────────────────────────────────
+app.post('/api/consent/cookie', optionalAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    if (typeof body.analytics !== 'boolean') {
+      return res.status(400).json({ error: 'Câmpul analytics trebuie să fie true sau false.' })
+    }
+    await recordConsentLog(prisma, req, {
+      userId: req.userId ?? null,
+      consentType: CONSENT_TYPES.COOKIE_ANALYTICS,
+      granted: body.analytics === true,
+    })
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('Consent cookie POST error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// ── Account: preferințe notificări email (client + partener) ───────────────
+app.get('/api/account/email-notifications', authMiddleware, async (req, res) => {
+  try {
+    if (!['client', 'partener'].includes(req.userRole)) {
+      return res.status(403).json({ error: 'Acces restricționat.' })
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { marketingEmailOptIn: true },
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    return res.json({ marketingEmailOptIn: user.marketingEmailOptIn === true })
+  } catch (err) {
+    console.error('Email notifications GET error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+app.patch('/api/account/email-notifications', authMiddleware, async (req, res) => {
+  try {
+    if (!['client', 'partener'].includes(req.userRole)) {
+      return res.status(403).json({ error: 'Acces restricționat.' })
+    }
+    const body = req.body || {}
+    if (typeof body.marketingEmailOptIn !== 'boolean') {
+      return res.status(400).json({ error: 'Câmpul marketingEmailOptIn trebuie să fie true sau false.' })
+    }
+    const optIn = body.marketingEmailOptIn === true
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: optIn
+        ? { marketingEmailOptIn: true, marketingEmailOptInAt: new Date() }
+        : { marketingEmailOptIn: false },
+      select: { marketingEmailOptIn: true },
+    })
+    await recordConsentLog(prisma, req, {
+      userId: req.userId,
+      consentType: CONSENT_TYPES.MARKETING_EMAILS,
+      granted: optIn,
+    })
+    return res.json({ marketingEmailOptIn: user.marketingEmailOptIn === true })
+  } catch (err) {
+    console.error('Email notifications PATCH error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
   }
 })
 
@@ -1655,6 +1989,41 @@ app.patch('/api/admin/account', authMiddleware, adminAuthMiddleware, async (req,
   }
 })
 
+async function commitClientEmailChange(userId, user, newEmailRaw) {
+  const oldEmail = String(user.email || '').trim()
+  const oldNorm = oldEmail.toLowerCase()
+  const guestEmailSync = [
+    prisma.guestResidentialOrder.updateMany({
+      where: { orderSource: 'client', email: oldEmail },
+      data: { email: newEmailRaw },
+    }),
+  ]
+  if (oldNorm !== oldEmail) {
+    guestEmailSync.push(
+      prisma.guestResidentialOrder.updateMany({
+        where: { orderSource: 'client', email: oldNorm },
+        data: { email: newEmailRaw },
+      }),
+    )
+  }
+  await prisma.$transaction([
+    ...guestEmailSync,
+    prisma.residentialOrder.updateMany({
+      where: { userId },
+      data: { email: newEmailRaw },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: newEmailRaw,
+        pendingEmailChange: null,
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+      },
+    }),
+  ])
+}
+
 app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async (req, res) => {
   try {
     const body = req.body || {}
@@ -1662,8 +2031,8 @@ app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async
       .trim()
       .toLowerCase()
     const currentPassword = body.currentPassword
-    if (!newEmailRaw || !currentPassword) {
-      return res.status(400).json({ error: 'Email nou și parola curentă sunt obligatorii.' })
+    if (!newEmailRaw) {
+      return res.status(400).json({ error: 'Email nou obligatoriu.' })
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailRaw)) {
       return res.status(400).json({ error: 'Adresa de email nu este validă.' })
@@ -1671,43 +2040,26 @@ app.post('/api/client/change-email', authMiddleware, clientAuthMiddleware, async
     const user = await prisma.user.findUnique({ where: { id: req.userId } })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
     if (!user.password) {
-      return res.status(400).json({
-        error: 'Pentru schimbarea emailului, setează mai întâi o parolă în zona „Schimbă parola”.',
+      return res.status(403).json({
+        error: 'Conturile create cu Google nu pot schimba adresa de email din setări.',
+        code: 'EMAIL_CHANGE_NOT_AVAILABLE',
       })
     }
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Parola curentă este obligatorie.' })
+    }
+    const valid = await bcrypt.compare(String(currentPassword), user.password)
+    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
     const oldEmail = String(user.email || '').trim()
     const oldNorm = oldEmail.toLowerCase()
     if (newEmailRaw === oldNorm) {
       return res.status(400).json({ error: 'Noul email este identic cu cel curent.' })
     }
-    const valid = await bcrypt.compare(String(currentPassword), user.password)
-    if (!valid) return res.status(401).json({ error: 'Parola curentă incorectă.' })
     const taken = await prisma.user.findUnique({ where: { email: newEmailRaw } })
     if (taken && taken.id !== user.id) {
       return res.status(409).json({ error: 'Acest email este deja folosit de un alt cont.' })
     }
-    const guestEmailSync = [
-      prisma.guestResidentialOrder.updateMany({
-        where: { orderSource: 'client', email: oldEmail },
-        data: { email: newEmailRaw },
-      }),
-    ]
-    if (oldNorm !== oldEmail) {
-      guestEmailSync.push(
-        prisma.guestResidentialOrder.updateMany({
-          where: { orderSource: 'client', email: oldNorm },
-          data: { email: newEmailRaw },
-        }),
-      )
-    }
-    await prisma.$transaction([
-      ...guestEmailSync,
-      prisma.residentialOrder.updateMany({
-        where: { userId: user.id },
-        data: { email: newEmailRaw },
-      }),
-      prisma.user.update({ where: { id: user.id }, data: { email: newEmailRaw } }),
-    ])
+    await commitClientEmailChange(user.id, user, newEmailRaw)
     const token = jwt.sign(
       { userId: user.id, email: newEmailRaw, role: user.role },
       JWT_SECRET,
@@ -1730,9 +2082,12 @@ app.delete('/api/client/account', authMiddleware, clientAuthMiddleware, async (r
     const userId = req.userId
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, password: true },
+      select: { email: true, password: true, deletedAt: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (user.deletedAt) {
+      return res.status(409).json({ error: 'Contul este deja marcat pentru ștergere.' })
+    }
     if (user.password) {
       if (!currentPassword) {
         return res.status(400).json({ error: 'Parola curentă este obligatorie pentru ștergerea contului.' })
@@ -1743,8 +2098,11 @@ app.delete('/api/client/account', authMiddleware, clientAuthMiddleware, async (r
 
     await sendAccountDeletedEmail(user.email, 'client')
 
-    await prisma.user.delete({ where: { id: userId } })
-    return res.json({ message: 'Cont șters.' })
+    await softDeleteUserAccount(prisma, userId)
+    return res.json({
+      message: `Cont dezactivat. Datele vor fi șterse definitiv după ${SOFT_DELETE_RETENTION_DAYS} de zile.`,
+      retentionDays: SOFT_DELETE_RETENTION_DAYS,
+    })
   } catch (err) {
     console.error('Client delete account error:', err)
     res.status(500).json({ error: 'Eroare la ștergerea contului.' })
@@ -3408,6 +3766,7 @@ app.get('/api/public/companii/:slugSegment', async (req, res) => {
         isPublic: true,
         isApproved: true,
         isSuspended: false,
+        user: { deletedAt: null },
       },
       select: {
         publicSlug: true,
@@ -3874,17 +4233,20 @@ app.delete('/api/partner/account', authMiddleware, async (req, res) => {
     const userId = req.userId
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true },
+      select: { email: true, deletedAt: true },
     })
     if (!user) return res.status(404).json({ error: 'Utilizator negăsit.' })
+    if (user.deletedAt) {
+      return res.status(409).json({ error: 'Contul este deja marcat pentru ștergere.' })
+    }
 
     await sendAccountDeletedEmail(user.email, 'partener')
 
-    await prisma.$transaction(async (tx) => {
-      await tx.partner.deleteMany({ where: { userId } })
-      await tx.user.delete({ where: { id: userId } })
+    await softDeleteUserAccount(prisma, userId)
+    return res.json({
+      message: `Cont dezactivat. Datele vor fi șterse definitiv după ${SOFT_DELETE_RETENTION_DAYS} de zile.`,
+      retentionDays: SOFT_DELETE_RETENTION_DAYS,
     })
-    return res.json({ message: 'Cont șters.' })
   } catch (err) {
     console.error('Delete account error:', err)
     res.status(500).json({ error: 'Eroare la ștergerea contului.' })
@@ -6272,6 +6634,11 @@ app.post(
         },
       })
 
+      await recordConsentLogs(prisma, req, [
+        { userId: userIdToStore ?? null, consentType: CONSENT_TYPES.RETURN_POLICY, granted: true },
+        { userId: userIdToStore ?? null, consentType: CONSENT_TYPES.RETURN_DECLARATION, granted: true },
+      ])
+
       const returId = created.id
       const photoUrls = []
       const uploadedKeys = []
@@ -7179,6 +7546,7 @@ const listPublicProductsHandler = async (req, res) => {
         orderBy: { createdAt: 'desc' },
       })
     }
+    products = sortProductsResidentialFirst(products)
     const authPayload = readOptionalAuthPayload(req)
     return res.json(
       products.map((p) => applyPublicPricePolicy(productToJson(p), authPayload))
@@ -7494,7 +7862,9 @@ app.get('/public/retur-serial-eligibility', warrantyVerifyRateLimitMiddleware, g
 const listProductsHandler = async (req, res) => {
   try {
     if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
-    const products = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
+    const products = sortProductsResidentialFirst(
+      await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
+    )
     res.set('Cache-Control', 'no-store')
     return res.json(products.map(productToJson))
   } catch (err) {

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { Building2, KeyRound, Loader2, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
+import { Building2, Bell, Download, KeyRound, Loader2, Mail, MapPin, Shield, Trash2, User } from 'lucide-react'
 import {
   clearAuth,
   deleteClientAccount,
+  downloadClientDataExport,
   getClientProfile,
   postClientChangeEmail,
   postClientChangePassword,
@@ -20,6 +21,9 @@ import {
   sanitizePostalField,
 } from '../../lib/formInputSanitize'
 import PasswordInput from '../../components/PasswordInput'
+import EmailNotificationsSettings from '../../components/settings/EmailNotificationsSettings'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { getClientSettingsExportTranslations } from '../../i18n/client-settings'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 
 /** Matches `inputClass` visually; PasswordInput adds `pr-11` for the eye toggle. */
@@ -41,6 +45,8 @@ const SETTINGS_NAV: readonly { id: string; label: string; Icon: LucideIcon }[] =
   { id: 'adresa-livrare', label: 'Adresa de livrare', Icon: MapPin },
   { id: 'schimba-parola', label: 'Schimbă parola', Icon: KeyRound },
   { id: 'schimba-email', label: 'Schimbă email', Icon: Mail },
+  { id: 'notificari', label: 'Notificări', Icon: Bell },
+  { id: 'export-date', label: 'Export date', Icon: Download },
   { id: 'autentificare-doi-pasi', label: 'Autentificare în doi pași', Icon: Shield },
   { id: 'sterge-cont', label: 'Șterge contul', Icon: Trash2 },
 ] as const
@@ -179,6 +185,11 @@ function SettingsSection({
 
 export default function ClientSettings() {
   const navigate = useNavigate()
+  const { language } = useLanguage()
+  const exportTr = useMemo(
+    () => getClientSettingsExportTranslations(language.code),
+    [language.code],
+  )
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -237,11 +248,23 @@ export default function ClientSettings() {
   const [deletePwd, setDeletePwd] = useState('')
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const [deleteErr, setDeleteErr] = useState('')
 
   const billCities = useMemo(() => getCitiesForCounty(billCounty), [billCounty])
   const delCities = useMemo(() => getCitiesForCounty(delCounty), [delCounty])
   const companyCities = useMemo(() => getCitiesForCounty(companyCounty), [companyCounty])
+  const settingsNavItems = useMemo(
+    () =>
+      SETTINGS_NAV.filter((item) => {
+        if (item.id === 'schimba-parola' || item.id === 'schimba-email') {
+          return accountHasPassword === true
+        }
+        return true
+      }),
+    [accountHasPassword],
+  )
 
   function buildPayload(): ClientProfilePayload {
     return {
@@ -272,7 +295,7 @@ export default function ClientSettings() {
       .then(({ email: em, profile, hasPassword }) => {
         if (c) return
         setEmail(em)
-        setAccountHasPassword(hasPassword ?? true)
+        setAccountHasPassword(hasPassword === true)
         if (profile) {
           setFirstName(profile.firstName || '')
           setLastName(profile.lastName || '')
@@ -436,6 +459,10 @@ export default function ClientSettings() {
       setEmailErr('Introdu noul email.')
       return
     }
+    if (!emailPwd.trim()) {
+      setEmailErr('Introdu parola curentă.')
+      return
+    }
     setEmailLoading(true)
     try {
       const { token, email: nextEmail } = await postClientChangeEmail(em, emailPwd)
@@ -448,6 +475,28 @@ export default function ClientSettings() {
       setEmailErr(err instanceof Error ? err.message : 'Eroare')
     } finally {
       setEmailLoading(false)
+    }
+  }
+
+  async function handleExportData() {
+    setExportLoading(true)
+    setExportError(null)
+    try {
+      const { blob, filename } = await downloadClientDataExport(email)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      anchor.rel = 'noopener'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.trim() : ''
+      setExportError(msg || exportTr.exportDataError)
+    } finally {
+      setExportLoading(false)
     }
   }
 
@@ -488,7 +537,7 @@ export default function ClientSettings() {
           className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:w-56 lg:sticky lg:top-24 lg:self-start"
         >
           <ul className="flex flex-col gap-0.5">
-            {SETTINGS_NAV.map((item) => {
+            {settingsNavItems.map((item) => {
               const NavIcon = item.Icon
               return (
                 <li key={item.id}>
@@ -498,7 +547,7 @@ export default function ClientSettings() {
                     className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 font-['Inter'] transition-colors hover:bg-white hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                   >
                     <NavIcon className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-                    <span>{item.label}</span>
+                    <span>{item.id === 'export-date' ? exportTr.exportDataTitle : item.label}</span>
                   </button>
                 </li>
               )
@@ -521,11 +570,17 @@ export default function ClientSettings() {
                   readOnly
                   autoComplete="off"
                   aria-readonly="true"
-                  title="Emailul se schimbă doar din secțiunea Schimbă email"
+                  title={
+                    accountHasPassword
+                      ? 'Emailul se schimbă doar din secțiunea Schimbă email'
+                      : 'Cont Google — emailul nu poate fi schimbat din setări'
+                  }
                   className={`${inputClass} mt-1 cursor-default bg-slate-100 text-slate-600 border-slate-200 focus:border-slate-200 focus:ring-0`}
                 />
                 <span className="mt-1 block text-xs text-slate-500 font-['Inter']">
-                  Emailul nu poate fi editat aici. Pentru schimbare folosește secțiunea „Schimbă email”.
+                  {accountHasPassword
+                    ? 'Emailul nu poate fi editat aici. Pentru schimbare folosește secțiunea „Schimbă email”.'
+                    : 'Cont creat cu Google — adresa de email este legată de autentificarea Google și nu poate fi modificată aici.'}
                 </span>
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -1027,6 +1082,7 @@ export default function ClientSettings() {
         </form>
       </SettingsSection>
 
+      {accountHasPassword === true ? (
       <SettingsSection id="schimba-parola" title="Schimbă parola" Icon={KeyRound}>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <label className="block">
@@ -1076,7 +1132,9 @@ export default function ClientSettings() {
           </button>
         </form>
       </SettingsSection>
+      ) : null}
 
+      {accountHasPassword === true ? (
       <SettingsSection id="schimba-email" title="Schimbă email" Icon={Mail}>
         <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
           Pentru schimbarea emailului este necesar să introduci parola curentă.
@@ -1116,6 +1174,45 @@ export default function ClientSettings() {
           </button>
         </form>
       </SettingsSection>
+      ) : null}
+
+      <SettingsSection id="notificari" title="Notificări" Icon={Bell}>
+        <EmailNotificationsSettings
+          content={{
+            intro: 'Alege ce tipuri de emailuri dorești să primești de la Baterino.',
+            marketingLabel: 'Comunicări comerciale',
+            marketingDesc: 'Oferte, noutăți și promoții trimise pe adresa de email a contului.',
+            loadingAria: 'Se încarcă preferințele…',
+            saved: 'Preferințele au fost salvate.',
+            loadError: 'Nu am putut încărca preferințele de notificare.',
+            saveError: 'Nu am putut salva preferințele. Încearcă din nou.',
+          }}
+        />
+      </SettingsSection>
+
+      <SettingsSection id="export-date" title={exportTr.exportDataTitle} Icon={Download}>
+        <p className="text-sm text-slate-600 font-['Inter'] -mt-1">{exportTr.exportDataDesc}</p>
+        {exportError ? (
+          <p className="text-sm text-red-600 font-['Inter']" role="alert">
+            {exportError}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void handleExportData()}
+          disabled={exportLoading}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 font-['Inter']"
+        >
+          {exportLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              {exportTr.exportDataLoading}
+            </>
+          ) : (
+            exportTr.exportData
+          )}
+        </button>
+      </SettingsSection>
 
       <SettingsSection id="autentificare-doi-pasi" title="Autentificare în doi pași" Icon={Shield}>
         <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
@@ -1134,8 +1231,8 @@ export default function ClientSettings() {
 
       <SettingsSection id="sterge-cont" title="Șterge contul" Icon={Trash2}>
         <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
-          Ștergerea contului este definitivă. Profilul și datele de autentificare dispar; comenzile tale rămân în
-          sistem pentru facturare, fără legătură cu acest cont.
+          Contul se dezactivează imediat (nu te mai poți autentifica). Datele personale sunt șterse definitiv după
+          30 de zile; comenzile rămân în sistem pentru obligații fiscale, cu datele clientului anonimizate.
         </p>
         {!showDeleteConfirm ? (
           <button
@@ -1188,15 +1285,19 @@ export default function ClientSettings() {
           >
             <h3 className="mb-2 text-lg font-bold text-slate-900 font-['Inter']">Ștergere cont</h3>
             <p className="mb-4 text-sm text-slate-600 font-['Inter']">
-              Ești pe cale să îți ștergi definitiv contul. Nu poți anula această acțiune.
+              Contul se dezactivează imediat. După 30 de zile, datele personale sunt șterse definitiv (comenzile
+              rămân anonimizate pentru obligații legale).
             </p>
             <ul className="mb-4 list-inside list-disc space-y-1 text-sm text-slate-700 font-['Inter']">
+              <li>Imediat: nu te mai poți autentifica; profilul nu mai este accesibil</li>
               <li>
                 {accountHasPassword === false
-                  ? 'Datele din profil și legătura cu Google vor fi eliminate'
-                  : 'Datele din profil și parola vor fi eliminate'}
+                  ? 'După 30 zile: profil, legătura Google și fișierele asociate sunt eliminate'
+                  : 'După 30 zile: profil, parola și datele personale sunt eliminate'}
               </li>
-              <li>Comenzile existente rămân înregistrate, fără legătură cu contul</li>
+              <li>Produsele înregistrate sunt dezlegate; certificatele de garanție generate sunt șterse</li>
+              <li>Cererile de service și datele personale din retururi asociate contului sunt anonimizate</li>
+              <li>Comenzile rămân în sistem (sumă, dată, linii); numele și emailul devin [deleted user]</li>
             </ul>
             {accountHasPassword === false ? (
               <p className="mb-4 text-sm text-slate-600 font-['Inter']">

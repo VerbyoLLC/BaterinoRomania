@@ -6,7 +6,7 @@ const STORAGE_KEY = 'baterino-lang'
 /** Site-wide default; Romanian when no saved preference exists. */
 export const DEFAULT_LANG: LangCode = 'ro'
 
-function getStoredLang(): LangCode {
+export function getStoredLang(): LangCode {
   if (typeof window === 'undefined') return DEFAULT_LANG
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'ro' || stored === 'en' || stored === 'zh') return stored
@@ -20,7 +20,7 @@ type LanguageContextValue = {
   setLanguage: (lang: LanguageEntry) => void
 }
 
-const LanguageContext = createContext<LanguageContextValue | null>(null)
+export const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<LanguageEntry>(() => {
@@ -46,6 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
+    window.dispatchEvent(new Event('baterino-lang-change'))
   }, [])
 
   return (

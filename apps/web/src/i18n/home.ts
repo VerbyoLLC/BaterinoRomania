@@ -9,6 +9,18 @@ export type HomeTranslations = {
   heroBoxDesc: string
   heroBoxCta: string
 
+  // Hero v2 – heading above card slider
+  heroV2Title: string
+  /** Hero v2 – inverter search input placeholder */
+  heroV2InverterSearchPlaceholder: string
+  /** Hero v2 – card 2 (discount programmes) */
+  heroV2Card2Title: string
+  heroV2Card2Subtitle: string
+  heroV2Card2Cta: string
+  /** Hero v2 – card 3 (industrial supply) */
+  heroV2Card3Title: string
+  heroV2Card3Subtitle: string
+
   // Hero – slider tabs
   heroSliderRez: string
   heroSliderInd: string
@@ -77,6 +89,18 @@ export type HomeTranslations = {
   welcomeModalProfesionist: string
   welcomeModalClientFinal: string
 
+  // Installed capacity counters
+  capacitySectionEyebrow: string
+  capacitySectionTitle: string
+  capacitySectionSubtitle: string
+  capacityMwUnit: string
+  capacityCounter1Title: string
+  capacityCounter1Subtitle: string
+  capacityCounter2Title: string
+  capacityCounter3Title: string
+  capacityCounter4Title: string
+  capacityCounter5Title: string
+
   // Features section
   featuresSectionTitle: string
   f1Title: string
@@ -93,6 +117,11 @@ export type HomeTranslations = {
   f6Desc: string
   f7Title: string
   f7Desc: string
+  f4ModalDesc: string
+  f6ModalDesc: string
+  f7ModalDesc: string
+  featureModalClose: string
+  featureModalMoreLink: string
 
   // Reduceri section
   reduceriProgramLabel: string
@@ -156,6 +185,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroBoxDesc: 'Îți oferim produse validate înainte de import, marje competitive și prețuri stabile, service și suport, stocuri permanente.',
     heroBoxCta: 'Devino Partener',
 
+    heroV2Title: 'Sisteme de stocare a energiei cu baterii LiFePO4',
+    heroV2InverterSearchPlaceholder: 'Vezi compatibilitatea cu invertorul tău',
+    heroV2Card2Title: 'Programe de reduceri până la 20% la sistemele rezidențiale',
+    heroV2Card2Subtitle: 'Reduceri pentru pensionari, vecini, prieteni și cei care locuiesc în mediul rural.',
+    heroV2Card2Cta: 'Vezi reduceri',
+    heroV2Card3Title: 'Ai un proiect industrial?',
+    heroV2Card3Subtitle: 'Noi îți furnizăm bateriile de care ai nevoie.',
+
     heroSliderRez: 'REZIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
     heroSliderMed: 'MEDICAL',
@@ -217,6 +254,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     welcomeModalProfesionist: 'DA, SUNT PROFESIONIST',
     welcomeModalClientFinal: 'NU, SUNT CLIENT FINAL',
 
+    capacitySectionEyebrow: 'Experiență dovedită',
+    capacitySectionTitle: 'Capacitate instalată în România',
+    capacitySectionSubtitle:
+      'Sisteme de stocare a energiei livrate și puse în funcțiune, pe fiecare segment — de la locuințe individuale la proiecte industriale, medicale și maritime.',
+    capacityMwUnit: 'MW',
+    capacityCounter1Title: 'Instalați în România',
+    capacityCounter1Subtitle: 'toate segmentele',
+    capacityCounter2Title: 'Rezidențial',
+    capacityCounter3Title: 'Industrial & C&I',
+    capacityCounter4Title: 'Medical',
+    capacityCounter5Title: 'Maritim',
+
     featuresSectionTitle: 'DE CE SĂ ÎȚI CUMPERI BATERIE DE LA NOI?',
     f1Title: 'Garanție extinsă 10 ani',
     f1Desc: 'Îți oferim garanție extinsă de 10 ani pentru toate produsele noastre.',
@@ -232,6 +281,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     f6Desc: 'Avem stocuri suficiente pentru fiecare produs în depozitele noastre, strategic amplasate.',
     f7Title: 'Retur în 15 zile de la achiziționare',
     f7Desc: 'E puțin probabil, însă poți să returnezi produsul în termen de 15 zile de când l-ai achiziționat.',
+    f4ModalDesc: 'Indiferent ce invertor utilizezi, bateriile noastre sunt **compatibile cu peste 99% din invertoarele disponibile pe piață**. Poți verifica compatibilitatea direct pe site sau contacta echipa noastră tehnică pentru recomandări personalizate.',
+    f6ModalDesc: 'Avem **stocuri permanente în România** pentru fiecare produs, în depozite strategic amplasate. Astfel asigurăm **livrări rapide** și disponibilitate constantă, fără a depinde de termene lungi de import.',
+    f7ModalDesc: 'Deși e puțin probabil să ai nevoie, **poți returna produsul în termen de 15 zile** de la achiziție, în condițiile prevăzute de politica noastră comercială. Ne dorim ca achiziția ta să fie una **sigură și fără riscuri inutile**.',
+    featureModalClose: 'Închide',
+    featureModalMoreLink: 'Siguranța achiziției',
 
     reduceriProgramLabel: 'PROGRAMUL',
     reduceriDiscountSuffix: 'REDUCERE',
@@ -286,6 +340,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroBoxTitle: 'Do you install or distribute solar systems?',
     heroBoxDesc: 'We offer products validated before import, competitive margins and stable prices, service and support, permanent stock.',
     heroBoxCta: 'Become a Partner',
+
+    heroV2Title: 'Energy storage systems with LiFePO4 batteries',
+    heroV2InverterSearchPlaceholder: 'See compatibility with your inverter',
+    heroV2Card2Title: 'Discount programmes up to 20% on residential systems',
+    heroV2Card2Subtitle: 'Discounts for pensioners, neighbours, friends, and those living in rural areas.',
+    heroV2Card2Cta: 'See discounts',
+    heroV2Card3Title: 'Do you have an industrial project?',
+    heroV2Card3Subtitle: 'We supply the batteries you need.',
 
     heroSliderRez: 'RESIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
@@ -348,6 +410,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     welcomeModalProfesionist: 'YES, I AM A PROFESSIONAL',
     welcomeModalClientFinal: 'NO, I AM AN END CUSTOMER',
 
+    capacitySectionEyebrow: 'Proven track record',
+    capacitySectionTitle: 'Installed capacity in Romania',
+    capacitySectionSubtitle:
+      'Energy storage systems delivered and commissioned across every segment — from individual homes to industrial, medical and maritime projects.',
+    capacityMwUnit: 'MW',
+    capacityCounter1Title: 'Installed in Romania',
+    capacityCounter1Subtitle: 'all segments',
+    capacityCounter2Title: 'Residential',
+    capacityCounter3Title: 'Industrial & C&I',
+    capacityCounter4Title: 'Medical',
+    capacityCounter5Title: 'Maritime',
+
     featuresSectionTitle: 'WHY BUY YOUR BATTERY FROM US?',
     f1Title: 'Extended 10-Year Warranty',
     f1Desc: 'We offer an extended 10-year warranty on all our products.',
@@ -363,6 +437,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     f6Desc: 'We maintain sufficient stock for every product in our strategically located warehouses.',
     f7Title: 'Returns Within 15 Days',
     f7Desc: 'Unlikely to be needed, but you can return the product within 15 days of purchase.',
+    f4ModalDesc: 'No matter what inverter you use, our batteries are **compatible with over 99% of inverters on the market**. You can check compatibility directly on the site or contact our technical team for personalised recommendations.',
+    f6ModalDesc: 'We maintain **permanent stock in Romania** for every product in strategically located warehouses. This ensures **fast delivery** and constant availability without relying on long import lead times.',
+    f7ModalDesc: 'Although unlikely to be needed, **you can return the product within 15 days** of purchase under our commercial policy. We want your purchase to be **safe and free from unnecessary risk**.',
+    featureModalClose: 'Close',
+    featureModalMoreLink: 'Purchase safety',
 
     reduceriProgramLabel: 'PROGRAMME',
     reduceriDiscountSuffix: 'DISCOUNT',
@@ -417,6 +496,14 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroBoxTitle: '您是否安装或分销光伏系统？',
     heroBoxDesc: '我们提供进口前验证的产品、有竞争力的利润和稳定价格、服务与支持、持续库存。',
     heroBoxCta: '成为合作伙伴',
+
+    heroV2Title: '磷酸铁锂电池储能系统',
+    heroV2InverterSearchPlaceholder: '查看与您逆变器的兼容性',
+    heroV2Card2Title: '住宅系统高达20%折扣计划',
+    heroV2Card2Subtitle: '退休人员、邻居、朋友以及农村地区居民的专属折扣。',
+    heroV2Card2Cta: '查看折扣',
+    heroV2Card3Title: '您有工业项目吗？',
+    heroV2Card3Subtitle: '我们为您提供所需的电池。',
 
     heroSliderRez: '住宅',
     heroSliderInd: '工业',
@@ -479,6 +566,18 @@ const translations: Record<LangCode, HomeTranslations> = {
     welcomeModalProfesionist: '我是专业人士',
     welcomeModalClientFinal: '我是终端客户',
 
+    capacitySectionEyebrow: '实绩证明',
+    capacitySectionTitle: '罗马尼亚已安装容量',
+    capacitySectionSubtitle:
+      '已交付并投入运行的储能系统，覆盖住宅、工业、医疗与航海等各个细分市场。',
+    capacityMwUnit: 'MW',
+    capacityCounter1Title: '罗马尼亚已安装',
+    capacityCounter1Subtitle: '全部细分市场',
+    capacityCounter2Title: '住宅',
+    capacityCounter3Title: '工业与商业',
+    capacityCounter4Title: '医疗',
+    capacityCounter5Title: '航海',
+
     featuresSectionTitle: '为什么选择我们购买电池？',
     f1Title: '延长10年质保',
     f1Desc: '我们为所有产品提供10年延长质保。',
@@ -494,6 +593,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     f6Desc: '我们在战略位置的仓库中为每款产品保持充足库存。',
     f7Title: '15天退货保障',
     f7Desc: '虽然可能性极低，但您可以在购买后15天内退货。',
+    f4ModalDesc: '无论您使用哪款逆变器，我们的电池**兼容市场上99%以上的逆变器**。您可以直接在网站上查看兼容性，或联系我们的技术团队获取个性化建议。',
+    f6ModalDesc: '我们在战略位置的仓库中为每款产品保持**罗马尼亚常备库存**，确保**快速交付**和持续供应，无需依赖漫长的进口周期。',
+    f7ModalDesc: '虽然不太可能需要，但根据我们的商业政策，**您可以在购买后15天内退货**。我们希望您的购买**安全且无多余风险**。',
+    featureModalClose: '关闭',
+    featureModalMoreLink: '购买安全保障',
 
     reduceriProgramLabel: '计划',
     reduceriDiscountSuffix: '折扣',

@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
-import { HelmetProvider } from 'react-helmet-async'
+import CookieConsentBanner from './components/CookieConsentBanner'
+import { CookieConsentProvider } from './contexts/CookieConsentContext'
+import { HelmetProvider, Helmet } from 'react-helmet-async'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ToastProvider } from './contexts/ToastContext'
 import Layout from './components/Layout'
@@ -94,6 +96,7 @@ import ClientDiscountCodes from './pages/client/ClientDiscountCodes'
 import ClientNotifications from './pages/client/ClientNotifications'
 import CartPage from './pages/CartPage'
 import VerificareGarantie from './pages/VerificareGarantie'
+import ServiceLithtech from './pages/ServiceLithtech'
 import ReturnareProduse from './pages/ReturnareProduse'
 import PartnerCompanyPublicPage from './pages/PartnerCompanyPublicPage'
 import { publicInstallerProfileUrlPath } from './lib/public-installer-profile-path'
@@ -106,11 +109,14 @@ function LegacyCompaniiInstallerRedirect() {
 export default function App() {
   return (
     <HelmetProvider>
+    <Helmet defaultTitle="Baterino Romania" />
     <BrowserRouter>
+      <CookieConsentProvider>
       <ToastProvider>
       <CartProvider>
       <CatalogCurrencyProvider>
       <ScrollToTop />
+      <CookieConsentBanner />
       <Routes>
         {/* ── Admin (no header / footer) ── */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -199,6 +205,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
+              <Route path="service-lithtech-romania" element={<ServiceLithtech />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>
@@ -225,6 +232,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
+              <Route path="service-lithtech-romania" element={<ServiceLithtech />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>
@@ -265,6 +273,7 @@ export default function App() {
       </CatalogCurrencyProvider>
       </CartProvider>
       </ToastProvider>
+      </CookieConsentProvider>
     </BrowserRouter>
     </HelmetProvider>
   )

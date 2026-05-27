@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getContactTranslations } from '../i18n/contact'
 import { submitInquiry, type InquiryPayload } from '../lib/api'
@@ -66,6 +66,7 @@ const INITIAL_FORM: InquiryPayload = {
 export default function Contact() {
   const { language } = useLanguage()
   const tr = getContactTranslations(language.code)
+  const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<ContactTab>('whatsapp')
   const [form, setForm] = useState<InquiryPayload>(INITIAL_FORM)
   const [loading, setLoading] = useState(false)
@@ -85,6 +86,14 @@ export default function Contact() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const requestType = searchParams.get('requestType')
+    if (requestType === 'service') {
+      setForm((f) => ({ ...f, requestType: 'service' }))
+      setActiveTab('mail')
+    }
+  }, [searchParams])
 
   const contactPhoneDisplay = formatPhoneDisplay(generalPhone)
   const contactPhoneTel = telHrefFromStored(generalPhone)

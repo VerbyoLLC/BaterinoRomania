@@ -8,6 +8,7 @@ export type PartnerSettingsSectionKey =
   | 'delivery'
   | 'password'
   | 'email'
+  | 'notifications'
   | 'twoFactor'
   | 'delete'
 
@@ -21,6 +22,7 @@ export type PartnerSettingsTranslations = {
   navDelivery: string
   navPassword: string
   navEmail: string
+  navNotifications: string
   navTwoFactor: string
   navDelete: string
   activityInstalator: string
@@ -85,6 +87,14 @@ export type PartnerSettingsTranslations = {
   emailTitle: string
   emailBody: string
   currentEmailLabel: string
+  notificationsTitle: string
+  notificationsIntro: string
+  notificationsMarketingLabel: string
+  notificationsMarketingDesc: string
+  notificationsLoadingAria: string
+  notificationsSaved: string
+  notificationsLoadError: string
+  notificationsSaveError: string
   twoFactorTitle: string
   twoFactorBody: string
   deleteTitle: string
@@ -96,6 +106,8 @@ export type PartnerSettingsTranslations = {
   deleteModalBody: string
   deleteModalBullet1: string
   deleteModalBullet2: string
+  deleteModalBullet3: string
+  deleteModalBullet4: string
   deleteConfirmLabel: string
   deleting: string
   profileLoadError: string
@@ -114,6 +126,7 @@ const ro: PartnerSettingsTranslations = {
   navDelivery: 'Adresa de livrare',
   navPassword: 'Schimbă parola',
   navEmail: 'Schimbă email',
+  navNotifications: 'Notificări',
   navTwoFactor: 'Autentificare în doi pași',
   navDelete: 'Șterge contul',
   activityInstalator: 'Instalator',
@@ -183,18 +196,30 @@ const ro: PartnerSettingsTranslations = {
   emailBody:
     'Pentru schimbarea adresei de email folosite la autentificare, te rugăm să contactezi echipa Baterino prin secțiunea Suport din meniul principal. Vom valida identitatea și îți vom actualiza contul în siguranță.',
   currentEmailLabel: 'Email curent:',
+  notificationsTitle: 'Notificări',
+  notificationsIntro: 'Alege ce tipuri de emailuri dorești să primești de la Baterino.',
+  notificationsMarketingLabel: 'Comunicări comerciale',
+  notificationsMarketingDesc: 'Oferte, noutăți și promoții trimise pe adresa de email a contului.',
+  notificationsLoadingAria: 'Se încarcă preferințele…',
+  notificationsSaved: 'Preferințele au fost salvate.',
+  notificationsLoadError: 'Nu am putut încărca preferințele de notificare.',
+  notificationsSaveError: 'Nu am putut salva preferințele. Încearcă din nou.',
   twoFactorTitle: 'Autentificare în doi pași',
   twoFactorBody:
     'Funcționalitatea de autentificare în doi pași (2FA) pentru conturile partener va fi disponibilă în curând.',
   deleteTitle: 'Șterge contul',
-  deleteIntro: 'Odată ce ștergi contul, nu există cale de întoarcere. Toate datele vor fi eliminate permanent.',
+  deleteIntro:
+    'Contul se dezactivează imediat. Datele personale sunt șterse definitiv după 30 de zile (comenzile rămân anonimizate).',
   deleteAccount: 'Șterge contul',
   cancel: 'Anulează',
   confirmDeletion: 'Confirmă ștergerea',
   deleteModalTitle: 'Ștergere cont',
-  deleteModalBody: 'Ești pe cale să ștergi contul. Această acțiune este permanentă și nu poate fi anulată.',
-  deleteModalBullet1: 'Toate datele personale vor fi șterse permanent',
-  deleteModalBullet2: 'Nu vei mai primi niciun fel de corespondență din partea noastră',
+  deleteModalBody:
+    'Contul se dezactivează imediat. După 30 de zile, datele personale sunt șterse definitiv.',
+  deleteModalBullet1: 'Imediat: nu te mai poți autentifica; profilul public dispare',
+  deleteModalBullet2: 'După 30 zile: date personale, logo/galerie și certificate de garanție generate sunt eliminate',
+  deleteModalBullet3: 'Cererile de service și datele personale din retururi asociate contului sunt anonimizate',
+  deleteModalBullet4: 'Comenzile rămân pentru obligații fiscale; numele și emailul devin [deleted user]',
   deleteConfirmLabel: 'Introdu DELETE pentru a confirma',
   deleting: 'Se șterge...',
   profileLoadError: 'Nu am putut încărca profilul.',
@@ -214,6 +239,7 @@ const en: PartnerSettingsTranslations = {
   navDelivery: 'Delivery address',
   navPassword: 'Change password',
   navEmail: 'Change email',
+  navNotifications: 'Notifications',
   navTwoFactor: 'Two-factor authentication',
   navDelete: 'Delete account',
   activityInstalator: 'Installer',
@@ -281,17 +307,29 @@ const en: PartnerSettingsTranslations = {
   emailBody:
     'To change your sign-in email, contact the Baterino team via Support in the main menu. We will verify your identity and update your account securely.',
   currentEmailLabel: 'Current email:',
+  notificationsTitle: 'Notifications',
+  notificationsIntro: 'Choose which types of emails you want to receive from Baterino.',
+  notificationsMarketingLabel: 'Marketing emails',
+  notificationsMarketingDesc: 'Offers, news and promotions sent to your account email address.',
+  notificationsLoadingAria: 'Loading preferences…',
+  notificationsSaved: 'Preferences saved.',
+  notificationsLoadError: 'Could not load notification preferences.',
+  notificationsSaveError: 'Could not save preferences. Please try again.',
   twoFactorTitle: 'Two-factor authentication',
   twoFactorBody: 'Two-factor authentication (2FA) for partner accounts will be available soon.',
   deleteTitle: 'Delete account',
-  deleteIntro: 'Once you delete your account, there is no going back. All data will be permanently removed.',
+  deleteIntro:
+    'Your account is deactivated immediately. Personal data is permanently erased after 30 days (orders are anonymized).',
   deleteAccount: 'Delete account',
   cancel: 'Cancel',
   confirmDeletion: 'Confirm deletion',
   deleteModalTitle: 'Delete account',
-  deleteModalBody: 'You are about to delete your account. This action is permanent and cannot be undone.',
-  deleteModalBullet1: 'All personal data will be permanently deleted',
-  deleteModalBullet2: 'You will no longer receive any correspondence from us',
+  deleteModalBody:
+    'Your account is deactivated immediately. Personal data is permanently erased after 30 days.',
+  deleteModalBullet1: 'Immediately: you cannot sign in; your public profile is hidden',
+  deleteModalBullet2: 'After 30 days: personal data, logo/gallery, and generated warranty certificates are removed',
+  deleteModalBullet3: 'Service requests and personal data on linked return requests are anonymized',
+  deleteModalBullet4: 'Orders remain for tax law; name and email become [deleted user]',
   deleteConfirmLabel: 'Type DELETE to confirm',
   deleting: 'Deleting...',
   profileLoadError: 'Could not load profile.',
@@ -311,6 +349,7 @@ const zh: PartnerSettingsTranslations = {
   navDelivery: '收货地址',
   navPassword: '修改密码',
   navEmail: '修改邮箱',
+  navNotifications: '通知',
   navTwoFactor: '两步验证',
   navDelete: '删除账户',
   activityInstalator: '安装商',
@@ -375,17 +414,27 @@ const zh: PartnerSettingsTranslations = {
   emailTitle: '修改邮箱',
   emailBody: '要更改登录邮箱，请通过主菜单中的「支持」联系 Baterino 团队。我们将验证身份后安全更新账户。',
   currentEmailLabel: '当前邮箱：',
+  notificationsTitle: '通知',
+  notificationsIntro: '选择您希望从 Baterino 接收的电子邮件类型。',
+  notificationsMarketingLabel: '营销邮件',
+  notificationsMarketingDesc: '发送至您账户邮箱的优惠、新闻和促销信息。',
+  notificationsLoadingAria: '正在加载偏好设置…',
+  notificationsSaved: '偏好设置已保存。',
+  notificationsLoadError: '无法加载通知偏好设置。',
+  notificationsSaveError: '无法保存偏好设置，请重试。',
   twoFactorTitle: '两步验证',
   twoFactorBody: '合作伙伴账户的两步验证 (2FA) 即将上线。',
   deleteTitle: '删除账户',
-  deleteIntro: '删除账户后无法恢复，所有数据将永久清除。',
+  deleteIntro: '账户将立即停用。个人数据在 30 天后永久删除（订单将匿名化）。',
   deleteAccount: '删除账户',
   cancel: '取消',
   confirmDeletion: '确认删除',
   deleteModalTitle: '删除账户',
-  deleteModalBody: '您即将删除账户。此操作不可撤销。',
-  deleteModalBullet1: '所有个人数据将被永久删除',
-  deleteModalBullet2: '您将不再收到我们的任何通信',
+  deleteModalBody: '账户将立即停用。个人数据在 30 天后永久删除。',
+  deleteModalBullet1: '立即：无法登录；公开资料不再显示',
+  deleteModalBullet2: '30 天后：个人数据、标识/图库及已生成的保修证书将被删除',
+  deleteModalBullet3: '与该账户关联的服务请求和退货中的个人数据将被匿名化',
+  deleteModalBullet4: '订单因税法保留；姓名和邮箱变为 [deleted user]',
   deleteConfirmLabel: '输入 DELETE 以确认',
   deleting: '正在删除...',
   profileLoadError: '无法加载资料。',

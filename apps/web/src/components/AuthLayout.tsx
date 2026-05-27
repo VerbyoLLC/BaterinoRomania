@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import MobileMenu from './MobileMenu'
+import SEO from './SEO'
 
 type AuthLayoutProps = {
   image: string
@@ -13,6 +14,8 @@ type AuthLayoutProps = {
 export default function AuthLayout({ image, supertitle, title, leftContent, children }: AuthLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   return (
+    <>
+      <SEO title={title} description="" noIndex lang="ro" />
     <div className="min-h-screen min-h-[100dvh] flex">
 
       {/* ── LEFT: image panel (fixed on desktop, stays in viewport) ── */}
@@ -91,5 +94,6 @@ export default function AuthLayout({ image, supertitle, title, leftContent, chil
       </div>
 
     </div>
+    </>
   )
 }
