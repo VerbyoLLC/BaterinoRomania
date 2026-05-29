@@ -4,6 +4,9 @@
  */
 export const BATERINO_CART_STORAGE_KEY = 'baterino-cart-v1'
 
+/** Coș invitat (fără cont) — localStorage global, fără sync server. */
+export const GUEST_CART_STORAGE_KEY = BATERINO_CART_STORAGE_KEY
+
 export function clientCartStorageKey(userId: string): string {
   const id = String(userId || '').trim()
   return id ? `${BATERINO_CART_STORAGE_KEY}:user:${id}` : BATERINO_CART_STORAGE_KEY
@@ -24,4 +27,8 @@ export function clearLegacyCartStorage(): void {
   } catch {
     /* ignore */
   }
+}
+
+export function clearGuestCartStorage(): void {
+  clearLegacyCartStorage()
 }

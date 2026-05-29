@@ -2253,7 +2253,12 @@ export type CreateProductPayload = {
   } | null
 }
 
-export async function uploadAdminFile(file: File, productFolder?: string, imageIndex?: number): Promise<{ url: string }> {
+export async function uploadAdminFile(
+  file: File,
+  productFolder?: string,
+  imageIndex?: number,
+  options?: { prefix?: string },
+): Promise<{ url: string }> {
   const token = getAuthToken()
   if (!token) throw new Error('Trebuie să fii autentificat.')
   const formData = new FormData()
@@ -2263,17 +2268,28 @@ export async function uploadAdminFile(file: File, productFolder?: string, imageI
   formData.append('file', file)
   const params = new URLSearchParams({ folder })
   if (imageIndex != null) params.set('imageIndex', String(imageIndex))
+  if (options?.prefix) params.set('prefix', options.prefix)
   const uploadUrl = `${API_BASE}/admin/upload?${params}`
-  // Only Authorization here: header values must be ISO-8859-1; product titles may contain UTF-8 (e.g. Romanian).
-  // Folder and imageIndex are already in the query string and FormData; the API reads those.
   const res = await fetch(uploadUrl, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options?.prefix ? { 'X-Upload-Prefix': options.prefix } : {}),
+    },
     body: formData,
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea fișierului.')
   return json
+}
+
+/** Upload JPG to R2 under study-cases/{slug}/ */
+export async function uploadCaseStudyImage(
+  file: File,
+  caseSlug: string,
+  imageIndex: number,
+): Promise<{ url: string }> {
+  return uploadAdminFile(file, caseSlug, imageIndex, { prefix: 'study-cases' })
 }
 
 export type ReducereProgramRow = ReducereProgram & {
@@ -2340,6 +2356,107 @@ export async function updateAdminReducereProgram(
 
 export async function deleteAdminReducereProgram(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/reducere-programs/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json.error || 'Eroare la ștergere.')
+  }
+}
+
+export type CaseStudySpec = {
+  label: string
+  value: string
+  highlight?: boolean
+}
+
+export type CaseStudyRow = {
+  id: string
+  locale: string
+  slug: string
+  category: string
+  title: string
+  location: string
+  image: string
+  imageAlt: string
+  images: string[]
+  imageCount: number
+  specs: CaseStudySpec[]
+  tags: string[]
+  isActive: boolean
+  sortOrder: number
+}
+
+export type CaseStudyPayload = {
+  locale?: string
+  slug?: string
+  category?: string
+  title?: string
+  location?: string
+  image?: string
+  images?: string[]
+  imageAlt?: string
+  imageCount?: number
+  specs?: CaseStudySpec[]
+  tags?: string[]
+  isActive?: boolean
+  sortOrder?: number
+}
+
+export async function getPublicCaseStudies(lang: LangCode): Promise<CaseStudyRow[]> {
+  const res = await fetch(`${API_BASE}/case-studies?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea studiilor de caz.')
+  return Array.isArray(json) ? json : []
+}
+
+export async function getAdminCaseStudies(locale: string = 'ro'): Promise<CaseStudyRow[]> {
+  const res = await fetch(`${API_BASE}/admin/case-studies?locale=${encodeURIComponent(locale)}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la încărcarea studiilor de caz.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function createAdminCaseStudy(body: CaseStudyPayload): Promise<CaseStudyRow> {
+  const res = await fetch(`${API_BASE}/admin/case-studies`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la creare.')
+  }
+  return json
+}
+
+export async function updateAdminCaseStudy(id: string, body: CaseStudyPayload): Promise<CaseStudyRow> {
+  const res = await fetch(`${API_BASE}/admin/case-studies/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la salvare.')
+  }
+  return json
+}
+
+export async function deleteAdminCaseStudy(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/case-studies/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })

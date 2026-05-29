@@ -37,6 +37,7 @@ export type FooterTranslations = {
   centreMedicale: string
   // Media
   presa: string
+  studiiDeCaz: string
   contact: string
 }
 
@@ -71,6 +72,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     distribuitori: 'Distribuitori',
     centreMedicale: 'Centre Medicale',
     presa: 'Presa',
+    studiiDeCaz: 'Studii de caz',
     contact: 'Contact',
   },
   en: {
@@ -103,6 +105,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     distribuitori: 'Distributors',
     centreMedicale: 'Medical Centers',
     presa: 'Press',
+    studiiDeCaz: 'Case studies',
     contact: 'Contact',
   },
   zh: {
@@ -135,6 +138,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     distribuitori: '经销商',
     centreMedicale: '医疗中心',
     presa: '新闻',
+    studiiDeCaz: '案例研究',
     contact: '联系我们',
   },
 }

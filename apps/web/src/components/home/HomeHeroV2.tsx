@@ -94,6 +94,29 @@ type HomeHeroV2Props = {
   userType: 'profesionist' | 'client' | null
 }
 
+function HeroListDot({ light = false }: { light?: boolean }) {
+  return (
+    <span
+      className={`mt-[0.45rem] size-1 shrink-0 rounded-full ${light ? 'bg-white/70' : 'bg-slate-400'}`}
+      aria-hidden
+    />
+  )
+}
+
+function HeroCheckMark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0" aria-hidden>
+      <path
+        d="M3.5 7l2.5 2.5 4.5-5.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 const CARD_ORDER: HeroV2CardId[] = ['industrial', 'rezidential', 'maritim', 'medical', 'instalatori']
 
 /** Homepage hero v2 — fluid card slider; sizes scale with viewport (clamp). */
@@ -123,6 +146,14 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
       multilineTitle?: boolean
       wide?: boolean
       noOverlay?: boolean
+      /** Residential card: product title, badges, price and order CTA on the right. */
+      productHeroOverlay?: boolean
+      /** Discount card: structured overlay with eligible groups. */
+      discountHeroOverlay?: boolean
+      /** Medical card: BESS Cabinet product overlay. */
+      medicalHeroOverlay?: boolean
+      /** Instalatori card: partner programme overlay. */
+      instalatoriHeroOverlay?: boolean
       /** Show title/button but skip the dark tint (e.g. instalatori). */
       noDarkOverlay?: boolean
       width?: string
@@ -133,8 +164,8 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         title: tr.heroMobile0Title,
         buttonLabel: tr.heroCardCta,
         image: '/images/slider2/slide2.jpg',
-        scrollToProducts: true,
-        noOverlay: true,
+        productHeroOverlay: true,
+        noDarkOverlay: true,
         width: '600px',
       },
       {
@@ -144,16 +175,18 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         buttonLabel: tr.heroV2Card2Cta,
         image: '/images/slider2/slide1.jpg',
         to: '/reduceri',
+        discountHeroOverlay: true,
         width: '300px',
         height: '450px',
         noDarkOverlay: true,
       },
       {
         id: 'medical',
-        title: tr.heroSlideMedTitle,
-        buttonLabel: tr.heroSlideMedCta,
+        title: tr.heroV2MedProductTitle,
+        buttonLabel: tr.heroV2MedCta,
         image: '/images/slider2/slide4-261kwh-bess.jpg',
         to: '/divizii/medical',
+        medicalHeroOverlay: true,
         width: '600px',
         noDarkOverlay: true,
       },
@@ -161,21 +194,21 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         id: 'maritim',
         title: tr.heroV2Card3Title,
         subtitle: tr.heroV2Card3Subtitle,
-        buttonLabel: tr.heroSlideIndCta,
+        buttonLabel: tr.heroV2Card3Cta,
         image: '/images/slider2/slider3.jpg',
-        to: '/divizii/maritim',
+        to: '/studii-de-caz',
+        multilineTitle: true,
         width: '300px',
         height: '450px',
         noDarkOverlay: true,
       },
       {
         id: 'instalatori',
-        title: tr.heroSlideInstTitle,
-        subtitle: tr.heroMobileInstDesc,
-        buttonLabel: tr.heroSlideInstCta,
+        title: tr.heroV2InstTitle,
+        buttonLabel: tr.heroV2InstCta,
         image: '/images/home/slider-apple/slide4-instalatori.jpg',
         to: '/instalatori',
-        multilineTitle: true,
+        instalatoriHeroOverlay: true,
         noDarkOverlay: true,
         width: '600px',
       },
@@ -332,8 +365,74 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   const isNoOverlayInteractive = (card: (typeof cards)[number]) =>
     card.noOverlay && (card.scrollToProducts || card.to)
 
-  const showCardContent = (card: (typeof cards)[number]) => !card.noOverlay
+  const showProductHeroOverlay = (card: (typeof cards)[number]) =>
+    card.id === 'rezidential' && card.productHeroOverlay === true
+
+  const showDiscountHeroOverlay = (card: (typeof cards)[number]) =>
+    card.id === 'industrial' && card.discountHeroOverlay === true
+
+  const showMedicalHeroOverlay = (card: (typeof cards)[number]) =>
+    card.id === 'medical' && card.medicalHeroOverlay === true
+
+  const showInstalatoriHeroOverlay = (card: (typeof cards)[number]) =>
+    card.id === 'instalatori' && card.instalatoriHeroOverlay === true
+
+  const showCardContent = (card: (typeof cards)[number]) =>
+    !card.noOverlay &&
+    !showProductHeroOverlay(card) &&
+    !showDiscountHeroOverlay(card) &&
+    !showMedicalHeroOverlay(card) &&
+    !showInstalatoriHeroOverlay(card)
   const showDarkOverlay = (card: (typeof cards)[number]) => !card.noOverlay && !card.noDarkOverlay
+
+  const medHighlights = useMemo(
+    () => [tr.heroV2MedFeature1, tr.heroV2MedFeature2],
+    [tr.heroV2MedFeature1, tr.heroV2MedFeature2],
+  )
+
+  const instBenefits = useMemo(
+    () => [
+      tr.heroV2InstBenefit1,
+      tr.heroV2InstBenefit2,
+      tr.heroV2InstBenefit3,
+      tr.heroV2InstBenefit4,
+    ],
+    [tr.heroV2InstBenefit1, tr.heroV2InstBenefit2, tr.heroV2InstBenefit3, tr.heroV2InstBenefit4],
+  )
+
+  const medSpecs = useMemo(
+    () => [
+      { label: tr.heroV2MedSpecCapacityLabel, value: tr.heroV2MedSpecCapacityValue },
+      { label: tr.heroV2MedSpecPowerLabel, value: tr.heroV2MedSpecPowerValue },
+      { label: tr.heroV2MedSpecCyclesLabel, value: tr.heroV2MedSpecCyclesValue },
+      { label: tr.heroV2MedSpecRetentionLabel, value: tr.heroV2MedSpecRetentionValue },
+    ],
+    [
+      tr.heroV2MedSpecCapacityLabel,
+      tr.heroV2MedSpecCapacityValue,
+      tr.heroV2MedSpecPowerLabel,
+      tr.heroV2MedSpecPowerValue,
+      tr.heroV2MedSpecCyclesLabel,
+      tr.heroV2MedSpecCyclesValue,
+      tr.heroV2MedSpecRetentionLabel,
+      tr.heroV2MedSpecRetentionValue,
+    ],
+  )
+
+  const rezHighlights = useMemo(
+    () => [
+      tr.heroV2RezBadgeGarantie,
+      tr.heroV2RezBadgeService,
+      tr.heroV2RezBadgeSwap,
+      tr.heroV2RezBadgeReduceri,
+    ],
+    [
+      tr.heroV2RezBadgeGarantie,
+      tr.heroV2RezBadgeService,
+      tr.heroV2RezBadgeSwap,
+      tr.heroV2RezBadgeReduceri,
+    ],
+  )
 
   return (
     <section className="mb-16 lg:mb-24 w-full" aria-label="Hero" style={HERO_CARD_CSS_VARS}>
@@ -370,8 +469,10 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   }
                 : undefined
             }
-            className={`relative flex-shrink-0 rounded-[10px] overflow-hidden bg-zinc-300 ${
-              card.id === 'industrial' ? 'group' : ''
+            className={`group relative flex-shrink-0 overflow-hidden bg-zinc-300 ${
+              showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
+                ? 'rounded-xl'
+                : 'rounded-[10px]'
             } ${
               card.height ? '' : 'h-[var(--hero-card-h)]'
             } ${
@@ -388,22 +489,224 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               src={card.image}
               alt={card.title.replace(/\n/g, ' ')}
               draggable={false}
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-transform duration-500 ease-out group-hover:scale-110 ${
+                showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
+                  ? 'object-[right_center]'
+                  : ''
+              }`}
             />
             {!showDarkOverlay(card) ? null : <div className="absolute inset-0 bg-black/45 pointer-events-none" />}
-            {showCardContent(card) ? (
+            {showProductHeroOverlay(card) ? (
+              <>
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-xl"
+                  style={{
+                    background:
+                      'linear-gradient(to right, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.38) 46%, rgba(0, 0, 0, 0.08) 58%, transparent 68%)',
+                  }}
+                  aria-hidden
+                />
+                <span className="absolute top-4 right-4 z-[3] inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black font-['Inter'] [text-shadow:none] pointer-events-none">
+                  {tr.heroV2MedStockTag}
+                </span>
+                <div
+                  className="absolute inset-y-0 left-0 z-[2] flex h-full w-[54%] min-w-0 flex-col justify-center px-8 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]"
+                >
+                  <p className="mb-2 text-xs font-medium text-white/75 font-['Inter']">
+                    {tr.heroV2RezProductSubtitle}
+                  </p>
+                  <h2 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
+                    {tr.heroV2RezProductTitle}
+                  </h2>
+                  <p className="mt-2 text-sm text-white/80 font-['Inter']">
+                    {tr.heroV2RezSpecCicluri}
+                    <span className="mx-1.5 text-white/40" aria-hidden>
+                      ·
+                    </span>
+                    {tr.heroV2RezSpecIp}
+                    <span className="mx-1.5 text-white/40" aria-hidden>
+                      ·
+                    </span>
+                    {tr.heroV2RezSpecChem}
+                  </p>
+
+                  <ul className="mt-4 space-y-2">
+                    {rezHighlights.map((label) => (
+                      <li key={label} className="flex items-start gap-2.5 text-sm text-white/90 font-['Inter']">
+                        <HeroListDot light />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-6 rounded-md border border-white/30 bg-white/20 px-4 py-3 backdrop-blur-md">
+                    <p className="text-xs font-medium text-white/80 font-['Inter']">{tr.heroV2RezPriceLabel}</p>
+                    <p className="mt-1 text-[clamp(1.5rem,2.5vw,1.875rem)] font-bold leading-none text-white font-['Inter'] tabular-nums">
+                      {tr.heroV2RezHeroPrice}
+                    </p>
+                    <p className="mt-1.5 text-sm text-white/90 font-['Inter']">{tr.heroV2RezPriceNote}</p>
+                  </div>
+                </div>
+              </>
+            ) : showMedicalHeroOverlay(card) ? (
+              <>
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-xl"
+                  style={{
+                    background:
+                      'linear-gradient(to right, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.38) 46%, rgba(0, 0, 0, 0.08) 58%, transparent 68%)',
+                  }}
+                  aria-hidden
+                />
+                <span className="absolute top-4 right-4 z-[3] inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black font-['Inter'] [text-shadow:none] pointer-events-none">
+                  {tr.heroV2MedStockTag}
+                </span>
+                <div
+                  className="absolute inset-y-0 left-0 z-[2] flex h-full w-[54%] min-w-0 flex-col justify-center px-8 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]"
+                >
+                  <p className="mb-2 text-sm font-semibold text-white/90 font-['Inter']">{tr.heroV2MedEyebrow}</p>
+                  <h2 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
+                    {tr.heroV2MedProductTitle}
+                  </h2>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {medSpecs.map(({ label, value }) => (
+                      <div
+                        key={label}
+                        className="rounded-md border border-white/30 bg-white/20 px-2.5 py-2 backdrop-blur-md"
+                      >
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-white/70 font-['Inter']">
+                          {label}
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold leading-tight text-white font-['Inter'] tabular-nums">
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <ul className="mt-4 space-y-2">
+                    {medHighlights.map((label) => (
+                      <li key={label} className="flex items-start gap-2.5 text-sm text-white/90 font-['Inter']">
+                        <HeroListDot light />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Link
+                  to={card.to!}
+                  className={`absolute bottom-6 right-6 z-[3] inline-flex h-9 items-center justify-center rounded-[8px] bg-white px-4 text-xs font-bold uppercase text-black font-['Inter'] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
+                    isDragging ? 'pointer-events-none' : 'pointer-events-auto'
+                  }`}
+                >
+                  {tr.heroV2MedCta}
+                </Link>
+              </>
+            ) : showDiscountHeroOverlay(card) ? (
+                <div className="absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] pointer-events-none">
+                  <div className="flex flex-col items-center gap-1 text-center [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
+                    <img
+                      src="/images/shared/baterino-logo-white.png"
+                      alt="Baterino"
+                      draggable={false}
+                      className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
+                    />
+                    <h2 className="m-0 text-[clamp(1rem,3.2vw,1.375rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                      {tr.heroV2Card2Title}
+                    </h2>
+                  </div>
+                  <p className="text-[clamp(0.875rem,2.75vw,1.125rem)] font-normal leading-snug normal-case text-white max-w-[min(320px,94%)] font-['Inter'] [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
+                    {tr.heroV2Card2Subtitle}
+                  </p>
+                  <div className="flex w-full justify-center">
+                    <Link
+                      to={card.to!}
+                      className={`w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
+                        isDragging ? 'pointer-events-none' : 'pointer-events-auto'
+                      }`}
+                    >
+                      {tr.heroV2Card2Cta}
+                    </Link>
+                  </div>
+                </div>
+            ) : showInstalatoriHeroOverlay(card) ? (
+              <>
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-xl"
+                  style={{
+                    background:
+                      'linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.42) 50%, rgba(0, 0, 0, 0.05) 62%, transparent 72%)',
+                  }}
+                  aria-hidden
+                />
+                <div className="absolute inset-y-0 left-0 z-[2] flex h-full w-[58%] min-w-0 flex-col justify-center px-7 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
+                  <p className="mb-2 text-xs font-medium tracking-wide text-white/75 font-['Inter']">
+                    {tr.heroV2InstLead}
+                  </p>
+                  <h2 className="m-0 text-[clamp(1.125rem,2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                    {tr.heroV2InstTitle}
+                  </h2>
+
+                  <div className="mt-4 w-full rounded-md bg-white/20 px-4 py-4 backdrop-blur-md [text-shadow:none]">
+                    <ul className="space-y-2.5">
+                      {instBenefits.map((label) => (
+                        <li key={label} className="flex items-start gap-2 text-[13px] leading-snug text-white/90 font-['Inter']">
+                          <span className="text-white">
+                            <HeroCheckMark />
+                          </span>
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <Link
+                  to={card.to!}
+                  className={`absolute bottom-6 right-6 z-[3] inline-flex h-9 items-center justify-center rounded-[8px] bg-white px-4 text-xs font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
+                    isDragging ? 'pointer-events-none' : 'pointer-events-auto'
+                  }`}
+                >
+                  {tr.heroV2InstCta}
+                </Link>
+              </>
+            ) : showCardContent(card) ? (
             <div className={`absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] ${isDragging ? 'pointer-events-none' : ''}`}>
-              <h2
-                className={`text-white font-bold font-['Inter'] leading-tight uppercase ${
-                  card.subtitle
-                    ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
-                    : 'text-[clamp(0.6875rem,2.2vw,0.9375rem)]'
-                } ${card.multilineTitle ? 'whitespace-pre-line' : ''}`}
-              >
-                {card.title}
-              </h2>
+              {card.id === 'maritim' ? (
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <img
+                    src="/images/lithtech/logo-baterino-pro-white.png"
+                    alt="Baterino Pro"
+                    draggable={false}
+                    className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
+                  />
+                  <h2
+                    className={`m-0 text-white font-bold font-['Inter'] leading-tight uppercase whitespace-pre-line ${
+                      card.subtitle
+                        ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
+                        : 'text-[clamp(0.6875rem,2.2vw,0.9375rem)]'
+                    }`}
+                  >
+                    {card.title}
+                  </h2>
+                </div>
+              ) : (
+                <h2
+                  className={`text-white font-bold font-['Inter'] leading-tight uppercase ${
+                    card.subtitle
+                      ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
+                      : 'text-[clamp(0.6875rem,2.2vw,0.9375rem)]'
+                  } ${card.multilineTitle ? 'whitespace-pre-line' : ''}`}
+                >
+                  {card.title}
+                </h2>
+              )}
               {card.subtitle ? (
-                <p className="text-white text-[clamp(0.875rem,2.75vw,1.125rem)] font-normal font-['Inter'] leading-snug normal-case max-w-[min(320px,94%)]">
+                <p
+                  className={`text-white text-[clamp(0.875rem,2.75vw,1.125rem)] font-normal font-['Inter'] leading-snug normal-case max-w-[min(320px,94%)] ${
+                    card.id === 'maritim' ? 'whitespace-pre-line' : ''
+                  }`}
+                >
                   {card.subtitle}
                 </p>
               ) : null}
@@ -418,13 +721,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   {card.buttonLabel}
                 </button>
               ) : (
-                <div
-                  className={
-                    card.id === 'industrial'
-                      ? 'flex w-full justify-center translate-y-[calc(100%+1rem)] opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100'
-                      : 'flex w-full justify-center'
-                  }
-                >
+                <div className="flex w-full justify-center">
                   <Link
                     to={card.to!}
                     className="w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors"

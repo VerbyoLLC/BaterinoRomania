@@ -77,6 +77,15 @@ function FeatureCard({
   )
 }
 
+function SafetyCard({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center rounded-[10px] border border-gray-200 bg-white px-4 py-5 text-center sm:px-5 sm:py-6 lg:px-6 lg:py-6">
+      <h3 className="mb-1.5 text-sm font-semibold font-['Inter'] leading-snug text-black sm:text-base">{title}</h3>
+      <p className="text-xs font-normal font-['Inter'] leading-relaxed text-gray-600 sm:text-sm sm:leading-5">{desc}</p>
+    </div>
+  )
+}
+
 function FeatureDetailModal({
   icon,
   title,
@@ -161,10 +170,13 @@ function FeatureDetailModal({
   return createPortal(modal, document.body)
 }
 
-/** Homepage features — static 4+3 grid (two rows on desktop). */
+const MOBILE_FEATURES_INITIAL = 3
+
+/** Homepage features — 4 columns on desktop; Siguranța card is last. */
 export default function HomeFeaturesGrid({ tr }: HomeFeaturesGridProps) {
   const { language } = useLanguage()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const [mobileShowAll, setMobileShowAll] = useState(false)
 
   const features = [
     { title: tr.f1Title, desc: tr.f1Desc },
@@ -176,50 +188,65 @@ export default function HomeFeaturesGrid({ tr }: HomeFeaturesGridProps) {
     { title: tr.f7Title, desc: tr.f7Desc },
   ] as const
 
-  const firstRow = features.slice(0, 4)
-  const secondRow = features.slice(4)
   const activeFeature = activeIndex != null ? features[activeIndex] : null
+
+  const gridItems: Array<{ type: 'feature'; index: number } | { type: 'safety' }> = [
+    { type: 'feature', index: 0 },
+    { type: 'feature', index: 1 },
+    { type: 'feature', index: 2 },
+    { type: 'feature', index: 3 },
+    { type: 'feature', index: 4 },
+    { type: 'feature', index: 5 },
+    { type: 'feature', index: 6 },
+    { type: 'safety' },
+  ]
 
   return (
     <section className="mb-16 lg:mb-24">
-      <div className="flex flex-col gap-4 px-5 my-8 sm:my-10 lg:flex-row lg:items-center lg:justify-between lg:px-[var(--grid-edge)]">
-        <h2
-          className="mx-auto max-w-[676px] text-center text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10 lg:mx-0 lg:text-left"
-        >
+      <div className="px-5 my-8 sm:my-10 lg:px-[var(--grid-edge)]">
+        <h2 className="mx-auto max-w-[676px] text-center text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10 lg:text-left">
           {tr.featuresSectionTitle}
         </h2>
-        <Link
-          to="/siguranta"
-          className="mx-auto inline-flex h-10 shrink-0 items-center justify-center rounded-[10px] bg-slate-900 px-6 text-sm font-semibold font-['Inter'] text-white transition-colors hover:bg-slate-700 lg:mx-0"
-        >
-          {tr.productsSafetyLink}
-        </Link>
       </div>
 
-      <div className="mt-6 space-y-[10px] px-5 sm:mt-8 lg:mt-10 lg:px-[var(--grid-edge)]">
-        <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-4">
-          {firstRow.map((f, i) => (
-            <FeatureCard
-              key={f.title}
-              icon={FEATURE_ICONS[i]}
-              title={f.title}
-              desc={f.desc}
-              onClick={() => setActiveIndex(i)}
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-4">
-          {secondRow.map((f, i) => (
-            <FeatureCard
-              key={f.title}
-              icon={FEATURE_ICONS[i + 4]}
-              title={f.title}
-              desc={f.desc}
-              onClick={() => setActiveIndex(i + 4)}
-            />
-          ))}
-        </div>
+      <div className="mt-6 grid grid-cols-1 gap-[10px] px-5 sm:mt-8 sm:grid-cols-2 lg:mt-10 lg:grid-cols-4 lg:px-[var(--grid-edge)]">
+        {gridItems.map((item, index) => {
+          const hiddenOnMobile = !mobileShowAll && index >= MOBILE_FEATURES_INITIAL
+
+          const card =
+            item.type === 'safety' ? (
+              <SafetyCard title={tr.productsSafetyLink} desc={tr.safetyCardDesc} />
+            ) : (
+              <FeatureCard
+                icon={FEATURE_ICONS[item.index]}
+                title={features[item.index].title}
+                desc={features[item.index].desc}
+                onClick={() => setActiveIndex(item.index)}
+              />
+            )
+
+          return (
+            <div
+              key={item.type === 'safety' ? 'safety' : features[item.index].title}
+              className={hiddenOnMobile ? 'hidden sm:contents' : 'contents'}
+            >
+              {card}
+            </div>
+          )
+        })}
       </div>
+
+      {!mobileShowAll && gridItems.length > MOBILE_FEATURES_INITIAL ? (
+        <div className="mt-4 flex justify-center px-5 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileShowAll(true)}
+            className="h-11 w-full max-w-xs rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-sm font-semibold font-['Inter'] text-black transition-colors hover:bg-neutral-100"
+          >
+            {tr.featuresShowMore}
+          </button>
+        </div>
+      ) : null}
 
       {activeFeature && activeIndex != null ? (
         <FeatureDetailModal

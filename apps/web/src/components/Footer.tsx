@@ -165,6 +165,7 @@ function Footer() {
               </Link>
             </div>
             <nav className="flex flex-col gap-2.5">
+              <Link to="/studii-de-caz" className={linkClass}>{t.studiiDeCaz}</Link>
               <Link to="/blog" className={linkClass}>{t.presa}</Link>
               <Link to="/contact" className={linkClass}>{t.contact}</Link>
             </nav>

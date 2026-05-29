@@ -17,7 +17,9 @@ import {
 } from '../lib/api'
 import {
   BATERINO_CART_STORAGE_KEY,
+  GUEST_CART_STORAGE_KEY,
   clearClientCartStorage,
+  clearGuestCartStorage,
   clearLegacyCartStorage,
   clientCartStorageKey,
 } from '../lib/cartStorage'
@@ -117,6 +119,16 @@ function parseStoredCartLines(raw: string): CartLine[] {
   }
 }
 
+function readPersistedCartFromKey(key: string): CartLine[] {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    return parseStoredCartLines(raw)
+  } catch {
+    return []
+  }
+}
+
 function readPersistedCartForClient(userId: string): CartLine[] {
   const key = clientCartStorageKey(userId)
   try {
@@ -140,33 +152,116 @@ function readPersistedCartForClient(userId: string): CartLine[] {
   }
 }
 
+function readPersistedGuestCart(): CartLine[] {
+  return readPersistedCartFromKey(GUEST_CART_STORAGE_KEY)
+}
+
+function canUseResidentialCart(): boolean {
+  const role = getAuthRole()
+  return role === null || role === 'client'
+}
+
 function isClientCartRole(): boolean {
   return getAuthRole() === 'client'
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>(() => {
-    if (typeof window === 'undefined') return []
-    if (!isClientCartRole()) return []
+function isGuestCartRole(): boolean {
+  return getAuthRole() === null
+}
+
+function mergeCartLineIntoList(prev: CartLine[], line: Omit<CartLine, 'qty'> & { qty: number }): CartLine[] {
+  const incomingKey = cartLineMergeKey(line)
+  const i = prev.findIndex((x) => cartLineMergeKey(x) === incomingKey)
+  if (i >= 0) {
+    const next = [...prev]
+    const row = { ...next[i] }
+    const img = line.imageUrl?.trim()
+    if (img) row.imageUrl = img
+    if (line.reducereDiscountPercent != null && line.reducereDiscountPercent > 0) {
+      row.reducereDiscountPercent = Math.min(100, line.reducereDiscountPercent)
+      row.reducereProgramId =
+        line.reducereProgramId != null && String(line.reducereProgramId).trim()
+          ? String(line.reducereProgramId).trim()
+          : undefined
+    } else {
+      delete row.reducereProgramId
+      delete row.reducereDiscountPercent
+    }
+    const maxRow = cartLineMaxQty(row)
+    row.qty = Math.min(maxRow, row.qty + line.qty)
+    next[i] = row
+    return next
+  }
+  const img = line.imageUrl?.trim()
+  const out: CartLine = {
+    productId: line.productId,
+    slug: line.slug,
+    title: line.title,
+    qty: line.qty,
+  }
+  if (img) out.imageUrl = img
+  if (line.reducereDiscountPercent != null && line.reducereDiscountPercent > 0) {
+    out.reducereDiscountPercent = Math.min(100, line.reducereDiscountPercent)
+    if (line.reducereProgramId != null && String(line.reducereProgramId).trim()) {
+      out.reducereProgramId = String(line.reducereProgramId).trim()
+    }
+  }
+  return [...prev, out]
+}
+
+function mergeCartLines(base: CartLine[], incoming: CartLine[]): CartLine[] {
+  return incoming.reduce(
+    (acc, line) => mergeCartLineIntoList(acc, line),
+    [...base],
+  )
+}
+
+function readInitialCartLines(): CartLine[] {
+  if (typeof window === 'undefined') return []
+  const role = getAuthRole()
+  if (role === 'client') {
     const uid = getAuthUserId()
     return uid ? readPersistedCartForClient(uid) : []
-  })
+  }
+  if (role === null) return readPersistedGuestCart()
+  return []
+}
+
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [lines, setLines] = useState<CartLine[]>(readInitialCartLines)
 
   /** După primul GET / client/cart sau fallback local — permite debounce PUT fără suprascriere prematură. */
-  const [cartHydrated, setCartHydrated] = useState(false)
+  const [cartHydrated, setCartHydrated] = useState(() => isGuestCartRole())
   const pullGenRef = useRef(0)
 
-  /** Login / logout / schimbare cont: încarcă coș de pe server sau urcă localul dacă serverul e gol. */
+  /** Login / logout / schimbare cont: încarcă coș de pe server, invitat local, sau golește pentru alte roluri. */
   useEffect(() => {
     const run = () => {
       const role = getAuthRole()
       const uid = getAuthUserId()
+
+      if (role === 'partener' || role === 'admin' || role === 'sales_agent') {
+        pullGenRef.current += 1
+        setCartHydrated(false)
+        setLines([])
+        return
+      }
+
+      if (role === null) {
+        pullGenRef.current += 1
+        setCartHydrated(true)
+        setLines(readPersistedGuestCart())
+        return
+      }
+
       if (role !== 'client' || !uid) {
         pullGenRef.current += 1
         setCartHydrated(false)
         setLines([])
         return
       }
+
+      const guestLines = readPersistedGuestCart()
       const gen = ++pullGenRef.current
       setCartHydrated(false)
       ;(async () => {
@@ -174,22 +269,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
           const { lines: serverLines } = await getClientCart()
           if (gen !== pullGenRef.current) return
           const localLines = readPersistedCartForClient(uid)
+          let merged: CartLine[] = []
           if (serverLines.length > 0) {
-            setLines(serverLines as CartLine[])
-            try {
-              localStorage.setItem(clientCartStorageKey(uid), JSON.stringify(serverLines))
-            } catch {
-              /* ignore */
-            }
+            merged = serverLines as CartLine[]
           } else if (localLines.length > 0) {
-            setLines(localLines)
-            await putClientCart(localLines as ClientCartLine[])
-          } else {
-            setLines([])
+            merged = localLines
+          }
+          if (guestLines.length > 0) {
+            merged = mergeCartLines(merged, guestLines)
+            clearGuestCartStorage()
+          }
+          setLines(merged)
+          try {
+            localStorage.setItem(clientCartStorageKey(uid), JSON.stringify(merged))
+          } catch {
+            /* ignore */
+          }
+          if (serverLines.length === 0 && merged.length > 0) {
+            await putClientCart(merged as ClientCartLine[])
+          } else if (guestLines.length > 0 && merged.length > 0) {
+            await putClientCart(merged as ClientCartLine[])
           }
         } catch {
           if (gen !== pullGenRef.current) return
-          setLines(readPersistedCartForClient(uid))
+          let merged = readPersistedCartForClient(uid)
+          if (guestLines.length > 0) {
+            merged = mergeCartLines(merged, guestLines)
+            clearGuestCartStorage()
+          }
+          setLines(merged)
         } finally {
           if (gen === pullGenRef.current) setCartHydrated(true)
         }
@@ -202,6 +310,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   /** Cache local pentru viteză / offline parțial. */
   useEffect(() => {
+    if (isGuestCartRole()) {
+      try {
+        localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(lines))
+      } catch {
+        /* ignore */
+      }
+      return
+    }
     if (!isClientCartRole()) return
     const uid = getAuthUserId()
     if (!uid) return
@@ -212,7 +328,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [lines])
 
-  /** Persistă pe server (debounce) după hidratare. */
+  /** Persistă pe server (debounce) după hidratare — doar clienți autentificați. */
   useEffect(() => {
     if (!cartHydrated) return
     if (!isClientCartRole()) return
@@ -225,53 +341,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [lines, cartHydrated])
 
   const addLine = useCallback((line: Omit<CartLine, 'qty'> & { qty?: number }) => {
-    if (!isClientCartRole()) return
+    if (!canUseResidentialCart()) return
     const incomingDisc = line.reducereDiscountPercent != null && line.reducereDiscountPercent > 0
     const maxNew = incomingDisc ? 1 : 99
     const q = line.qty != null ? Math.min(maxNew, Math.max(1, Math.floor(line.qty))) : 1
-    setLines((prev) => {
-      const incomingKey = cartLineMergeKey(line)
-      const i = prev.findIndex((x) => cartLineMergeKey(x) === incomingKey)
-      if (i >= 0) {
-        const next = [...prev]
-        const row = { ...next[i] }
-        const img = line.imageUrl?.trim()
-        if (img) row.imageUrl = img
-        if (line.reducereDiscountPercent != null && line.reducereDiscountPercent > 0) {
-          row.reducereDiscountPercent = Math.min(100, line.reducereDiscountPercent)
-          row.reducereProgramId =
-            line.reducereProgramId != null && String(line.reducereProgramId).trim()
-              ? String(line.reducereProgramId).trim()
-              : undefined
-        } else {
-          delete row.reducereProgramId
-          delete row.reducereDiscountPercent
-        }
-        const maxRow = cartLineMaxQty(row)
-        row.qty = Math.min(maxRow, row.qty + q)
-        next[i] = row
-        return next
-      }
-      const img = line.imageUrl?.trim()
-      const out: CartLine = {
-        productId: line.productId,
-        slug: line.slug,
-        title: line.title,
-        qty: q,
-      }
-      if (img) out.imageUrl = img
-      if (line.reducereDiscountPercent != null && line.reducereDiscountPercent > 0) {
-        out.reducereDiscountPercent = Math.min(100, line.reducereDiscountPercent)
-        if (line.reducereProgramId != null && String(line.reducereProgramId).trim()) {
-          out.reducereProgramId = String(line.reducereProgramId).trim()
-        }
-      }
-      return [...prev, out]
-    })
+    setLines((prev) => mergeCartLineIntoList(prev, { ...line, qty: q }))
   }, [])
 
   const setLineQty = useCallback((lineKey: string, qty: number) => {
-    if (!isClientCartRole()) return
+    if (!canUseResidentialCart()) return
     setLines((prev) =>
       prev.map((x) => {
         if (cartLineMergeKey(x) !== lineKey) return x
@@ -283,16 +361,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const removeLine = useCallback((lineKey: string) => {
-    if (!isClientCartRole()) return
+    if (!canUseResidentialCart()) return
     setLines((prev) => prev.filter((x) => cartLineMergeKey(x) !== lineKey))
   }, [])
 
   const clearCart = useCallback(() => {
-    const uid = getAuthUserId()
     setLines([])
-    if (uid) clearClientCartStorage(uid)
+    const role = getAuthRole()
+    const uid = getAuthUserId()
+    if (role === 'client' && uid) {
+      clearClientCartStorage(uid)
+      void putClientCart([]).catch(() => {})
+      return
+    }
+    if (role === null) {
+      clearGuestCartStorage()
+      return
+    }
     clearLegacyCartStorage()
-    if (uid) void putClientCart([]).catch(() => {})
+    if (uid) clearClientCartStorage(uid)
   }, [])
 
   const itemCount = useMemo(() => lines.reduce((s, x) => s + x.qty, 0), [lines])

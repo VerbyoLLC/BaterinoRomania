@@ -25,6 +25,7 @@ const COMPANIE_SUBMENU_ITEMS = [
   { key: 'viziune', path: '/companie/viziune', subtitleKey: 'compViziuneSubtitle' as const },
   { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino', subtitleKey: 'compLithtechSubtitle' as const },
   { key: 'contact', path: '/contact', subtitleKey: 'compContactSubtitle' as const },
+  { key: 'siguranta', path: '/siguranta', subtitleKey: 'mainSigurantaSubtitle' as const },
 ]
 
 const LOGIN_SUBMENU_ITEMS = [
@@ -553,13 +554,13 @@ export default function MobileMenu({
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>
                       <Link
-                        to="/siguranta"
+                        to="/studii-de-caz"
                         className="flex items-center justify-between w-full py-3 border-b border-gray-100"
                         onClick={handleLinkClick}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.siguranta}</p>
-                          <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainSigurantaSubtitle}</p>
+                          <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.studiiDeCaz}</p>
+                          <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainStudiiDeCazSubtitle}</p>
                         </div>
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>

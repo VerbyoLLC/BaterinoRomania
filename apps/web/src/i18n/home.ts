@@ -16,10 +16,59 @@ export type HomeTranslations = {
   /** Hero v2 – card 2 (discount programmes) */
   heroV2Card2Title: string
   heroV2Card2Subtitle: string
+  heroV2Card2Eyebrow: string
+  heroV2Card2DiscountPct: string
+  heroV2Card2DiscountNote: string
+  heroV2Card2DiscountLead: string
+  heroV2Card2EligibleFor: string
+  heroV2Card2EligiblePensioners: string
+  heroV2Card2EligibleFamilies: string
+  heroV2Card2EligibleNeighbours: string
+  heroV2Card2EligibleRural: string
   heroV2Card2Cta: string
   /** Hero v2 – card 3 (industrial supply) */
   heroV2Card3Title: string
   heroV2Card3Subtitle: string
+  heroV2Card3Cta: string
+  /** Hero v2 – card 2 (residential featured product overlay) */
+  heroV2RezProductTitle: string
+  heroV2RezProductSubtitle: string
+  heroV2RezBadgeGarantie: string
+  heroV2RezBadgeSwap: string
+  heroV2RezBadgeReduceri: string
+  heroV2RezBadgeRetur: string
+  heroV2RezCtaOrder: string
+  heroV2RezCtaDetails: string
+  heroV2RezHeroPrice: string
+  heroV2RezPriceLabel: string
+  heroV2RezPriceNote: string
+  heroV2RezBadgeService: string
+  heroV2RezSpecCicluri: string
+  heroV2RezSpecIp: string
+  heroV2RezSpecChem: string
+  /** Hero v2 – card 4 (BESS Cabinet 261 kWh overlay) */
+  heroV2MedEyebrow: string
+  heroV2MedProductTitle: string
+  heroV2MedStockTag: string
+  heroV2MedSpecCapacityLabel: string
+  heroV2MedSpecCapacityValue: string
+  heroV2MedSpecPowerLabel: string
+  heroV2MedSpecPowerValue: string
+  heroV2MedSpecCyclesLabel: string
+  heroV2MedSpecCyclesValue: string
+  heroV2MedSpecRetentionLabel: string
+  heroV2MedSpecRetentionValue: string
+  heroV2MedFeature1: string
+  heroV2MedFeature2: string
+  heroV2MedCta: string
+  /** Hero v2 – card 5 (partner / instalatori overlay) */
+  heroV2InstTitle: string
+  heroV2InstLead: string
+  heroV2InstBenefit1: string
+  heroV2InstBenefit2: string
+  heroV2InstBenefit3: string
+  heroV2InstBenefit4: string
+  heroV2InstCta: string
 
   // Hero – slider tabs
   heroSliderRez: string
@@ -61,6 +110,7 @@ export type HomeTranslations = {
   // Products section
   productsSectionTitle: string
   productsSafetyLink: string
+  safetyCardDesc: string
   productsTabAll: string
   productsTabRez: string
   productsTabInd: string
@@ -122,6 +172,7 @@ export type HomeTranslations = {
   f7ModalDesc: string
   featureModalClose: string
   featureModalMoreLink: string
+  featuresShowMore: string
 
   // Reduceri section
   reduceriProgramLabel: string
@@ -170,6 +221,9 @@ export type HomeTranslations = {
   ariaNext: string
 
   // Bottom CTA
+  warrantyCtaTitle: string
+  warrantyCtaSubtitle: string
+  warrantyCtaButton: string
   ctaTitle: string
   ctaDesc: string
   ctaBtn1: string
@@ -187,11 +241,60 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     heroV2Title: 'Sisteme de stocare a energiei cu baterii LiFePO4',
     heroV2InverterSearchPlaceholder: 'Vezi compatibilitatea cu invertorul tău',
-    heroV2Card2Title: 'Programe de reduceri până la 20% la sistemele rezidențiale',
-    heroV2Card2Subtitle: 'Reduceri pentru pensionari, vecini, prieteni și cei care locuiesc în mediul rural.',
-    heroV2Card2Cta: 'Vezi reduceri',
-    heroV2Card3Title: 'Ai un proiect industrial?',
-    heroV2Card3Subtitle: 'Noi îți furnizăm bateriile de care ai nevoie.',
+    heroV2Card2Title: 'Programe de reduceri de până la 20%',
+    heroV2Card2Subtitle:
+      'Descoperă reducerile noastre pentru seniori, prieteni, vecini și cei care locuiesc la țară.',
+    heroV2Card2Eyebrow: 'Baterii rezidențiale',
+    heroV2Card2DiscountPct: '20%',
+    heroV2Card2DiscountNote: 'reducere',
+    heroV2Card2DiscountLead: 'Până la 20% reducere',
+    heroV2Card2EligibleFor: 'pentru:',
+    heroV2Card2EligiblePensioners: 'Pensionari',
+    heroV2Card2EligibleFamilies: 'Familii cu copii',
+    heroV2Card2EligibleNeighbours: 'Vecini care se înscriu împreună',
+    heroV2Card2EligibleRural: 'Gospodării din mediul rural',
+    heroV2Card2Cta: 'Vezi Reduceri',
+    heroV2Card3Title: 'Construiești un Proiect Industrial?',
+    heroV2Card3Subtitle: 'Avem tehnologia și experiența pentru a-l realiza împreună.',
+    heroV2Card3Cta: 'Vezi Proiecte Finalizate',
+    heroV2RezProductTitle: 'EcoHome 10 kWh',
+    heroV2RezProductSubtitle: 'LithTech · Baterie rezidențială LiFePO₄',
+    heroV2RezBadgeGarantie: 'Garanție 10 ani',
+    heroV2RezBadgeSwap: 'Baterino SWAP',
+    heroV2RezBadgeReduceri: 'Programe de reducere',
+    heroV2RezBadgeRetur: 'Retur în 15 zile',
+    heroV2RezCtaOrder: 'Comandă acum',
+    heroV2RezCtaDetails: 'Detalii',
+    heroV2RezHeroPrice: '10.000 RON',
+    heroV2RezPriceLabel: 'Preț excelent',
+    heroV2RezPriceNote: 'Cel mai bun raport calitate-preț',
+    heroV2RezBadgeService: 'Service și suport tehnic în România',
+    heroV2RezSpecCicluri: '8.000 cicluri',
+    heroV2RezSpecIp: 'IP65',
+    heroV2RezSpecChem: 'LiFePO₄',
+
+    heroV2MedEyebrow: 'Peste 20 de ani de funcționare garantată',
+    heroV2MedProductTitle: 'BESS Cabinet 261 kWh',
+    heroV2MedStockTag: 'În Stoc în România',
+    heroV2MedSpecCapacityLabel: 'Capacitate',
+    heroV2MedSpecCapacityValue: '261 kWh',
+    heroV2MedSpecPowerLabel: 'Putere AC',
+    heroV2MedSpecPowerValue: '125 kW',
+    heroV2MedSpecCyclesLabel: 'Cicluri de viață',
+    heroV2MedSpecCyclesValue: '8.000',
+    heroV2MedSpecRetentionLabel: 'Retenție SOH',
+    heroV2MedSpecRetentionValue: '70%',
+    heroV2MedFeature1: 'Răcire cu lichid · Eficiență ≥99%',
+    heroV2MedFeature2: 'Certificat IEC 61000 · Garanție 5/10 ani',
+    heroV2MedCta: 'Detalii tehnice',
+
+    heroV2InstTitle: 'Devino Partener Baterino',
+    heroV2InstLead: 'Mai mult profit. Zero complicații.',
+    heroV2InstBenefit1: 'Structură de preț orientată către parteneri',
+    heroV2InstBenefit2: 'Preluăm responsabilitatea clientului final.',
+    heroV2InstBenefit3: 'Stocuri permanente cu livrare în maxim 48 de ore',
+    heroV2InstBenefit4: 'Service și suport tehnic în România, prin platforma Baterino.',
+    heroV2InstCta: 'Devino Partener',
 
     heroSliderRez: 'REZIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
@@ -228,6 +331,8 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     productsSectionTitle: 'ALEGE BATERIA TA',
     productsSafetyLink: 'Siguranța achiziției',
+    safetyCardDesc:
+      'Garanție de 10 ani, service în România, SWAP și testare riguroasă — descoperă tot ce include promisiunea Baterino.',
     productsTabAll: 'TOATE',
     productsTabRez: 'REZIDENTIAL',
     productsTabInd: 'INDUSTRIAL',
@@ -286,6 +391,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     f7ModalDesc: 'Deși e puțin probabil să ai nevoie, **poți returna produsul în termen de 15 zile** de la achiziție, în condițiile prevăzute de politica noastră comercială. Ne dorim ca achiziția ta să fie una **sigură și fără riscuri inutile**.',
     featureModalClose: 'Închide',
     featureModalMoreLink: 'Siguranța achiziției',
+    featuresShowMore: 'Arată mai multe',
 
     reduceriProgramLabel: 'PROGRAMUL',
     reduceriDiscountSuffix: 'REDUCERE',
@@ -325,6 +431,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     divMedTitle: 'MEDICAL',
     divMedDesc: 'Pentru clinici de imagistică și cabinete stomatologice.',
 
+    warrantyCtaTitle: '10 Ani Garanție – Cea mai extinsă din România',
+    warrantyCtaSubtitle:
+      'Ca importatori direcți și tehnicieni certificați LithTech, suntem singurii care pot oferi această garanție în România. Asigurăm service-ul local și stăm alături de tine pentru fiecare pas, timp de 10 ani.',
+    warrantyCtaButton: 'Vezi Produsele',
+
     ctaTitle: 'Discutați cu echipa noastră',
     ctaDesc: 'Evaluăm și dimensionăm soluții energetice adaptate nevoilor dumneavoastră.',
     ctaBtn1: 'VEZI PRODUSE',
@@ -343,11 +454,60 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     heroV2Title: 'Energy storage systems with LiFePO4 batteries',
     heroV2InverterSearchPlaceholder: 'See compatibility with your inverter',
-    heroV2Card2Title: 'Discount programmes up to 20% on residential systems',
-    heroV2Card2Subtitle: 'Discounts for pensioners, neighbours, friends, and those living in rural areas.',
+    heroV2Card2Title: 'Discount programmes up to 20% off',
+    heroV2Card2Subtitle:
+      'Discover our discounts for seniors, friends, neighbours, and those living in the countryside.',
+    heroV2Card2Eyebrow: 'Residential batteries',
+    heroV2Card2DiscountPct: '20%',
+    heroV2Card2DiscountNote: 'off',
+    heroV2Card2DiscountLead: 'Up to 20% off',
+    heroV2Card2EligibleFor: 'for:',
+    heroV2Card2EligiblePensioners: 'Pensioners',
+    heroV2Card2EligibleFamilies: 'Families with children',
+    heroV2Card2EligibleNeighbours: 'Neighbours signing up together',
+    heroV2Card2EligibleRural: 'Households in rural areas',
     heroV2Card2Cta: 'See discounts',
-    heroV2Card3Title: 'Do you have an industrial project?',
-    heroV2Card3Subtitle: 'We supply the batteries you need.',
+    heroV2Card3Title: 'Are you building an industrial project?',
+    heroV2Card3Subtitle: 'We have the technology and experience to build it together.',
+    heroV2Card3Cta: 'See completed projects',
+    heroV2RezProductTitle: 'EcoHome 10 kWh',
+    heroV2RezProductSubtitle: 'LithTech · Residential LiFePO₄ battery',
+    heroV2RezBadgeGarantie: '10-year warranty',
+    heroV2RezBadgeSwap: 'Baterino SWAP',
+    heroV2RezBadgeReduceri: 'Discount programmes',
+    heroV2RezBadgeRetur: '15-day returns',
+    heroV2RezCtaOrder: 'Order now',
+    heroV2RezCtaDetails: 'Details',
+    heroV2RezHeroPrice: '10,000 RON',
+    heroV2RezPriceLabel: 'Excellent price',
+    heroV2RezPriceNote: 'Best value for money',
+    heroV2RezBadgeService: 'Service and technical support in Romania',
+    heroV2RezSpecCicluri: '8,000 cycles',
+    heroV2RezSpecIp: 'IP65',
+    heroV2RezSpecChem: 'LiFePO₄',
+
+    heroV2MedEyebrow: 'Over 20 years of guaranteed operation',
+    heroV2MedProductTitle: 'BESS Cabinet 261 kWh',
+    heroV2MedStockTag: 'In stock in Romania',
+    heroV2MedSpecCapacityLabel: 'Capacity',
+    heroV2MedSpecCapacityValue: '261 kWh',
+    heroV2MedSpecPowerLabel: 'AC power',
+    heroV2MedSpecPowerValue: '125 kW',
+    heroV2MedSpecCyclesLabel: 'Cycle life',
+    heroV2MedSpecCyclesValue: '8,000',
+    heroV2MedSpecRetentionLabel: 'SOH retention',
+    heroV2MedSpecRetentionValue: '70%',
+    heroV2MedFeature1: 'Liquid cooling · Efficiency ≥99%',
+    heroV2MedFeature2: 'IEC 61000 certified · 5/10 year warranty',
+    heroV2MedCta: 'Technical details',
+
+    heroV2InstTitle: 'Become a Baterino Partner',
+    heroV2InstLead: 'More profit. Zero hassle.',
+    heroV2InstBenefit1: 'Partner-oriented pricing structure',
+    heroV2InstBenefit2: 'We take responsibility for the end customer.',
+    heroV2InstBenefit3: 'Permanent stock with delivery in up to 48 hours',
+    heroV2InstBenefit4: 'Service and technical support in Romania through the Baterino platform.',
+    heroV2InstCta: 'Become a Partner',
 
     heroSliderRez: 'RESIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
@@ -384,6 +544,8 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     productsSectionTitle: 'CHOOSE YOUR BATTERY',
     productsSafetyLink: 'Purchase safety',
+    safetyCardDesc:
+      '10-year warranty, service in Romania, SWAP and rigorous testing — discover everything included in the Baterino promise.',
     productsTabAll: 'ALL',
     productsTabRez: 'RESIDENTIAL',
     productsTabInd: 'INDUSTRIAL',
@@ -442,6 +604,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     f7ModalDesc: 'Although unlikely to be needed, **you can return the product within 15 days** of purchase under our commercial policy. We want your purchase to be **safe and free from unnecessary risk**.',
     featureModalClose: 'Close',
     featureModalMoreLink: 'Purchase safety',
+    featuresShowMore: 'Show more',
 
     reduceriProgramLabel: 'PROGRAMME',
     reduceriDiscountSuffix: 'DISCOUNT',
@@ -481,6 +644,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     divMedTitle: 'MEDICAL',
     divMedDesc: 'We are the only company in Romania specialised in providing energy storage solutions for imaging centres, dental surgeries, dialysis centres and medical clinics.',
 
+    warrantyCtaTitle: '10-Year Warranty – The most extensive in Romania',
+    warrantyCtaSubtitle:
+      'As direct LithTech importers and certified technicians, we are the only ones who can offer this warranty in Romania. We provide local service and stand with you every step of the way for 10 years.',
+    warrantyCtaButton: 'View Products',
+
     ctaTitle: 'Talk to our team',
     ctaDesc: 'We evaluate and size energy solutions tailored to your needs.',
     ctaBtn1: 'VIEW PRODUCTS',
@@ -499,11 +667,59 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     heroV2Title: '磷酸铁锂电池储能系统',
     heroV2InverterSearchPlaceholder: '查看与您逆变器的兼容性',
-    heroV2Card2Title: '住宅系统高达20%折扣计划',
-    heroV2Card2Subtitle: '退休人员、邻居、朋友以及农村地区居民的专属折扣。',
+    heroV2Card2Title: '高达20%折扣计划',
+    heroV2Card2Subtitle: '了解我们为老年人、朋友、邻居以及农村居民提供的专属折扣。',
+    heroV2Card2Eyebrow: '住宅电池',
+    heroV2Card2DiscountPct: '20%',
+    heroV2Card2DiscountNote: '折扣',
+    heroV2Card2DiscountLead: '高达20%折扣',
+    heroV2Card2EligibleFor: '适用于：',
+    heroV2Card2EligiblePensioners: '退休人员',
+    heroV2Card2EligibleFamilies: '有孩子的家庭',
+    heroV2Card2EligibleNeighbours: '一起报名的邻居',
+    heroV2Card2EligibleRural: '农村家庭',
     heroV2Card2Cta: '查看折扣',
-    heroV2Card3Title: '您有工业项目吗？',
-    heroV2Card3Subtitle: '我们为您提供所需的电池。',
+    heroV2Card3Title: '您在建设工业项目吗？',
+    heroV2Card3Subtitle: '我们拥有技术和经验，与您一起实现它。',
+    heroV2Card3Cta: '查看已完成项目',
+    heroV2RezProductTitle: 'EcoHome 10 kWh',
+    heroV2RezProductSubtitle: 'LithTech · 住宅 LiFePO₄ 电池',
+    heroV2RezBadgeGarantie: '10年保修',
+    heroV2RezBadgeSwap: 'Baterino SWAP',
+    heroV2RezBadgeReduceri: '折扣计划',
+    heroV2RezBadgeRetur: '15天退货',
+    heroV2RezCtaOrder: '立即订购',
+    heroV2RezCtaDetails: '详情',
+    heroV2RezHeroPrice: '10,000 RON',
+    heroV2RezPriceLabel: '超值价格',
+    heroV2RezPriceNote: '最佳性价比',
+    heroV2RezBadgeService: '罗马尼亚本地服务与技术支持',
+    heroV2RezSpecCicluri: '8,000 次循环',
+    heroV2RezSpecIp: 'IP65',
+    heroV2RezSpecChem: 'LiFePO₄',
+
+    heroV2MedEyebrow: '超过20年保证运行',
+    heroV2MedProductTitle: 'BESS Cabinet 261 kWh',
+    heroV2MedStockTag: '罗马尼亚现货',
+    heroV2MedSpecCapacityLabel: '容量',
+    heroV2MedSpecCapacityValue: '261 kWh',
+    heroV2MedSpecPowerLabel: '交流功率',
+    heroV2MedSpecPowerValue: '125 kW',
+    heroV2MedSpecCyclesLabel: '循环寿命',
+    heroV2MedSpecCyclesValue: '8,000',
+    heroV2MedSpecRetentionLabel: 'SOH 保持率',
+    heroV2MedSpecRetentionValue: '70%',
+    heroV2MedFeature1: '液冷 · 效率 ≥99%',
+    heroV2MedFeature2: 'IEC 61000 认证 · 5/10 年保修',
+    heroV2MedCta: '技术详情',
+
+    heroV2InstTitle: '成为 Baterino 合作伙伴',
+    heroV2InstLead: '更多利润，零烦恼。',
+    heroV2InstBenefit1: '面向合作伙伴的定价结构',
+    heroV2InstBenefit2: '我们承担终端客户的责任。',
+    heroV2InstBenefit3: '常备库存，最多48小时内送达',
+    heroV2InstBenefit4: '通过 Baterino 平台在罗马尼亚提供本地服务与技术支持。',
+    heroV2InstCta: '成为合作伙伴',
 
     heroSliderRez: '住宅',
     heroSliderInd: '工业',
@@ -540,6 +756,7 @@ const translations: Record<LangCode, HomeTranslations> = {
 
     productsSectionTitle: '选择您的电池',
     productsSafetyLink: '购买安全',
+    safetyCardDesc: '10年质保、罗马尼亚本地服务、换电服务与严格测试——了解Baterino承诺的全部内容。',
     productsTabAll: '全部',
     productsTabRez: '住宅',
     productsTabInd: '工业',
@@ -598,6 +815,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     f7ModalDesc: '虽然不太可能需要，但根据我们的商业政策，**您可以在购买后15天内退货**。我们希望您的购买**安全且无多余风险**。',
     featureModalClose: '关闭',
     featureModalMoreLink: '购买安全保障',
+    featuresShowMore: '显示更多',
 
     reduceriProgramLabel: '计划',
     reduceriDiscountSuffix: '折扣',
@@ -636,6 +854,11 @@ const translations: Record<LangCode, HomeTranslations> = {
     divMarDesc: '为航海环境提供储能解决方案。',
     divMedTitle: '医疗',
     divMedDesc: '我们是罗马尼亚唯一专门为影像中心、牙科诊所、透析中心和医疗诊所提供储能解决方案的公司。',
+
+    warrantyCtaTitle: '10年质保 – 罗马尼亚最全面的质保',
+    warrantyCtaSubtitle:
+      '作为LithTech直接进口商和认证技术人员，我们是罗马尼亚唯一能够提供此质保的公司。我们提供本地服务，并在10年内全程陪伴您。',
+    warrantyCtaButton: '查看产品',
 
     ctaTitle: '与我们的团队交流',
     ctaDesc: '我们评估并为您的需求量身定制储能解决方案。',

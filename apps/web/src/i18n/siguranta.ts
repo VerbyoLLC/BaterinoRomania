@@ -3,6 +3,11 @@ import type { LangCode } from './menu'
 export type SigurantaTranslations = {
   supertitle: string
   heroTitle: string
+  heroSubtitle: string
+  pillarsEyebrow: string
+  pillarTrust: string
+  pillarStability: string
+  pillarPerformance: string
   // Feature 1 – SWAP
   swapTitle: string
   swapDesc: string
@@ -23,12 +28,20 @@ export type SigurantaTranslations = {
   ctaDesc: string
   ctaBtn1: string
   ctaBtn2: string
+  readMore: string
+  modalClose: string
 }
 
 const translations: Record<LangCode, SigurantaTranslations> = {
   ro: {
     supertitle: 'PROMISIUNEA NOASTRĂ ESTE',
     heroTitle: 'SĂ ÎȚI FURNIZĂM PRODUSE DE CALITATE ȘI SERVICII DE ÎNCREDERE',
+    heroSubtitle:
+      'Import direct LithTech, testare riguroasă, garanție de 10 ani și service local — tot ce ai nevoie ca sistemul tău să funcționeze fără griji.',
+    pillarsEyebrow: 'Serviciile Baterino se bazează pe',
+    pillarTrust: 'Încredere',
+    pillarStability: 'Stabilitate',
+    pillarPerformance: 'Performanță',
     swapTitle: 'SERVICIUL BATERINO SWAP',
     swapDesc: 'Am construit serviciile Baterino pe trei piloni esențiali: **încredere, stabilitate și performanță**. Prin serviciul **Baterino SWAP**, **îți oferim o baterie la schimb — același model sau unul superior — pe toată durata procesului de diagnoză și reparație**, astfel încât sistemul tău să rămână funcțional fără întreruperi.',
     suportTitle: 'SUPORT ȘI MENTENANȚĂ',
@@ -43,10 +56,18 @@ const translations: Record<LangCode, SigurantaTranslations> = {
     ctaDesc: 'Evaluăm și dimensionăm soluții energetice pentru operare eficientă și sigură, adaptate nevoilor dumneavoastră.',
     ctaBtn1: 'VEZI PRODUSE',
     ctaBtn2: 'DISCUTĂ CU NOI',
+    readMore: 'Citește mai mult',
+    modalClose: 'Închide',
   },
   en: {
     supertitle: 'OUR PROMISE IS',
     heroTitle: 'TO PROVIDE YOU WITH QUALITY PRODUCTS AND RELIABLE SERVICES',
+    heroSubtitle:
+      'Direct LithTech import, rigorous testing, a 10-year warranty and local service — everything you need for worry-free operation.',
+    pillarsEyebrow: 'Baterino services are built on',
+    pillarTrust: 'Trust',
+    pillarStability: 'Stability',
+    pillarPerformance: 'Performance',
     swapTitle: 'BATERINO SWAP SERVICE',
     swapDesc: 'We have built Baterino services on three essential pillars: **trust, stability and performance**. Through the **Baterino SWAP** service, **we offer you a replacement battery — the same model or a superior one — throughout the entire diagnosis and repair process**, so your system stays operational without interruption.',
     suportTitle: 'SUPPORT & MAINTENANCE',
@@ -61,10 +82,17 @@ const translations: Record<LangCode, SigurantaTranslations> = {
     ctaDesc: 'We evaluate and size energy solutions for efficient and safe operation, tailored to your needs.',
     ctaBtn1: 'VIEW PRODUCTS',
     ctaBtn2: 'CONTACT US',
+    readMore: 'Read more',
+    modalClose: 'Close',
   },
   zh: {
     supertitle: '我们的承诺是',
     heroTitle: '为您提供优质产品和可靠服务',
+    heroSubtitle: 'LithTech直接进口、严格测试、10年质保和本地服务——让您无忧运行所需的一切。',
+    pillarsEyebrow: 'Baterino服务建立在',
+    pillarTrust: '信任',
+    pillarStability: '稳定',
+    pillarPerformance: '性能',
     swapTitle: 'BATERINO换电服务',
     swapDesc: '我们在三大核心支柱上构建Baterino服务：**信任、稳定性和性能**。通过**Baterino换电服务**，**我们在整个诊断和维修过程中为您提供备用电池——相同型号或更优型号**——确保您的系统不间断运行。',
     suportTitle: '支持与维护',
@@ -79,6 +107,8 @@ const translations: Record<LangCode, SigurantaTranslations> = {
     ctaDesc: '我们评估和设计高效安全的储能解决方案，根据您的需求量身定制。',
     ctaBtn1: '查看产品',
     ctaBtn2: '联系我们',
+    readMore: '阅读更多',
+    modalClose: '关闭',
   },
 }
 

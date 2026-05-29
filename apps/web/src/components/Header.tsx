@@ -22,6 +22,7 @@ const COMPANIE_PATHS = [
   { key: 'viziune', path: '/companie/viziune' },
   { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino' },
   { key: 'contact', path: '/contact' },
+  { key: 'siguranta', path: '/siguranta' },
 ]
 
 function clientAccountInitials(email: string): string {
@@ -190,7 +191,7 @@ export default function Header() {
               <>
                 <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.produse}</Link>
                 <Link to="/reduceri" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.reduceri}</Link>
-                <Link to="/siguranta" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.siguranta}</Link>
+                <Link to="/studii-de-caz" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.studiiDeCaz}</Link>
                 {!hideInstalatoriNav ? (
                   <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.instalatori}</Link>
                 ) : null}

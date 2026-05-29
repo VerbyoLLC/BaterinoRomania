@@ -8,7 +8,7 @@ export const LANGUAGES: { code: LangCode; label: string; menuLabel: string }[] =
 
 const translations: Record<LangCode, Record<string, string>> = {
   ro: {
-    home: 'Acasă', produse: 'Produse', reduceri: 'Reduceri', siguranta: 'Siguranță', divizii: 'Divizii',
+    home: 'Acasă', produse: 'Produse', reduceri: 'Reduceri', siguranta: 'Siguranță', studiiDeCaz: 'Studii de caz', divizii: 'Divizii',
     rezidential: 'Rezidențial', industrial: 'Industrial', medical: 'Medical', maritim: 'Maritim',
     lithtech: 'Parteneriat LithTech', instalatori: 'Instalatori', companie: 'Companie',
     viziune: 'Viziune', misiune: 'Misiune', implementare: 'Implementare', echipa: 'Echipa',
@@ -21,6 +21,7 @@ const translations: Record<LangCode, Record<string, string>> = {
     loginCreateAccount: 'Creează cont', loginSignIn: 'Intră în cont', loginSubtitle: 'Clienți și Parteneri',
     mainProduse: 'Baterii LiFePO4', mainProduseSubtitle: 'Alege o baterie',
     mainReduceriSubtitle: 'Programe reduceri baterii', mainSigurantaSubtitle: 'De ce cumperi de la noi',
+    mainStudiiDeCazSubtitle: 'Proiecte reale de stocare energie',
     mainDiviziiSubtitle: 'Diviziile noastre tehnice', mainInstalatori: 'Instalatori & Distribuitori',
     mainInstalatoriSubtitle: 'Devino partenerul nostru', mainCompanieSubtitle: 'Viziune, Parteneriat și Contact',
     mainLangSubtitle: 'Alege limba sitului', mainLogin: 'Logare', mainLoginSubtitle: 'Clienți și Parteneri',
@@ -28,7 +29,7 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainVerificareGarantieSubtitle: 'Verifică numărul de serie al bateriei',
   },
   en: {
-    home: 'Home', produse: 'Products', reduceri: 'Discounts', siguranta: 'Safety', divizii: 'Divisions',
+    home: 'Home', produse: 'Products', reduceri: 'Discounts', siguranta: 'Safety', studiiDeCaz: 'Case studies', divizii: 'Divisions',
     rezidential: 'Residential', industrial: 'Industrial', medical: 'Medical', maritim: 'Maritime',
     lithtech: 'LithTech Partnership', instalatori: 'Installers', companie: 'Company',
     viziune: 'Vision', misiune: 'Mission', implementare: 'Implementation', echipa: 'Team',
@@ -41,6 +42,7 @@ const translations: Record<LangCode, Record<string, string>> = {
     loginCreateAccount: 'Create account', loginSignIn: 'Log in', loginSubtitle: 'Clients and Partners',
     mainProduse: 'LiFePO4 Batteries', mainProduseSubtitle: 'Choose a battery',
     mainReduceriSubtitle: 'Battery discount programs', mainSigurantaSubtitle: 'Why buy from us',
+    mainStudiiDeCazSubtitle: 'Real-world energy storage projects',
     mainDiviziiSubtitle: 'Our technical divisions', mainInstalatori: 'Installers & Distributors',
     mainInstalatoriSubtitle: 'Become our partner', mainCompanieSubtitle: 'Vision, Partnership and Contact',
     mainLangSubtitle: 'Choose site language', mainLogin: 'Log in', mainLoginSubtitle: 'Clients and Partners',
@@ -48,7 +50,7 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainVerificareGarantieSubtitle: 'Verify your battery serial number',
   },
   zh: {
-    home: '首页', produse: '产品', reduceri: '折扣', siguranta: '安全', divizii: '事业部',
+    home: '首页', produse: '产品', reduceri: '折扣', siguranta: '安全', studiiDeCaz: '案例研究', divizii: '事业部',
     rezidential: '住宅', industrial: '工业', medical: '医疗', maritim: '船舶',
     lithtech: 'LithTech合作', instalatori: '安装商', companie: '公司',
     viziune: '愿景', misiune: '使命', implementare: '实施', echipa: '团队',
@@ -61,6 +63,7 @@ const translations: Record<LangCode, Record<string, string>> = {
     loginCreateAccount: '创建账户', loginSignIn: '登录', loginSubtitle: '客户和合作伙伴',
     mainProduse: 'LiFePO4电池', mainProduseSubtitle: '选择电池',
     mainReduceriSubtitle: '电池折扣计划', mainSigurantaSubtitle: '为什么选择我们',
+    mainStudiiDeCazSubtitle: '真实储能项目案例',
     mainDiviziiSubtitle: '我们的技术部门', mainInstalatori: '安装商与经销商',
     mainInstalatoriSubtitle: '成为我们的合作伙伴', mainCompanieSubtitle: '愿景、合作与联系',
     mainLangSubtitle: '选择网站语言', mainLogin: '登录', mainLoginSubtitle: '客户和合作伙伴',

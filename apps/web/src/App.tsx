@@ -66,6 +66,7 @@ import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
 import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
 import Cariere from './pages/Cariere'
+import StudiiDeCaz from './pages/StudiiDeCaz'
 import Contact from './pages/Contact'
 import IntrebariFrecvente from './pages/IntrebariFrecvente'
 import SliderExamples from './pages/SliderExamples'
@@ -262,6 +263,7 @@ export default function App() {
               <Route path="companie/contact" element={<Navigate to="/companie/viziune" replace />} />
               <Route path="companie/:slug" element={<Navigate to="/companie/viziune" replace />} />
               <Route path="cariere" element={<Cariere />} />
+              <Route path="studii-de-caz" element={<StudiiDeCaz />} />
               <Route path="contact" element={<Contact />} />
               <Route path="blog" element={<Blog />} />
               <Route path="typography" element={<Typography />} />

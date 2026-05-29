@@ -18,6 +18,7 @@ import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 import HomeHeroV2 from '../components/home/HomeHeroV2'
+import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
 import HomeInstalledCapacityCounters from '../components/home/HomeInstalledCapacityCounters'
@@ -255,40 +256,30 @@ export default function Home() {
             <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
           </div>
 
-          {/* Filters left + Vezi tot right */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 lg:mb-10">
-            <div
-              className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3"
-              role="group"
-              aria-label={tr.productsSectionTitle}
-            >
-              {(isMobile ? tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)) : tabs).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  aria-pressed={activeTab === tab.id}
-                  aria-label={tab.label}
-                  className={`h-12 sm:h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 sm:w-auto ${
-                    isMobile ? 'w-full max-w-xs' : ''
-                  } ${
-                    activeTab === tab.id
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="hidden sm:flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
-              <Link
-                to="/produse"
-                className="inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
+          {/* Product category filters */}
+          <div
+            className="flex flex-col items-center sm:flex-row sm:flex-wrap sm:justify-center gap-1 sm:gap-6 lg:gap-8 mb-8 lg:mb-10"
+            role="group"
+            aria-label={tr.productsSectionTitle}
+          >
+            {(isMobile ? tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)) : tabs).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={activeTab === tab.id}
+                aria-label={tab.label}
+                className={`px-2 py-2 text-sm font-semibold font-['Inter'] uppercase transition-colors border-b-2 sm:w-auto ${
+                  isMobile ? 'w-full max-w-xs' : ''
+                } ${
+                  activeTab === tab.id
+                    ? 'text-slate-900 border-slate-900'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }`}
               >
-                {tr.productsViewAll}
-              </Link>
-            </div>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Product grid */}
@@ -362,17 +353,11 @@ export default function Home() {
             })
             )}
           </div>
-
-          {/* Vezi toate produsele – mobile only, under products */}
-          <div className="flex justify-center sm:hidden mb-10">
-            <Link
-              to="/produse"
-              className="inline-flex items-center justify-center h-12 px-8 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
-            >
-              {tr.productsViewAll}
-            </Link>
-          </div>
         </section>
+
+        <div className="mt-8 lg:mt-10">
+          <HomeWarrantyCta tr={tr} />
+        </div>
 
       </div>
 
@@ -380,19 +365,11 @@ export default function Home() {
 
       {/* ── REDUCERI – Programe de reduceri ── */}
       <section className="mb-0 max-w-content mx-auto px-5 lg:px-3">
-        <div className="flex flex-col gap-4 my-6 sm:my-8 text-center sm:text-left items-center sm:items-stretch">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full">
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10">
-              {tr.reduceriGridTitle}
-            </h2>
-            <Link
-              to="/reduceri"
-              className="hidden lg:inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors shrink-0"
-            >
-              {tr.reduceriViewAll}
-            </Link>
-          </div>
-          <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[846px]">
+        <div className="my-6 flex flex-col items-center gap-4 text-center sm:my-8">
+          <h2 className="text-black text-2xl font-bold font-['Inter'] leading-9 sm:text-3xl sm:leading-10">
+            {tr.reduceriGridTitle}
+          </h2>
+          <p className="max-w-[846px] text-base font-normal font-['Inter'] leading-5 text-black sm:text-lg sm:leading-6">
             {tr.reduceriGridSubtitle}
           </p>
         </div>
@@ -411,10 +388,12 @@ export default function Home() {
                   <span className="text-slate-900 text-xs sm:text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
                 </div>
                 <div className="absolute left-[20px] sm:left-[26px] right-[20px] sm:right-[26px] bottom-[20px] sm:bottom-[24px] z-10 flex flex-col gap-2 sm:gap-3">
-                  <p className="text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-5 sm:leading-6">{tr.reduceriProgramLabel}</p>
-                  <h3 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-7 sm:leading-8 whitespace-pre-line">
-                    {card.title}
-                  </h3>
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-5 sm:leading-6">{tr.reduceriProgramLabel}</p>
+                    <h3 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-7 sm:leading-8 whitespace-pre-line">
+                      {card.title}
+                    </h3>
+                  </div>
                   <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5">
                     {card.desc}
                   </p>
@@ -505,16 +484,16 @@ export default function Home() {
 
         {/* ── DIVIZIILE BATERINO ── */}
         <section className="mb-16 lg:mb-24">
-          <div>
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4 text-center lg:text-left">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="my-4 text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10">
               {tr.diviziileNoastreTitle}
             </h2>
-            <p className="text-gray-700 text-base sm:text-lg font-medium font-['Inter'] leading-6 sm:leading-8 mb-6 sm:mb-8 max-w-[894px] text-center lg:text-left mx-auto lg:mx-0">
+            <p className="mb-6 max-w-[894px] text-base font-medium font-['Inter'] leading-6 text-gray-700 sm:mb-8 sm:text-lg sm:leading-8">
               {tr.diviziileNoastreSubtitle}
             </p>
 
             {/* Desktop: 4 cards in grid */}
-            <div className="hidden lg:grid grid-cols-4 gap-6">
+            <div className="hidden w-full lg:grid lg:grid-cols-4 lg:gap-6">
               <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
                 <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
@@ -554,7 +533,7 @@ export default function Home() {
             </div>
 
             {/* Mobile: slider */}
-            <div className="lg:hidden">
+            <div className="w-full lg:hidden">
               <div className="-mx-5 w-[calc(100%+2.5rem)]">
                 <div
                   ref={divisionsSliderRef}
@@ -611,7 +590,7 @@ export default function Home() {
 
         {/* ── LITHTECH ── */}
         <section className="mb-16 lg:mb-24">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 gap-y-8 gap-x-6 lg:gap-x-4 lg:gap-y-10 items-start">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 gap-y-8 gap-x-6 lg:gap-x-4 lg:gap-y-10 items-start lg:items-center">
             {/* Left: text – 6 cols (on mobile: centered, gap-4 like reduceri) */}
             <div className="flex flex-col gap-4 order-1 lg:order-1 lg:col-span-6 text-center lg:text-left items-center lg:items-stretch w-full">
               <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 max-w-96 my-6 sm:my-8">
