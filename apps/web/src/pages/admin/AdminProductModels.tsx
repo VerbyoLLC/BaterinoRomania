@@ -90,6 +90,11 @@ export default function AdminProductModels() {
   const [availabilitySavingId, setAvailabilitySavingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Search & filters
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState<'all' | 'industrial' | 'residential'>('all')
+  const [filterAvailable, setFilterAvailable] = useState<'all' | 'yes' | 'no'>('all')
+
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
@@ -120,6 +125,22 @@ export default function AdminProductModels() {
   )
 
   const drawerRow = useMemo(() => rowsWithDraft.find((r) => r.id === drawerModelId) ?? null, [rowsWithDraft, drawerModelId])
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return rowsWithDraft.filter((row) => {
+      if (q) {
+        const inName = row.name.toLowerCase().includes(q)
+        const inSeries = row.series.toLowerCase().includes(q)
+        const inModel = row.modelNumber.toLowerCase().includes(q)
+        if (!inName && !inSeries && !inModel) return false
+      }
+      if (filterType !== 'all' && row.usageType !== filterType) return false
+      if (filterAvailable === 'yes' && row.availableForStock === false) return false
+      if (filterAvailable === 'no' && row.availableForStock !== false) return false
+      return true
+    })
+  }, [rowsWithDraft, search, filterType, filterAvailable])
 
   const setDraftField = <K extends keyof ProductModelDraft>(rowId: string, key: K, value: ProductModelDraft[K]) => {
     setDraftById((prev) => {
@@ -236,11 +257,53 @@ export default function AdminProductModels() {
         </div>
       )}
 
+      {/* Search & Filters */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Caută după Nume, Serie, Model…"
+          className="h-9 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-['Inter']"
+        />
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-500 font-['Inter'] uppercase tracking-wide">Tip</label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as 'all' | 'industrial' | 'residential')}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-['Inter']"
+          >
+            <option value="all">Toate</option>
+            <option value="industrial">Industrial</option>
+            <option value="residential">Residential</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-500 font-['Inter'] uppercase tracking-wide">Disponibil</label>
+          <select
+            value={filterAvailable}
+            onChange={(e) => setFilterAvailable(e.target.value as 'all' | 'yes' | 'no')}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-['Inter']"
+          >
+            <option value="all">Toate</option>
+            <option value="yes">Disponibil</option>
+            <option value="no">Indisponibil</option>
+          </select>
+        </div>
+        {(search || filterType !== 'all' || filterAvailable !== 'all') && (
+          <span className="text-xs text-slate-400 font-['Inter']">
+            {filteredRows.length} / {rowsWithDraft.length} rezultate
+          </span>
+        )}
+      </div>
+
       <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden ring-1 ring-slate-900/[0.04]">
         {loading ? (
           <p className="p-8 text-sm text-gray-500 font-['Inter']">Se încarcă…</p>
         ) : rows.length === 0 ? (
           <p className="p-8 text-sm text-gray-500 font-['Inter']">Nu există înregistrări. Rulează migrarea API.</p>
+        ) : filteredRows.length === 0 ? (
+          <p className="p-8 text-sm text-gray-500 font-['Inter']">Niciun model nu corespunde filtrelor selectate.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[60rem] table-fixed border-collapse text-left text-sm font-['Inter']">
@@ -279,7 +342,7 @@ export default function AdminProductModels() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rowsWithDraft.map((row, idx) => (
+                {filteredRows.map((row, idx) => (
                   <tr
                     key={row.id}
                     className={`align-middle transition-colors hover:bg-sky-50/40 ${idx % 2 === 1 ? 'bg-slate-50/35' : 'bg-white'}`}
