@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Truck, Tag, Wrench, Clock } from 'lucide-react'
 
 export type CatalogProductCardDensity = 'produse' | 'home' | 'partner'
 
@@ -369,13 +370,21 @@ export function IndustrialCatalogProductCard(props: IndustrialCatalogProductCard
   return <CatalogProductCard {...props} variant="industrial" />
 }
 
-export type HorizontalCatalogProductCardProps = CatalogProductCardBaseProps & {
+export type HorizontalFeatureBadge = {
+  type: 'stock' | 'delivery' | 'transport' | 'install' | 'reduceri'
+  label: string
+}
+
+export type HorizontalCatalogProductCardProps = Omit<CatalogProductCardBaseProps, 'priceAboveBadge' | 'imageOverlay'> & {
   variant?: 'residential' | 'industrial'
+  /** Compact feature badges rendered in a single row: stock, delivery, transport, install, reduceri */
+  featureBadges?: HorizontalFeatureBadge[]
 }
 
 /**
- * Desktop: horizontal card — image on the left (40%), content on the right (60%).
- * Mobile: falls back to the standard vertical card layout.
+ * Desktop: horizontal card — image on the left, content on the right.
+ * Mobile: standard vertical layout.
+ * Uses compact icon + text badges instead of pill badges to guarantee single-row display.
  */
 export function HorizontalCatalogProductCard({
   variant = 'residential',
@@ -388,14 +397,13 @@ export function HorizontalCatalogProductCard({
   to,
   linkState,
   priceDisplay,
-  imageOverlay,
-  priceAboveBadge,
   residentialPriceHeading,
   residentialPriceVatNote,
   residentialPartnerPriceCta,
   residentialStockListingCta,
   shellClassName = '',
   ctaLabel,
+  featureBadges = [],
 }: HorizontalCatalogProductCardProps) {
   const [imgLoaded, setImgLoaded] = useState(true)
   const isIndustrial = variant === 'industrial'
@@ -415,20 +423,23 @@ export function HorizontalCatalogProductCard({
   const showDarkChip = !isIndustrial && darkLabel !== ''
   const showPrice = !showDarkChip && priceDisplay != null && priceDisplay !== ''
   const showIndustrialCta = isIndustrial && !showPrice && ctaLabel
-
   const subtitleLine = isIndustrial ? String(subtitle ?? '').trim() : ''
+
+  // Split badges into two rows: stock/delivery on image, transport/install/reduceri in content
+  const imageBadges = featureBadges.filter(b => b.type === 'stock' || b.type === 'delivery')
+  const featureRow = featureBadges.filter(b => b.type === 'transport' || b.type === 'install' || b.type === 'reduceri')
 
   return (
     <div
-      className={`group flex flex-col overflow-hidden rounded-[10px] bg-[#f7f7f7] transition-shadow duration-300 hover:shadow-md lg:flex-row ${shellClassName}`.trim()}
+      className={`group overflow-hidden rounded-[10px] bg-[#f7f7f7] transition-shadow duration-300 hover:shadow-md ${shellClassName}`.trim()}
     >
       <Link
         to={to!}
         state={linkState}
         className="flex flex-col lg:flex-row lg:items-stretch w-full"
       >
-        {/* ── Image — clean, no overlays on desktop ── */}
-        <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[42%] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
+        {/* ── Image ── */}
+        <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[38%] lg:min-h-[180px] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
           <img
             src={imageSrc}
             alt={imageAlt}
@@ -436,70 +447,69 @@ export function HorizontalCatalogProductCard({
             onLoad={() => setImgLoaded(true)}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
-          {/* On mobile keep overlay on image; on desktop it moves to content area */}
-          {imageOverlay ? (
-            <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] lg:hidden">
-              {imageOverlay}
+          {/* Stock + delivery badges overlaid on image */}
+          {imageBadges.length > 0 && (
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-1.5">
+              {imageBadges.map(b => (
+                <HorizontalBadgePill key={b.type} badge={b} />
+              ))}
             </div>
-          ) : null}
+          )}
         </div>
 
         {/* ── Content ── */}
-        <div className="flex flex-1 flex-col justify-center px-5 py-5 lg:px-6 lg:py-5">
-
-          {/* Row 1 — stock + delivery badges (desktop only, moved out of image) */}
-          {imageOverlay ? (
-            <div className="hidden lg:flex flex-wrap gap-1.5 mb-3">
-              {imageOverlay}
-            </div>
-          ) : null}
+        <div className="flex flex-1 flex-col justify-center px-5 py-5 lg:px-5 lg:py-4">
 
           <h3 className="text-lg font-bold font-['Inter'] leading-snug text-black lg:text-xl">
             {title}
           </h3>
           {subtitleLine ? (
-            <p className="mt-1 text-sm font-medium font-['Inter'] leading-snug text-neutral-600">
+            <p className="mt-1 text-sm font-medium font-['Inter'] leading-snug text-neutral-500">
               {subtitleLine}
             </p>
           ) : null}
-
           {!isIndustrial ? (
-            <div className="mt-2 space-y-0.5">
-              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-700">{specLine1}</p>
-              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-700">{specLine2}</p>
+            <div className="mt-1.5">
+              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine1}</p>
+              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine2}</p>
             </div>
           ) : null}
 
-          {/* Transport + install badges — below specs */}
-          {priceAboveBadge ? (
-            <div className="mt-3">{priceAboveBadge}</div>
+          {/* Compact icon badges — transport, install, reduceri — guaranteed single row */}
+          {featureRow.length > 0 ? (
+            <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+              {featureRow.map((b, i) => (
+                <HorizontalFeatureItem key={b.type} badge={b} showDivider={i < featureRow.length - 1} />
+              ))}
+            </div>
           ) : null}
 
+          {/* Price / CTA */}
           {showDarkChip ? (
             <div className="mt-3">
-              <span className="inline-flex items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm">
+              <span className="inline-flex items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white font-['Inter']">
                 {darkLabel}
               </span>
             </div>
           ) : showPrice ? (
             <div className="mt-3">
               {residentialPriceHeading ? (
-                <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400 font-['Inter']">
                   {residentialPriceHeading}
                 </span>
               ) : null}
-              <p className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight text-slate-900 font-['Inter'] lg:text-3xl">
+              <p className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight text-slate-900 font-['Inter'] lg:text-[1.75rem]">
                 {priceDisplay}
               </p>
               {residentialPriceVatNote ? (
-                <span className="text-xs font-medium text-neutral-500 font-['Inter']">
+                <span className="text-[11px] font-medium text-neutral-400 font-['Inter']">
                   {residentialPriceVatNote}
                 </span>
               ) : null}
             </div>
           ) : showIndustrialCta ? (
             <div className="mt-3">
-              <span className="inline-flex items-center justify-center rounded-[10px] bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm">
+              <span className="inline-flex items-center justify-center rounded-[10px] bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white font-['Inter']">
                 {String(ctaLabel).trim()}
               </span>
             </div>
@@ -507,6 +517,66 @@ export function HorizontalCatalogProductCard({
         </div>
       </Link>
     </div>
+  )
+}
+
+// ── Internal sub-components ────────────────────────────────────────────────
+
+function stockVariantStyle(type: HorizontalFeatureBadge['type'], label: string) {
+  if (type !== 'stock') return 'bg-slate-100 text-slate-600'
+  const l = label.toLowerCase()
+  if (l.includes('epuizat') || l.includes('out')) return 'bg-red-100 text-red-700'
+  if (l.includes('curând') || l.includes('soon')) return 'bg-amber-100 text-amber-700'
+  if (l.includes('comandă') || l.includes('order')) return 'bg-sky-100 text-sky-700'
+  return 'bg-emerald-100 text-emerald-700'
+}
+
+function stockDotColor(label: string) {
+  const l = label.toLowerCase()
+  if (l.includes('epuizat') || l.includes('out')) return 'bg-red-500'
+  if (l.includes('curând') || l.includes('soon')) return 'bg-amber-400'
+  if (l.includes('comandă') || l.includes('order')) return 'bg-sky-500'
+  return 'bg-emerald-500'
+}
+
+/** Stock / delivery colored pill — shown on image */
+function HorizontalBadgePill({ badge }: { badge: HorizontalFeatureBadge }) {
+  const isStock = badge.type === 'stock'
+  const pillClass = stockVariantStyle(badge.type, badge.label)
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold font-['Inter'] ${pillClass}`}>
+      {isStock && (
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${stockDotColor(badge.label)}`} aria-hidden />
+      )}
+      {badge.type === 'delivery' && <Clock size={11} aria-hidden />}
+      {badge.label}
+    </span>
+  )
+}
+
+/** Transport / install / reduceri — compact icon + text, no background */
+function HorizontalFeatureItem({ badge, showDivider }: { badge: HorizontalFeatureBadge; showDivider: boolean }) {
+  const Icon =
+    badge.type === 'transport' ? Truck :
+    badge.type === 'install' ? Wrench :
+    Tag
+
+  const iconColor =
+    badge.type === 'transport' ? 'text-teal-600' :
+    badge.type === 'install' ? 'text-indigo-500' :
+    'text-violet-500'
+
+  const textColor =
+    badge.type === 'transport' ? 'text-teal-700' :
+    badge.type === 'install' ? 'text-indigo-700' :
+    'text-violet-700'
+
+  return (
+    <span className="inline-flex items-center gap-1.5 shrink-0">
+      <Icon size={13} className={`shrink-0 ${iconColor}`} aria-hidden />
+      <span className={`text-xs font-semibold font-['Inter'] ${textColor}`}>{badge.label}</span>
+      {showDivider && <span className="text-neutral-300 text-xs" aria-hidden>·</span>}
+    </span>
   )
 }
 

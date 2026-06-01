@@ -164,7 +164,7 @@ type Props = {
   product: PublicProduct
   labels: CatalogBadgeLabels
   className?: string
-  layout?: 'stack' | 'wrap'
+  layout?: 'stack' | 'wrap' | 'row'
   /** When set, only render these badge types (e.g. stock+delivery on image, transport above price). */
   include?: CatalogBadgeId[]
   /** White pills with black text — used for transport/reduceri above price on catalog cards. */
@@ -190,7 +190,9 @@ export default function ResidentialProductCatalogBadges({
       className={
         layout === 'stack'
           ? `flex flex-col items-start gap-1.5 ${className}`.trim()
-          : `flex flex-wrap items-center gap-2 ${className}`.trim()
+          : layout === 'row'
+            ? `flex flex-row flex-nowrap items-center gap-2 ${className}`.trim()
+            : `flex flex-wrap items-center gap-2 ${className}`.trim()
       }
     >
       {items.map((item) => (

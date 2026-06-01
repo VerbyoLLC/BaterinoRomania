@@ -18,9 +18,16 @@ import SEO from '../components/SEO'
 import {
   CatalogProductCardSkeleton,
   HorizontalCatalogProductCard,
+  type HorizontalFeatureBadge,
 } from '../components/product/CatalogProductCard'
-import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
-import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
+import {
+  catalogBadgeLabelsFromProduseTr,
+  getCatalogStockBadgeLabel,
+  getCatalogDeliveryBadgeLabel,
+  getCatalogTransportBadgeLabel,
+  getCatalogInstallBadgeLabel,
+  productHasEligibleReducerePrograms,
+} from '../lib/catalogProductBadges'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
@@ -226,6 +233,19 @@ export default function Produse() {
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
               const catalogBadgeLabels = catalogBadgeLabelsFromProduseTr(tr)
+              const featureBadges: HorizontalFeatureBadge[] = []
+              const stockLabel = getCatalogStockBadgeLabel(product, { inStock: tr.catalogStockInStock, outOfStock: tr.catalogStockOutOfStock, comingSoon: tr.catalogStockComingSoon, onOrder: tr.catalogStockOnOrder })
+              if (stockLabel) featureBadges.push({ type: 'stock', label: stockLabel })
+              const deliveryLabel = getCatalogDeliveryBadgeLabel(product, { h24: tr.catalogDelivery24h, h48: tr.catalogDelivery48h, d7_14: tr.catalogDelivery7_14d, d60: catalogBadgeLabels.delivery60d })
+              if (deliveryLabel) featureBadges.push({ type: 'delivery', label: deliveryLabel })
+              const transportLabel = getCatalogTransportBadgeLabel(product, { free: catalogBadgeLabels.transportFree, paid: catalogBadgeLabels.transportPaid })
+              if (transportLabel) featureBadges.push({ type: 'transport', label: transportLabel })
+              if (product.tipProdus === 'industrial') {
+                const installLabel = getCatalogInstallBadgeLabel(product, { baterino: catalogBadgeLabels.installBaterino, partner: catalogBadgeLabels.installPartner })
+                if (installLabel) featureBadges.push({ type: 'install', label: installLabel })
+              } else if (productHasEligibleReducerePrograms(product)) {
+                featureBadges.push({ type: 'reduceri', label: catalogBadgeLabels.reduceri })
+              }
               return (
                 <HorizontalCatalogProductCard
                   key={product.id}
@@ -248,24 +268,7 @@ export default function Produse() {
                       ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(product))
                       : null
                   }
-                  imageOverlay={
-                    <ResidentialProductCatalogBadges
-                      product={product}
-                      labels={catalogBadgeLabels}
-                      layout="stack"
-                      include={['stock', 'delivery']}
-                    />
-                  }
-                  priceAboveBadge={
-                    <ResidentialProductCatalogBadges
-                      product={product}
-                      labels={catalogBadgeLabels}
-                      layout="wrap"
-                      className="gap-1.5"
-                      include={product.tipProdus === 'industrial' ? ['transport', 'install'] : ['transport', 'reducere']}
-                      appearance="neutral"
-                    />
-                  }
+                  featureBadges={featureBadges}
                 />
               )
             })}
