@@ -123,11 +123,11 @@ export function IndustrialModelConfigurationCard({
     'cursor-pointer touch-manipulation text-left active:scale-[0.995] hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2'
 
   const shellClass = `flex min-h-0 min-w-0 w-full flex-col rounded-[10px] border border-neutral-200 bg-white shadow-sm transition-all duration-200 ease-out ${
-    stretchHeight ? 'h-full' : ''
+    stretchHeight ? 'h-full min-h-0 flex-1' : ''
   } ${
     onPress || onCardClick ? pressableClass : 'hover:border-neutral-300 hover:shadow-md hover:shadow-slate-900/8'
   } ${onCardClick && isCardExpanded ? 'border-slate-900 ring-1 ring-slate-900/15' : ''} ${
-    isCompact ? 'px-3 py-3 sm:px-3 sm:py-3.5' : 'px-4 py-4'
+    isCompact ? 'px-3 py-3 sm:px-3 sm:py-3.5' : stretchHeight ? 'px-4 py-5 sm:px-5 sm:py-6' : 'px-4 py-4'
   }`
 
   const inner = (

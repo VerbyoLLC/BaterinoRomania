@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useId, useCallback, type ReactNode } from 
 import { ChevronDown } from 'lucide-react'
 import { Link, useParams, Navigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getProduct, productHasEligibleReducerePrograms, residentialProductStockUnavailable, type PublicProduct } from '../lib/api'
+import { getProduct, type PublicProduct } from '../lib/api'
 import { getProductDetailTranslations, type ProductDetailTranslations } from '../i18n/product-detail'
 import SEO from '../components/SEO'
 import ProductPriceBlock from '../components/ProductPriceBlock'
 import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
-import ResidentialReducereProgramBadge from '../components/ResidentialReducereProgramBadge'
+import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
+import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
+import { getProduseTranslations } from '../i18n/produse'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
 import {
@@ -19,6 +21,9 @@ import {
   ResidentialTechSpecTable,
 } from '../components/product/ResidentialProductSpecCard'
 import { cacheProductTip, readCachedProductTip } from '../lib/productTipCache'
+import { normalizeProductFaq } from '../lib/productFaq'
+import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
+import ProductCaseStudiesSection from '../components/product/ProductCaseStudiesSection'
 import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 import CompatibilitateInvertorModal from '../components/CompatibilitateInvertorModal'
 
@@ -851,9 +856,8 @@ export default function ProductRezidential() {
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
-  const faqItems = Array.isArray(product.faq)
-    ? product.faq.filter((f) => (f.q?.trim() || f.a?.trim()))
-    : []
+  const faqItems = normalizeProductFaq(product.faq)
+  const caseStudyItems = normalizeProductCaseStudyExamples(product.caseStudyExamples)
   const divisionLabel = (() => {
     const cat = String((product as { categorie?: string }).categorie || '').toLowerCase()
     if (cat.includes('industrial')) return tr.sectorIndustrial
@@ -891,16 +895,14 @@ export default function ProductRezidential() {
               <h1 className="text-black text-2xl font-bold font-['Inter'] leading-tight tracking-tight m-0 sm:text-3xl">
                 {product.title}
               </h1>
-              {!residentialProductStockUnavailable(product) || productHasEligibleReducerePrograms(product) ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {!residentialProductStockUnavailable(product) ? (
-                    <span className="inline-flex max-w-full items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] shadow-sm ring-1 ring-emerald-800/40">
-                      {tr.residentialStockInStockBadge}
-                    </span>
-                  ) : null}
-                  <ResidentialReducereProgramBadge product={product} label={tr.programReducereBadge} />
-                </div>
-              ) : null}
+              <div className="mt-2">
+                <ResidentialProductCatalogBadges
+                  product={product}
+                  labels={catalogBadgeLabelsFromProduseTr(getProduseTranslations(language.code))}
+                  layout="wrap"
+                  include={['stock', 'delivery', 'transport']}
+                />
+              </div>
               {rawDesc ? (
                 <div className="mt-3 sm:mt-4 max-w-prose">
                   <p className="text-neutral-700 text-base font-['Inter'] leading-relaxed m-0">
@@ -1120,6 +1122,35 @@ export default function ProductRezidential() {
                 </button>
               </div>
             </section>
+
+              {faqItems.length > 0 ? (
+                <section className="mt-6 lg:mt-8" aria-labelledby="res-product-faq-heading">
+                  <h2
+                    id="res-product-faq-heading"
+                    className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6"
+                  >
+                    {tr.intrebariFrecvente}
+                  </h2>
+                  <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
+                    {faqItems.map((item, i) => (
+                      <details key={`faq-${i}-${item.q}`} className="group bg-white open:bg-neutral-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+                          <span className="min-w-0 flex-1 text-sm leading-snug sm:text-base">{item.q}</span>
+                          <ChevronDown
+                            size={22}
+                            strokeWidth={2}
+                            className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+                          <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{item.a}</p>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
           </div>
 
             <div className="order-6 hidden w-full flex-col gap-8 lg:order-none lg:flex lg:min-w-0">
@@ -1186,34 +1217,7 @@ export default function ProductRezidential() {
                 </section>
               )}
 
-              {faqItems.length > 0 ? (
-                <section aria-labelledby="res-product-faq-heading">
-                  <h2
-                    id="res-product-faq-heading"
-                    className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6"
-                  >
-                    {tr.intrebariFrecvente}
-                  </h2>
-                  <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
-                    {faqItems.map((item, i) => (
-                      <details key={`faq-${i}-${item.q}`} className="group bg-white open:bg-neutral-50/50">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
-                          <span className="min-w-0 flex-1 text-sm leading-snug sm:text-base">{item.q}</span>
-                          <ChevronDown
-                            size={22}
-                            strokeWidth={2}
-                            className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
-                            aria-hidden
-                          />
-                        </summary>
-                        <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
-                          <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{item.a}</p>
-                        </div>
-                      </details>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
+              <ProductCaseStudiesSection title={tr.studiiDeCaz} items={caseStudyItems} />
 
               <section className="flex flex-col gap-4">
                 <div className="relative h-64 w-full max-w-[592px] overflow-hidden rounded-[10px]">

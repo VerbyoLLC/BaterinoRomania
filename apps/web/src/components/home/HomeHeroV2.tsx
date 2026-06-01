@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { BadgePercent, Headphones, ShieldCheck, Truck, type LucideIcon } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 import { useHorizontalDragScroll } from '../../lib/useHorizontalDragScroll'
 import { smoothScrollTo } from '../../lib/smoothHorizontalScroll'
@@ -103,19 +104,7 @@ function HeroListDot({ light = false }: { light?: boolean }) {
   )
 }
 
-function HeroCheckMark() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0" aria-hidden>
-      <path
-        d="M3.5 7l2.5 2.5 4.5-5.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
+const INST_BENEFIT_ICONS: LucideIcon[] = [BadgePercent, ShieldCheck, Truck, Headphones]
 
 const CARD_ORDER: HeroV2CardId[] = ['industrial', 'rezidential', 'maritim', 'medical', 'instalatori']
 
@@ -636,39 +625,44 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   className="absolute inset-0 pointer-events-none rounded-xl"
                   style={{
                     background:
-                      'linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.42) 50%, rgba(0, 0, 0, 0.05) 62%, transparent 72%)',
+                      'linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.42) 55%, rgba(0, 0, 0, 0.05) 75%, transparent 85%)',
                   }}
                   aria-hidden
                 />
-                <div className="absolute inset-y-0 left-0 z-[2] flex h-full w-[58%] min-w-0 flex-col justify-center px-7 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
-                  <p className="mb-2 text-xs font-medium tracking-wide text-white/75 font-['Inter']">
+                <div className="absolute inset-y-0 left-0 z-[2] flex h-full w-[82%] min-w-0 flex-col justify-center px-7 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
+                  <p className="mb-2 text-xs font-medium tracking-wide text-white/75 font-['Inter'] sm:text-sm">
                     {tr.heroV2InstLead}
                   </p>
-                  <h2 className="m-0 text-[clamp(1.125rem,2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                  <h2 className="m-0 text-[clamp(1.125rem,2.2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
                     {tr.heroV2InstTitle}
                   </h2>
 
-                  <div className="mt-4 w-full rounded-md bg-white/20 px-4 py-4 backdrop-blur-md [text-shadow:none]">
+                  <div className="mt-3 w-full rounded-md border border-white/80 bg-white/20 px-3.5 py-3 backdrop-blur-md [text-shadow:none] sm:px-4 sm:py-3.5">
                     <ul className="space-y-2.5">
-                      {instBenefits.map((label) => (
-                        <li key={label} className="flex items-start gap-2 text-[13px] leading-snug text-white/90 font-['Inter']">
-                          <span className="text-white">
-                            <HeroCheckMark />
-                          </span>
-                          {label}
-                        </li>
-                      ))}
+                      {instBenefits.map((label, index) => {
+                        const Icon = INST_BENEFIT_ICONS[index]
+                        return (
+                          <li
+                            key={label}
+                            className="flex items-start gap-2 text-xs leading-snug text-white/90 font-['Inter'] sm:text-sm sm:leading-relaxed"
+                          >
+                            <Icon className="mt-0.5 size-4 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
+                            {label}
+                          </li>
+                        )
+                      })}
                     </ul>
                   </div>
+
+                  <Link
+                    to={card.to!}
+                    className={`mt-4 inline-flex h-10 items-center justify-center self-start rounded-[8px] bg-white px-5 text-sm font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
+                      isDragging ? 'pointer-events-none' : 'pointer-events-auto'
+                    }`}
+                  >
+                    {tr.heroV2InstCta}
+                  </Link>
                 </div>
-                <Link
-                  to={card.to!}
-                  className={`absolute bottom-6 right-6 z-[3] inline-flex h-9 items-center justify-center rounded-[8px] bg-white px-4 text-xs font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
-                    isDragging ? 'pointer-events-none' : 'pointer-events-auto'
-                  }`}
-                >
-                  {tr.heroV2InstCta}
-                </Link>
               </>
             ) : showCardContent(card) ? (
             <div className={`absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] ${isDragging ? 'pointer-events-none' : ''}`}>

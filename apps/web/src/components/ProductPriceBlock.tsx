@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom'
 import type { PublicProduct } from '../lib/api'
-import { getAuthRole, getResidentialCatalogStockListingCta } from '../lib/api'
+import {
+  getAuthRole,
+  getPartnerCatalogSaleUnitNumeric,
+  getResidentialCatalogStockListingCta,
+} from '../lib/api'
 import { getProduseTranslations } from '../i18n/produse'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
@@ -50,8 +54,12 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
     )
   }
 
-  const sale = num(product.salePrice)
-  const landed = num((product as { landedPrice?: string | number | null }).landedPrice)
+  const sale = isPartner
+    ? (() => {
+        const nu = getPartnerCatalogSaleUnitNumeric(product)
+        return Number.isNaN(nu) ? null : nu
+      })()
+    : num(product.salePrice)
   const vatPct = num((product as { vat?: string | number | null }).vat)
 
   const canSeeMoney =
@@ -105,14 +113,6 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
           embedded ? 'text-base' : 'space-y-2 text-sm rounded-xl border border-neutral-200 bg-white/90 px-4 py-4 shadow-sm'
         } ${className}`}
       >
-        {landed != null && landed > 0 ? (
-          <div className="flex justify-between gap-4 text-sm">
-            <span className="text-gray-600">{tr.landedLabel}</span>
-            <span className="font-semibold tabular-nums">
-              {fmtMoney(landed)} {tr.currencySuffix}
-            </span>
-          </div>
-        ) : null}
         <div className="flex justify-between gap-4 text-sm">
           <span className="text-gray-600">{tr.saleLabel}</span>
           <span className="font-semibold tabular-nums">

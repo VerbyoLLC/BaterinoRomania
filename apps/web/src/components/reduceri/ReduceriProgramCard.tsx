@@ -140,9 +140,9 @@ export function ReduceriProgramCard({
               </button>
             </div>
           ) : null}
-          <div className="absolute left-5 right-5 bottom-4 z-10 flex flex-col gap-0.5">
-            <div className="text-white text-base font-medium font-['Nunito_Sans'] leading-5">PROGRAMUL</div>
-            <div className="text-white text-xl font-bold font-['Inter'] leading-7">{programName}</div>
+          <div className="absolute left-5 right-5 bottom-4 z-10 flex flex-col">
+            <div className="text-white text-base font-medium font-['Nunito_Sans'] leading-none">PROGRAMUL</div>
+            <div className="text-white text-xl font-bold font-['Inter'] leading-tight">{programName}</div>
           </div>
         </div>
 

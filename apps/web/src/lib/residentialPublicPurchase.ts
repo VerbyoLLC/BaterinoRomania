@@ -6,8 +6,9 @@ function num(v: string | number | null | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Residential template: show public client purchase UI (price, programme, qty, order). */
+/** Residential template: show public client purchase UI (price, programme, qty, order). Never on industrial PDP. */
 export function showResidentialClientPurchaseUI(product: PublicProduct): boolean {
+  if (String(product.tipProdus || '').toLowerCase() === 'industrial') return false
   const vis = (product.priceVisibility as string) || 'public'
   if (vis !== 'public') return false
   if (residentialProductStockUnavailable(product)) return false

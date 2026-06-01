@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type TouchEvent } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowDown,
@@ -16,11 +16,17 @@ import {
   X,
 } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
+import { getPublicProductModels } from '../lib/api'
+import { normalizeProductFaq } from '../lib/productFaq'
+import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
+import ProductCaseStudiesSection from '../components/product/ProductCaseStudiesSection'
+import { resolveIndustrialModelBrochureUrl } from '../lib/industrialModelBrochure'
 import { IndustrialDesktopWhatsappSlide } from '../components/product/IndustrialDesktopWhatsappSlide'
 import {
   IndustrialModelConfigurationCard,
   IndustrialModelConfigurationSheetHeader,
 } from '../components/product/IndustrialModelConfigurationCard'
+import { IndustrialSingleModelCompanionCards } from '../components/product/IndustrialSingleModelCompanionCards'
 import { IndustrialCarouselSlideImage } from '../components/product/ProductPageLoaders'
 import IndustrialTechnicalSpecTable from '../components/IndustrialTechnicalSpecTable'
 import {
@@ -31,7 +37,9 @@ import {
 import SEO from '../components/SEO'
 import OutlineButton from '../components/OutlineButton'
 import ProductPriceBlock from '../components/ProductPriceBlock'
-import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
+import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
+import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
+import { getProduseTranslations } from '../i18n/produse'
 import { getProductDetailTranslations } from '../i18n/product-detail'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
 import type { LangCode } from '../i18n/menu'
@@ -47,6 +55,7 @@ const TABS = [
   { id: 'spec' as const },
   { id: 'services' as const },
   { id: 'warranty' as const },
+  { id: 'caseStudies' as const },
   { id: 'faq' as const },
 ] as const
 
@@ -95,7 +104,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const currentImg = imgs[currentSlide] || ''
 
   const keyAdvantages = Array.isArray(product.keyAdvantages) ? product.keyAdvantages : []
-  const faqItems = Array.isArray(product.faq) ? product.faq.filter((f) => f.q?.trim() || f.a?.trim()) : []
+  const faqItems = normalizeProductFaq(product.faq)
+  const caseStudyItems = normalizeProductCaseStudyExamples(product.caseStudyExamples)
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => tab.id !== 'caseStudies' || caseStudyItems.length > 0),
+    [caseStudyItems.length],
+  )
   const docs = product.documenteTehnice || []
   const brochureUrl = docs.find((d) => d.url)?.url || ''
   const technicalSpecsRaw =
@@ -103,6 +117,8 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
     (product as { technical_specs_models?: unknown }).technical_specs_models
   const technicalSpecs = normalizeIndustrialTechnicalSpecs(technicalSpecsRaw) ?? { entries: [] }
   const modelEntries = technicalSpecs.entries
+  const isSingleModelRow = modelEntries.length === 1
+  const singleModelEntry = isSingleModelRow ? modelEntries[0]! : null
   const modelsUseSlider = modelEntries.length > MODEL_SLIDER_THRESHOLD
   const modelPages = modelsUseSlider
     ? chunkModelEntries(modelEntries, MODEL_DESKTOP_SLIDE_SIZE)
@@ -111,10 +127,30 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const [modelConfigPage, setModelConfigPage] = useState(0)
   const [mobileModelsVisible, setMobileModelsVisible] = useState(MOBILE_MODELS_INITIAL)
   const [mobileSpecModalEntry, setMobileSpecModalEntry] = useState<IndustrialModelSpecEntry | null>(null)
+  const [productModelCatalog, setProductModelCatalog] = useState<
+    Awaited<ReturnType<typeof getPublicProductModels>>
+  >([])
   const heroTouchStartX = useRef<number | null>(null)
   const heroDragPxRef = useRef(0)
   const [heroDragPx, setHeroDragPx] = useState(0)
   const [heroIsDragging, setHeroIsDragging] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getPublicProductModels()
+      .then((rows) => {
+        if (!cancelled) setProductModelCatalog(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setProductModelCatalog([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const brochureUrlForModel = (entry: IndustrialModelSpecEntry) =>
+    resolveIndustrialModelBrochureUrl(entry, productModelCatalog)
 
   useEffect(() => {
     setModelConfigPage(0)
@@ -245,6 +281,8 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
         return tr.tabServices
       case 'warranty':
         return tr.tabWarranty
+      case 'caseStudies':
+        return tr.tabCaseStudies
       case 'faq':
         return tr.tabFaq
     }
@@ -288,6 +326,15 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               {subtitle}
             </p>
           )}
+          <div className="mt-4 flex justify-center sm:mt-5">
+            <ResidentialProductCatalogBadges
+              product={product}
+              labels={catalogBadgeLabelsFromProduseTr(getProduseTranslations(language.code))}
+              layout="wrap"
+              className="justify-center gap-1.5"
+              include={['stock', 'delivery', 'transport', 'install']}
+            />
+          </div>
         </header>
 
         <div className="mb-4 flex w-[calc(100%+2.5rem)] max-w-none flex-col sm:mx-auto sm:mb-5 sm:w-full sm:max-w-[1200px] -mx-5">
@@ -398,7 +445,9 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
         {modelEntries.length > 0 ? (
           <div
-            className="mx-auto w-full min-w-0 max-w-[1200px] mb-6 sm:mb-8"
+            className={`mx-auto mb-10 w-full min-w-0 max-w-[1200px] sm:mb-12 lg:mb-14${
+              isSingleModelRow ? ' lg:pb-14' : ''
+            }`}
             aria-label={tr.overviewModelsHeading}
           >
             <p className="m-0 mb-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter']">
@@ -429,6 +478,15 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     onPress={() => setMobileSpecModalEntry(entry)}
                   />
                 ))}
+                {isSingleModelRow && singleModelEntry ? (
+                  <IndustrialSingleModelCompanionCards
+                    tr={tr}
+                    stretchHeight
+                    technicalBrochureUrl={brochureUrlForModel(singleModelEntry)}
+                    productBrochureUrl={brochureUrl}
+                    modelName={singleModelEntry.modelName}
+                  />
+                ) : null}
               </div>
               {mobileModelsVisible < modelEntries.length ? (
                 <div className="mt-4 flex justify-center">
@@ -505,6 +563,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                     productTitle={product.title}
                                     modelName={entry.modelName}
                                     tr={tr}
+                                    technicalBrochureUrl={brochureUrlForModel(entry)}
                                   />
                                 </div>
                               </div>
@@ -515,6 +574,38 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     </div>
                   </div>
                 </div>
+              </div>
+            ) : isSingleModelRow && singleModelEntry ? (
+              <div className="hidden w-full min-w-0 items-stretch gap-3 sm:gap-4 lg:grid lg:grid-cols-2">
+                <div
+                  className="group relative z-10 flex h-full min-h-0 min-w-0 flex-col outline-none hover:z-20 focus-within:z-20"
+                  tabIndex={0}
+                >
+                  <div className="relative flex h-full min-h-0 flex-1 flex-col">
+                    <IndustrialModelConfigurationCard
+                      entry={singleModelEntry}
+                      tr={tr}
+                      specLabel={specLabel}
+                      manyModels={false}
+                      stretchHeight
+                    />
+                    <IndustrialDesktopWhatsappSlide
+                      reveal="group-hover"
+                      open={false}
+                      productTitle={product.title}
+                      modelName={singleModelEntry.modelName}
+                      tr={tr}
+                      technicalBrochureUrl={brochureUrlForModel(singleModelEntry)}
+                    />
+                  </div>
+                </div>
+                <IndustrialSingleModelCompanionCards
+                  tr={tr}
+                  stretchHeight
+                  technicalBrochureUrl={brochureUrlForModel(singleModelEntry)}
+                  productBrochureUrl={brochureUrl}
+                  modelName={singleModelEntry.modelName}
+                />
               </div>
             ) : (
               <div
@@ -543,6 +634,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                         productTitle={product.title}
                         modelName={entry.modelName}
                         tr={tr}
+                        technicalBrochureUrl={brochureUrlForModel(entry)}
                       />
                     </div>
                   </div>
@@ -552,7 +644,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           </div>
         ) : null}
 
-        <section className="border-t border-gray-100 pt-6 sm:pt-8">
+        <section className="border-t border-gray-100 pt-10 sm:pt-12">
           <h2 className="text-gray-700 text-xl lg:text-3xl font-bold font-['Inter'] leading-7 lg:leading-10 m-0 mb-6 sm:mb-7 lg:mb-8">
             {tr.overviewTitle}
           </h2>
@@ -572,7 +664,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                 )}
               </div>
 
-              {brochureUrl && (
+              {brochureUrl && !isSingleModelRow ? (
                 <a
                   href={brochureUrl}
                   target="_blank"
@@ -582,7 +674,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                   <Download size={18} aria-hidden />
                   {tr.downloadBrochure}
                 </a>
-              )}
+              ) : null}
             </div>
 
             {/* ── Right: sticky sidebar with boxes ── */}
@@ -590,22 +682,15 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
               {/* Price / contact */}
               <div className="min-w-0 rounded-[10px] border border-neutral-200/80 bg-neutral-100 p-5 sm:p-6">
+                <div className="mb-4">
+                  <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+                </div>
+                <hr className="mb-4 border-0 border-t border-neutral-200" aria-hidden />
                 <img
                   src="/images/shared/baterino-industrial-black.png"
                   alt="Baterino Industrial"
                   className="mb-3 h-5 w-auto max-w-full object-contain object-left"
                 />
-                <div className="mb-4">
-                  {showResidentialClientPurchaseUI(product) ? (
-                    <ResidentialClientPriceBlock
-                      product={product}
-                      tr={productDetailTr}
-                      lang={language.code as LangCode}
-                    />
-                  ) : (
-                    <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
-                  )}
-                </div>
                 {tr.contactBlurb.trim() ? (
                   <>
                     <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>
@@ -635,7 +720,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             role="tablist"
             aria-label={tr.tablistAria}
           >
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -762,6 +847,9 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                   })}
                 </div>
               </div>
+            )}
+            {activeTab === 'caseStudies' && (
+              <ProductCaseStudiesSection title={tr.tabCaseStudies} items={caseStudyItems} />
             )}
             {activeTab === 'faq' && (
               <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">

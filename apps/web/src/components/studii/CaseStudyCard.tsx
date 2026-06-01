@@ -136,3 +136,42 @@ export default function CaseStudyCard({
     </CardShell>
   )
 }
+
+export function CaseStudyCardSkeleton() {
+  return (
+    <article
+      className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white animate-pulse"
+      aria-hidden
+    >
+      <div className="relative aspect-[16/10] w-full bg-neutral-200" />
+
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <div className="h-6 w-24 rounded-md bg-neutral-200" />
+
+        <div className="flex flex-col gap-2">
+          <div className="h-6 w-full max-w-[92%] rounded bg-neutral-200" />
+          <div className="h-6 w-3/4 max-w-[75%] rounded bg-neutral-200" />
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <div className="h-4 w-4 shrink-0 rounded-full bg-neutral-200" />
+            <div className="h-4 w-32 rounded bg-neutral-200" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg bg-neutral-100 px-3 py-2.5">
+              <div className="h-3 w-16 rounded bg-neutral-200" />
+              <div className="mt-2 h-4 w-20 rounded bg-neutral-200" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-auto flex flex-wrap gap-2">
+          <div className="h-7 w-20 rounded-md border border-neutral-200 bg-neutral-100" />
+          <div className="h-7 w-16 rounded-md border border-neutral-200 bg-neutral-100" />
+          <div className="h-7 w-24 rounded-md border border-neutral-200 bg-neutral-100" />
+        </div>
+      </div>
+    </article>
+  )
+}

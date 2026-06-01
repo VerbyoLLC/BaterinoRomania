@@ -11,6 +11,7 @@ export type IndustrialBessTemplateTranslations = {
   tabServices: string
   tabWarranty: string
   tabFaq: string
+  tabCaseStudies: string
   overviewTitle: string
   /** Heading above per-model summary cards in Overview */
   overviewModelsHeading: string
@@ -20,8 +21,18 @@ export type IndustrialBessTemplateTranslations = {
   overviewModelsTapHint: string
   /** Desktop WhatsApp: prefilled chat text; placeholders {product}, {model} */
   modelDesktopWhatsappPrefill: string
-  /** Desktop: label for WhatsApp link under card */
-  modelDesktopDetailsCta: string
+  /** Desktop: label for WhatsApp „Cere ofertă” on model card hover */
+  modelDesktopCereOfertaCta: string
+  /** Desktop: download technical PDF when brochure exists for model */
+  modelDesktopTechnicalPdfCta: string
+  /** Sole model row: companion cards beside the configuration card */
+  singleModelImportingTitle: string
+  singleModelImportingBody: string
+  singleModelTransportTitle: string
+  singleModelTransportBody: string
+  singleModelDocumentsTitle: string
+  singleModelDocumentsBody: string
+  singleModelDocumentsDownloadCta: string
   overviewP1: string
   overviewP2: string
   downloadBrochure: string
@@ -198,13 +209,25 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     tabServices: 'Baterino services',
     tabWarranty: 'Warranty and support',
     tabFaq: "FAQ's",
+    tabCaseStudies: 'Case studies',
     overviewTitle: 'Overview',
     overviewModelsHeading: 'Model highlights',
     modelsLoadMore: 'Load more',
     overviewModelsTapHint: 'Tap a model to see technical details',
     modelDesktopWhatsappPrefill:
       'Hi. I would like to know more details about {product}. Model: {model}.',
-    modelDesktopDetailsCta: 'Product details',
+    modelDesktopCereOfertaCta: 'Request a quote',
+    modelDesktopTechnicalPdfCta: 'Technical details',
+    singleModelImportingTitle: 'Importing and sourcing',
+    singleModelImportingBody:
+      'Direct procurement from manufacturers with quality assurance, compliance verification, and logistics coordination across Southeast Asia and Eastern Europe.',
+    singleModelTransportTitle: 'Transport and Baterino installation',
+    singleModelTransportBody:
+      'Nationwide delivery and on-site installation by Baterino certified technicians — site preparation, system integration, testing, and grid connection support.',
+    singleModelDocumentsTitle: 'Download technical documents',
+    singleModelDocumentsBody:
+      'Full technical specifications, drawings, and product documentation are available in the technical brochure for this model.',
+    singleModelDocumentsDownloadCta: 'Download PDF',
     overviewP1:
       'The 20FT Container BESS delivers 334–501.5 kWh of modular energy storage with advanced liquid cooling, flexible expansion, and industry-leading reliability. Supports grid-side, transmission-side, and user-side deployment scenarios.',
     overviewP2:
@@ -353,13 +376,25 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     tabServices: 'Servicii Baterino',
     tabWarranty: 'Garanție și suport',
     tabFaq: 'Întrebări frecvente',
+    tabCaseStudies: 'Studii de caz',
     overviewTitle: 'Prezentare',
     overviewModelsHeading: 'Configurații disponibile',
     modelsLoadMore: 'Încarcă mai mult',
     overviewModelsTapHint: 'Apasă pe model pentru a vedea detalii tehnice',
     modelDesktopWhatsappPrefill:
       'Salut. Aș dori să aflu mai multe detalii despre {product}. Model {model}.',
-    modelDesktopDetailsCta: 'Detalii despre produs',
+    modelDesktopCereOfertaCta: 'Cere ofertă',
+    modelDesktopTechnicalPdfCta: 'Detalii tehnice',
+    singleModelImportingTitle: 'Import și aprovizionare',
+    singleModelImportingBody:
+      'Achiziție directă de la producători, asigurarea calității, verificări de conformitate și logistică în Asia de Sud-Est și Europa de Est.',
+    singleModelTransportTitle: 'Transport și instalare Baterino',
+    singleModelTransportBody:
+      'Livrare națională și instalare la fața locului de către tehnicieni certificați Baterino — pregătire amplasament, integrare, testare și conectare la rețea.',
+    singleModelDocumentsTitle: 'Descarcă documentația tehnică',
+    singleModelDocumentsBody:
+      'Specificațiile complete, desenele și documentația produsului sunt disponibile în broșura tehnică pentru acest model.',
+    singleModelDocumentsDownloadCta: 'Descarcă PDF',
     overviewP1:
       'BESS-ul în container de 20ft oferă 334–501,5 kWh de stocare modulară cu răcire lichidă avansată, expansiune flexibilă și fiabilitate industrială. Compatibil cu scenarii în rețea, transport și parte utilizator.',
     overviewP2:
@@ -508,12 +543,24 @@ const translations: Record<LangCode, IndustrialBessTemplateTranslations> = {
     tabServices: 'Baterino 服务',
     tabWarranty: '质保与支持',
     tabFaq: '常见问题',
+    tabCaseStudies: '案例研究',
     overviewTitle: '概述',
     overviewModelsHeading: '型号要点',
     modelsLoadMore: '加载更多',
     overviewModelsTapHint: '点击型号查看技术详情',
     modelDesktopWhatsappPrefill: '您好，我想了解更多关于 {product} 的信息。型号：{model}。',
-    modelDesktopDetailsCta: '产品详情',
+    modelDesktopCereOfertaCta: '索取报价',
+    modelDesktopTechnicalPdfCta: '技术详情',
+    singleModelImportingTitle: '进口与采购',
+    singleModelImportingBody:
+      '直连制造商采购，质量与合规把关，协同东南亚与东欧物流。',
+    singleModelTransportTitle: '运输与 Baterino 安装',
+    singleModelTransportBody:
+      'Baterino 认证工程师全国配送与现场安装——场地准备、系统集成、测试与并网支持。',
+    singleModelDocumentsTitle: '下载技术文档',
+    singleModelDocumentsBody:
+      '该型号的完整技术规格、图纸与产品文档见技术手册。',
+    singleModelDocumentsDownloadCta: '下载 PDF',
     overviewP1:
       '20尺集装箱BESS以先进液冷、灵活扩展与工业级可靠性提供334–501.5 kWh模块化储能，适用于电网侧、输配电侧与用户侧场景。',
     overviewP2:

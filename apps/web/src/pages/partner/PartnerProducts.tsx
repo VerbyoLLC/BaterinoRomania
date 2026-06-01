@@ -35,6 +35,8 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { getProductDetailTranslations } from '../../i18n/product-detail'
 import { getProduseTranslations } from '../../i18n/produse'
+import ResidentialProductCatalogBadges from '../../components/product/ResidentialProductCatalogBadges'
+import { catalogBadgeLabelsFromProduseTr } from '../../lib/catalogProductBadges'
 import {
   partnerCartLoadingLabel,
   partnerCartTotalsLabels,
@@ -137,43 +139,6 @@ function getPartnerCatalogSection(p: PublicProduct): PartnerCatalogSectionId {
 
 const PARTNER_TOOLBAR_ICON_BTN =
   'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/80 disabled:opacity-50'
-
-/* ─────────────────────────────────────────────── StockBadge ─── */
-function StockBadge({
-  product,
-  inStockLabel,
-  outOfStockLabel,
-  comingSoonLabel,
-}: {
-  product: PublicProduct
-  inStockLabel: string
-  outOfStockLabel: string
-  comingSoonLabel: string
-}) {
-  const status = product.catalogStockStatus
-  if (status === 'out_of_stock') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 font-['Inter']">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-        {outOfStockLabel}
-      </span>
-    )
-  }
-  if (status === 'coming_soon') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 font-['Inter']">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
-        {comingSoonLabel}
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 font-['Inter']">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-      {inStockLabel}
-    </span>
-  )
-}
 
 /* ─────────────────────────────────────────────── Cart skeleton ─── */
 function PartnerCartPanelSkeletonInner() {
@@ -490,7 +455,7 @@ function PartnerProductCard({
       }`}
     >
       {/* Image */}
-      <div className="relative bg-[#f7f7f7]">
+        <div className="relative bg-[#f7f7f7]">
         <div className="flex h-56 items-center justify-center p-6">
           <img
             src={img}
@@ -499,12 +464,12 @@ function PartnerProductCard({
             loading="lazy"
           />
       </div>
-        <div className="absolute left-3 top-3">
-          <StockBadge
+        <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)]">
+          <ResidentialProductCatalogBadges
             product={product}
-            inStockLabel={trProduse.catalogStockInStock}
-            outOfStockLabel={trProduse.catalogStockOutOfStock}
-            comingSoonLabel={trProduse.catalogStockComingSoon}
+            labels={catalogBadgeLabelsFromProduseTr(trProduse)}
+            layout="stack"
+            include={['stock', 'delivery']}
           />
         </div>
       </div>
@@ -524,6 +489,16 @@ function PartnerProductCard({
 
         {/* Price */}
         <div className="mt-auto pt-1">
+          <div className="mb-1.5 flex justify-center">
+            <ResidentialProductCatalogBadges
+              product={product}
+              labels={catalogBadgeLabelsFromProduseTr(trProduse)}
+              layout="wrap"
+              className="justify-center gap-1.5"
+              include={['transport', 'reducere']}
+              appearance="neutral"
+            />
+          </div>
           {priceDisplay && !stockUnavailable ? (
             <div>
               <p className="m-0 text-base font-extrabold tabular-nums text-slate-900 font-['Inter']">
@@ -1295,11 +1270,10 @@ export default function PartnerProducts() {
                       </div>
                       <div className="min-w-0">
                         <div className="mb-1">
-                          <StockBadge
+                          <ResidentialProductCatalogBadges
                             product={p}
-                            inStockLabel={trProduse.catalogStockInStock}
-                            outOfStockLabel={trProduse.catalogStockOutOfStock}
-                            comingSoonLabel={trProduse.catalogStockComingSoon}
+                            labels={catalogBadgeLabelsFromProduseTr(trProduse)}
+                            layout="wrap"
                           />
                         </div>
                         <p className="m-0 text-sm font-bold leading-snug text-slate-900 font-['Inter']">{p.title}</p>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Info } from 'lucide-react'
 import {
   createProduct,
   updateProduct,
@@ -29,8 +29,29 @@ import {
   sanitizePriceInputTyping,
 } from '../../lib/formInputSanitize'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
+import { MAX_PRODUCT_CASE_STUDIES } from '../../lib/productCaseStudies'
 
 const MAX_IMAGES = 5
+
+function AdminInfoTooltip({ label, text }: { label: string; text: string }) {
+  return (
+    <span className="relative inline-flex group">
+      <button
+        type="button"
+        className="rounded-full p-0.5 text-neutral-400 hover:text-neutral-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+        aria-label={label}
+      >
+        <Info className="size-4" aria-hidden />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-50 w-64 -translate-y-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs leading-snug text-slate-700 font-['Inter'] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  )
+}
 
 export default function AdminProducts() {
   const { currency } = useCatalogCurrency()
@@ -41,7 +62,6 @@ export default function AdminProducts() {
   const cardPhotoInputRef = useRef<HTMLInputElement>(null)
   const seoOgImageInputRef = useRef<HTMLInputElement>(null)
   const [panelOpen, setPanelOpen] = useState(false)
-  const [isClosingPanel, setIsClosingPanel] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -95,12 +115,17 @@ export default function AdminProducts() {
   const [temperaturaStocareMax, setTemperaturaStocareMax] = useState('')
   const [umiditateMin, setUmiditateMin] = useState('')
   const [umiditateMax, setUmiditateMax] = useState('')
-  const [landedPrice, setLandedPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
+  const [partnerSalePrice, setPartnerSalePrice] = useState('')
   const [vat, setVat] = useState('')
   const [priceVisibility, setPriceVisibility] = useState<'hidden' | 'public' | 'partner_only'>('public')
   const [pricePresentation, setPricePresentation] = useState<'simple' | 'detailed'>('simple')
-  const [catalogStockStatus, setCatalogStockStatus] = useState<'in_stock' | 'out_of_stock' | 'coming_soon'>('in_stock')
+  const [catalogStockStatus, setCatalogStockStatus] = useState<
+    'in_stock' | 'out_of_stock' | 'coming_soon' | 'on_order'
+  >('in_stock')
+  const [catalogDeliveryBadge, setCatalogDeliveryBadge] = useState<'24h' | '48h' | '7_14d' | '60d'>('48h')
+  const [catalogTransportBadge, setCatalogTransportBadge] = useState<'free' | 'paid'>('free')
+  const [catalogInstallBadge, setCatalogInstallBadge] = useState<'baterino' | 'partner'>('baterino')
   const [promovarePeContClient, setPromovarePeContClient] = useState(false)
   const [promovarePeContPartener, setPromovarePeContPartener] = useState(false)
   const [adminReducerPrograms, setAdminReducerPrograms] = useState<ReducereProgramRow[]>([])
@@ -120,6 +145,11 @@ export default function AdminProducts() {
     { descriere: '', file: null },
   ])
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }])
+  const [caseStudyExamples, setCaseStudyExamples] = useState<
+    { title: string; subtitle: string; location: string; file: File | null; url?: string; preview?: string }[]
+  >([])
+  const caseStudyFileInputRef = useRef<HTMLInputElement>(null)
+  const caseStudyUploadIndexRef = useRef(0)
   const [alimentaModalContent, setAlimentaModalContent] = useState<string>('')
   const [cardPhoto, setCardPhoto] = useState<{
     file: File | null
@@ -322,11 +352,11 @@ export default function AdminProducts() {
     const umid = parseRange((row as { umiditate?: string }).umiditate)
     setUmiditateMin(umid.min.replace('%', ''))
     setUmiditateMax(umid.max.replace('%', ''))
-    const land = (row as { landedPrice?: string | number }).landedPrice
     const sale = row.salePrice
     const v = (row as { vat?: string | number }).vat
-    setLandedPrice(land != null && String(land).trim() ? formatPriceInputDisplay(String(land)) : '')
     setSalePrice(sale != null && String(sale).trim() ? formatPriceInputDisplay(String(sale)) : '')
+    const psp = (row as { partnerSalePrice?: string | number }).partnerSalePrice
+    setPartnerSalePrice(psp != null && String(psp).trim() ? formatPriceInputDisplay(String(psp)) : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
     const pv = String((row as { priceVisibility?: string }).priceVisibility || 'public')
     setPriceVisibility(
@@ -336,8 +366,22 @@ export default function AdminProducts() {
     setPricePresentation(pp === 'detailed' ? 'detailed' : 'simple')
     const cs = String((row as { catalogStockStatus?: string }).catalogStockStatus || '')
     setCatalogStockStatus(
-      cs === 'out_of_stock' ? 'out_of_stock' : cs === 'coming_soon' ? 'coming_soon' : 'in_stock',
+      cs === 'out_of_stock'
+        ? 'out_of_stock'
+        : cs === 'coming_soon'
+          ? 'coming_soon'
+          : cs === 'on_order'
+            ? 'on_order'
+            : 'in_stock',
     )
+    const cd = String((row as { catalogDeliveryBadge?: string }).catalogDeliveryBadge || '')
+    setCatalogDeliveryBadge(
+      cd === '24h' ? '24h' : cd === '7_14d' ? '7_14d' : cd === '60d' ? '60d' : '48h',
+    )
+    const ct = String((row as { catalogTransportBadge?: string }).catalogTransportBadge || '')
+    setCatalogTransportBadge(ct === 'paid' ? 'paid' : 'free')
+    const ci = String((row as { catalogInstallBadge?: string }).catalogInstallBadge || '')
+    setCatalogInstallBadge(ci === 'partner' ? 'partner' : 'baterino')
     setPromovarePeContClient((row as { promovarePeContClient?: boolean }).promovarePeContClient === true)
     setPromovarePeContPartener((row as { promovarePeContPartener?: boolean }).promovarePeContPartener === true)
     setReducereProgramIds(normalizeProductReducereProgramIds(row))
@@ -358,6 +402,19 @@ export default function AdminProducts() {
       Array.isArray(faqData) && faqData.length > 0
         ? faqData.map((f) => ({ q: f.q || '', a: f.a || '' }))
         : [{ q: '', a: '' }]
+    )
+    const csRaw = (row as { caseStudyExamples?: { title: string; subtitle: string; location?: string; image: string }[] }).caseStudyExamples
+    setCaseStudyExamples(
+      Array.isArray(csRaw) && csRaw.length > 0
+        ? csRaw.slice(0, MAX_PRODUCT_CASE_STUDIES).map((x) => ({
+            title: x.title || '',
+            subtitle: x.subtitle || '',
+            location: x.location || '',
+            file: null,
+            url: x.image,
+            preview: x.image || '',
+          }))
+        : [],
     )
     const alimenta = (row as { alimentaModalContent?: unknown }).alimentaModalContent
     setAlimentaModalContent(
@@ -418,12 +475,15 @@ export default function AdminProducts() {
     setTemperaturaStocareMax('')
     setUmiditateMin('')
     setUmiditateMax('')
-    setLandedPrice('')
     setSalePrice('')
+    setPartnerSalePrice('')
     setVat('')
     setPriceVisibility('public')
     setPricePresentation('simple')
     setCatalogStockStatus('in_stock')
+    setCatalogDeliveryBadge('48h')
+    setCatalogTransportBadge('free')
+    setCatalogInstallBadge('baterino')
     setPromovarePeContClient(false)
     setPromovarePeContPartener(false)
     setReducereProgramIds([])
@@ -436,6 +496,7 @@ export default function AdminProducts() {
     })
     setDocumenteTehnice([{ descriere: '', file: null }])
     setFaq([{ q: '', a: '' }])
+    setCaseStudyExamples([])
     setAlimentaModalContent('')
     setCardPhoto((prev) => {
       if (prev.preview.startsWith('blob:')) URL.revokeObjectURL(prev.preview)
@@ -531,6 +592,54 @@ export default function AdminProducts() {
   const removeFaqItem = (index: number) => {
     if (faq.length <= 1) return
     setFaq((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const addCaseStudyExample = () => {
+    setCaseStudyExamples((prev) => {
+      if (prev.length >= MAX_PRODUCT_CASE_STUDIES) return prev
+      return [...prev, { title: '', subtitle: '', location: '', file: null }]
+    })
+  }
+
+  const removeCaseStudyExample = (index: number) => {
+    setCaseStudyExamples((prev) => {
+      const removed = prev[index]
+      if (removed?.preview?.startsWith('blob:')) URL.revokeObjectURL(removed.preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const setCaseStudyExampleField = (index: number, field: 'title' | 'subtitle' | 'location', value: string) => {
+    setCaseStudyExamples((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  const triggerCaseStudyUpload = (index: number) => {
+    caseStudyUploadIndexRef.current = index
+    caseStudyFileInputRef.current?.click()
+  }
+
+  const onCaseStudyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const index = caseStudyUploadIndexRef.current
+    const file = e.target.files?.[0]
+    if (file?.type.startsWith('image/')) {
+      setCaseStudyExamples((prev) => {
+        const next = [...prev]
+        const prevRow = next[index]
+        if (prevRow?.preview?.startsWith('blob:')) URL.revokeObjectURL(prevRow.preview)
+        next[index] = {
+          ...next[index],
+          file,
+          preview: URL.createObjectURL(file),
+          url: undefined,
+        }
+        return next
+      })
+    }
+    e.target.value = ''
   }
 
   const addKeyAdvantage = () => {
@@ -727,28 +836,22 @@ export default function AdminProducts() {
   }
 
   const handleClosePanel = () => {
-    setIsClosingPanel(true)
-  }
-
-  const handlePanelTransitionEnd = (e: React.TransitionEvent) => {
-    if (e.target !== e.currentTarget) return
-    if (isClosingPanel) {
-      images.forEach(({ preview }) => preview.startsWith('blob:') && URL.revokeObjectURL(preview))
-      keyAdvantages.forEach((ka) => ka.preview?.startsWith('blob:') && URL.revokeObjectURL(ka.preview))
-      if (cardPhoto.preview.startsWith('blob:')) URL.revokeObjectURL(cardPhoto.preview)
-      setSeoOgImagePhoto((og) => {
-        if (og.preview.startsWith('blob:')) URL.revokeObjectURL(og.preview)
-        return { file: null, preview: '' }
-      })
-      setImages([])
-      setKeyAdvantages([])
-      setCardPhoto({ file: null, preview: '' })
-      setTechnicalSpecs(createEmptyIndustrialTechnicalSpecs())
-      setTechnicalSpecModelExpanded([])
-      setEditingProductId(null)
-      setPanelOpen(false)
-      setIsClosingPanel(false)
-    }
+    images.forEach(({ preview }) => preview.startsWith('blob:') && URL.revokeObjectURL(preview))
+    keyAdvantages.forEach((ka) => ka.preview?.startsWith('blob:') && URL.revokeObjectURL(ka.preview))
+    caseStudyExamples.forEach((row) => row.preview?.startsWith('blob:') && URL.revokeObjectURL(row.preview))
+    if (cardPhoto.preview.startsWith('blob:')) URL.revokeObjectURL(cardPhoto.preview)
+    setSeoOgImagePhoto((og) => {
+      if (og.preview.startsWith('blob:')) URL.revokeObjectURL(og.preview)
+      return { file: null, preview: '' }
+    })
+    setImages([])
+    setKeyAdvantages([])
+    setCaseStudyExamples([])
+    setCardPhoto({ file: null, preview: '' })
+    setTechnicalSpecs(createEmptyIndustrialTechnicalSpecs())
+    setTechnicalSpecModelExpanded([])
+    setEditingProductId(null)
+    setPanelOpen(false)
   }
 
   const buildPayload = async () => {
@@ -795,6 +898,23 @@ export default function AdminProducts() {
     }
 
     const faqFiltered = faq.filter((item) => item.q.trim() || item.a.trim()).map((item) => ({ q: item.q.trim(), a: item.a.trim() }))
+
+    const caseStudyExamplesOut: { title: string; subtitle: string; location: string; image: string }[] = []
+    for (let i = 0; i < caseStudyExamples.length && caseStudyExamplesOut.length < MAX_PRODUCT_CASE_STUDIES; i++) {
+      const row = caseStudyExamples[i]
+      if (!row.title.trim() && !row.subtitle.trim() && !row.location.trim() && !row.file && !row.url) continue
+      let imageUrl = row.url || ''
+      if (row.file) {
+        const { url } = await uploadAdminFile(row.file, productFolder, 200 + i + 1)
+        imageUrl = url
+      }
+      caseStudyExamplesOut.push({
+        title: row.title.trim(),
+        subtitle: row.subtitle.trim(),
+        location: row.location.trim(),
+        image: imageUrl,
+      })
+    }
 
     const dims = [dimensiuniL, dimensiuniW, dimensiuniH].filter(Boolean).join(' × ')
     const dimensiuniStr = dims ? `${dims} mm` : undefined
@@ -876,15 +996,21 @@ export default function AdminProducts() {
           .join(',') || undefined,
       priceVisibility,
       pricePresentation,
-      catalogStockStatus: tipProdus === 'rezidential' ? catalogStockStatus : null,
+      catalogStockStatus:
+        tipProdus === 'rezidential' || tipProdus === 'industrial' ? catalogStockStatus : null,
+      catalogDeliveryBadge:
+        tipProdus === 'rezidential' || tipProdus === 'industrial' ? catalogDeliveryBadge : null,
+      catalogTransportBadge:
+        tipProdus === 'rezidential' || tipProdus === 'industrial' ? catalogTransportBadge : null,
+      catalogInstallBadge: tipProdus === 'industrial' ? catalogInstallBadge : null,
       promovarePeContClient,
       promovarePeContPartener,
       reducereProgramIds: tipProdus === 'rezidential' ? [...new Set(reducereProgramIds)] : [],
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
       seoOgImage: seoOgImageOut,
-      landedPrice: String(parsePriceInput(landedPrice) || 0),
       salePrice: String(parsePriceInput(salePrice) || 0),
+      partnerSalePrice: String(parsePriceInput(partnerSalePrice) || 0),
       vat: parseFormattedNumber(vat) || '19',
       energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
       capacitate: carouselTemplate ? undefined : capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
@@ -917,6 +1043,7 @@ export default function AdminProducts() {
       cardImage: cardImageOut,
       documenteTehnice: docTehniceFinal,
       faq: faqFiltered,
+      caseStudyExamples: caseStudyExamplesOut,
       alimentaModalContent: alimentaParsed,
     }
 
@@ -1001,123 +1128,89 @@ export default function AdminProducts() {
     }
   }
 
-  const panelVisible = panelOpen || isClosingPanel
-
   return (
-    <div className={`flex flex-col w-full min-h-0 ${panelVisible ? 'h-[calc(100vh-4rem)] lg:h-screen overflow-hidden' : ''}`}>
-      {/* Tab bar — full width, sticky on scroll */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white shrink-0 shadow-sm">
-        <h1 className="text-xl font-bold font-['Inter'] text-black">Produse</h1>
-        {panelVisible ? (
-          <div className="flex items-center gap-2">
-            {saveSuccess && (
-              <span className="text-sm text-green-600 font-medium mr-2">Produsul a fost salvat.</span>
-            )}
-            {saveError && (
-              <span className="text-sm text-red-600 font-medium mr-2">{saveError}</span>
-            )}
-            <button
-              type="submit"
-              form="add-product-form"
-              disabled={isSaving}
-              className="h-9 px-4 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Se salvează...' : 'Save'}
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={isSaving}
-              className="h-9 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm font-semibold font-['Inter'] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleClosePanel}
-              disabled={isSaving}
-              className="h-9 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm font-semibold font-['Inter'] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            {saveSuccess && (
-              <span className="text-sm text-green-600 font-medium">Produsul a fost salvat.</span>
-            )}
-            <button
-              type="button"
-              onClick={handleOpenPanel}
-              className="h-9 px-5 bg-slate-900 text-white rounded-lg text-sm font-semibold font-['Inter'] hover:bg-slate-700 transition-colors flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Product
-            </button>
-          </div>
-        )}
+    <div className="p-6 sm:p-8 lg:p-10 max-w-6xl">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Produse</h1>
+          <p className="text-gray-500 text-sm font-['Inter'] m-0">
+            Adaugă, editează sau șterge produse afișate în catalogul magazinului.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+          {saveSuccess && !panelOpen ? (
+            <span className="text-sm text-green-600 font-medium font-['Inter']">Produsul a fost salvat.</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleOpenPanel}
+            className="rounded-[10px] bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-700 transition-colors"
+          >
+            + Adaugă produs
+          </button>
+        </div>
       </div>
 
-      {/* Content: list left, panel right (slides from left) */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: product list — half screen */}
-        <div className={`w-1/2 min-w-0 shrink-0 p-5 overflow-y-auto ${panelVisible ? 'overflow-hidden' : ''}`}>
-          {productsLoading ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex items-center justify-center">
-              <p className="text-gray-500 text-sm">Se încarcă produsele…</p>
-            </div>
-          ) : productsError ? (
-            <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
-              <p className="text-red-600 text-sm mb-2">{productsError}</p>
-              {productsError.includes('Rută negăsită') && (
-                <p className="text-gray-600 text-xs mb-3">
-                  Asigură-te că API-ul rulează local (npm run dev:api) sau că ai făcut deploy pe Railway cu ultimele modificări.
+      {productsLoading ? (
+        <p className="text-gray-500 text-sm font-['Inter']">Se încarcă produsele…</p>
+      ) : productsError ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 font-['Inter']">
+          <p className="mb-2">{productsError}</p>
+          {productsError.includes('Rută negăsită') ? (
+            <p className="text-red-700/80 text-xs mb-3">
+              Asigură-te că API-ul rulează local (npm run dev:api) sau că ai făcut deploy pe Railway cu ultimele modificări.
+            </p>
+          ) : null}
+          <button type="button" onClick={fetchProducts} className="text-sm font-semibold underline">
+            Reîncearcă
+          </button>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+          <p className="text-gray-500 text-sm font-['Inter'] mb-4">
+            Nu există produse în baza de date.
+          </p>
+          <button
+            type="button"
+            onClick={handleOpenPanel}
+            className="rounded-[10px] border border-slate-300 px-4 py-2 text-sm font-semibold font-['Inter'] hover:bg-neutral-50"
+          >
+            Adaugă primul produs
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {(['all', 'rezidential', 'industrial', 'medical', 'maritim'] as const).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setFilterCategorie(cat)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold font-['Inter'] transition-colors ${
+                  filterCategorie === cat
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-neutral-100 text-slate-700 hover:bg-neutral-200'
+                }`}
+              >
+                {cat === 'all' ? 'Toate' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+          {(() => {
+            const filtered =
+              filterCategorie === 'all'
+                ? products
+                : products.filter((p) => {
+                    const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
+                    return cat.includes(filterCategorie)
+                  })
+            return (
+              <>
+                <p className="text-sm text-gray-500 mb-4 font-['Inter']">
+                  {filtered.length} produs{filtered.length === 1 ? '' : 'e'}
+                  {filterCategorie !== 'all' && ` (${products.length} total)`}
                 </p>
-              )}
-              <button type="button" onClick={fetchProducts} className="text-sm font-medium text-slate-700 hover:underline">Reîncearcă</button>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-              <p className="text-gray-500 text-sm font-['Inter']">
-                Nu există produse în baza de date. Adaugă primul produs.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="text-sm font-medium text-gray-600 mr-1">Filtre:</span>
-                {(['all', 'rezidential', 'industrial', 'medical', 'maritim'] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setFilterCategorie(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      filterCategorie === cat
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {cat === 'all' ? 'Toate' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </button>
-                ))}
-              </div>
-              {(() => {
-                const filtered = filterCategorie === 'all'
-                  ? products
-                  : products.filter((p) => {
-                      const cat = String((p as { categorie?: string }).categorie || '').toLowerCase()
-                      return cat.includes(filterCategorie)
-                    })
-                return (
-                  <>
-                    <p className="text-sm text-gray-500 mb-3 font-['Inter']">
-                      {filtered.length} produs{filtered.length === 1 ? '' : 'e'}
-                      {filterCategorie !== 'all' && ` (${products.length} total)`}
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                       {filtered.map((p) => {
                   const imgs = Array.isArray(p.images) ? p.images : []
                   const thumb =
@@ -1129,114 +1222,149 @@ export default function AdminProducts() {
                   const priceVal = p.salePrice
                   const priceStr = priceVal != null ? String(priceVal) : null
                   return (
-                    <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                      {/* Image on top */}
-                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
-                        {thumb ? (
-                          <img src={thumb} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">—</div>
-                        )}
-                        {/* Photo count badge — bottom left */}
-                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/50 text-white text-xs font-medium">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span>{imgs.length}</span>
-                        </div>
-                        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                          <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${
-                            p.status === 'published' ? 'bg-green-100 text-green-700' :
-                            p.status === 'suspended' ? 'bg-red-100 text-red-700' :
-                            'bg-amber-100 text-amber-700'
-                          }`}>
-                            {p.status === 'published' ? (
-                              <>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Live
-                              </>
-                            ) : p.status === 'suspended' ? (
-                              <>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                </svg>
-                                Suspended
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Draft
-                              </>
-                            )}
-                          </span>
-                          <div className="flex gap-1">
-                            <button type="button" onClick={() => handleEditClick(p)} title="Editează" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-600 shadow-sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                            </button>
-                            {p.status === 'draft' && (
-                              <button type="button" onClick={() => handleGoLive(p.id)} title="Go Live" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-green-600 shadow-sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              </button>
-                            )}
-                            <button type="button" onClick={() => handleDelete(p.id)} title="Șterge" className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-red-600 shadow-sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
+                    <div key={p.id} className="flex flex-col gap-3">
+                      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                          {thumb ? (
+                            <img src={thumb} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">—</div>
+                          )}
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/50 text-white text-xs font-medium">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{imgs.length}</span>
                           </div>
                         </div>
-                      </div>
-                      {/* Title, description, details, price */}
-                      <div className="p-4 flex flex-col gap-2 flex-1">
-                        <h3 className="font-semibold text-gray-900 line-clamp-2">{p.title || 'Fără titlu'}</h3>
-                        {p.brand && <p className="text-xs text-gray-500">Brand: {p.brand}</p>}
-                        {p.description && <p className="text-xs text-gray-600 line-clamp-2">{p.description}</p>}
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                          {p.tensiuneNominala && <span>Tensiune: {p.tensiuneNominala}</span>}
-                          {p.capacitate && <span>Capacitate: {p.capacitate}</span>}
-                          {p.compozitie && <span>Compoziție: {p.compozitie}</span>}
-                          {p.cicluriDescarcare && <span>Cicluri: {p.cicluriDescarcare}</span>}
-                          <span>Conectivitate: {conectivitate}</span>
+                        <div className="p-4 flex flex-col gap-2 flex-1">
+                          <h3 className="font-semibold text-gray-900 line-clamp-2 font-['Inter']">{p.title || 'Fără titlu'}</h3>
+                          {p.brand ? <p className="text-xs text-gray-500 font-['Inter']">Brand: {p.brand}</p> : null}
+                          {p.description ? (
+                            <p className="text-xs text-gray-600 line-clamp-2 font-['Inter']">{p.description}</p>
+                          ) : null}
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 font-['Inter']">
+                            {p.tensiuneNominala ? <span>Tensiune: {p.tensiuneNominala}</span> : null}
+                            {p.capacitate ? <span>Capacitate: {p.capacitate}</span> : null}
+                            {p.compozitie ? <span>Compoziție: {p.compozitie}</span> : null}
+                            {p.cicluriDescarcare ? <span>Cicluri: {p.cicluriDescarcare}</span> : null}
+                            <span>Conectivitate: {conectivitate}</span>
+                          </div>
+                          {priceStr && !Number.isNaN(Number(priceStr)) ? (
+                            <p className="text-sm font-semibold text-gray-800 mt-auto font-['Inter']">
+                              {Number(priceStr).toLocaleString('ro-RO')} {currency}
+                            </p>
+                          ) : null}
                         </div>
-                        {priceStr && !Number.isNaN(Number(priceStr)) && (
-                          <p className="text-sm font-semibold text-gray-800 mt-auto">{Number(priceStr).toLocaleString('ro-RO')} {currency}</p>
-                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 px-1">
+                        <span
+                          className={`rounded-md px-2 py-0.5 text-xs font-semibold font-['Inter'] ${
+                            p.status === 'published'
+                              ? 'bg-green-100 text-green-800'
+                              : p.status === 'suspended'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-amber-100 text-amber-900'
+                          }`}
+                        >
+                          {p.status === 'published' ? 'Live' : p.status === 'suspended' ? 'Suspendat' : 'Draft'}
+                        </span>
+                        <span className="text-xs text-neutral-500 font-['Inter'] truncate flex-1">
+                          {p.sku || p.brand || p.id}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleEditClick(p)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold font-['Inter'] hover:bg-neutral-50"
+                        >
+                          Editează
+                        </button>
+                        {p.status === 'draft' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleGoLive(p.id)}
+                            className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-semibold text-green-700 font-['Inter'] hover:bg-green-50"
+                          >
+                            Publică
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(p.id)}
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 font-['Inter'] hover:bg-red-50"
+                        >
+                          Șterge
+                        </button>
                       </div>
                     </div>
                   )
                 })}
                     </div>
-                  </>
-                )
-              })()}
-            </>
-          )}
-        </div>
+              </>
+            )
+          })()}
+        </>
+      )}
 
-        {/* Right: panel area — panel slides in from left */}
-        <div className="w-1/2 shrink-0 overflow-hidden border-l border-gray-200 bg-white overflow-y-auto">
+      {panelOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/40"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) handleClosePanel()
+          }}
+          role="presentation"
+        >
           <div
-            className={`w-full min-h-full p-6 sm:p-8 shadow-lg transition-transform duration-300 ease-out ${
-              isClosingPanel ? '-translate-x-full' : panelOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-            onTransitionEnd={handlePanelTransitionEnd}
+            className="flex h-full w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-panel-title"
           >
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h2 id="product-panel-title" className="text-lg font-bold font-['Inter'] text-slate-900">
+                {editingProductId ? 'Editează produs' : 'Adaugă produs'}
+              </h2>
+              <button
+                type="button"
+                onClick={handleClosePanel}
+                disabled={isSaving}
+                className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                aria-label="Închide"
+              >
+                ✕
+              </button>
+            </div>
+
             <form
               id="add-product-form"
               onSubmit={(e) => {
                 e.preventDefault()
                 handleSave()
               }}
-              className="flex flex-col gap-5"
+              className="flex min-h-0 flex-1 flex-col"
             >
-              <h2 className="text-lg font-bold font-['Inter'] text-black mb-2">{editingProductId ? 'Editează produs' : 'Adaugă produs'}</h2>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-5">
+                {saveError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 font-['Inter']">
+                    {saveError}
+                  </div>
+                ) : null}
+                {saveSuccess ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 font-['Inter']">
+                    Produsul a fost salvat.
+                  </div>
+                ) : null}
 
               {/* Tip Produs */}
               <div>
-                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-3">Tip Produs</label>
-                <p className="text-xs text-gray-500 mb-2">Determină template-ul folosit la afișare.</p>
+                <div className="mb-3 flex items-center gap-2">
+                  <label className="block text-sm font-bold font-['Inter'] text-gray-900 m-0">Tip Produs</label>
+                  <AdminInfoTooltip
+                    label="Informații tip produs"
+                    text="Determină șablonul folosit la afișare. Rezidențial — descriere, preț, specificații tehnice, documente, FAQ. Industrial — carousel, Overview, avantaje cheie și broșură PDF."
+                  />
+                </div>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1261,16 +1389,6 @@ export default function AdminProducts() {
                     <span className="text-sm font-medium font-['Inter'] text-gray-700">Industrial</span>
                   </label>
                 </div>
-                {tipProdus === 'industrial' && (
-                  <p className="mt-2 text-xs text-slate-600 font-['Inter'] rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
-                    <strong>Industrial</strong> — șablon cu carousel, Overview, avantaje cheie și broșură PDF. Folosește câmpurile de mai jos (subtitlu, overview, imagini, avantaje).
-                  </p>
-                )}
-                {tipProdus === 'rezidential' && (
-                  <p className="mt-2 text-xs text-slate-600 font-['Inter'] rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
-                    <strong>Rezidențial</strong> — șablon clasic: descriere, preț, specificații tehnice complete, documente multiple, FAQ, opțional „Ce se poate alimenta”.
-                  </p>
-                )}
               </div>
 
               {/* Categorie */}
@@ -1306,10 +1424,13 @@ export default function AdminProducts() {
 
               {/* Promovare în conturi */}
               <div className="pt-2 border-t border-gray-200">
-                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-3">Promovare pe cont</h3>
-                <p className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm leading-snug text-sky-950 font-['Inter']">
-                  Acest produs va fi afișat cu prioritate.
-                </p>
+                <div className="mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900 m-0">Promovare pe cont</h3>
+                  <AdminInfoTooltip
+                    label="Informații promovare pe cont"
+                    text="Acest produs va fi afișat cu prioritate în contul selectat (client sau partener)."
+                  />
+                </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
                   <label className="inline-flex cursor-pointer items-center gap-2 font-['Inter'] text-sm text-gray-800">
                     <input
@@ -1332,36 +1453,148 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {tipProdus === 'rezidential' && (
+              {(tipProdus === 'rezidential' || tipProdus === 'industrial') && (
                 <div className="pt-2 border-t border-gray-200">
-                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-1">Stoc</h3>
-                  <p className="text-xs text-gray-500 mb-3 font-['Inter']">
-                    Etichetă în colțul stânga al imaginii pe cardul produsului (catalog).
-                  </p>
-                  <div role="radiogroup" aria-label="Stoc catalog" className="flex flex-col gap-2.5">
-                    {(
-                      [
-                        { id: 'catalog-stock-suficient', value: 'in_stock' as const, label: 'Stoc suficient' },
-                        { id: 'catalog-stock-epuizat', value: 'out_of_stock' as const, label: 'Stoc epuizat' },
-                        { id: 'catalog-stock-curand', value: 'coming_soon' as const, label: 'În curând' },
-                      ] as const
-                    ).map((opt) => (
-                      <label
-                        key={opt.id}
-                        htmlFor={opt.id}
-                        className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
-                      >
-                        <input
-                          id={opt.id}
-                          type="radio"
-                          name="catalogStockStatus"
-                          checked={catalogStockStatus === opt.value}
-                          onChange={() => setCatalogStockStatus(opt.value)}
-                          className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
-                        />
-                        {opt.label}
-                      </label>
-                    ))}
+                  <div className="mb-4 flex items-center gap-2">
+                    <h3 className="text-sm font-bold font-['Inter'] text-gray-900 m-0">Badges</h3>
+                    <AdminInfoTooltip
+                      label="Informații badges"
+                      text="Opțiunile selectate vor apărea ca badge-uri pe cardul produsului și în pagina de detaliu."
+                    />
+                  </div>
+
+                  <div
+                    className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${tipProdus === 'industrial' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
+                  >
+                    <div>
+                      <h4 className="text-sm font-semibold font-['Inter'] text-gray-900 mb-1">Stoc</h4>
+                      <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                        Etichetă în colțul stânga al imaginii pe cardul produsului (catalog).
+                      </p>
+                      <div role="radiogroup" aria-label="Stoc catalog" className="flex flex-col gap-2.5">
+                        {(
+                          [
+                            { id: 'catalog-stock-suficient', value: 'in_stock' as const, label: 'Stoc suficient' },
+                            { id: 'catalog-stock-epuizat', value: 'out_of_stock' as const, label: 'Stoc epuizat' },
+                            { id: 'catalog-stock-curand', value: 'coming_soon' as const, label: 'În curând' },
+                            { id: 'catalog-stock-comanda', value: 'on_order' as const, label: 'La comandă' },
+                          ] as const
+                        ).map((opt) => (
+                          <label
+                            key={opt.id}
+                            htmlFor={opt.id}
+                            className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                          >
+                            <input
+                              id={opt.id}
+                              type="radio"
+                              name="catalogStockStatus"
+                              checked={catalogStockStatus === opt.value}
+                              onChange={() => setCatalogStockStatus(opt.value)}
+                              className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold font-['Inter'] text-gray-900 mb-1">Livrare</h4>
+                      <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                        Etichetă livrare afișată pe cardul produsului (catalog).
+                      </p>
+                      <div role="radiogroup" aria-label="Livrare catalog" className="flex flex-col gap-2.5">
+                        {(
+                          [
+                            { id: 'catalog-delivery-24h', value: '24h' as const, label: '24 de ore' },
+                            { id: 'catalog-delivery-48h', value: '48h' as const, label: '48 ore' },
+                            { id: 'catalog-delivery-7-14d', value: '7_14d' as const, label: '7 - 14 zile' },
+                            { id: 'catalog-delivery-60d', value: '60d' as const, label: '60 de zile' },
+                          ] as const
+                        ).map((opt) => (
+                          <label
+                            key={opt.id}
+                            htmlFor={opt.id}
+                            className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                          >
+                            <input
+                              id={opt.id}
+                              type="radio"
+                              name="catalogDeliveryBadge"
+                              checked={catalogDeliveryBadge === opt.value}
+                              onChange={() => setCatalogDeliveryBadge(opt.value)}
+                              className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold font-['Inter'] text-gray-900 mb-1">Transport</h4>
+                      <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                        Etichetă transport afișată pe cardul produsului (catalog).
+                      </p>
+                      <div role="radiogroup" aria-label="Transport catalog" className="flex flex-col gap-2.5">
+                        {(
+                          [
+                            { id: 'catalog-transport-gratuit', value: 'free' as const, label: 'Gratuit' },
+                            { id: 'catalog-transport-platit', value: 'paid' as const, label: 'Contra cost' },
+                          ] as const
+                        ).map((opt) => (
+                          <label
+                            key={opt.id}
+                            htmlFor={opt.id}
+                            className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                          >
+                            <input
+                              id={opt.id}
+                              type="radio"
+                              name="catalogTransportBadge"
+                              checked={catalogTransportBadge === opt.value}
+                              onChange={() => setCatalogTransportBadge(opt.value)}
+                              className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {tipProdus === 'industrial' && (
+                      <div>
+                        <h4 className="text-sm font-semibold font-['Inter'] text-gray-900 mb-1">Instalare</h4>
+                        <p className="text-xs text-gray-500 mb-3 font-['Inter']">
+                          Etichetă instalare afișată pe cardul produsului (catalog).
+                        </p>
+                        <div role="radiogroup" aria-label="Instalare catalog" className="flex flex-col gap-2.5">
+                          {(
+                            [
+                              { id: 'catalog-install-baterino', value: 'baterino' as const, label: 'Baterino' },
+                              { id: 'catalog-install-partner', value: 'partner' as const, label: 'Partener' },
+                            ] as const
+                          ).map((opt) => (
+                            <label
+                              key={opt.id}
+                              htmlFor={opt.id}
+                              className="flex items-center gap-2.5 cursor-pointer font-['Inter'] text-sm text-gray-800"
+                            >
+                              <input
+                                id={opt.id}
+                                type="radio"
+                                name="catalogInstallBadge"
+                                checked={catalogInstallBadge === opt.value}
+                                onChange={() => setCatalogInstallBadge(opt.value)}
+                                className="h-4 w-4 border-gray-300 text-slate-900 focus:ring-slate-900"
+                              />
+                              {opt.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1700,29 +1933,14 @@ export default function AdminProducts() {
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     >
                       <option value="simple">Simplu (preț + TVA)</option>
-                      <option value="detailed">Detaliat (aterizat, preț, TVA, total)</option>
+                      <option value="detailed">Detaliat (preț, TVA, total)</option>
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                  <div>
-                    <label htmlFor="product-landed-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Landed Price (RON)
-                    </label>
-                    <input
-                      id="product-landed-price"
-                      type="text"
-                      inputMode="decimal"
-                      value={landedPrice}
-                      onChange={(e) => handlePriceInput(e.target.value, setLandedPrice)}
-                      onBlur={() => handlePriceBlur(landedPrice, setLandedPrice)}
-                      placeholder="20,000.00"
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                   <div>
                     <label htmlFor="product-sale-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Sale Price (RON)
+                      Preț vânzare client (RON)
                     </label>
                     <input
                       id="product-sale-price"
@@ -1731,6 +1949,21 @@ export default function AdminProducts() {
                       value={salePrice}
                       onChange={(e) => handlePriceInput(e.target.value, setSalePrice)}
                       onBlur={() => handlePriceBlur(salePrice, setSalePrice)}
+                      placeholder="20,000.00"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="product-partner-sale-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      Preț vânzare partener (RON)
+                    </label>
+                    <input
+                      id="product-partner-sale-price"
+                      type="text"
+                      inputMode="decimal"
+                      value={partnerSalePrice}
+                      onChange={(e) => handlePriceInput(e.target.value, setPartnerSalePrice)}
+                      onBlur={() => handlePriceBlur(partnerSalePrice, setPartnerSalePrice)}
                       placeholder="20,000.00"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
@@ -2399,6 +2632,109 @@ export default function AdminProducts() {
                 </div>
               </div>
 
+              {/* Studii de caz — exemple instalări (rezidențial + industrial) */}
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3 className="text-sm font-bold font-['Inter'] text-gray-900">Studii de caz</h3>
+                  <button
+                    type="button"
+                    onClick={addCaseStudyExample}
+                    disabled={caseStudyExamples.length >= MAX_PRODUCT_CASE_STUDIES}
+                    className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    + Adaugă exemplu
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Opțional. Maxim {MAX_PRODUCT_CASE_STUDIES} exemple de instalări afișate pe pagina produsului (titlu, subtitlu, locație, imagine).
+                </p>
+                <input
+                  ref={caseStudyFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onCaseStudyFileChange}
+                />
+                {caseStudyExamples.length === 0 ? (
+                  <p className="text-xs text-gray-500 italic">Niciun exemplu adăugat.</p>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {caseStudyExamples.map((row, i) => (
+                      <div key={i} className="rounded-xl border border-gray-200 p-4 space-y-3 bg-neutral-50/80">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs font-semibold text-gray-600">Exemplu {i + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeCaseStudyExample(i)}
+                            className="text-xs text-red-600 hover:underline"
+                          >
+                            Elimină
+                          </button>
+                        </div>
+                        <div>
+                          <label htmlFor={`cs-title-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                            Titlu
+                          </label>
+                          <input
+                            id={`cs-title-${i}`}
+                            type="text"
+                            value={row.title}
+                            onChange={(e) => setCaseStudyExampleField(i, 'title', e.target.value)}
+                            placeholder="Ex: Vilă cu panouri fotovoltaice"
+                            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`cs-location-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                            Locație
+                          </label>
+                          <input
+                            id={`cs-location-${i}`}
+                            type="text"
+                            value={row.location}
+                            onChange={(e) => setCaseStudyExampleField(i, 'location', e.target.value)}
+                            placeholder="Ex: București, Ilfov"
+                            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`cs-subtitle-${i}`} className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">
+                            Subtitlu
+                          </label>
+                          <input
+                            id={`cs-subtitle-${i}`}
+                            type="text"
+                            value={row.subtitle}
+                            onChange={(e) => setCaseStudyExampleField(i, 'subtitle', e.target.value)}
+                            placeholder="Ex: 10 kWh EcoHome, backup complet"
+                            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <span className="block text-xs font-semibold font-['Inter'] text-gray-700 mb-1">Imagine</span>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {(row.preview || row.url) && (
+                              <img
+                                src={row.preview || row.url}
+                                alt=""
+                                className="h-20 w-28 object-cover rounded-lg border border-gray-200"
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => triggerCaseStudyUpload(i)}
+                              className="h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-white bg-white"
+                            >
+                              {row.file || row.url ? 'Înlocuiește imaginea' : 'Încarcă imagine'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Ce se poate alimenta – conținut modal personalizat (șablon clasic / rezidențial) */}
               {tipProdus === 'rezidential' && (
                 <div className="pt-2 border-t border-gray-200">
@@ -2414,10 +2750,37 @@ export default function AdminProducts() {
                 </div>
               )}
 
+              </div>
+
+              <div className="flex shrink-0 gap-3 border-t border-gray-200 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={handleClosePanel}
+                  disabled={isSaving}
+                  className="flex-1 rounded-[10px] border border-gray-300 px-4 py-2.5 text-sm font-semibold font-['Inter'] hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                  className="flex-1 rounded-[10px] border border-gray-300 px-4 py-2.5 text-sm font-semibold font-['Inter'] hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  Draft
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 rounded-[10px] bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white font-['Inter'] hover:bg-slate-700 disabled:opacity-50"
+                >
+                  {isSaving ? 'Se salvează…' : 'Salvează'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

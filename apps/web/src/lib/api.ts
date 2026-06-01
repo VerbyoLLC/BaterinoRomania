@@ -371,10 +371,12 @@ export type PublicProduct = {
   cardImage?: string | null
   keyAdvantages?: { title: string; image: string }[]
   faq?: { q: string; a: string }[]
+  caseStudyExamples?: { title: string; subtitle: string; location: string; image: string }[]
   documenteTehnice?: { descriere: string; url: string }[]
   technicalSpecsModels?: CreateProductPayload['technicalSpecsModels']
   images: string[]
   salePrice?: string | number | null
+  partnerSalePrice?: string | number | null
   landedPrice?: string | number | null
   vat?: string | number | null
   /** hidden | public | partner_only */
@@ -382,7 +384,13 @@ export type PublicProduct = {
   /** simple | detailed (UI only) */
   pricePresentation?: 'simple' | 'detailed'
   /** Rezidențial: etichetă în colțul imaginii pe card catalog */
-  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | 'on_order' | null
+  /** Rezidențial: etichetă livrare pe card catalog */
+  catalogDeliveryBadge?: '24h' | '48h' | '7_14d' | '60d' | null
+  /** Rezidențial / industrial: etichetă transport pe card catalog */
+  catalogTransportBadge?: 'free' | 'paid' | null
+  /** Industrial: etichetă instalare pe card catalog */
+  catalogInstallBadge?: 'baterino' | 'partner' | null
   /** Rezidențial: id-uri programe reducere (CMS); gol = toate programele în dropdown (comportament vechi) */
   reducereProgramIds?: string[]
   /** Admin: prioritate în catalog partener */
@@ -427,7 +435,7 @@ export function normalizeCatalogCurrencyCode(v: unknown): CatalogCurrencyCode {
   return (CATALOG_CURRENCY_CODES as readonly string[]).includes(s) ? (s as CatalogCurrencyCode) : 'RON'
 }
 
-/** Public catalog / Home: VAT-inclusive price for residential cards when `priceVisibility` is public. */
+/** Public catalog: VAT-inclusive price when `priceVisibility` is public and sale price is set. */
 export function formatResidentialCatalogPriceDisplay(
   product: PublicProduct,
   langCode: string,
@@ -444,16 +452,20 @@ export function formatResidentialCatalogPriceDisplay(
   return `${Math.round(unit).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
 }
 
-/** Partner catalog: validated unit from salePrice (catalog/net); NaN if missing or invalid. */
-export function getPartnerCatalogSaleUnitNumeric(product: Pick<PublicProduct, 'salePrice'>): number {
+/** Partner catalog: validated unit from partnerSalePrice (catalog/net); fallback salePrice; NaN if missing. */
+export function getPartnerCatalogSaleUnitNumeric(
+  product: Pick<PublicProduct, 'salePrice' | 'partnerSalePrice'>,
+): number {
+  const partner = catalogNum(product.partnerSalePrice)
+  if (partner != null && partner > 0) return partner
   const sale = catalogNum(product.salePrice)
   return sale != null && sale > 0 ? sale : NaN
 }
 
 /** Partner UI / cart: unit price including VAT when product VAT % > 0 (same rule as residential catalog). */
 export function getPartnerDisplayUnitPriceWithVat(product: PublicProduct): number {
-  const sale = catalogNum(product.salePrice)
-  if (sale == null || sale <= 0) return NaN
+  const sale = getPartnerCatalogSaleUnitNumeric(product)
+  if (Number.isNaN(sale)) return NaN
   const vat = catalogNum(product.vat)
   return vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
 }
@@ -464,7 +476,7 @@ export function getPartnerCatalogVatPercentForDisplay(product: PublicProduct): n
   return v != null && v > 0 ? v : null
 }
 
-export type CatalogStockStatus = 'in_stock' | 'out_of_stock' | 'coming_soon'
+export type CatalogStockStatus = 'in_stock' | 'out_of_stock' | 'coming_soon' | 'on_order'
 
 /** Rezidențial: stoc epuizat sau în curând — fără preț parteneri, fără chip „disponibil parteneri”. */
 export function residentialProductStockUnavailable(
@@ -539,6 +551,8 @@ export type PublicProductModelRow = {
   series: string
   modelNumber: string
   usageType: 'industrial' | 'residential'
+  /** Set when a PDF exists in R2 for this model (Product Technical Brochures). */
+  technicalBrochureUrl?: string | null
 }
 
 export async function getPublicProductModels(): Promise<PublicProductModelRow[]> {
@@ -553,6 +567,7 @@ export async function getPublicProductModels(): Promise<PublicProductModelRow[]>
 export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
   const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}`, {
     headers: publicFetchHeaders(),
+    cache: 'no-store',
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
@@ -2213,13 +2228,19 @@ export type CreateProductPayload = {
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   pricePresentation?: 'simple' | 'detailed'
   /** Doar rezidențial; la industrial se trimite null din admin */
-  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | null
+  catalogStockStatus?: 'in_stock' | 'out_of_stock' | 'coming_soon' | 'on_order' | null
+  /** Doar rezidențial; la industrial se trimite null din admin */
+  catalogDeliveryBadge?: '24h' | '48h' | '7_14d' | '60d' | null
+  /** Doar rezidențial; la industrial se trimite null din admin */
+  catalogTransportBadge?: 'free' | 'paid' | null
+  /** Doar industrial; la rezidențial se trimite null din admin */
+  catalogInstallBadge?: 'baterino' | 'partner' | null
   /** Prioritate afișare în cont client / partener */
   promovarePeContClient?: boolean
   promovarePeContPartener?: boolean
   reducereProgramIds?: string[]
-  landedPrice: string | number
   salePrice: string | number
+  partnerSalePrice?: string | number
   vat: string | number
   energieNominala?: string
   capacitate?: string
@@ -2246,6 +2267,7 @@ export type CreateProductPayload = {
   images: string[]
   documenteTehnice: { descriere: string; url: string }[]
   faq: { q: string; a: string }[]
+  caseStudyExamples?: { title: string; subtitle: string; location: string; image: string }[]
   alimentaModalContent?: { title: string; intro?: string; sections: Array<{ label: string; items: string[] }> } | null
   /** Specificații tehnice șablon industrial: fiecare intrare = un model + toate câmpurile */
   technicalSpecsModels?: {

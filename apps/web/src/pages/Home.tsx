@@ -27,6 +27,8 @@ import {
   IndustrialCatalogProductCard,
   ResidentialCatalogProductCard,
 } from '../components/product/CatalogProductCard'
+import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
+import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
 
 function renderBaterinoGlobalLink(text: string) {
   return text.split('Baterino Global').map((part, i, arr) =>
@@ -306,10 +308,12 @@ export default function Home() {
                   : null
               const priceDisplay =
                 p.tipProdus === 'industrial'
-                  ? undefined
+                  ? formatResidentialCatalogPriceDisplay(p, language.code, currency) ?? undefined
                   : stockListingCta || residentialPartnerPriceCta
                     ? undefined
                     : formatResidentialCatalogPriceDisplay(p, language.code, currency)
+              const industrialHasPrice = p.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
+              const showIndustrialPriceExtras = industrialHasPrice
               const to = `/produse/${p.slug || p.id}`
               const linkState = { tipProdus: p.tipProdus }
               const common = {
@@ -329,12 +333,36 @@ export default function Home() {
                 priceDisplay != null &&
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
+              const catalogBadgeLabels = catalogBadgeLabelsFromProduseTr(tr)
               return p.tipProdus === 'industrial' ? (
                 <IndustrialCatalogProductCard
                   key={p.id}
                   {...common}
                   subtitle={industrialSubtitle}
-                  ctaLabel={tr.disponibilPentruParteneri}
+                  ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
+                  residentialPriceHeading={showIndustrialPriceExtras ? tr.pretLabel : null}
+                  residentialPriceVatNote={tr.catalogIncludesVatWithPct.replace(
+                    '{pct}',
+                    getResidentialCatalogVatPercentLabel(p),
+                  )}
+                  imageOverlay={
+                    <ResidentialProductCatalogBadges
+                      product={p}
+                      labels={catalogBadgeLabels}
+                      layout="stack"
+                      include={['stock', 'delivery']}
+                    />
+                  }
+                  priceAboveBadge={
+                    <ResidentialProductCatalogBadges
+                      product={p}
+                      labels={catalogBadgeLabels}
+                      layout="wrap"
+                      className="justify-center gap-1.5"
+                      include={['transport', 'install']}
+                      appearance="neutral"
+                    />
+                  }
                 />
               ) : (
                 <ResidentialCatalogProductCard
@@ -347,6 +375,24 @@ export default function Home() {
                     showResPriceExtras
                       ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p))
                       : null
+                  }
+                  imageOverlay={
+                    <ResidentialProductCatalogBadges
+                      product={p}
+                      labels={catalogBadgeLabels}
+                      layout="stack"
+                      include={['stock', 'delivery']}
+                    />
+                  }
+                  priceAboveBadge={
+                    <ResidentialProductCatalogBadges
+                      product={p}
+                      labels={catalogBadgeLabels}
+                      layout="wrap"
+                      className="justify-center gap-1.5"
+                      include={['transport', 'reducere']}
+                      appearance="neutral"
+                    />
                   }
                 />
               )
@@ -388,9 +434,9 @@ export default function Home() {
                   <span className="text-slate-900 text-xs sm:text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
                 </div>
                 <div className="absolute left-[20px] sm:left-[26px] right-[20px] sm:right-[26px] bottom-[20px] sm:bottom-[24px] z-10 flex flex-col gap-2 sm:gap-3">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-5 sm:leading-6">{tr.reduceriProgramLabel}</p>
-                    <h3 className="text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-7 sm:leading-8 whitespace-pre-line">
+                  <div className="flex flex-col">
+                    <p className="m-0 text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-none">{tr.reduceriProgramLabel}</p>
+                    <h3 className="m-0 text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-tight whitespace-pre-line">
                       {card.title}
                     </h3>
                   </div>
@@ -525,9 +571,9 @@ export default function Home() {
                 <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
                 <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[31px]">
+                <div className="absolute bottom-6 inset-x-0 px-4 text-center">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px]">{tr.divMarDesc}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px] mx-auto">{tr.divMarDesc}</p>
                 </div>
               </Link>
             </div>
@@ -547,7 +593,7 @@ export default function Home() {
                     { img: '/images/home/rezidential-baterii-lifepo4.jpg', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.png' },
                     { img: '/images/home/industrial-baterii-lifepo4.jpg', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.png' },
                     { img: '/images/home/medical-baterii-lifepo4.jpg', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.png' },
-                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png' },
+                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png', centerText: true },
                   ].map((d, i) => (
                     <Link
                       key={i}
@@ -557,9 +603,9 @@ export default function Home() {
                       <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40" />
                       <img src={d.logo} alt="" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
-                      <div className="absolute bottom-5 sm:bottom-6 left-[16px] sm:left-[21px]">
+                      <div className={`absolute bottom-5 sm:bottom-6 ${'centerText' in d && d.centerText ? 'inset-x-0 px-4 text-center' : 'left-[16px] sm:left-[21px]'}`}>
                         <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
-                        <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 max-w-[220px] sm:max-w-[240px]">{d.desc}</p>
+                        <p className={`text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 ${'centerText' in d && d.centerText ? 'max-w-[256px] mx-auto' : 'max-w-[220px] sm:max-w-[240px]'}`}>{d.desc}</p>
                       </div>
                     </Link>
                   ))}

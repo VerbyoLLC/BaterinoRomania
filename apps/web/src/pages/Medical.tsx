@@ -218,7 +218,6 @@ export default function Medical() {
               className="relative w-full object-cover rounded-[10px]"
               style={{ height: '440px' }}
             />
-            <div className="absolute inset-0 bg-black/60 rounded-[10px]" aria-hidden />
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0 min-w-0 z-10">
               <img src="/images/divizii/medical/baterino-medical-logo-white.png" alt="Baterino MED" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
               <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">

@@ -6,13 +6,13 @@ import {
   getProductCardImageUrl,
   getPublicReducerePrograms,
   normalizeProductReducereProgramIds,
+  productHasEligibleReducerePrograms,
   type PublicProduct,
 } from '../lib/api'
 import {
   RESIDENTIAL_DISCOUNT_GUEST_NOTICE_FALLBACK_RO,
   type ProductDetailTranslations,
 } from '../i18n/product-detail'
-import { getReduceriTranslations } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { useCart } from '../contexts/CartContext'
@@ -28,16 +28,6 @@ function num(v: string | number | null | undefined): number | null {
 }
 
 type DiscountProgramOption = { id: string; programLabel: string; discountPercent: number }
-
-function buildLocalDiscountOptions(lc: LangCode): DiscountProgramOption[] {
-  return getReduceriTranslations(lc).programs
-    .filter((p) => p.discountPercent != null && Number(p.discountPercent) > 0)
-    .map((p, i) => ({
-      id: `local-${lc}-${i}-${p.discountPercent}`,
-      programLabel: p.programLabel,
-      discountPercent: Number(p.discountPercent),
-    }))
-}
 
 /** Matches card display on /reduceri — drop leading „PROGRAMUL”. */
 function cleanProgramDisplayName(programLabel: string): string {
@@ -60,12 +50,11 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const { addLine } = useCart()
   const { currency } = useCatalogCurrency()
   const p = getProductPricingTranslations(lang, currency)
+  const showReducereProgramPicker = productHasEligibleReducerePrograms(product)
   const [qty, setQty] = useState(1)
-  const [discountOptions, setDiscountOptions] = useState<DiscountProgramOption[]>(() =>
-    buildLocalDiscountOptions(lang),
-  )
+  const [discountOptions, setDiscountOptions] = useState<DiscountProgramOption[]>([])
   /** Încărcare liste programe din API (înainte afișăm select-ul ca definitiv). */
-  const [discountProgramsLoading, setDiscountProgramsLoading] = useState(true)
+  const [discountProgramsLoading, setDiscountProgramsLoading] = useState(showReducereProgramPicker)
   const [qtyBusy, setQtyBusy] = useState(false)
   const qtyBusyTimerRef = useRef<number | null>(null)
   const [discountProgramId, setDiscountProgramId] = useState<string>('none')
@@ -116,7 +105,12 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   useEffect(() => {
     setDiscountProgramId('none')
     const allowed = normalizeProductReducereProgramIds(product)
-    setDiscountOptions(buildLocalDiscountOptions(lang))
+    if (allowed.length === 0) {
+      setDiscountOptions([])
+      setDiscountProgramsLoading(false)
+      return
+    }
+    setDiscountOptions([])
     setDiscountProgramsLoading(true)
     let cancelled = false
     getPublicReducerePrograms(lang)
@@ -129,16 +123,10 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             programLabel: r.programLabel,
             discountPercent: Number(r.discountPercent),
           }))
-        const localFallback = buildLocalDiscountOptions(lang)
-        if (mapped.length === 0) {
-          setDiscountOptions(allowed.length > 0 ? [] : localFallback)
-          return
-        }
-        const filtered = allowed.length > 0 ? mapped.filter((o) => allowed.includes(o.id)) : mapped
-        setDiscountOptions(filtered.length > 0 ? filtered : allowed.length > 0 ? [] : mapped)
+        setDiscountOptions(mapped.filter((o) => allowed.includes(o.id)))
       })
       .catch(() => {
-        if (!cancelled) setDiscountOptions(allowed.length > 0 ? [] : buildLocalDiscountOptions(lang))
+        if (!cancelled) setDiscountOptions([])
       })
       .finally(() => {
         if (!cancelled) setDiscountProgramsLoading(false)
@@ -146,7 +134,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     return () => {
       cancelled = true
     }
-  }, [lang, reducereFilterKey])
+  }, [lang, reducereFilterKey, product])
 
   useEffect(() => {
     if (discountProgramId === 'none') return
@@ -156,7 +144,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   }, [discountOptions, discountProgramId])
 
   const sale = num(product.salePrice)!
-  const landed = num((product as { landedPrice?: string | number | null }).landedPrice)
   const vatPct = num((product as { vat?: string | number | null }).vat)
 
   const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
@@ -185,7 +172,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   /** Total de plată după reducere. */
   const lineTotal = unitAfterDiscount * qty
   const totalSavings = lineBaseTotal - lineTotal
-  const showPrevious = landed != null && landed > 0 && landed > sale
   const pctBadge = selectedDiscount ? selectedDiscount.discountPercent : Math.round(rate * 100)
   const vatInline = hasVat ? tr.includesVatWithPct.replace(/\{pct\}/g, fmtPct(vatPct!)) : null
   const guestWithDiscount = hasProgramDiscount && !isClientUser
@@ -197,15 +183,6 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
 
   return (
     <div className="space-y-2 font-['Inter']">
-      {showPrevious ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs pb-1 border-b border-neutral-100">
-          <span className="font-semibold uppercase tracking-wide text-neutral-500">{p.landedLabel}</span>
-          <span className="font-semibold tabular-nums text-neutral-400 line-through decoration-neutral-400">
-            {fmtMoney(landed!)} {p.currencySuffix}
-          </span>
-        </div>
-      ) : null}
-
       <div className="space-y-4 pb-[5px]">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-4">
           <div className="flex w-full flex-col gap-2 sm:w-fit sm:shrink-0">
@@ -250,6 +227,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
             </div>
           </div>
 
+          {showReducereProgramPicker ? (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <div className="hidden text-sm font-semibold uppercase leading-tight text-gray-700 sm:block">
               {tr.alegeProgramReduceri}
@@ -331,6 +309,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               </button>
             </div>
           </div>
+          ) : null}
         </div>
 
         {hasProgramDiscount ? (
@@ -468,32 +447,34 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         ) : null}
       </div>
 
-      <ResidentialMobileDiscountModals
-        lang={lang}
-        tr={tr}
-        discountOptions={discountOptions}
-        pickDraftId={mobilePickDraftId}
-        formatOptionLabel={(opt) => formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
-        pickOpen={mobileDiscountPickOpen}
-        onClosePick={() => setMobileDiscountPickOpen(false)}
-        detailOptionId={mobileDiscountDetailId}
-        onCloseDetail={() => setMobileDiscountDetailId(null)}
-        onApplyDetail={() => {
-          if (mobileDiscountDetailId) setDiscountProgramId(mobileDiscountDetailId)
-          setMobileDiscountDetailId(null)
-        }}
-        onSelectProgram={(id) => {
-          setMobilePickDraftId(id)
-          if (id === 'none') {
-            setDiscountProgramId('none')
-            setMobileDiscountPickOpen(false)
+      {showReducereProgramPicker ? (
+        <ResidentialMobileDiscountModals
+          lang={lang}
+          tr={tr}
+          discountOptions={discountOptions}
+          pickDraftId={mobilePickDraftId}
+          formatOptionLabel={(opt) => formatResidentialDiscountOption(tr, opt.programLabel, opt.discountPercent)}
+          pickOpen={mobileDiscountPickOpen}
+          onClosePick={() => setMobileDiscountPickOpen(false)}
+          detailOptionId={mobileDiscountDetailId}
+          onCloseDetail={() => setMobileDiscountDetailId(null)}
+          onApplyDetail={() => {
+            if (mobileDiscountDetailId) setDiscountProgramId(mobileDiscountDetailId)
             setMobileDiscountDetailId(null)
-            return
-          }
-          setMobileDiscountPickOpen(false)
-          setMobileDiscountDetailId(id)
-        }}
-      />
+          }}
+          onSelectProgram={(id) => {
+            setMobilePickDraftId(id)
+            if (id === 'none') {
+              setDiscountProgramId('none')
+              setMobileDiscountPickOpen(false)
+              setMobileDiscountDetailId(null)
+              return
+            }
+            setMobileDiscountPickOpen(false)
+            setMobileDiscountDetailId(id)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

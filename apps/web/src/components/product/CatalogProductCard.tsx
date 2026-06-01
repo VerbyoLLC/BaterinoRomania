@@ -46,6 +46,10 @@ export type CatalogProductCardBaseProps = {
   residentialPriceHeading?: string | null
   /** Below residential public price (e.g. Include TVA 21%). */
   residentialPriceVatNote?: string | null
+  /** When set, rendered over the product image (e.g. Stoc / Livrare badges). */
+  imageOverlay?: ReactNode
+  /** Residential: badge row directly above the price block (e.g. Transport). */
+  priceAboveBadge?: ReactNode
   /** Merged onto outer shell (e.g. partner selected border). */
   shellClassName?: string
 }
@@ -74,17 +78,27 @@ function CatalogProductCard({
   residentialStockListingCta = null,
   residentialPriceHeading = null,
   residentialPriceVatNote = null,
+  imageOverlay = null,
+  priceAboveBadge = null,
   shellClassName = '',
 }: CatalogProductCardProps) {
   const isProduseDensity = density === 'produse'
   const isPartnerDensity = density === 'partner'
   const isIndustrial = variant === 'industrial'
   const partnerMode = footer != null && typeof onMainClick === 'function'
+  const hasCatalogPrice = priceDisplay != null && String(priceDisplay).trim() !== ''
   if (!partnerMode && !to) {
     throw new Error('CatalogProductCard: `to` is required unless using partner mode (`footer` + `onMainClick`).')
   }
-  if (!partnerMode && isIndustrial && (!ctaLabel || !String(ctaLabel).trim())) {
-    throw new Error('CatalogProductCard: industrial cards require `ctaLabel` for the bottom CTA.')
+  if (
+    !partnerMode &&
+    isIndustrial &&
+    !hasCatalogPrice &&
+    (!ctaLabel || !String(ctaLabel).trim())
+  ) {
+    throw new Error(
+      'CatalogProductCard: industrial cards require `ctaLabel` when no `priceDisplay` is set.',
+    )
   }
   const subtitleLine = isIndustrial ? String(subtitle ?? '').trim() : ''
   const showSubtitle = Boolean(subtitleLine)
@@ -93,8 +107,12 @@ function CatalogProductCard({
   const shellPb = partnerMode
     ? 'pb-0'
     : isIndustrial
-      ? (isProduseDensity ? 'pb-8' : 'pb-6')
-      : (isProduseDensity ? 'pb-5' : 'pb-4')
+      ? isProduseDensity
+        ? 'pb-5'
+        : 'pb-4'
+      : isProduseDensity
+        ? 'pb-5'
+        : 'pb-4'
   const imageFrameH = isPartnerDensity ? 'h-44' : 'h-56'
   const imageTopRadius = isPartnerDensity ? 'rounded-t-xl' : 'rounded-t-[10px]'
 
@@ -102,7 +120,6 @@ function CatalogProductCard({
   let specClass: string
   let firstSpecMargin: string
   let secondSpecMargin: string
-  let btnMax: string
 
   if (isPartnerDensity) {
     titleClass =
@@ -110,7 +127,6 @@ function CatalogProductCard({
     specClass = "text-center text-sm font-normal font-['Inter'] leading-snug text-gray-500"
     firstSpecMargin = 'mt-2'
     secondSpecMargin = 'mt-1 mb-1'
-    btnMax = ''
   } else if (isProduseDensity) {
     titleClass =
       "mt-4 w-full max-w-full px-4 text-center text-xl font-bold font-['Inter'] text-black leading-6"
@@ -118,14 +134,12 @@ function CatalogProductCard({
       "text-center text-base font-normal font-['Nunito_Sans'] leading-7 tracking-tight text-neutral-950"
     firstSpecMargin = 'mt-1.5'
     secondSpecMargin = ''
-    btnMax = 'max-w-[220px] mt-8'
   } else {
     titleClass =
       "mb-3 mt-6 px-6 text-center text-lg font-bold font-['Inter'] leading-snug text-black"
     specClass = "px-6 text-center text-sm font-normal font-['Nunito_Sans'] leading-6 text-neutral-950"
     firstSpecMargin = ''
     secondSpecMargin = 'mb-4'
-    btnMax = 'max-w-[200px]'
   }
 
   let subtitleClass: string
@@ -147,9 +161,7 @@ function CatalogProductCard({
   const imageBlock = (
     <div className="w-full">
       <div
-        className={`relative ${imageFrameH} w-full overflow-hidden ${imageTopRadius} border-b border-neutral-200 bg-[#f7f7f7] ${
-          isIndustrial ? 'flex items-center justify-center' : ''
-        }`}
+        className={`relative ${imageFrameH} w-full overflow-hidden ${imageTopRadius} bg-[#f7f7f7] flex items-center justify-center`}
       >
         {imageLoadingPlaceholder && !imgLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -164,12 +176,8 @@ function CatalogProductCard({
         <img
           src={imageSrc}
           alt={imageAlt}
-          className={`transition-all duration-300 ${
+          className={`h-full w-full max-h-full max-w-full object-contain object-center transition-all duration-300 ${
             partnerMode ? 'transition-transform duration-200 group-hover:scale-105' : ''
-          } ${
-            isIndustrial
-              ? 'h-full w-full max-h-full max-w-full object-contain object-center'
-              : 'h-full w-full object-cover object-center'
           } ${imageLoadingPlaceholder && !imgLoaded ? 'opacity-0' : 'opacity-100'}`}
           onLoad={() => setImgLoaded(true)}
           onError={(e) => {
@@ -177,6 +185,11 @@ function CatalogProductCard({
             setImgLoaded(true)
           }}
         />
+        {imageOverlay ? (
+          <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)]">
+            {imageOverlay}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -203,6 +216,11 @@ function CatalogProductCard({
     ((stockListingTrim && !partnerMode) || partnerListingCta) &&
     darkListingLabel !== ''
 
+  const showIndustrialDetailsCta =
+    isIndustrial && !hasCatalogPrice && ctaLabel != null && String(ctaLabel).trim() !== ''
+
+  const catalogPriceSlotClass = `${priceAboveBadge ? 'mt-2' : priceMarginTop} flex w-full max-w-full flex-col items-center px-2`
+
   const metaBlock = (
     <>
       {!isIndustrial ? (
@@ -211,8 +229,23 @@ function CatalogProductCard({
           <p className={`${specClass} ${secondSpecMargin}`.trim()}>{specLine2}</p>
         </>
       ) : null}
+      {priceAboveBadge ? (
+        <div
+          className={`${
+            isIndustrial
+              ? showSubtitle
+                ? 'mt-3'
+                : 'mt-2'
+              : priceMarginTop
+          } flex w-full justify-center px-2`}
+        >
+          {priceAboveBadge}
+        </div>
+      ) : null}
       {showDarkListingChip ? (
-        <div className={`${priceMarginTop} flex w-full max-w-full flex-col items-center px-2`}>
+        <div
+          className={`${priceAboveBadge ? 'mt-2' : priceMarginTop} flex w-full max-w-full flex-col items-center px-2`}
+        >
           <span
             className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600 font-['Inter'] sm:text-[13px] invisible select-none pointer-events-none"
             aria-hidden
@@ -233,7 +266,7 @@ function CatalogProductCard({
         </div>
       ) : priceDisplay != null && priceDisplay !== '' ? (
         residentialPriceHeading != null || residentialPriceVatNote != null ? (
-          <div className={`${priceMarginTop} flex w-full max-w-full flex-col items-center px-2`}>
+          <div className={catalogPriceSlotClass}>
             <span
               className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600 font-['Inter'] sm:text-[13px] invisible select-none pointer-events-none"
               aria-hidden
@@ -251,11 +284,31 @@ function CatalogProductCard({
           </div>
         ) : (
           <p
-            className={`${priceMarginTop} text-center text-lg font-bold font-['Inter'] tracking-tight text-slate-900 tabular-nums`}
+            className={`${priceAboveBadge ? 'mt-2' : priceMarginTop} text-center text-lg font-bold font-['Inter'] tracking-tight text-slate-900 tabular-nums`}
           >
             {priceDisplay}
           </p>
         )
+      ) : showIndustrialDetailsCta ? (
+        <div className={catalogPriceSlotClass}>
+          <span
+            className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600 font-['Inter'] sm:text-[13px] invisible select-none pointer-events-none"
+            aria-hidden
+          >
+            {String(residentialPriceHeading ?? '').trim() || 'PREȚ'}
+          </span>
+          <span
+            className={`mt-1 mx-auto inline-flex w-full max-w-[min(100%,18rem)] items-center justify-center rounded-[10px] bg-slate-900 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm ${isProduseDensity ? 'max-w-[220px]' : isPartnerDensity ? '' : 'max-w-[200px]'}`}
+          >
+            {String(ctaLabel).trim()}
+          </span>
+          <span
+            className="m-0 mt-1 text-center text-xs font-medium text-neutral-500 font-['Inter'] sm:text-sm invisible select-none pointer-events-none"
+            aria-hidden
+          >
+            {residentialPriceVatNote?.trim() || 'Include TVA 21%'}
+          </span>
+        </div>
       ) : null}
     </>
   )
@@ -297,14 +350,6 @@ function CatalogProductCard({
         >
           {footer}
         </div>
-      ) : isIndustrial && ctaLabel ? (
-        <Link
-          to={to!}
-          state={linkState}
-          className={`mx-auto w-full ${btnMax} py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold font-['Inter'] rounded-[10px] hover:bg-slate-700 transition-colors text-center uppercase tracking-wide`}
-        >
-          {ctaLabel}
-        </Link>
       ) : null}
     </div>
   )
@@ -332,7 +377,7 @@ export function CatalogProductCardSkeleton({
   if (density === 'home') {
     return (
       <div className="flex flex-col items-center overflow-hidden rounded-[10px] bg-[#f7f7f7] pb-6 animate-pulse">
-        <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-[10px] border-b border-neutral-200 bg-[#f7f7f7]">
+        <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-[10px] bg-[#f7f7f7]">
           <img
             src="/images/shared/baterino-logo-black.svg"
             alt=""
@@ -356,7 +401,7 @@ export function CatalogProductCardSkeleton({
     return (
       <div className="flex min-h-[340px] flex-col overflow-hidden rounded-xl border border-neutral-200 bg-[#f7f7f7] animate-pulse">
         <div className="w-full">
-          <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-xl border-b border-neutral-200 bg-[#f7f7f7]">
+          <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-t-xl bg-[#f7f7f7]">
             <img
               src="/images/shared/baterino-logo-black.svg"
               alt=""
@@ -386,7 +431,7 @@ export function CatalogProductCardSkeleton({
   return (
     <div className="flex flex-col overflow-hidden rounded-[10px] bg-[#f7f7f7] pb-8 animate-pulse">
       <div className="w-full">
-        <div className="h-56 w-full overflow-hidden rounded-t-[10px] border-b border-neutral-200 bg-[#f7f7f7]">
+        <div className="h-56 w-full overflow-hidden rounded-t-[10px] bg-[#f7f7f7]">
           <div className="flex h-full w-full items-center justify-center">
             <img
               src="/images/shared/baterino-logo-black.svg"

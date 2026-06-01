@@ -20,6 +20,8 @@ import {
   IndustrialCatalogProductCard,
   ResidentialCatalogProductCard,
 } from '../components/product/CatalogProductCard'
+import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
+import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
@@ -211,10 +213,13 @@ export default function Produse() {
                   : null
               const priceDisplay =
                 product.tipProdus === 'industrial'
-                  ? undefined
+                  ? formatResidentialCatalogPriceDisplay(product, language.code, currency) ?? undefined
                   : stockListingCta || residentialPartnerPriceCta
                     ? undefined
                     : formatResidentialCatalogPriceDisplay(product, language.code, currency)
+              const industrialHasPrice =
+                product.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
+              const showIndustrialPriceExtras = industrialHasPrice
               const to = `/produse/${product.slug || product.id}`
               const linkState = { tipProdus: product.tipProdus }
               const common = {
@@ -233,12 +238,36 @@ export default function Produse() {
                 priceDisplay != null &&
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
+              const catalogBadgeLabels = catalogBadgeLabelsFromProduseTr(tr)
               return product.tipProdus === 'industrial' ? (
                 <IndustrialCatalogProductCard
                   key={product.id}
                   {...common}
                   subtitle={industrialSubtitle}
-                  ctaLabel={tr.disponibilPentruParteneri}
+                  ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
+                  residentialPriceHeading={showIndustrialPriceExtras ? tr.pretLabel : null}
+                  residentialPriceVatNote={tr.catalogIncludesVatWithPct.replace(
+                    '{pct}',
+                    getResidentialCatalogVatPercentLabel(product),
+                  )}
+                  imageOverlay={
+                    <ResidentialProductCatalogBadges
+                      product={product}
+                      labels={catalogBadgeLabels}
+                      layout="stack"
+                      include={['stock', 'delivery']}
+                    />
+                  }
+                  priceAboveBadge={
+                    <ResidentialProductCatalogBadges
+                      product={product}
+                      labels={catalogBadgeLabels}
+                      layout="wrap"
+                      className="justify-center gap-1.5"
+                      include={['transport', 'install']}
+                      appearance="neutral"
+                    />
+                  }
                 />
               ) : (
                 <ResidentialCatalogProductCard
@@ -254,6 +283,24 @@ export default function Produse() {
                           getResidentialCatalogVatPercentLabel(product),
                         )
                       : null
+                  }
+                  imageOverlay={
+                    <ResidentialProductCatalogBadges
+                      product={product}
+                      labels={catalogBadgeLabels}
+                      layout="stack"
+                      include={['stock', 'delivery']}
+                    />
+                  }
+                  priceAboveBadge={
+                    <ResidentialProductCatalogBadges
+                      product={product}
+                      labels={catalogBadgeLabels}
+                      layout="wrap"
+                      className="justify-center gap-1.5"
+                      include={['transport', 'reducere']}
+                      appearance="neutral"
+                    />
                   }
                 />
               )

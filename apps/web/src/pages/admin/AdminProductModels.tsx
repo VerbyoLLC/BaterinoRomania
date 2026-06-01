@@ -44,17 +44,35 @@ function serializeSpecs(fields: SpecField[]): string {
     .join('\n')
 }
 
-function getEnergyValue(technicalDescription: string): string {
+function normalizeSpecLabel(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+/** Reads kWh from technicalDescription (`Energy:` / `Nominal Energy:` / RO) or from name `(261.248kWh)`. */
+function getEnergyValue(technicalDescription: string, name?: string): string {
   const lines = String(technicalDescription ?? '')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-  const energyLine = lines.find((line) => /^energy\s*:/i.test(line))
-  if (!energyLine) return '—'
-  const idx = energyLine.indexOf(':')
-  if (idx < 0) return '—'
-  const value = energyLine.slice(idx + 1).trim()
-  return value || '—'
+
+  for (const line of lines) {
+    const idx = line.indexOf(':')
+    if (idx <= 0) continue
+    const label = normalizeSpecLabel(line.slice(0, idx))
+    if (label === 'energy' || label === 'nominal energy' || label === 'energie nominala') {
+      const value = line.slice(idx + 1).trim()
+      if (value) return value
+    }
+  }
+
+  const fromName = String(name ?? '').match(/\(([^)]*kwh[^)]*)\)/i)
+  if (fromName?.[1]?.trim()) return fromName[1].trim()
+
+  return '—'
 }
 
 export default function AdminProductModels() {
@@ -298,9 +316,9 @@ export default function AdminProductModels() {
                     <td className="px-3 py-2.5">
                       <span
                         className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-sm font-medium tabular-nums leading-snug text-slate-800 break-words"
-                        title={getEnergyValue(row.technicalDescription)}
+                        title={getEnergyValue(row.technicalDescription, row.name)}
                       >
-                        {getEnergyValue(row.technicalDescription)}
+                        {getEnergyValue(row.technicalDescription, row.name)}
                       </span>
                     </td>
                     <td className="px-3 py-2.5">

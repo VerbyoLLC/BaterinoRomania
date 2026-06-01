@@ -37,9 +37,23 @@ export type ProduseTranslations = {
   /** Residential card under price; `{pct}` = VAT % */
   catalogIncludesVatWithPct: string
   /** Residential card image corner */
+  catalogBadgeStocCategory: string
+  catalogBadgeLivrareCategory: string
+  catalogBadgeTransportCategory: string
+  catalogBadgeInstalareCategory: string
   catalogStockInStock: string
   catalogStockOutOfStock: string
   catalogStockComingSoon: string
+  catalogStockOnOrder: string
+  catalogDelivery24h: string
+  catalogDelivery48h: string
+  catalogDelivery7_14d: string
+  catalogDelivery60d: string
+  catalogTransportFree: string
+  catalogTransportPaid: string
+  catalogInstallBaterino: string
+  catalogInstallPartner: string
+  catalogReducereBadge: string
   /** Pagină produs: text sub eticheta stoc */
   catalogStockUnavailableDetailNote: string
   /** Panou parteneri: sub eticheta stoc când nu se poate comanda */
@@ -77,9 +91,23 @@ const translations: Record<LangCode, ProduseTranslations> = {
     disponibilPentruParteneri: 'VEZI DETALII',
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
     catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogBadgeStocCategory: 'Stoc',
+    catalogBadgeLivrareCategory: 'Livrare',
+    catalogBadgeTransportCategory: 'Transport',
+    catalogBadgeInstalareCategory: 'Instalare',
     catalogStockInStock: 'Stoc suficient',
     catalogStockOutOfStock: 'Stoc epuizat',
     catalogStockComingSoon: 'În curând',
+    catalogStockOnOrder: 'La comandă',
+    catalogDelivery24h: '24 de ore',
+    catalogDelivery48h: '48 ore',
+    catalogDelivery7_14d: '7 - 14 zile',
+    catalogDelivery60d: '60 de zile',
+    catalogTransportFree: 'Gratuit',
+    catalogTransportPaid: 'Contra cost',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: 'Partener',
+    catalogReducereBadge: 'Programe Reduceri',
     catalogStockUnavailableDetailNote: 'Acest produs nu este disponibil pentru comandă în acest moment.',
     catalogStockPartnerFooterNote: 'Momentan indisponibil pentru comenzi în contul partener.',
     seoTitle: 'Baterii LiFePO4',
@@ -134,9 +162,23 @@ const translations: Record<LangCode, ProduseTranslations> = {
     disponibilPentruParteneri: 'VIEW DETAILS',
     catalogDisponibilParteneriPrice: 'Available to partners',
     catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogBadgeStocCategory: 'Stock',
+    catalogBadgeLivrareCategory: 'Delivery',
+    catalogBadgeTransportCategory: 'Transport',
+    catalogBadgeInstalareCategory: 'Instalare',
     catalogStockInStock: 'In stock',
     catalogStockOutOfStock: 'Out of stock',
     catalogStockComingSoon: 'Coming soon',
+    catalogStockOnOrder: 'On order',
+    catalogDelivery24h: '24 hours',
+    catalogDelivery48h: '48 hours',
+    catalogDelivery7_14d: '7 - 14 days',
+    catalogDelivery60d: '60 days',
+    catalogTransportFree: 'Free',
+    catalogTransportPaid: 'Paid',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: 'Partner',
+    catalogReducereBadge: 'Discount programs',
     catalogStockUnavailableDetailNote: 'This product is not available to order at the moment.',
     catalogStockPartnerFooterNote: 'Currently unavailable for partner portal orders.',
     seoTitle: 'LiFePO4 Batteries',
@@ -191,9 +233,22 @@ const translations: Record<LangCode, ProduseTranslations> = {
     disponibilPentruParteneri: '查看详情',
     catalogDisponibilParteneriPrice: '合作伙伴专享',
     catalogIncludesVatWithPct: '含增值税 {pct}%',
+    catalogBadgeStocCategory: '库存',
+    catalogBadgeLivrareCategory: '配送',
+    catalogBadgeTransportCategory: '运输',
     catalogStockInStock: '库存充足',
     catalogStockOutOfStock: '售罄',
     catalogStockComingSoon: '即将到货',
+    catalogStockOnOrder: '预订',
+    catalogDelivery24h: '24 小时',
+    catalogDelivery48h: '48 小时',
+    catalogDelivery7_14d: '7 - 14 天',
+    catalogDelivery60d: '60 天',
+    catalogTransportFree: '免费',
+    catalogTransportPaid: '付费',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: '合作伙伴',
+    catalogReducereBadge: '折扣计划',
     catalogStockUnavailableDetailNote: '该产品目前无法下单。',
     catalogStockPartnerFooterNote: '合作伙伴账户暂不可下单。',
     seoTitle: 'LiFePO4电池',

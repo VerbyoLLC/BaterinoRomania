@@ -3,7 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getStudiiDeCazTranslations } from '../i18n/studii-de-caz'
 import { getPublicCaseStudies } from '../lib/api'
 import SEO from '../components/SEO'
-import CaseStudyCard from '../components/studii/CaseStudyCard'
+import CaseStudyCard, { CaseStudyCardSkeleton } from '../components/studii/CaseStudyCard'
 
 export default function StudiiDeCaz() {
   const { language } = useLanguage()
@@ -67,9 +67,17 @@ export default function StudiiDeCaz() {
         </header>
 
         {loading ? (
-          <p className="text-center text-neutral-500 text-sm font-['Inter']" aria-busy="true">
-            …
-          </p>
+          <ul
+            className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3"
+            aria-busy="true"
+            aria-label={tr.heroTitle}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i} className="min-w-0">
+                <CaseStudyCardSkeleton />
+              </li>
+            ))}
+          </ul>
         ) : (
           <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
             {cases.map((item) => (

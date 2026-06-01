@@ -114,6 +114,7 @@ export type ProductDetailTranslations = {
   /** Opens full technical details bottom sheet (mobile accordion) */
   toateDetaliileBtn: string
   intrebariFrecvente: string
+  studiiDeCaz: string
   // Swap banner (CTA → /siguranta)
   stiaiCa: string
   swapDesc: string
@@ -251,6 +252,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     detaliiTehnice: 'Detalii tehnice',
     toateDetaliileBtn: 'Toate detaliile',
     intrebariFrecvente: 'Întrebări frecvente',
+    studiiDeCaz: 'Studii de caz',
     stiaiCa: 'ȘTIAI CĂ?',
     swapDesc:
       'Prin serviciul Baterino SWAP îți oferim o baterie la schimb pe toată durata perioadei în care bateria ta se află la noi în service?',
@@ -377,6 +379,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     detaliiTehnice: 'Technical details',
     toateDetaliileBtn: 'All details',
     intrebariFrecvente: 'Frequently asked questions',
+    studiiDeCaz: 'Case studies',
     stiaiCa: 'DID YOU KNOW?',
     swapDesc:
       'With Baterino SWAP, we offer you a replacement battery for the entire period your battery is with us in service.',
@@ -502,6 +505,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     detaliiTehnice: '技术详情',
     toateDetaliileBtn: '全部参数',
     intrebariFrecvente: '常见问题',
+    studiiDeCaz: '案例研究',
     stiaiCa: '你知道吗？',
     swapDesc: '通过Baterino SWAP服务，在您的电池于我方服务中心期间，我们为您提供替换电池。',
     swapBannerCta: '查看全部服务',

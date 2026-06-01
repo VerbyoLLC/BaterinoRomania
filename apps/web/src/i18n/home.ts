@@ -129,9 +129,23 @@ export type HomeTranslations = {
   /** Residential catalog: label above public price */
   pretLabel: string
   catalogIncludesVatWithPct: string
+  catalogBadgeStocCategory: string
+  catalogBadgeLivrareCategory: string
+  catalogBadgeTransportCategory: string
+  catalogBadgeInstalareCategory: string
   catalogStockInStock: string
   catalogStockOutOfStock: string
   catalogStockComingSoon: string
+  catalogStockOnOrder: string
+  catalogDelivery24h: string
+  catalogDelivery48h: string
+  catalogDelivery7_14d: string
+  catalogDelivery60d: string
+  catalogTransportFree: string
+  catalogTransportPaid: string
+  catalogInstallBaterino: string
+  catalogInstallPartner: string
+  catalogReducereBadge: string
   productsComingSoon: string
   welcomeModalWelcomeTo: string
   welcomeModalTitle: string
@@ -349,9 +363,23 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
     pretLabel: 'Preț',
     catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogBadgeStocCategory: 'Stoc',
+    catalogBadgeLivrareCategory: 'Livrare',
+    catalogBadgeTransportCategory: 'Transport',
+    catalogBadgeInstalareCategory: 'Instalare',
     catalogStockInStock: 'Stoc suficient',
     catalogStockOutOfStock: 'Stoc epuizat',
     catalogStockComingSoon: 'În curând',
+    catalogStockOnOrder: 'La comandă',
+    catalogDelivery24h: '24 de ore',
+    catalogDelivery48h: '48 ore',
+    catalogDelivery7_14d: '7 - 14 zile',
+    catalogDelivery60d: '60 de zile',
+    catalogTransportFree: 'Gratuit',
+    catalogTransportPaid: 'Contra cost',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: 'Partener',
+    catalogReducereBadge: 'Programe Reduceri',
     productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
     welcomeModalWelcomeTo: 'BINE AI VENIT LA',
     welcomeModalTitle: 'ESTI INSTALATOR SAU DISTRIBUITOR?',
@@ -562,9 +590,23 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogDisponibilParteneriPrice: 'Available to partners',
     pretLabel: 'Price',
     catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogBadgeStocCategory: 'Stock',
+    catalogBadgeLivrareCategory: 'Delivery',
+    catalogBadgeTransportCategory: 'Transport',
+    catalogBadgeInstalareCategory: 'Instalare',
     catalogStockInStock: 'In stock',
     catalogStockOutOfStock: 'Out of stock',
     catalogStockComingSoon: 'Coming soon',
+    catalogStockOnOrder: 'On order',
+    catalogDelivery24h: '24 hours',
+    catalogDelivery48h: '48 hours',
+    catalogDelivery7_14d: '7 - 14 days',
+    catalogDelivery60d: '60 days',
+    catalogTransportFree: 'Free',
+    catalogTransportPaid: 'Paid',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: 'Partner',
+    catalogReducereBadge: 'Discount programs',
     productsComingSoon: 'The site is being updated. Products will be available soon.',
     welcomeModalWelcomeTo: 'WELCOME TO',
     welcomeModalTitle: 'ARE YOU AN INSTALLER OR DISTRIBUTOR?',
@@ -642,7 +684,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     divMarTitle: 'MARITIME',
     divMarDesc: 'Energy storage solutions for the maritime environment.',
     divMedTitle: 'MEDICAL',
-    divMedDesc: 'We are the only company in Romania specialised in providing energy storage solutions for imaging centres, dental surgeries, dialysis centres and medical clinics.',
+    divMedDesc: 'For imaging clinics and dental practices.',
 
     warrantyCtaTitle: '10-Year Warranty – The most extensive in Romania',
     warrantyCtaSubtitle:
@@ -773,9 +815,22 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogDisponibilParteneriPrice: '合作伙伴专享',
     pretLabel: '价格',
     catalogIncludesVatWithPct: '含增值税 {pct}%',
+    catalogBadgeStocCategory: '库存',
+    catalogBadgeLivrareCategory: '配送',
+    catalogBadgeTransportCategory: '运输',
     catalogStockInStock: '库存充足',
     catalogStockOutOfStock: '售罄',
     catalogStockComingSoon: '即将到货',
+    catalogStockOnOrder: '预订',
+    catalogDelivery24h: '24 小时',
+    catalogDelivery48h: '48 小时',
+    catalogDelivery7_14d: '7 - 14 天',
+    catalogDelivery60d: '60 天',
+    catalogTransportFree: '免费',
+    catalogTransportPaid: '付费',
+    catalogInstallBaterino: 'Baterino',
+    catalogInstallPartner: '合作伙伴',
+    catalogReducereBadge: '折扣计划',
     productsComingSoon: '网站正在更新中，产品即将推出。',
     welcomeModalWelcomeTo: '欢迎来到',
     welcomeModalTitle: '您是安装商还是分销商？',
@@ -853,7 +908,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     divMarTitle: '航海',
     divMarDesc: '为航海环境提供储能解决方案。',
     divMedTitle: '医疗',
-    divMedDesc: '我们是罗马尼亚唯一专门为影像中心、牙科诊所、透析中心和医疗诊所提供储能解决方案的公司。',
+    divMedDesc: '面向影像中心和牙科诊所。',
 
     warrantyCtaTitle: '10年质保 – 罗马尼亚最全面的质保',
     warrantyCtaSubtitle:

@@ -1,5 +1,9 @@
 import type { IndustrialBessTemplateTranslations } from '../../i18n/industrial-bess-template'
 import { CONTACT_WHATSAPP_WAME } from '../../lib/contactWhatsApp'
+import {
+  technicalBrochureDownloadFilename,
+  technicalBrochureDownloadHref,
+} from '../../lib/industrialModelBrochure'
 
 function WhatsappGlyph({ className }: { className?: string }) {
   return (
@@ -8,6 +12,27 @@ function WhatsappGlyph({ className }: { className?: string }) {
     </svg>
   )
 }
+
+function DownloadGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3v12m0 0l4-4m-4 4L8 11" />
+      <path d="M4 21h16" />
+    </svg>
+  )
+}
+
+const actionBtnClass =
+  'relative z-10 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 px-5 py-3 text-sm font-semibold font-[\'Inter\'] shadow-sm transition-colors sm:text-base'
 
 export type IndustrialDesktopWhatsappSlideProps = {
   /** Ignored when `reveal` is `group-hover` (use parent `group` + hover / focus-within). */
@@ -19,46 +44,77 @@ export type IndustrialDesktopWhatsappSlideProps = {
   productTitle: string
   modelName: string
   tr: IndustrialBessTemplateTranslations
+  /** Public R2 URL for model technical PDF; second button only when set. */
+  technicalBrochureUrl?: string | null
 }
 
-/** Absolute slide-down CTA below an industrial model card (desktop). */
+/** Absolute slide-down CTAs below an industrial model card (desktop hover). */
 export function IndustrialDesktopWhatsappSlide({
   open,
   reveal = 'toggle',
   productTitle,
   modelName,
   tr,
+  technicalBrochureUrl = null,
 }: IndustrialDesktopWhatsappSlideProps) {
   const prefill = tr.modelDesktopWhatsappPrefill
     .replace(/\{product\}/g, productTitle.trim() || '—')
     .replace(/\{model\}/g, modelName.trim() || '—')
-  const href = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(prefill)}`
+  const whatsappHref = `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(prefill)}`
+
+  const brochureTrim = technicalBrochureUrl != null ? String(technicalBrochureUrl).trim() : ''
+  const hasBrochure = brochureTrim.length > 0
 
   const byHover =
     reveal === 'group-hover'
-      ? 'pointer-events-none max-h-0 -translate-y-1 opacity-0 group-hover:pointer-events-auto group-hover:max-h-32 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:max-h-32 group-focus-within:translate-y-0 group-focus-within:opacity-100'
+      ? 'pointer-events-none max-h-0 -translate-y-1 opacity-0 group-hover:pointer-events-auto group-hover:max-h-48 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:max-h-48 group-focus-within:translate-y-0 group-focus-within:opacity-100'
       : ''
 
   const byOpen =
     reveal === 'toggle'
       ? open
-        ? 'pointer-events-auto max-h-32 opacity-100 translate-y-0'
+        ? 'pointer-events-auto max-h-48 opacity-100 translate-y-0'
         : 'pointer-events-none max-h-0 -translate-y-1 opacity-0'
       : ''
+
+  const handleBrochureDownload = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const proxyUrl = technicalBrochureDownloadHref(brochureTrim)
+    const a = document.createElement('a')
+    a.href = proxyUrl
+    a.download = technicalBrochureDownloadFilename(modelName)
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   return (
     <div
       className={`absolute left-0 right-0 top-full z-20 mt-0 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${byHover} ${byOpen}`}
     >
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="relative z-10 mt-2 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white font-['Inter'] shadow-sm transition-colors hover:bg-slate-800 sm:text-base"
-      >
-        <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
-        {tr.modelDesktopDetailsCta}
-      </a>
+      <div className="relative z-10 mt-2 flex w-full flex-col gap-2">
+        <a
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`${actionBtnClass} border-slate-900 bg-slate-900 text-white hover:bg-slate-800`}
+        >
+          <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
+          {tr.modelDesktopCereOfertaCta}
+        </a>
+        {hasBrochure ? (
+          <button
+            type="button"
+            onClick={handleBrochureDownload}
+            className={`${actionBtnClass} border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-neutral-50`}
+          >
+            <DownloadGlyph className="h-[18px] w-[18px] shrink-0 text-slate-900" />
+            {tr.modelDesktopTechnicalPdfCta}
+          </button>
+        ) : null}
+      </div>
     </div>
   )
 }

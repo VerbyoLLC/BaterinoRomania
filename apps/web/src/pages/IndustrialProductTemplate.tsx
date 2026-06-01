@@ -25,6 +25,7 @@ import {
 } from '../lib/industrialProductPageLayout'
 import { IndustrialModelConfigurationCard } from '../components/product/IndustrialModelConfigurationCard'
 import { IndustrialDesktopWhatsappSlide } from '../components/product/IndustrialDesktopWhatsappSlide'
+import { IndustrialSingleModelCompanionCards } from '../components/product/IndustrialSingleModelCompanionCards'
 import { industrialEntriesFromTemplateRows } from '../lib/industrialTechnicalSpec'
 
 type Slide = { title: string; content: ReactNode }
@@ -281,6 +282,8 @@ export default function IndustrialProductTemplate() {
     () => industrialEntriesFromTemplateRows(STATIC_TECH_SPEC_ROWS),
     [],
   )
+  const isSingleModelRow = templateModelEntries.length === 1
+  const singleModelEntry = isSingleModelRow ? templateModelEntries[0]! : null
 
   return (
     <>
@@ -362,7 +365,9 @@ export default function IndustrialProductTemplate() {
 
         {templateModelEntries.length > 0 ? (
           <div
-            className="mx-auto w-full min-w-0 max-w-[1200px] mb-6 sm:mb-8"
+            className={`mx-auto mb-10 w-full min-w-0 max-w-[1200px] sm:mb-12 lg:mb-14${
+              isSingleModelRow ? ' lg:pb-14' : ''
+            }`}
             aria-label={tr.overviewModelsHeading}
           >
             <p className="m-0 mb-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter']">
@@ -378,7 +383,43 @@ export default function IndustrialProductTemplate() {
                   variant="compact"
                 />
               ))}
+              {isSingleModelRow && singleModelEntry ? (
+                <IndustrialSingleModelCompanionCards
+                  tr={tr}
+                  modelName={singleModelEntry.modelName}
+                />
+              ) : null}
             </div>
+            {isSingleModelRow && singleModelEntry ? (
+              <div className="hidden w-full min-w-0 items-stretch gap-3 sm:gap-4 lg:grid lg:grid-cols-2">
+                <div
+                  key={`${singleModelEntry.modelName}-d-0`}
+                  className="group relative z-10 flex h-full min-h-0 min-w-0 flex-col outline-none hover:z-20 focus-within:z-20"
+                  tabIndex={0}
+                >
+                  <div className="relative flex h-full min-h-0 flex-1 flex-col">
+                    <IndustrialModelConfigurationCard
+                      entry={singleModelEntry}
+                      tr={tr}
+                      specLabel={rowLabel}
+                      stretchHeight
+                    />
+                    <IndustrialDesktopWhatsappSlide
+                      reveal="group-hover"
+                      open={false}
+                      productTitle={tr.heroTitle}
+                      modelName={singleModelEntry.modelName}
+                      tr={tr}
+                    />
+                  </div>
+                </div>
+                <IndustrialSingleModelCompanionCards
+                  tr={tr}
+                  stretchHeight
+                  modelName={singleModelEntry.modelName}
+                />
+              </div>
+            ) : (
             <div
               className="hidden w-full min-w-0 gap-3 sm:gap-4 lg:grid"
               style={{
@@ -409,10 +450,11 @@ export default function IndustrialProductTemplate() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         ) : null}
 
-        <section className="border-t border-gray-100 pt-6 sm:pt-8">
+        <section className="border-t border-gray-100 pt-10 sm:pt-12">
           <h2 className="text-gray-700 text-xl lg:text-3xl font-bold font-['Inter'] leading-7 lg:leading-10 m-0 mb-6 sm:mb-7 lg:mb-8">
             {tr.overviewTitle}
           </h2>
@@ -450,7 +492,7 @@ export default function IndustrialProductTemplate() {
                             <span className="text-xs font-semibold text-neutral-600 font-['Inter']">{modelName}</span>
                             <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 font-['Inter']">
                               <WhatsAppGlyph className="h-4 w-4 shrink-0 text-slate-900" />
-                              {tr.modelDesktopDetailsCta}
+                              {tr.modelDesktopCereOfertaCta}
                             </span>
                           </a>
                         </li>
@@ -461,13 +503,15 @@ export default function IndustrialProductTemplate() {
                 </div>
               ) : null}
 
-              <Link
-                to="/contact"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-300 bg-white text-slate-900 px-5 py-3 font-semibold font-['Inter'] text-sm sm:text-base hover:border-slate-400 hover:bg-neutral-50 transition-colors mt-6 sm:mt-8 w-full sm:w-auto"
-              >
-                <Download size={18} aria-hidden />
-                {tr.downloadBrochure}
-              </Link>
+              {!isSingleModelRow ? (
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-300 bg-white text-slate-900 px-5 py-3 font-semibold font-['Inter'] text-sm sm:text-base hover:border-slate-400 hover:bg-neutral-50 transition-colors mt-6 sm:mt-8 w-full sm:w-auto"
+                >
+                  <Download size={18} aria-hidden />
+                  {tr.downloadBrochure}
+                </Link>
+              ) : null}
             </div>
 
             <div className="min-w-0 p-5 sm:p-6 bg-neutral-100 rounded-[10px] border border-neutral-200/80">
