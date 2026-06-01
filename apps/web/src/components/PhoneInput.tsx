@@ -105,13 +105,12 @@ export default function PhoneInput({
 
   return (
     <div className={shellClass}>
-      {/* Auto-detected flag + dial code — read-only indicator */}
-      <span className="flex shrink-0 select-none items-center gap-1.5 border-r border-slate-200 bg-slate-50 px-3 text-sm">
-        <span className="text-base leading-none">{country.flag}</span>
-        <span className="tabular-nums font-semibold text-slate-500">{country.dialCode}</span>
+      {/* Auto-detected country indicator — shows 2-letter code, works on all platforms */}
+      <span className="flex shrink-0 select-none items-center border-r border-slate-200 bg-slate-50 px-3.5 text-xs font-bold tracking-wide text-slate-500">
+        {country.code}
       </span>
 
-      {/* Full number input — user types +countrycode + local number */}
+      {/* Full number input — user types +countrycode followed by local digits */}
       <input
         type="tel"
         autoComplete={autoComplete}
