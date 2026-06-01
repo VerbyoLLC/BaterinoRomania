@@ -239,10 +239,10 @@ export default function Produse() {
               const deliveryLabel = getCatalogDeliveryBadgeLabel(product, { h24: tr.catalogDelivery24h, h48: tr.catalogDelivery48h, d7_14: tr.catalogDelivery7_14d, d60: catalogBadgeLabels.delivery60d })
               if (deliveryLabel) featureBadges.push({ type: 'delivery', label: deliveryLabel })
               const transportLabel = getCatalogTransportBadgeLabel(product, { free: catalogBadgeLabels.transportFree, paid: catalogBadgeLabels.transportPaid })
-              if (transportLabel) featureBadges.push({ type: 'transport', label: transportLabel })
+              if (transportLabel) featureBadges.push({ type: 'transport', label: `${catalogBadgeLabels.transportCategory} ${transportLabel}` })
               if (product.tipProdus === 'industrial') {
                 const installLabel = getCatalogInstallBadgeLabel(product, { baterino: catalogBadgeLabels.installBaterino, partner: catalogBadgeLabels.installPartner })
-                if (installLabel) featureBadges.push({ type: 'install', label: installLabel })
+                if (installLabel) featureBadges.push({ type: 'install', label: `${catalogBadgeLabels.installCategory} ${installLabel}` })
               } else if (productHasEligibleReducerePrograms(product)) {
                 featureBadges.push({ type: 'reduceri', label: catalogBadgeLabels.reduceri })
               }
