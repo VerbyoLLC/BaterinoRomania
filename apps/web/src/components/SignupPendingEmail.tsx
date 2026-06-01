@@ -43,9 +43,9 @@ export default function SignupPendingEmail({
   async function handleVerifyCode(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const digits = code.replace(/\D/g, '').slice(0, 4)
-    if (digits.length !== 4) {
-      setError('Introdu cele 4 cifre din email.')
+    const digits = code.replace(/\D/g, '').slice(0, 6)
+    if (digits.length !== 6) {
+      setError('Introdu cele 6 cifre din email.')
       return
     }
     setVerifyLoading(true)
@@ -100,13 +100,13 @@ export default function SignupPendingEmail({
       <p className="text-gray-500 text-sm font-['Inter'] leading-5 mb-2">
         {verificationSent ? (
           <>
-            Am trimis un cod din <strong>4 cifre</strong> la{' '}
+            Am trimis un cod din <strong>6 cifre</strong> la{' '}
             <span className="text-black font-semibold">{email}</span>. Introdu codul mai jos pentru a-ți activa
             contul.
           </>
         ) : (
           <>
-            După ce repari trimiterea, vei primi un cod din 4 cifre la{' '}
+            După ce repari trimiterea, vei primi un cod din 6 cifre la{' '}
             <span className="text-black font-semibold">{email}</span>. Apoi îl introduci aici.
           </>
         )}
@@ -117,16 +117,16 @@ export default function SignupPendingEmail({
 
       <form onSubmit={handleVerifyCode} className="mb-6 space-y-3">
         <label className="block">
-          <span className="text-sm font-semibold text-gray-800 font-['Inter']">Cod din 4 cifre</span>
+          <span className="text-sm font-semibold text-gray-800 font-['Inter']">Cod din 6 cifre</span>
           <input
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="one-time-code"
-            maxLength={4}
+            maxLength={6}
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            placeholder="••••"
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="••••••"
             className="mt-1 w-full h-12 rounded-[10px] border border-gray-300 px-4 text-center text-2xl font-bold tracking-[0.4em] font-['Inter'] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
         </label>

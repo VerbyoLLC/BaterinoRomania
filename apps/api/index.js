@@ -803,9 +803,9 @@ function marketingEmailOptInCreateData(body) {
   return { marketingEmailOptIn: true, marketingEmailOptInAt: new Date() }
 }
 
-/** Cod numeric 4 cifre (leading zeros) pentru verificare email la înregistrare. */
+/** Cod numeric 6 cifre (leading zeros) pentru verificare email la înregistrare. */
 function randomSignupVerificationCode() {
-  return String(crypto.randomInt(0, 10000)).padStart(4, '0')
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
 }
 
 const SIGNUP_VERIFICATION_CODE_TTL_MS = 15 * 60 * 1000
@@ -926,7 +926,7 @@ app.post('/api/auth/signup', signupLimiter, async (req, res) => {
 
     return res.status(201).json({
       message: verificationSent
-        ? 'Cont creat. Verifică emailul pentru codul de 4 cifre.'
+        ? 'Cont creat. Verifică emailul pentru codul de 6 cifre.'
         : isMailConfigured()
           ? 'Cont creat. Nu am putut trimite acum emailul cu codul (server de mail). Folosește „Retrimite codul” după ce repari SMTP/Resend.'
           : 'Cont creat. Emailul nu este configurat pe server; configurează SMTP sau Resend, apoi retrimite codul.',
@@ -1027,15 +1027,15 @@ app.post('/api/auth/verify-email', async (req, res) => {
   }
 })
 
-// ── Auth: Verify code (4 cifre — înregistrare client și partener) ─────────
+// ── Auth: Verify code (6 cifre — înregistrare client și partener) ─────────
 app.post('/api/auth/verify', verifyIpLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
-    const codeDigits = String(body.code ?? '').replace(/\D/g, '').slice(0, 4)
+    const codeDigits = String(body.code ?? '').replace(/\D/g, '').slice(0, 6)
 
-    if (!email || codeDigits.length !== 4) {
-      return res.status(400).json({ error: 'Email și cod din 4 cifre sunt obligatorii.' })
+    if (!email || codeDigits.length !== 6) {
+      return res.status(400).json({ error: 'Email și cod din 6 cifre sunt obligatorii.' })
     }
 
     const user = await prisma.user.findUnique({

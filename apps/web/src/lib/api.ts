@@ -765,7 +765,7 @@ export async function verifyEmailToken(token: string): Promise<{ token: string; 
   return data as { token: string; user: AuthUser }
 }
 
-/** Verificare înregistrare cu cod din 4 cifre (client / partener). */
+/** Verificare înregistrare cu cod din 6 cifre (client / partener). */
 export async function verifySignupCode(
   email: string,
   code: string,
