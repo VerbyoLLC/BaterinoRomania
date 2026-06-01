@@ -17,8 +17,7 @@ import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import {
   CatalogProductCardSkeleton,
-  IndustrialCatalogProductCard,
-  ResidentialCatalogProductCard,
+  HorizontalCatalogProductCard,
 } from '../components/product/CatalogProductCard'
 import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
 import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
@@ -191,13 +190,13 @@ export default function Produse() {
 
         {/* ── PRODUCT GRID ── */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <CatalogProductCardSkeleton key={i} />
             ))}
           </div>
         ) : filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
             {filtered.map((product) => {
               const img = getProductCardImageUrl(product)
               const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
@@ -219,69 +218,34 @@ export default function Produse() {
                     : formatResidentialCatalogPriceDisplay(product, language.code, currency)
               const industrialHasPrice =
                 product.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
-              const showIndustrialPriceExtras = industrialHasPrice
               const to = `/produse/${product.slug || product.id}`
               const linkState = { tipProdus: product.tipProdus }
-              const common = {
-                density: 'produse' as const,
-                imageSrc: img,
-                imageAlt: product.title,
-                title: product.title,
-                specLine1,
-                specLine2,
-                to,
-                linkState,
-                priceDisplay,
-              }
               const industrialSubtitle = String(product.subtitle || '').trim() || undefined
               const showResPriceExtras =
                 priceDisplay != null &&
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
               const catalogBadgeLabels = catalogBadgeLabelsFromProduseTr(tr)
-              return product.tipProdus === 'industrial' ? (
-                <IndustrialCatalogProductCard
+              return (
+                <HorizontalCatalogProductCard
                   key={product.id}
-                  {...common}
+                  variant={product.tipProdus === 'industrial' ? 'industrial' : 'residential'}
+                  imageSrc={img}
+                  imageAlt={product.title}
+                  title={product.title}
                   subtitle={industrialSubtitle}
-                  ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
-                  residentialPriceHeading={showIndustrialPriceExtras ? tr.pretLabel : null}
-                  residentialPriceVatNote={tr.catalogIncludesVatWithPct.replace(
-                    '{pct}',
-                    getResidentialCatalogVatPercentLabel(product),
-                  )}
-                  imageOverlay={
-                    <ResidentialProductCatalogBadges
-                      product={product}
-                      labels={catalogBadgeLabels}
-                      layout="stack"
-                      include={['stock', 'delivery']}
-                    />
-                  }
-                  priceAboveBadge={
-                    <ResidentialProductCatalogBadges
-                      product={product}
-                      labels={catalogBadgeLabels}
-                      layout="wrap"
-                      className="justify-center gap-1.5"
-                      include={['transport', 'install']}
-                      appearance="neutral"
-                    />
-                  }
-                />
-              ) : (
-                <ResidentialCatalogProductCard
-                  key={product.id}
-                  {...common}
+                  specLine1={specLine1}
+                  specLine2={specLine2}
+                  to={to}
+                  linkState={linkState}
+                  priceDisplay={priceDisplay}
+                  ctaLabel={product.tipProdus === 'industrial' && !industrialHasPrice ? tr.disponibilPentruParteneri : undefined}
                   residentialPartnerPriceCta={residentialPartnerPriceCta}
                   residentialStockListingCta={stockListingCta}
-                  residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
+                  residentialPriceHeading={showResPriceExtras || industrialHasPrice ? tr.pretLabel : null}
                   residentialPriceVatNote={
-                    showResPriceExtras
-                      ? tr.catalogIncludesVatWithPct.replace(
-                          '{pct}',
-                          getResidentialCatalogVatPercentLabel(product),
-                        )
+                    showResPriceExtras || industrialHasPrice
+                      ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(product))
                       : null
                   }
                   imageOverlay={
@@ -297,8 +261,8 @@ export default function Produse() {
                       product={product}
                       labels={catalogBadgeLabels}
                       layout="wrap"
-                      className="justify-center gap-1.5"
-                      include={['transport', 'reducere']}
+                      className="gap-1.5"
+                      include={product.tipProdus === 'industrial' ? ['transport', 'install'] : ['transport', 'reducere']}
                       appearance="neutral"
                     />
                   }

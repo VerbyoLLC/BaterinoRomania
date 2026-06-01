@@ -369,6 +369,137 @@ export function IndustrialCatalogProductCard(props: IndustrialCatalogProductCard
   return <CatalogProductCard {...props} variant="industrial" />
 }
 
+export type HorizontalCatalogProductCardProps = CatalogProductCardBaseProps & {
+  variant?: 'residential' | 'industrial'
+}
+
+/**
+ * Desktop: horizontal card — image on the left (40%), content on the right (60%).
+ * Mobile: falls back to the standard vertical card layout.
+ */
+export function HorizontalCatalogProductCard({
+  variant = 'residential',
+  imageSrc,
+  imageAlt,
+  title,
+  subtitle,
+  specLine1,
+  specLine2,
+  to,
+  linkState,
+  priceDisplay,
+  imageOverlay,
+  priceAboveBadge,
+  residentialPriceHeading,
+  residentialPriceVatNote,
+  residentialPartnerPriceCta,
+  residentialStockListingCta,
+  shellClassName = '',
+  ctaLabel,
+}: HorizontalCatalogProductCardProps) {
+  const [imgLoaded, setImgLoaded] = useState(true)
+  const isIndustrial = variant === 'industrial'
+
+  const stockListingTrim =
+    !isIndustrial &&
+    residentialStockListingCta != null &&
+    String(residentialStockListingCta).trim() !== ''
+  const partnerListingCta =
+    residentialPartnerPriceCta != null &&
+    String(residentialPartnerPriceCta).trim() !== ''
+  const darkLabel = stockListingTrim
+    ? String(residentialStockListingCta).trim()
+    : partnerListingCta
+      ? String(residentialPartnerPriceCta).trim()
+      : ''
+  const showDarkChip = !isIndustrial && darkLabel !== ''
+  const showPrice = !showDarkChip && priceDisplay != null && priceDisplay !== ''
+  const showIndustrialCta = isIndustrial && !showPrice && ctaLabel
+
+  const subtitleLine = isIndustrial ? String(subtitle ?? '').trim() : ''
+
+  return (
+    <div
+      className={`group flex flex-col overflow-hidden rounded-[10px] bg-[#f7f7f7] transition-shadow duration-300 hover:shadow-md lg:flex-row ${shellClassName}`.trim()}
+    >
+      <Link
+        to={to!}
+        state={linkState}
+        className="flex flex-col lg:flex-row lg:items-stretch w-full"
+      >
+        {/* ── Image ── */}
+        <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[42%] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
+          <img
+            src={imageSrc}
+            alt={imageAlt}
+            className={`h-full w-full max-h-full max-w-full object-contain object-center transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImgLoaded(true)}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+          {imageOverlay ? (
+            <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)]">
+              {imageOverlay}
+            </div>
+          ) : null}
+        </div>
+
+        {/* ── Content ── */}
+        <div className="flex flex-1 flex-col justify-center px-5 py-5 lg:px-6 lg:py-5">
+          <h3 className="text-lg font-bold font-['Inter'] leading-snug text-black lg:text-xl">
+            {title}
+          </h3>
+          {subtitleLine ? (
+            <p className="mt-1 text-sm font-medium font-['Inter'] leading-snug text-neutral-600">
+              {subtitleLine}
+            </p>
+          ) : null}
+
+          {!isIndustrial ? (
+            <div className="mt-2 space-y-0.5">
+              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-700">{specLine1}</p>
+              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-700">{specLine2}</p>
+            </div>
+          ) : null}
+
+          {priceAboveBadge ? (
+            <div className="mt-3">{priceAboveBadge}</div>
+          ) : null}
+
+          {showDarkChip ? (
+            <div className="mt-3">
+              <span className="inline-flex items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm">
+                {darkLabel}
+              </span>
+            </div>
+          ) : showPrice ? (
+            <div className="mt-3">
+              {residentialPriceHeading ? (
+                <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500 font-['Inter']">
+                  {residentialPriceHeading}
+                </span>
+              ) : null}
+              <p className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight text-slate-900 font-['Inter'] lg:text-3xl">
+                {priceDisplay}
+              </p>
+              {residentialPriceVatNote ? (
+                <span className="text-xs font-medium text-neutral-500 font-['Inter']">
+                  {residentialPriceVatNote}
+                </span>
+              ) : null}
+            </div>
+          ) : showIndustrialCta ? (
+            <div className="mt-3">
+              <span className="inline-flex items-center justify-center rounded-[10px] bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white font-['Inter'] sm:text-sm">
+                {String(ctaLabel).trim()}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      </Link>
+    </div>
+  )
+}
+
 export function CatalogProductCardSkeleton({
   density = 'produse',
 }: {
