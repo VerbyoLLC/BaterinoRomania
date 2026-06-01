@@ -4385,48 +4385,6 @@ app.delete('/api/partner/account', authMiddleware, async (req, res) => {
   }
 })
 
-// ── Debug: test Prisma (fără auth, doar pentru diagnostic) ─────────────
-app.get('/api/debug/db', async (req, res) => {
-  try {
-    const count = await prisma.partner.count()
-    return res.json({ ok: true, partnersCount: count })
-  } catch (err) {
-    console.error('Debug DB error:', err)
-    return res.status(500).json({ ok: false, error: err?.message || String(err) })
-  }
-})
-
-// ── Debug: mail config + optional test send ───────────────────────────
-app.get('/api/debug/mail', async (req, res) => {
-  try {
-    const provider = getMailProvider()
-    const configured = isMailConfigured()
-    const from = getMailFrom()
-    const out = {
-      configured,
-      provider,
-      from: from ? String(from).replace(/<[^>]+>/, '<***>') : null,
-      ...getMailDebugInfo(),
-    }
-
-    if (req.query.verify === '1' || req.query.verify === 'true') {
-      out.smtpVerify = await verifySmtpConnection()
-    }
-
-    const testTo = req.query.test || req.query.to
-    if (testTo && configured) {
-      const resetUrl = `${process.env.FRONTEND_URL || 'https://baterino.ro'}/reset-password?token=test123`
-      await sendPasswordResetEmail(String(testTo), resetUrl)
-      out.testSent = true
-      out.testTo = testTo
-    }
-    return res.json(out)
-  } catch (err) {
-    console.error('Debug mail error:', err)
-    return res.status(500).json({ ok: false, configured: isMailConfigured(), error: err?.message || String(err) })
-  }
-})
-
 // ── Debug: HTML proforma preview (always registered; blocked in prod unless BATERINO_DEBUG_PROFORMA=1) ──
 async function proformaPreviewHandler(req, res) {
   const enabledInProd = process.env.BATERINO_DEBUG_PROFORMA === '1'
@@ -4449,9 +4407,6 @@ async function proformaPreviewHandler(req, res) {
     return res.status(500).type('text/plain').send(err?.message || String(err))
   }
 }
-app.get('/api/debug/proforma-preview', proformaPreviewHandler)
-app.get('/debug/proforma-preview', proformaPreviewHandler)
-/** Same HTML sample as debug route — easier URL to remember for template checks. */
 app.get('/api/proforma-template', proformaPreviewHandler)
 
 // ── Debug: referral invite email HTML preview (blocked in prod unless BATERINO_DEBUG_REFERRAL_EMAIL=1) ──
@@ -4484,9 +4439,6 @@ async function referralInvitePreviewHandler(req, res) {
     return res.status(500).type('text/plain').send(err?.message || String(err))
   }
 }
-app.get('/api/debug/referral-invite-preview', referralInvitePreviewHandler)
-app.get('/debug/referral-invite-preview', referralInvitePreviewHandler)
-/** Same HTML sample as debug route — open in browser while editing templates/referral-invite-email.js */
 app.get('/api/referral-invite-template', referralInvitePreviewHandler)
 
 // ── Admin: list inquiries (messages) ───────────────────────────────────
