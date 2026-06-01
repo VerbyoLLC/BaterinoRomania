@@ -8,6 +8,7 @@ const {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } = require('@aws-sdk/client-s3')
 
 let s3Client = null
@@ -73,6 +74,43 @@ async function uploadToR2(buffer, key, contentType, opts = {}) {
   return `${publicUrlBase}/${key}`
 }
 
+/**
+ * @param {string} key - R2 object key
+ * @returns {Promise<boolean>}
+ */
+async function r2ObjectExists(key) {
+  const bucket = process.env.R2_BUCKET
+  if (!bucket || !key) return false
+  if (!isR2Configured()) return false
+  try {
+    const client = getR2Client()
+    await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+    return true
+  } catch (err) {
+    const code = err?.name || err?.Code
+    const status = err?.$metadata?.httpStatusCode
+    if (code === 'NotFound' || code === 'NoSuchKey' || status === 404) return false
+    console.warn('[r2] headObject failed:', key, err?.message || err)
+    return false
+  }
+}
+
+/**
+ * Public URL for a product-model technical brochure PDF when the object exists in R2.
+ * @param {string} modelNumber
+ * @param {string} modelName
+ * @returns {Promise<string|null>}
+ */
+async function resolveProductModelTechnicalBrochureUrl(modelNumber, modelName) {
+  if (!isR2Configured()) return null
+  const key = productTechnicalBrochurePdfKey(modelNumber, modelName)
+  const exists = await r2ObjectExists(key)
+  if (!exists) return null
+  const publicUrlBase = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
+  if (!publicUrlBase) return null
+  return `${publicUrlBase}/${key}`
+}
+
 const MIME_TO_EXT = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',
@@ -133,9 +171,13 @@ function generateKey(originalName, prefix = 'uploads', mimetype, productFolder, 
   const productSlug = productFolder ? sanitizeFolderName(productFolder) : null
   const folder = productSlug ? `${prefix}/${productSlug}` : prefix
 
-  if (imageIndex != null && mimetype && mimetype.startsWith('image/')) {
+  if (imageIndex != null && Number.isFinite(imageIndex) && imageIndex > 0) {
     const slug = productFolder ? slugifyForFilename(productFolder) : 'imagine'
-    const imgExt = ext || (MIME_TO_EXT[mimetype] || '.jpg')
+    const imgExt =
+      ext ||
+      (mimetype && MIME_TO_EXT[mimetype]) ||
+      (originalName && /\.jpe?g$/i.test(originalName) ? '.jpg' : '') ||
+      '.jpg'
     return `${folder}/${slug}-${imageIndex}${imgExt}`
   }
 
@@ -366,5 +408,6 @@ module.exports = {
   sanitizeSerialNumber,
   buildReturConditionPhotoKey,
   productTechnicalBrochurePdfKey,
+  resolveProductModelTechnicalBrochureUrl,
   commercialOfferPdfKey,
 }

@@ -1,8 +1,8 @@
 /**
- * Populate technicalSpecsModels for BESS cabinet 215–261 kWh (4 models).
- * Run from apps/api: node scripts/populate-bess-cabinet-215-261-specs.cjs
+ * Populate technicalSpecsModels for BESS cabinet 215–261 kWh (4 models)
+ * and upsert each configuration as a row in product_models (Inventar → Modele).
  *
- * npm run populate:bess-cabinet-215-261
+ * Run from apps/api: npm run populate:bess-cabinet-215-261
  */
 require('dotenv').config()
 const path = require('path')
@@ -10,6 +10,39 @@ const { PrismaPg } = require('@prisma/adapter-pg')
 const { PrismaClient } = require(path.join(__dirname, '..', 'generated', 'prisma', 'index.js'))
 
 const SLUG = 'bess-cabinet-baterii-lifepo4-215-kwh-261-kwh'
+const SERIES = 'BESS Cabinet 215–261 kWh'
+
+const SPEC_FIELDS = [
+  { key: 'energySystem', label: 'Energy System' },
+  { key: 'nominalVoltage', label: 'Nominal Voltage' },
+  { key: 'nominalCapacity', label: 'Nominal Capacity' },
+  { key: 'nominalEnergy', label: 'Nominal Energy' },
+  { key: 'systemConfiguration', label: 'System Configuration' },
+  { key: 'cellType', label: 'Cell Type' },
+  { key: 'chemistry', label: 'Chemistry' },
+  { key: 'cycleLife', label: 'Cycle life' },
+  { key: 'batteryModule', label: 'Battery Module' },
+  { key: 'batteryCluster', label: 'Battery Cluster' },
+  { key: 'maxOutputPower', label: 'Max Output Power' },
+  { key: 'ratedOutputVoltage', label: 'Rated Output Voltage' },
+  { key: 'acAccessMethod', label: 'AC Access Method' },
+  { key: 'ratedGridFrequency', label: 'Rated Grid Frequency' },
+  { key: 'pcsCabinetCount', label: 'Number of PCS cabinets' },
+  { key: 'conversionEfficiency', label: 'Conversion Efficiency' },
+  { key: 'coolingMethod', label: 'Cooling Method' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'waterproof', label: 'Waterproof' },
+  { key: 'corrosionLevel', label: 'Corrosion Level' },
+  { key: 'noiseLevel', label: 'Noise Level' },
+  { key: 'chargeTemperature', label: 'Charge Temperature' },
+  { key: 'dischargeTemperature', label: 'Discharge Temperature' },
+  { key: 'storageTemperature', label: 'Storage Temperature' },
+  { key: 'altitude', label: 'Altitude' },
+  { key: 'certification', label: 'Certification' },
+  { key: 'warranty', label: 'Warranty' },
+  { key: 'dimensions', label: 'Dimensions [L×W×H]' },
+  { key: 'weight', label: 'Weight' },
+]
 
 const COMM =
   'CAN/RS485/Ethernet (support IEC61850, IEC104) /WIFI/4G'
@@ -108,18 +141,105 @@ const technicalSpecsModels = {
   ],
 }
 
+function buildTechnicalDescription(specs) {
+  const lines = ['Model-specific:']
+  for (const { key, label } of SPEC_FIELDS) {
+    const val = specs?.[key]
+    if (val != null && String(val).trim()) lines.push(`${label}: ${String(val).trim()}`)
+  }
+  return lines.join('\n')
+}
+
+function normalizeEntries(raw) {
+  if (!raw || typeof raw !== 'object') return technicalSpecsModels.entries
+  const entries = Array.isArray(raw.entries) ? raw.entries : []
+  if (entries.length === 0) return technicalSpecsModels.entries
+  return entries
+    .map((e) => ({
+      modelName: String(e?.modelName ?? '').trim(),
+      specs: e?.specs && typeof e.specs === 'object' ? e.specs : {},
+    }))
+    .filter((e) => e.modelName)
+}
+
+async function syncProductModels(prisma, entries, { brand }) {
+  const agg = await prisma.productModel.aggregate({ _max: { sortOrder: true } })
+  let sortOrder = (agg._max.sortOrder ?? 0) + 1
+  const results = []
+
+  for (const entry of entries) {
+    const modelNumber = entry.modelName
+    const energy = String(entry.specs?.nominalEnergy ?? '').trim()
+    const displayName = energy ? `${modelNumber} (${energy})` : modelNumber
+    const technicalDescription = buildTechnicalDescription(entry.specs)
+
+    const existing = await prisma.productModel.findUnique({
+      where: { modelNumber },
+      select: { id: true, modelNumber: true },
+    })
+
+    if (existing) {
+      await prisma.productModel.update({
+        where: { modelNumber },
+        data: {
+          name: displayName,
+          brand: brand || 'LithTech',
+          series: SERIES,
+          usageType: 'industrial',
+          technicalDescription,
+          availableForStock: true,
+        },
+      })
+      results.push({ modelNumber, action: 'updated' })
+    } else {
+      await prisma.productModel.create({
+        data: {
+          name: displayName,
+          brand: brand || 'LithTech',
+          modelNumber,
+          series: SERIES,
+          usageType: 'industrial',
+          technicalDescription,
+          availableForStock: true,
+          sortOrder: sortOrder++,
+        },
+      })
+      results.push({ modelNumber, action: 'created' })
+    }
+  }
+
+  return results
+}
+
 async function main() {
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) })
-  const product = await prisma.product.findFirst({ where: { slug: SLUG }, select: { id: true, title: true, slug: true } })
+  const product = await prisma.product.findFirst({
+    where: { slug: SLUG },
+    select: { id: true, title: true, slug: true, brand: true, technicalSpecsModels: true },
+  })
   if (!product) {
     console.error(`No product with slug "${SLUG}".`)
     process.exit(1)
   }
+
+  const entries = normalizeEntries(product.technicalSpecsModels)
+  const payload = { entries }
+
   await prisma.product.update({
     where: { id: product.id },
-    data: { technicalSpecsModels },
+    data: { technicalSpecsModels: payload },
   })
-  console.log(`Updated technicalSpecsModels for ${product.slug} (${product.title}) — ${technicalSpecsModels.entries.length} models.`)
+  console.log(
+    `Updated technicalSpecsModels for ${product.slug} (${product.title}) — ${entries.length} models.`,
+  )
+
+  const brand = String(product.brand || 'LithTech').trim() || 'LithTech'
+  const modelResults = await syncProductModels(prisma, entries, { brand })
+  for (const r of modelResults) {
+    console.log(`  product_models: ${r.modelNumber} — ${r.action}`)
+  }
+  console.log(`Done. ${modelResults.length} individual models in Inventar → Modele.`)
+
   await prisma.$disconnect()
 }
 

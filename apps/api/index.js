@@ -55,6 +55,7 @@ const {
   warrantyCertificateKey,
   buildReturConditionPhotoKey,
   productTechnicalBrochurePdfKey,
+  resolveProductModelTechnicalBrochureUrl,
   commercialOfferPdfKey,
 } = require('./lib/r2.js')
 const {
@@ -188,18 +189,65 @@ function productToJson(record) {
   }
 }
 
-/** Catalog list order: rezidential first, then industrial, then other sectors. */
-function tipProdusSortRank(tipProdus) {
-  const t = String(tipProdus || '').toLowerCase()
-  if (t === 'rezidential') return 0
-  if (t === 'industrial') return 1
-  return 2
+/** Catalog sector order (matches /produse filters). */
+const CATALOG_SECTOR_SORT_ORDER = ['rezidential', 'industrial', 'medical', 'maritim', 'comercial', 'micro_grid']
+
+function sectorSortRank(product) {
+  const cat = String(product?.categorie || '').toLowerCase()
+  let best = CATALOG_SECTOR_SORT_ORDER.length
+  if (cat.trim()) {
+    for (let i = 0; i < CATALOG_SECTOR_SORT_ORDER.length; i++) {
+      if (cat.includes(CATALOG_SECTOR_SORT_ORDER[i])) {
+        best = Math.min(best, i)
+      }
+    }
+    if (best < CATALOG_SECTOR_SORT_ORDER.length) return best
+  }
+  const tip = String(product?.tipProdus || '').toLowerCase()
+  if (tip === 'rezidential') return 0
+  if (tip === 'industrial') return 1
+  return CATALOG_SECTOR_SORT_ORDER.length
+}
+
+/** in_stock first; applies when product has catalog stock (rezidential / industrial or explicit status). */
+function catalogStockSortRank(catalogStockStatus, tipProdus) {
+  const tip = String(tipProdus || '').toLowerCase()
+  if (tip !== 'rezidential' && tip !== 'industrial') {
+    if (catalogStockStatus == null || catalogStockStatus === '') return 0
+  }
+  const s = String(catalogStockStatus || 'in_stock').trim()
+  if (s === 'in_stock') return 0
+  if (s === 'on_order') return 1
+  if (s === 'coming_soon') return 2
+  if (s === 'out_of_stock') return 3
+  return 0
+}
+
+/** Catalog list: sector groups, then availability (in stock first), then newest. */
+function parseProductCaseStudyExamples(v) {
+  if (!Array.isArray(v)) return []
+  return v
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const title = String(entry.title ?? '').trim()
+      const subtitle = String(entry.subtitle ?? '').trim()
+      const location = String(entry.location ?? '').trim()
+      const image = String(entry.image ?? entry.picture ?? '').trim()
+      if (!title && !subtitle && !location && !image) return null
+      return { title, subtitle, location, image }
+    })
+    .filter(Boolean)
+    .slice(0, 6)
 }
 
 function sortProductsResidentialFirst(products) {
   return [...products].sort((a, b) => {
-    const byTip = tipProdusSortRank(a.tipProdus) - tipProdusSortRank(b.tipProdus)
-    if (byTip !== 0) return byTip
+    const bySector = sectorSortRank(a) - sectorSortRank(b)
+    if (bySector !== 0) return bySector
+    const byStock =
+      catalogStockSortRank(a.catalogStockStatus, a.tipProdus) -
+      catalogStockSortRank(b.catalogStockStatus, b.tipProdus)
+    if (byStock !== 0) return byStock
     const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
     const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
     return tb - ta
@@ -218,12 +266,53 @@ function parsePricePresentation(v) {
   return 'simple'
 }
 
-/** Rezidențial: in_stock | out_of_stock | coming_soon — null clears badge */
+/** Rezidențial: in_stock | out_of_stock | coming_soon | on_order — null clears badge */
 function parseCatalogStockStatus(v) {
   if (v === null || v === undefined || v === '') return null
   const s = String(v).trim()
-  if (['in_stock', 'out_of_stock', 'coming_soon'].includes(s)) return s
+  if (['in_stock', 'out_of_stock', 'coming_soon', 'on_order'].includes(s)) return s
   return null
+}
+
+/** Rezidențial: 24h | 48h | 7_14d | 60d — null clears badge */
+function parseCatalogDeliveryBadge(v) {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (['24h', '48h', '7_14d', '60d'].includes(s)) return s
+  return null
+}
+
+/** Rezidențial: free | paid — null clears badge */
+function parseCatalogTransportBadge(v) {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (['free', 'paid'].includes(s)) return s
+  return null
+}
+
+/** Industrial: baterino | partner — null clears badge */
+function parseCatalogInstallBadge(v) {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (['baterino', 'partner'].includes(s)) return s
+  return null
+}
+
+/** Public API: default badge fields when DB is null (pre-migration / never saved). */
+function normalizeCatalogBadges(apiProduct) {
+  const tip = String(apiProduct?.tipProdus || '').toLowerCase()
+  if (tip !== 'rezidential' && tip !== 'industrial') return apiProduct
+  const normalized = {
+    ...apiProduct,
+    catalogStockStatus: parseCatalogStockStatus(apiProduct.catalogStockStatus) ?? 'in_stock',
+    catalogDeliveryBadge: parseCatalogDeliveryBadge(apiProduct.catalogDeliveryBadge) ?? '48h',
+    catalogTransportBadge: parseCatalogTransportBadge(apiProduct.catalogTransportBadge) ?? 'free',
+  }
+  if (tip === 'industrial') {
+    normalized.catalogInstallBadge =
+      parseCatalogInstallBadge(apiProduct.catalogInstallBadge) ?? 'baterino'
+  }
+  return normalized
 }
 
 /** string[] of ReducereProgram ids; invalid input → [] */
@@ -259,15 +348,21 @@ function applyPublicPricePolicy(apiProduct, authPayload) {
       ...apiProduct,
       landedPrice: null,
       salePrice: null,
+      partnerSalePrice: null,
       vat: null,
     }
   }
-  if (vis === 'public') return apiProduct
-  if (role === 'partener') return apiProduct
+  if (vis === 'public') {
+    return { ...apiProduct, partnerSalePrice: null }
+  }
+  if (role === 'partener') {
+    return { ...apiProduct, salePrice: null, landedPrice: null }
+  }
   return {
     ...apiProduct,
     landedPrice: null,
     salePrice: null,
+    partnerSalePrice: null,
     vat: null,
   }
 }
@@ -289,12 +384,21 @@ function guestResidentialProductEligible(apiProduct) {
 
 /** Parteneri: catalog larg (industrial, medical…); prețuri vizibile doar cu JWT — verifică după applyPublicPricePolicy. */
 function partnerCatalogCheckoutProductEligible(apiProduct) {
-  const saleRaw = apiProduct.salePrice
-  const sale =
-    saleRaw == null || saleRaw === ''
+  const partnerRaw = apiProduct.partnerSalePrice
+  const partner =
+    partnerRaw == null || partnerRaw === ''
       ? NaN
-      : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
-  if (!Number.isFinite(sale) || sale <= 0) return false
+      : parseFloat(String(partnerRaw).replace(/\s/g, '').replace(',', '.'))
+  if (Number.isFinite(partner) && partner > 0) {
+    // ok
+  } else {
+    const saleRaw = apiProduct.salePrice
+    const sale =
+      saleRaw == null || saleRaw === ''
+        ? NaN
+        : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
+    if (!Number.isFinite(sale) || sale <= 0) return false
+  }
   const tip = String(apiProduct.tipProdus || '').toLowerCase()
   const stock = apiProduct.catalogStockStatus
   if (tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')) return false
@@ -304,11 +408,16 @@ function partnerCatalogCheckoutProductEligible(apiProduct) {
 }
 
 /**
- * Catalog line: salePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
+ * Catalog line: salePrice / partnerSalePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
  * @returns {{ quantity: number, unitExclCatalog: number, vatPercent: number | null }}
  */
-function computeGuestResidentialLineTotals(apiProduct, qty) {
-  const sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
+function computeGuestResidentialLineTotals(apiProduct, qty, opts = {}) {
+  const usePartner = Boolean(opts.usePartnerPrice)
+  const primaryField = usePartner ? 'partnerSalePrice' : 'salePrice'
+  let sale = parseFloat(String(apiProduct[primaryField] ?? '').replace(/\s/g, '').replace(',', '.'))
+  if (usePartner && (!Number.isFinite(sale) || sale <= 0)) {
+    sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
+  }
   const vatRaw = apiProduct.vat
   const vat =
     vatRaw == null || vatRaw === '' ? 0 : parseFloat(String(vatRaw).replace(/\s/g, '').replace(',', '.'))
@@ -6066,6 +6175,238 @@ app.delete('/api/admin/reducere-programs/:id', authMiddleware, adminAuthMiddlewa
   }
 })
 
+// ── Case studies (Studii de caz) ─────────────────────────────────────────────
+
+function normalizeCaseStudyLocale(raw) {
+  const s = String(raw || 'ro').toLowerCase().replace(/[^a-z]/g, '')
+  return s === 'en' || s === 'zh' ? s : 'ro'
+}
+
+function slugifyCaseStudy(raw) {
+  return String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function parseCaseStudySpecs(v) {
+  if (!Array.isArray(v)) return []
+  return v
+    .slice(0, 4)
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const label = String(item.label || '').trim()
+      const value = String(item.value || '').trim()
+      if (!label && !value) return null
+      return {
+        label,
+        value,
+        highlight: item.highlight === true,
+      }
+    })
+    .filter(Boolean)
+}
+
+function parseCaseStudyTags(v) {
+  if (!Array.isArray(v)) return []
+  return [...new Set(v.map((t) => String(t || '').trim()).filter(Boolean))]
+}
+
+const CASE_STUDY_MAX_IMAGES = 6
+
+function parseCaseStudyImages(v, fallbackImage) {
+  if (Array.isArray(v)) {
+    const urls = v
+      .map((u) => String(u || '').trim())
+      .filter(Boolean)
+      .slice(0, CASE_STUDY_MAX_IMAGES)
+    if (urls.length > 0) return urls
+  }
+  const img = String(fallbackImage || '').trim()
+  return img ? [img] : []
+}
+
+function normalizeCaseStudyImageFields(body, existing) {
+  const fallbackImage =
+    body?.image != null
+      ? String(body.image || '').trim()
+      : existing?.image
+        ? String(existing.image).trim()
+        : ''
+  const images = parseCaseStudyImages(body?.images, fallbackImage)
+  const image = images[0] || fallbackImage || '/images/divizii/industrial/centre-de-date.jpg'
+  const imageCount = images.length
+  return { images, image, imageCount }
+}
+
+function caseStudyToApi(row) {
+  if (!row) return row
+  const images = parseCaseStudyImages(row.images, row.image)
+  const image = images[0] || String(row.image || '').trim()
+  return {
+    id: row.id,
+    locale: row.locale,
+    slug: row.slug,
+    category: row.category,
+    title: row.title,
+    location: row.location,
+    image,
+    imageAlt: row.imageAlt,
+    images,
+    imageCount: images.length || Number(row.imageCount) || 0,
+    specs: parseCaseStudySpecs(row.specs),
+    tags: parseCaseStudyTags(row.tags),
+    isActive: row.isActive !== false,
+    sortOrder: row.sortOrder ?? 0,
+  }
+}
+
+app.get('/api/case-studies', async (req, res) => {
+  try {
+    const locale = normalizeCaseStudyLocale(req.query.locale)
+    const rows = await prisma.caseStudy.findMany({
+      where: { locale, isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    })
+    return res.json(rows.map(caseStudyToApi))
+  } catch (err) {
+    console.error('Public case-studies error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+const adminCaseStudyListHandler = async (req, res) => {
+  try {
+    const locale = normalizeCaseStudyLocale(req.query.locale)
+    const rows = await prisma.caseStudy.findMany({
+      where: { locale },
+      orderBy: { sortOrder: 'asc' },
+    })
+    return res.json(rows.map(caseStudyToApi))
+  } catch (err) {
+    console.error('Admin case-studies list error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+app.get('/api/admin/case-studies', authMiddleware, adminAuthMiddleware, adminCaseStudyListHandler)
+
+app.post('/api/admin/case-studies', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const b = req.body || {}
+    const locale = normalizeCaseStudyLocale(b.locale)
+    const slug = slugifyCaseStudy(b.slug || b.title)
+    if (!slug) return res.status(400).json({ error: 'Slug invalid.' })
+    const title = String(b.title || '').trim()
+    if (!title) return res.status(400).json({ error: 'Titlul este obligatoriu.' })
+
+    const existing = await prisma.caseStudy.findUnique({
+      where: { locale_slug: { locale, slug } },
+    })
+    if (existing) return res.status(409).json({ error: 'Există deja un studiu de caz cu acest slug pentru limba selectată.' })
+
+    const maxSort = await prisma.caseStudy.aggregate({
+      where: { locale },
+      _max: { sortOrder: true },
+    })
+    const sortOrder = (maxSort._max.sortOrder ?? -1) + 1
+
+    const { images, image, imageCount } = normalizeCaseStudyImageFields(b)
+
+    const row = await prisma.caseStudy.create({
+      data: {
+        locale,
+        slug,
+        category: String(b.category || 'INDUSTRIAL').trim() || 'INDUSTRIAL',
+        title,
+        location: String(b.location || '').trim(),
+        image,
+        imageAlt: String(b.imageAlt || title).trim(),
+        imageCount,
+        images,
+        specs: parseCaseStudySpecs(b.specs),
+        tags: parseCaseStudyTags(b.tags),
+        isActive: b.isActive !== false,
+        sortOrder,
+      },
+    })
+    return res.status(201).json(caseStudyToApi(row))
+  } catch (err) {
+    console.error('Admin case-studies create error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la creare.' })
+  }
+})
+
+app.patch('/api/admin/case-studies/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id
+    const current = await prisma.caseStudy.findUnique({ where: { id } })
+    if (!current) return res.status(404).json({ error: 'Studiu de caz negăsit.' })
+
+    const b = req.body || {}
+    const data = {}
+
+    if (b.locale != null) data.locale = normalizeCaseStudyLocale(b.locale)
+    if (b.slug != null) {
+      const slug = slugifyCaseStudy(b.slug)
+      if (!slug) return res.status(400).json({ error: 'Slug invalid.' })
+      data.slug = slug
+    }
+    if (b.category != null) data.category = String(b.category).trim()
+    if (b.title != null) {
+      const title = String(b.title).trim()
+      if (!title) return res.status(400).json({ error: 'Titlul este obligatoriu.' })
+      data.title = title
+    }
+    if (b.location != null) data.location = String(b.location).trim()
+    if (b.imageAlt != null) data.imageAlt = String(b.imageAlt).trim()
+    if (b.images != null || b.image != null) {
+      const normalized = normalizeCaseStudyImageFields(b, current)
+      data.images = normalized.images
+      data.image = normalized.image
+      data.imageCount = normalized.imageCount
+    } else if (b.imageCount != null) {
+      data.imageCount = Math.max(0, parseInt(String(b.imageCount), 10) || 0)
+    }
+    if (b.specs != null) data.specs = parseCaseStudySpecs(b.specs)
+    if (b.tags != null) data.tags = parseCaseStudyTags(b.tags)
+    if (b.isActive != null) data.isActive = b.isActive !== false
+    if (b.sortOrder != null) {
+      const n = parseInt(String(b.sortOrder), 10)
+      if (Number.isFinite(n)) data.sortOrder = n
+    }
+
+    const nextLocale = data.locale ?? current.locale
+    const nextSlug = data.slug ?? current.slug
+    if (nextLocale !== current.locale || nextSlug !== current.slug) {
+      const clash = await prisma.caseStudy.findUnique({
+        where: { locale_slug: { locale: nextLocale, slug: nextSlug } },
+      })
+      if (clash && clash.id !== id) {
+        return res.status(409).json({ error: 'Există deja un studiu de caz cu acest slug pentru limba selectată.' })
+      }
+    }
+
+    const row = await prisma.caseStudy.update({ where: { id }, data })
+    return res.json(caseStudyToApi(row))
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Studiu de caz negăsit.' })
+    console.error('Admin case-studies patch error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+})
+
+app.delete('/api/admin/case-studies/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    await prisma.caseStudy.delete({ where: { id: req.params.id } })
+    return res.status(204).end()
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Studiu de caz negăsit.' })
+    console.error('Admin case-studies delete error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
+  }
+})
+
 // ── Admin: file upload (images, PDFs) → R2 ─────────────────────────────────────────
 const uploadHandler = async (req, res) => {
   try {
@@ -6073,13 +6414,27 @@ const uploadHandler = async (req, res) => {
     if (!isR2Configured()) {
       return res.status(503).json({ error: 'Stocare fișiere neconfigurată. Verifică R2 în .env.' })
     }
+    const customPrefix = String(req.query?.prefix || req.get('X-Upload-Prefix') || '').trim()
     const isPdf = req.file.mimetype === 'application/pdf'
-    const prefix = isPdf ? 'docs' : 'products'
+    const prefix = customPrefix || (isPdf ? 'docs' : 'products')
     const productFolder = (req.query?.folder || req.get('X-Product-Folder') || req.body?.folder || '').trim()
     const imageIndexRaw = req.get('X-Image-Index') || req.body?.imageIndex || req.query?.imageIndex
     const imageIndex = imageIndexRaw != null ? parseInt(String(imageIndexRaw), 10) : undefined
+
+    if (prefix === 'study-cases') {
+      const mt = String(req.file.mimetype || '').toLowerCase()
+      const name = String(req.file.originalname || '').toLowerCase()
+      const isJpeg = mt === 'image/jpeg' || mt === 'image/jpg' || name.endsWith('.jpg') || name.endsWith('.jpeg')
+      if (!isJpeg) {
+        return res.status(400).json({ error: 'Studiile de caz acceptă doar imagini JPG/JPEG.' })
+      }
+      if (!productFolder) {
+        return res.status(400).json({ error: 'Folder studiu de caz lipsă (slug).' })
+      }
+    }
+
     const key = generateKey(req.file.originalname, prefix, req.file.mimetype, productFolder || undefined, imageIndex)
-    console.log('[R2 Upload] productFolder:', productFolder || '(none)', 'key:', key)
+    console.log('[R2 Upload] prefix:', prefix, 'productFolder:', productFolder || '(none)', 'key:', key)
     const url = await uploadToR2(req.file.buffer, key, req.file.mimetype)
     return res.json({ url })
   } catch (err) {
@@ -6103,13 +6458,14 @@ const createProductHandler = async (req, res) => {
     const sku = String(body.sku || '').trim() || `SKU-${Date.now()}`
     const tipProdus = ['rezidential', 'industrial'].includes(body.tipProdus) ? body.tipProdus : 'rezidential'
 
-    const landedPrice = parseDecimal(body.landedPrice, 0)
     const salePrice = parseDecimal(body.salePrice, 0)
+    const partnerSalePrice = parseDecimal(body.partnerSalePrice, 0)
     const vat = parseDecimal(body.vat, 19)
 
     const images = Array.isArray(body.images) ? body.images : []
     const documenteTehnice = Array.isArray(body.documenteTehnice) ? body.documenteTehnice : []
     const faq = Array.isArray(body.faq) ? body.faq : []
+    const caseStudyExamples = parseProductCaseStudyExamples(body.caseStudyExamples)
 
     let baseSlug = slugify(title)
     let slug = baseSlug
@@ -6142,12 +6498,25 @@ const createProductHandler = async (req, res) => {
         priceVisibility: parsePriceVisibility(body.priceVisibility),
         pricePresentation: parsePricePresentation(body.pricePresentation),
         catalogStockStatus:
-          tipProdus === 'rezidential' ? parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock' : null,
+          tipProdus === 'rezidential' || tipProdus === 'industrial'
+            ? parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock'
+            : null,
+        catalogDeliveryBadge:
+          tipProdus === 'rezidential' || tipProdus === 'industrial'
+            ? parseCatalogDeliveryBadge(body.catalogDeliveryBadge) ?? '48h'
+            : null,
+        catalogTransportBadge:
+          tipProdus === 'rezidential' || tipProdus === 'industrial'
+            ? parseCatalogTransportBadge(body.catalogTransportBadge) ?? 'free'
+            : null,
+        catalogInstallBadge:
+          tipProdus === 'industrial' ? parseCatalogInstallBadge(body.catalogInstallBadge) ?? 'baterino' : null,
         reducereProgramIds: tipProdus === 'rezidential' ? parseReducereProgramIds(body.reducereProgramIds) : [],
         promovarePeContClient: body.promovarePeContClient === true,
         promovarePeContPartener: body.promovarePeContPartener === true,
-        landedPrice,
+        landedPrice: 0,
         salePrice,
+        partnerSalePrice,
         vat,
         energieNominala: body.energieNominala?.trim() || null,
         capacitate: body.capacitate?.trim() || null,
@@ -6174,6 +6543,7 @@ const createProductHandler = async (req, res) => {
         keyAdvantages: Array.isArray(body.keyAdvantages) ? body.keyAdvantages : [],
         documenteTehnice,
         faq,
+        caseStudyExamples,
         alimentaModalContent: body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null,
         technicalSpecsModels: (() => {
           const n = parseTechnicalSpecsModelsBody(body.technicalSpecsModels)
@@ -6227,6 +6597,7 @@ const updateProductHandler = async (req, res) => {
     if (body.pricePresentation !== undefined) data.pricePresentation = parsePricePresentation(body.pricePresentation)
     if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
     if (body.salePrice !== undefined) data.salePrice = parseDecimal(body.salePrice, 0)
+    if (body.partnerSalePrice !== undefined) data.partnerSalePrice = parseDecimal(body.partnerSalePrice, 0)
     if (body.vat !== undefined) data.vat = parseDecimal(body.vat, 19)
     if (body.energieNominala !== undefined) data.energieNominala = body.energieNominala?.trim() || null
     if (body.capacitate !== undefined) data.capacitate = body.capacitate?.trim() || null
@@ -6253,6 +6624,7 @@ const updateProductHandler = async (req, res) => {
     if (Array.isArray(body.keyAdvantages)) data.keyAdvantages = body.keyAdvantages
     if (Array.isArray(body.documenteTehnice)) data.documenteTehnice = body.documenteTehnice
     if (Array.isArray(body.faq)) data.faq = body.faq
+    if (Array.isArray(body.caseStudyExamples)) data.caseStudyExamples = parseProductCaseStudyExamples(body.caseStudyExamples)
     if (body.alimentaModalContent !== undefined) {
       data.alimentaModalContent = body.alimentaModalContent && typeof body.alimentaModalContent === 'object' ? body.alimentaModalContent : null
     }
@@ -6266,16 +6638,54 @@ const updateProductHandler = async (req, res) => {
     }
 
     if (tipProdus === 'industrial') {
-      data.catalogStockStatus = null
       data.reducereProgramIds = []
-    } else if (body.catalogStockStatus !== undefined) {
+    } else if (tipProdus === 'rezidential') {
+      data.catalogInstallBadge = null
+    }
+
+    if (body.catalogStockStatus !== undefined) {
       let rowTip = tipProdus
       if (!rowTip) {
         const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
         rowTip = ex?.tipProdus
       }
-      if (rowTip === 'rezidential') {
+      if (rowTip === 'rezidential' || rowTip === 'industrial') {
         data.catalogStockStatus = parseCatalogStockStatus(body.catalogStockStatus) ?? 'in_stock'
+      }
+    }
+
+    if (body.catalogDeliveryBadge !== undefined) {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential' || rowTip === 'industrial') {
+        data.catalogDeliveryBadge = parseCatalogDeliveryBadge(body.catalogDeliveryBadge) ?? '48h'
+      }
+    }
+
+    if (body.catalogTransportBadge !== undefined) {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'rezidential' || rowTip === 'industrial') {
+        data.catalogTransportBadge = parseCatalogTransportBadge(body.catalogTransportBadge) ?? 'free'
+      }
+    }
+
+    if (body.catalogInstallBadge !== undefined) {
+      let rowTip = tipProdus
+      if (!rowTip) {
+        const ex = await prisma.product.findUnique({ where: { id }, select: { tipProdus: true } })
+        rowTip = ex?.tipProdus
+      }
+      if (rowTip === 'industrial') {
+        data.catalogInstallBadge = parseCatalogInstallBadge(body.catalogInstallBadge) ?? 'baterino'
+      } else if (rowTip === 'rezidential') {
+        data.catalogInstallBadge = null
       }
     }
 
@@ -6950,7 +7360,9 @@ app.post('/api/guest-residential-orders', async (req, res) => {
             'Cu program de reducere se poate comanda maximum 1 bucată per produs. Actualizează coșul și încearcă din nou.',
         })
       }
-      const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
+      const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity, {
+        usePartnerPrice: isPartener,
+      })
       const totals = applyDiscountFactorToGuestLineTotals(baseTotals, discountFactor)
       const listTotals =
         discountFactor > 0 ? applyDiscountFactorToGuestLineTotals(baseTotals, 0) : null
@@ -7549,7 +7961,9 @@ const listPublicProductsHandler = async (req, res) => {
     products = sortProductsResidentialFirst(products)
     const authPayload = readOptionalAuthPayload(req)
     return res.json(
-      products.map((p) => applyPublicPricePolicy(productToJson(p), authPayload))
+      products.map((p) =>
+        applyPublicPricePolicy(normalizeCatalogBadges(productToJson(p)), authPayload),
+      ),
     )
   } catch (err) {
     console.error('List public products error:', err)
@@ -7573,17 +7987,27 @@ const listPublicProductModelsHandler = async (_req, res) => {
         usageType: true,
       },
     })
-    res.set('Cache-Control', 'public, max-age=120')
-    return res.json(
-      rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        brand: r.brand,
-        series: r.series || '',
-        modelNumber: r.modelNumber,
-        usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
-      })),
+    const withBrochures = await Promise.all(
+      rows.map(async (r) => {
+        let technicalBrochureUrl = null
+        try {
+          technicalBrochureUrl = await resolveProductModelTechnicalBrochureUrl(r.modelNumber, r.name)
+        } catch {
+          technicalBrochureUrl = null
+        }
+        return {
+          id: r.id,
+          name: r.name,
+          brand: r.brand,
+          series: r.series || '',
+          modelNumber: r.modelNumber,
+          usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
+          technicalBrochureUrl,
+        }
+      }),
     )
+    res.set('Cache-Control', 'public, max-age=120')
+    return res.json(withBrochures)
   } catch (err) {
     console.error('List public product models error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcarea modelelor.' })
@@ -7615,7 +8039,9 @@ const getPublicProductHandler = async (req, res) => {
     }
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
     const authPayload = readOptionalAuthPayload(req)
-    return res.json(applyPublicPricePolicy(productToJson(product), authPayload))
+    return res.json(
+      applyPublicPricePolicy(normalizeCatalogBadges(productToJson(product)), authPayload),
+    )
   } catch (err) {
     console.error('Get public product error:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
