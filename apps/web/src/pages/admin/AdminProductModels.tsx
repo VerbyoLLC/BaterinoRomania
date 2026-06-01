@@ -52,27 +52,43 @@ function normalizeSpecLabel(label: string): string {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-/** Reads kWh from technicalDescription (`Energy:` / `Nominal Energy:` / RO) or from name `(261.248kWh)`. */
+/** Reads energy from technicalDescription and returns it formatted as kWh only. */
 function getEnergyValue(technicalDescription: string, name?: string): string {
   const lines = String(technicalDescription ?? '')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
 
+  let raw = ''
   for (const line of lines) {
     const idx = line.indexOf(':')
     if (idx <= 0) continue
     const label = normalizeSpecLabel(line.slice(0, idx))
     if (label === 'energy' || label === 'nominal energy' || label === 'energie nominala') {
-      const value = line.slice(idx + 1).trim()
-      if (value) return value
+      raw = line.slice(idx + 1).trim()
+      break
     }
   }
 
-  const fromName = String(name ?? '').match(/\(([^)]*kwh[^)]*)\)/i)
-  if (fromName?.[1]?.trim()) return fromName[1].trim()
+  if (!raw) {
+    const fromName = String(name ?? '').match(/\(([^)]*kwh[^)]*)\)/i)
+    if (fromName?.[1]?.trim()) return fromName[1].trim()
+    return '—'
+  }
 
-  return '—'
+  // Prefer the kWh value inside parentheses: "64307.2Wh (64.3 kWh)" → "64.3 kWh"
+  const kwhInParens = raw.match(/\(([\d.,]+\s*kwh)\)/i)
+  if (kwhInParens?.[1]) return kwhInParens[1].trim()
+
+  // Pure Wh value — convert: "64307.2Wh" → "64.3 kWh"
+  const whOnly = raw.match(/^([\d.,]+)\s*wh$/i)
+  if (whOnly) {
+    const wh = parseFloat(whOnly[1].replace(',', '.'))
+    if (!isNaN(wh) && wh > 0) return `${(wh / 1000).toFixed(1)} kWh`
+  }
+
+  // Already kWh or unknown format — return as-is
+  return raw
 }
 
 export default function AdminProductModels() {
