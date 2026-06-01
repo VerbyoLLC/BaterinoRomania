@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ReactCrop, { centerCrop, makeAspectCrop, type Crop, type PixelCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import {
   getAdminProductModels,
   getAuthToken,
@@ -102,9 +104,16 @@ export default function AdminProductModels() {
   const [specFields, setSpecFields] = useState<SpecField[]>([])
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [uploadTargetRowId, setUploadTargetRowId] = useState<string | null>(null)
-  const [uploadingRowId, setUploadingRowId] = useState<string | null>(null)
+  const [uploadingRowId] = useState<string | null>(null)
   const [availabilitySavingId, setAvailabilitySavingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Image cropper
+  const [cropperState, setCropperState] = useState<{ src: string; rowId: string; fileName: string } | null>(null)
+  const [crop, setCrop] = useState<Crop>()
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const [cropUploading, setCropUploading] = useState(false)
+  const imgCropRef = useRef<HTMLImageElement>(null)
 
   // Search & filters
   const [search, setSearch] = useState('')
@@ -240,23 +249,65 @@ export default function AdminProductModels() {
   const btnGhost =
     'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40'
 
-  const onImageSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onImageSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !uploadTargetRowId) return
-    const row = rowsWithDraft.find((r) => r.id === uploadTargetRowId)
-    if (!row) return
-    setUploadingRowId(uploadTargetRowId)
-    setError(null)
-    try {
-      const uploaded = await uploadAdminFile(file, `product-models/${row.modelNumber || row.id}`)
-      setDraftField(uploadTargetRowId, 'imageUrl', uploaded.url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Eroare la upload imagine.')
-    } finally {
-      setUploadingRowId(null)
-      setUploadTargetRowId(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCropperState({ src: reader.result as string, rowId: uploadTargetRowId, fileName: file.name })
+      setCrop(undefined)
+      setCompletedCrop(undefined)
     }
+    reader.readAsDataURL(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setUploadTargetRowId(null)
+  }
+
+  const onCropImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget
+    const initialCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 80 }, 1, width, height),
+      width,
+      height,
+    )
+    setCrop(initialCrop)
+  }
+
+  const onCropConfirm = async () => {
+    if (!cropperState || !imgCropRef.current || !completedCrop) return
+    const img = imgCropRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = 600
+    canvas.height = 600
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const scaleX = img.naturalWidth / img.width
+    const scaleY = img.naturalHeight / img.height
+    ctx.drawImage(
+      img,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0, 0, 600, 600,
+    )
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      const croppedFile = new File([blob], cropperState.fileName.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+      const row = rowsWithDraft.find((r) => r.id === cropperState.rowId)
+      if (!row) return
+      setCropUploading(true)
+      setError(null)
+      try {
+        const uploaded = await uploadAdminFile(croppedFile, `product-models/${row.modelNumber || row.id}`)
+        setDraftField(cropperState.rowId, 'imageUrl', uploaded.url)
+        setCropperState(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Eroare la upload imagine.')
+      } finally {
+        setCropUploading(false)
+      }
+    }, 'image/jpeg', 0.92)
   }
 
   return (
@@ -601,6 +652,81 @@ export default function AdminProductModels() {
         className="hidden"
         onChange={onImageSelected}
       />
+
+      {/* ── Image cropper modal ── */}
+      {cropperState && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setCropperState(null)}
+          />
+          <div className="relative flex flex-col rounded-2xl bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 font-['Inter']">Decupează imaginea</h2>
+                <p className="text-xs text-slate-500 font-['Inter'] mt-0.5">
+                  Selectează zona dorită · Output: <span className="font-semibold">600 × 600 px</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCropperState(null)}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Anulează
+              </button>
+            </div>
+
+            {/* Crop area */}
+            <div className="flex-1 overflow-auto p-5 flex items-center justify-center bg-slate-100">
+              <ReactCrop
+                crop={crop}
+                onChange={(_, pct) => setCrop(pct)}
+                onComplete={(px) => setCompletedCrop(px)}
+                aspect={1}
+                minWidth={50}
+                minHeight={50}
+                className="max-w-full"
+              >
+                <img
+                  ref={imgCropRef}
+                  src={cropperState.src}
+                  alt="Crop preview"
+                  onLoad={onCropImageLoad}
+                  className="max-h-[55vh] max-w-full object-contain"
+                />
+              </ReactCrop>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 shrink-0">
+              <p className="text-xs text-slate-400 font-['Inter']">
+                {completedCrop
+                  ? `Zona selectată: ${Math.round(completedCrop.width)} × ${Math.round(completedCrop.height)} px → redimensionat la 600 × 600 px`
+                  : 'Trage pentru a ajusta zona de decupare'}
+              </p>
+              <button
+                type="button"
+                onClick={onCropConfirm}
+                disabled={!completedCrop || cropUploading}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {cropUploading ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Se încarcă…
+                  </>
+                ) : 'Aplică și încarcă'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
