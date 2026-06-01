@@ -443,7 +443,7 @@ export function HorizontalCatalogProductCard({
           <img
             src={imageSrc}
             alt={imageAlt}
-            className={`h-full w-full max-h-full max-w-full object-contain object-center transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`h-full w-full max-h-full max-w-full object-contain object-center transition-all duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
