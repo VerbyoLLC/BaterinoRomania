@@ -664,7 +664,11 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 const app = express()
 const PORT = process.env.PORT || 3001
-const JWT_SECRET = process.env.JWT_SECRET || 'baterino-dev-secret-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET env var is missing or too short (min 32 chars). Aborting.')
+  process.exit(1)
+}
 
 /** Pe Railway / reverse proxy: setează TRUST_PROXY=1 ca req.ip să fie IP-ul clientului (rate limit corect). */
 if (String(process.env.TRUST_PROXY || '').trim() === '1') {
