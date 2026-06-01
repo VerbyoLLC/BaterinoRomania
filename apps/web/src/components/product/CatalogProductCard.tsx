@@ -427,7 +427,7 @@ export function HorizontalCatalogProductCard({
         state={linkState}
         className="flex flex-col lg:flex-row lg:items-stretch w-full"
       >
-        {/* ── Image ── */}
+        {/* ── Image — clean, no overlays on desktop ── */}
         <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[42%] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
           <img
             src={imageSrc}
@@ -436,8 +436,9 @@ export function HorizontalCatalogProductCard({
             onLoad={() => setImgLoaded(true)}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
+          {/* On mobile keep overlay on image; on desktop it moves to content area */}
           {imageOverlay ? (
-            <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)]">
+            <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] lg:hidden">
               {imageOverlay}
             </div>
           ) : null}
@@ -445,6 +446,14 @@ export function HorizontalCatalogProductCard({
 
         {/* ── Content ── */}
         <div className="flex flex-1 flex-col justify-center px-5 py-5 lg:px-6 lg:py-5">
+
+          {/* Row 1 — stock + delivery badges (desktop only, moved out of image) */}
+          {imageOverlay ? (
+            <div className="hidden lg:flex flex-wrap gap-1.5 mb-3">
+              {imageOverlay}
+            </div>
+          ) : null}
+
           <h3 className="text-lg font-bold font-['Inter'] leading-snug text-black lg:text-xl">
             {title}
           </h3>
@@ -461,6 +470,7 @@ export function HorizontalCatalogProductCard({
             </div>
           ) : null}
 
+          {/* Transport + install badges — below specs */}
           {priceAboveBadge ? (
             <div className="mt-3">{priceAboveBadge}</div>
           ) : null}
