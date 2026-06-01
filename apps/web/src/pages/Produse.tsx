@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getProduseTranslations } from '../i18n/produse'
@@ -177,21 +177,6 @@ export default function Produse() {
                 </svg>
               </button>
             )}
-          </div>
-          <div className="flex flex-wrap gap-2 self-end sm:self-auto sm:ml-auto sm:flex-shrink-0">
-            <Link
-              to="/produse"
-              className="inline-flex items-center justify-center h-10 px-6 border-2 border-gray-200 rounded-[10px] font-semibold font-['Inter'] text-sm text-black hover:bg-gray-50 hover:border-gray-300 transition-colors"
-            >
-              {tr.howToChoose}
-            </Link>
-            <button
-              type="button"
-              onClick={() => { setSector(''); setVoltageFilter('') }}
-              className="inline-flex items-center justify-center h-10 px-6 bg-slate-900 text-white rounded-[10px] font-semibold font-['Inter'] text-sm hover:bg-slate-700 transition-colors"
-            >
-              {tr.viewAll}
-            </button>
           </div>
         </div>
 
