@@ -236,6 +236,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogBadgeStocCategory: '库存',
     catalogBadgeLivrareCategory: '配送',
     catalogBadgeTransportCategory: '运输',
+    catalogBadgeInstalareCategory: '安装',
     catalogStockInStock: '库存充足',
     catalogStockOutOfStock: '售罄',
     catalogStockComingSoon: '即将到货',
