@@ -367,7 +367,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogBadgeLivrareCategory: 'Livrare',
     catalogBadgeTransportCategory: 'Transport',
     catalogBadgeInstalareCategory: 'Instalare',
-    catalogStockInStock: 'Stoc suficient',
+    catalogStockInStock: 'În Stoc',
     catalogStockOutOfStock: 'Stoc epuizat',
     catalogStockComingSoon: 'În curând',
     catalogStockOnOrder: 'La comandă',

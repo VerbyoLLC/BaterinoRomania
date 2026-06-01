@@ -222,7 +222,7 @@ export default function Produse() {
               const stockLabel = getCatalogStockBadgeLabel(product, { inStock: tr.catalogStockInStock, outOfStock: tr.catalogStockOutOfStock, comingSoon: tr.catalogStockComingSoon, onOrder: tr.catalogStockOnOrder })
               if (stockLabel) featureBadges.push({ type: 'stock', label: stockLabel })
               const deliveryLabel = getCatalogDeliveryBadgeLabel(product, { h24: tr.catalogDelivery24h, h48: tr.catalogDelivery48h, d7_14: tr.catalogDelivery7_14d, d60: catalogBadgeLabels.delivery60d })
-              if (deliveryLabel) featureBadges.push({ type: 'delivery', label: deliveryLabel })
+              if (deliveryLabel) featureBadges.push({ type: 'delivery', label: `${catalogBadgeLabels.deliveryCategory} ${deliveryLabel}` })
               const transportLabel = getCatalogTransportBadgeLabel(product, { free: catalogBadgeLabels.transportFree, paid: catalogBadgeLabels.transportPaid })
               if (transportLabel) featureBadges.push({ type: 'transport', label: `${catalogBadgeLabels.transportCategory} ${transportLabel}` })
               if (product.tipProdus === 'industrial') {

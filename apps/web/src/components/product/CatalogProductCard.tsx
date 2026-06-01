@@ -449,7 +449,7 @@ export function HorizontalCatalogProductCard({
           />
           {/* Stock + delivery badges overlaid on image */}
           {imageBadges.length > 0 && (
-            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-1.5">
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-row flex-wrap gap-1.5">
               {imageBadges.map(b => (
                 <HorizontalBadgePill key={b.type} badge={b} />
               ))}
