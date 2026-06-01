@@ -51,12 +51,14 @@ import {
 } from '../lib/api'
 import { showResidentialClientPurchaseUI } from '../lib/residentialPublicPurchase'
 import {
-  formatRoNational9Display,
+  loadPhoneE164,
+  isPhoneE164Valid,
   sanitizeAddressField,
   sanitizeEmailTyping,
   sanitizePersonName,
   sanitizePostalField,
 } from '../lib/formInputSanitize'
+import PhoneInput from '../components/PhoneInput'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../lib/romanian-counties-cities'
 
 function num(v: string | number | null | undefined): number | null {
@@ -129,8 +131,6 @@ const inputClassBase =
 
 const inputClass = `${inputClassBase} border border-slate-200 focus:border-slate-900 focus:ring-slate-900/10`
 
-const phoneFieldShellClass =
-  'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10'
 
 function inputClassWithError(hasError: boolean): string {
   return hasError
@@ -146,11 +146,6 @@ function selectClassWithError(hasError: boolean): string {
     : `${selectClassBase} border border-slate-200 focus:border-slate-900 focus:ring-slate-900/10`
 }
 
-function phoneShellClass(hasError: boolean): string {
-  return hasError
-    ? 'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border-2 border-red-500 bg-white transition-colors focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-500/25'
-    : phoneFieldShellClass
-}
 
 /** Blends with accordion panel `#f7f7f7`; border matches background via transparency. */
 const checkoutBackButtonClass =
@@ -329,11 +324,10 @@ export default function GuestCheckout() {
   const companyCities = useMemo(() => getCitiesForCounty(coCounty), [coCounty])
 
   const checkoutProfilePayloadForApi = useCallback((): ClientProfilePayload => {
-    const phoneDigits = shipPhone.replace(/\D/g, '').slice(0, 9)
     return {
       firstName: shipPrenume.trim(),
       lastName: shipNume.trim(),
-      phone: phoneDigits,
+      phone: shipPhone,
       billAddress: billAddress.trim(),
       billCounty: billCounty.trim(),
       billCity: billCity.trim(),
@@ -426,7 +420,7 @@ export default function GuestCheckout() {
         if (profile) {
           setShipNume(profile.lastName || '')
           setShipPrenume(profile.firstName || '')
-          setShipPhone(profile.phone || '')
+          setShipPhone(loadPhoneE164(profile.phone))
           setBillAddress(pjDelPrefill ? pjDelPrefill.billAddress : profile.billAddress || '')
           setBillCounty(pjDelPrefill ? pjDelPrefill.billCounty : profile.billCounty || '')
           setBillCity(pjDelPrefill ? pjDelPrefill.billCity : profile.billCity || '')
@@ -668,13 +662,12 @@ export default function GuestCheckout() {
     setOrderPlaceError(null)
     setOrderPlaceLoading(true)
     try {
-      const phoneDigits = shipPhone.replace(/\D/g, '').slice(0, 9)
       const cuiClean = coCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
       // PF: Pas 3 = adresa unică (bill = del). PJ: company* = facturare; Pas 3 = adresa de livrare distinctă.
       const common = checkoutBuyerIsPj
         ? {
             email: shipEmail.trim(),
-            phone: phoneDigits,
+            phone: shipPhone,
             nume: shipNume.trim(),
             prenume: shipPrenume.trim(),
             buyerType: 'company' as const,
@@ -696,7 +689,7 @@ export default function GuestCheckout() {
           }
         : {
             email: shipEmail.trim(),
-            phone: phoneDigits,
+            phone: shipPhone,
             nume: shipNume.trim(),
             prenume: shipPrenume.trim(),
             buyerType: 'person' as const,
@@ -1080,8 +1073,7 @@ export default function GuestCheckout() {
             const err: Step2FieldErrors = {}
             if (!shipNume.trim()) err.nume = tr.fieldErrorEmpty
             if (!shipPrenume.trim()) err.prenume = tr.fieldErrorEmpty
-            const phoneDigits = shipPhone.replace(/\D/g, '').slice(0, 9)
-            if (phoneDigits.length !== 9) err.phone = tr.fieldErrorPhone
+            if (!isPhoneE164Valid(shipPhone)) err.phone = tr.fieldErrorPhone
             if (!shipEmail.trim()) err.email = tr.fieldErrorEmpty
             else if (!isValidEmail(shipEmail)) err.email = tr.fieldErrorEmail
             const coErr: Step2CompanyErrors = {}
@@ -1211,31 +1203,22 @@ export default function GuestCheckout() {
             </label>
             <label className="block min-w-0">
               <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldPhone}</span>
-              <div className={phoneShellClass(Boolean(step2FieldErrors.phone))}>
-                <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold tabular-nums text-slate-700">
-                  +40
-                </span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  className="min-w-0 flex-1 border-0 bg-transparent px-3.5 text-sm font-['Inter'] text-slate-900 outline-none placeholder:text-slate-400"
-                  placeholder={tr.placeholderPhone}
-                  value={formatRoNational9Display(shipPhone)}
-                  maxLength={11}
-                  aria-invalid={Boolean(step2FieldErrors.phone)}
-                  aria-describedby={step2FieldErrors.phone ? 'checkout-step2-phone-err' : undefined}
-                  onChange={(e) => {
-                    setStep2FieldErrors((p) => {
-                      if (!p.phone) return p
-                      const n = { ...p }
-                      delete n.phone
-                      return n
-                    })
-                    setShipPhone(e.target.value.replace(/\D/g, '').slice(0, 9))
-                  }}
-                />
-              </div>
+              <PhoneInput
+                value={shipPhone}
+                onChange={(v) => {
+                  setStep2FieldErrors((p) => {
+                    if (!p.phone) return p
+                    const n = { ...p }
+                    delete n.phone
+                    return n
+                  })
+                  setShipPhone(v)
+                }}
+                error={Boolean(step2FieldErrors.phone)}
+                autoComplete="tel"
+                aria-invalid={Boolean(step2FieldErrors.phone)}
+                aria-describedby={step2FieldErrors.phone ? 'checkout-step2-phone-err' : undefined}
+              />
               <FieldError id="checkout-step2-phone-err" message={step2FieldErrors.phone} />
             </label>
             <label className="block min-w-0">

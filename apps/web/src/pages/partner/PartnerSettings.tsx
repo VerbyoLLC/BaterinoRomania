@@ -16,11 +16,13 @@ import {
   savePartnerProfile,
 } from '../../lib/api'
 import {
-  formatRoNational9Display,
+  loadPhoneE164,
+  isPhoneE164Valid,
   sanitizePersonName,
   sanitizeRoPostalCode,
   sanitizeStreetLine,
 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 import EmailNotificationsSettings from '../../components/settings/EmailNotificationsSettings'
 
@@ -322,8 +324,7 @@ export default function PartnerSettings() {
         setActivities(fromApi)
         setContactFirstName(String(p?.contactFirstName ?? '').trim())
         setContactLastName(String(p?.contactLastName ?? '').trim())
-        const ph = String(p?.phone ?? '').replace(/\D/g, '').slice(0, 9)
-        setPhone(ph)
+        setPhone(loadPhoneE164(p?.phone))
         setDeliveryStreet(String(p?.deliveryStreet ?? '').trim())
         setDeliveryCounty(String(p?.deliveryCounty ?? '').trim())
         setDeliveryCity(String(p?.deliveryCity ?? '').trim())
@@ -350,12 +351,11 @@ export default function PartnerSettings() {
     setPersonalError('')
     const fn = sanitizePersonName(contactFirstName).trim()
     const ln = sanitizePersonName(contactLastName).trim()
-    const phoneDigits = phone.replace(/\D/g, '').slice(0, 9)
     if (!fn || !ln) {
       setPersonalError(tr.personalErrorName)
       return
     }
-    if (phoneDigits.length !== 9) {
+    if (!isPhoneE164Valid(phone)) {
       setPersonalError(tr.personalErrorPhone)
       return
     }
@@ -364,7 +364,7 @@ export default function PartnerSettings() {
       await savePartnerProfile({
         contactFirstName: fn,
         contactLastName: ln,
-        phone: phoneDigits,
+        phone: phone,
       })
       setSavePersonalOk(true)
     } catch (err) {
@@ -546,18 +546,19 @@ export default function PartnerSettings() {
                   required
                 />
               </div>
-              <Field
-                label={tr.phone}
-                type="tel"
-                placeholder={tr.phonePlaceholder}
-                hint={tr.phoneHint}
-                value={formatRoNational9Display(phone)}
-                onChange={(v) => {
-                  setPhone(v.replace(/\D/g, '').slice(0, 9))
-                  setSavePersonalOk(false)
-                }}
-                required
-              />
+              <div>
+                <label className="mb-1 block text-sm font-semibold font-['Inter'] text-gray-700">
+                  {tr.phone}<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <PhoneInput
+                  value={phone}
+                  onChange={(v) => {
+                    setPhone(v)
+                    setSavePersonalOk(false)
+                  }}
+                  autoComplete="tel"
+                />
+              </div>
               {personalError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 font-['Inter']">
                   {personalError}

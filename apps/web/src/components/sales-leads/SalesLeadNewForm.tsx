@@ -16,8 +16,8 @@ import type { CreateSalesLeadPayload } from '../../lib/api'
 import {
   sanitizeEmailTyping,
   sanitizePersonName,
-  sanitizePhonePlusOnly,
 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 
 const inputClass =
   "w-full min-h-[40px] rounded-lg border border-zinc-200 px-3 text-sm font-['Inter'] text-slate-900 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-slate-900"
@@ -212,29 +212,19 @@ export function SalesLeadNewForm({ tr, trLeads, backHref, leadsHref, onSave, cla
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="lead-phone" className={labelClass}>
-                {tr.phoneLabel}
-              </label>
-              <input
-                id="lead-phone"
-                type="tel"
+              <label className={labelClass}>{tr.phoneLabel}</label>
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(sanitizePhonePlusOnly(e.target.value))}
-                className={inputClass}
-                placeholder={tr.placeholderPhone}
+                onChange={setPhone}
+                autoComplete="tel"
               />
             </div>
             <div>
-              <label htmlFor="lead-whatsapp" className={labelClass}>
-                {tr.whatsappLabel}
-              </label>
-              <input
-                id="lead-whatsapp"
-                type="tel"
+              <label className={labelClass}>{tr.whatsappLabel}</label>
+              <PhoneInput
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(sanitizePhonePlusOnly(e.target.value))}
-                className={inputClass}
-                placeholder={tr.placeholderPhone}
+                onChange={setWhatsapp}
+                autoComplete="tel"
               />
             </div>
           </div>

@@ -38,8 +38,10 @@ import {
   sanitizeAddressField,
   sanitizePostalField,
   sanitizePersonName,
-  formatRoNational9Display,
+  loadPhoneE164,
+  isPhoneE164Valid,
 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 
 function sanitizeCuiTyping(value: string): string {
   return String(value ?? '')
@@ -55,8 +57,6 @@ const inputClassBase =
 
 const inputClass = `${inputClassBase} border border-slate-200 focus:border-slate-900 focus:ring-slate-900/10`
 
-const phoneFieldShellClass =
-  'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10'
 
 const selectClass = `${inputClassBase} cursor-pointer appearance-none border border-slate-200 pr-10 focus:border-slate-900 focus:ring-slate-900/10`
 
@@ -187,8 +187,7 @@ export default function PartnerCheckout() {
         )
         setNume(sanitizePersonName(prof.contactLastName || '') || '')
         setPrenume(sanitizePersonName(prof.contactFirstName || '') || '')
-        const ph = String(prof.phone || '').replace(/\D/g, '').slice(-9)
-        setPhone(ph.length === 9 ? ph : '')
+        setPhone(loadPhoneE164(prof.phone))
         setCompanyName(String(prof.companyName || '').trim())
         setCompanyCui(sanitizeCuiTyping(String(prof.cui || '')))
         const fa = String(prof.companyStreet || prof.address || '').trim()
@@ -234,11 +233,10 @@ export default function PartnerCheckout() {
   const emailFromAccount = getAuthEmail() || ''
 
   const validateContactFields = (): string | null => {
-    const phoneDigits = phone.replace(/\D/g, '').slice(0, 9)
     if (!sanitizePersonName(nume) || !sanitizePersonName(prenume)) {
       return tr.fieldErrorRequired
     }
-    if (phoneDigits.length !== 9) {
+    if (!isPhoneE164Valid(phone)) {
       return tr.fieldErrorPhone
     }
     return null
@@ -262,14 +260,13 @@ export default function PartnerCheckout() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setSubmitError(null)
-    const phoneDigits = phone.replace(/\D/g, '').slice(0, 9)
     const cuiClean = companyCui.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
 
     if (!emailFromAccount.trim()) {
       setSubmitError(trPartner.invalidSession)
       return
     }
-    if (phoneDigits.length !== 9) {
+    if (!isPhoneE164Valid(phone)) {
       setSubmitError(tr.fieldErrorPhone)
       return
     }
@@ -294,7 +291,7 @@ export default function PartnerCheckout() {
           quantity,
         })),
         email: emailFromAccount.trim(),
-        phone: phoneDigits,
+        phone: phone,
         nume: sanitizePersonName(nume),
         prenume: sanitizePersonName(prenume),
         buyerType: 'company',
@@ -441,21 +438,11 @@ export default function PartnerCheckout() {
             </label>
             <label className="block min-w-0 sm:col-span-2">
               <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">{tr.fieldPhone}</span>
-              <div className={phoneFieldShellClass}>
-                <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold tabular-nums text-slate-700">
-                  +40
-                </span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  className="min-w-0 flex-1 border-0 bg-transparent px-3.5 text-sm font-['Inter'] text-slate-900 outline-none placeholder:text-slate-400"
-                  placeholder={tr.placeholderPhone}
-                  value={formatRoNational9Display(phone)}
-                  maxLength={11}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                />
-              </div>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                autoComplete="tel"
+              />
             </label>
           </div>
 

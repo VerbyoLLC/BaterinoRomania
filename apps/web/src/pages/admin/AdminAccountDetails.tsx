@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAdminAccount, getAuthToken, patchAdminAccount, type AdminAccountDto } from '../../lib/api'
+import { loadPhoneE164 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin',
@@ -28,7 +30,7 @@ export default function AdminAccountDetails() {
         setAccount(a)
         setFirstName(a.firstName)
         setLastName(a.lastName)
-        setPhone(a.phone)
+        setPhone(loadPhoneE164(a.phone))
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Eroare la încărcare.')
@@ -136,19 +138,16 @@ export default function AdminAccountDetails() {
               />
             </div>
             <div>
-              <label htmlFor="admin-acc-phone" className="block text-sm font-semibold text-slate-800 font-['Inter'] mb-1.5">
+              <label className="block text-sm font-semibold text-slate-800 font-['Inter'] mb-1.5">
                 Telefon
               </label>
-              <input
-                id="admin-acc-phone"
-                type="tel"
-                autoComplete="tel"
+              <PhoneInput
                 value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value)
+                onChange={(v) => {
+                  setPhone(v)
                   setSavedOk(false)
                 }}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-['Inter'] text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                autoComplete="tel"
               />
             </div>
             <button

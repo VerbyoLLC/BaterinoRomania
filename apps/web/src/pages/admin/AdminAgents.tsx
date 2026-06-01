@@ -17,6 +17,8 @@ import {
   type SalesAgentKind,
 } from '../../lib/api'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
+import { loadPhoneE164 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 
 const AGENT_SECTORS = ['Toate', 'Industrial', 'Medical', 'Rezidential', 'Maritim'] as const
 const AGENT_KIND_OPTIONS: { id: SalesAgentKind; label: string }[] = [
@@ -58,9 +60,6 @@ function filterNameChars(raw: string): string {
   return raw.replace(/[^\p{L}\s'.-]/gu, '')
 }
 
-function filterDigits(raw: string): string {
-  return raw.replace(/\D/g, '').slice(0, 15)
-}
 
 const emptyForm = () => ({
   lastName: '',
@@ -209,8 +208,8 @@ export default function AdminAgents() {
     setForm({
       lastName: a.lastName,
       firstName: a.firstName,
-      phone: a.phone,
-      whatsapp: a.whatsapp,
+      phone: loadPhoneE164(a.phone),
+      whatsapp: loadPhoneE164(a.whatsapp),
       email: a.email,
       program: a.program,
       county: a.county,
@@ -279,8 +278,8 @@ export default function AdminAgents() {
   const validateAndSubmit = async () => {
     const lastName = form.lastName.trim()
     const firstName = form.firstName.trim()
-    const phone = filterDigits(form.phone)
-    const whatsapp = filterDigits(form.whatsapp)
+    const phone = form.phone
+    const whatsapp = form.whatsapp
     const email = form.email.trim().toLowerCase()
     const program = form.program.trim()
 
@@ -292,12 +291,12 @@ export default function AdminAgents() {
       setFormError('Prenume: doar litere (și diacritice), spații, cratime.')
       return
     }
-    if (phone.length < 9) {
-      setFormError('Telefon: minim 9 cifre.')
+    if (phone.replace(/\D/g, '').length < 7) {
+      setFormError('Telefon: număr de telefon invalid.')
       return
     }
-    if (whatsapp.length < 9) {
-      setFormError('WhatsApp: minim 9 cifre.')
+    if (whatsapp && whatsapp.replace(/\D/g, '').length < 7) {
+      setFormError('WhatsApp: număr de telefon invalid.')
       return
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -950,28 +949,26 @@ export default function AdminAgents() {
                   placeholder="Doar litere"
                 />
               </label>
-              <label className="block text-sm font-medium text-slate-700 font-['Inter']">
+              <div className="block text-sm font-medium text-slate-700 font-['Inter']">
                 Telefon
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: filterDigits(e.target.value) }))}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/15"
-                  placeholder="Doar cifre"
-                />
-              </label>
-              <label className="block text-sm font-medium text-slate-700 font-['Inter']">
+                <div className="mt-1">
+                  <PhoneInput
+                    value={form.phone}
+                    onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                    autoComplete="tel"
+                  />
+                </div>
+              </div>
+              <div className="block text-sm font-medium text-slate-700 font-['Inter']">
                 WhatsApp
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm((f) => ({ ...f, whatsapp: filterDigits(e.target.value) }))}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/15"
-                  placeholder="Doar cifre"
-                />
-              </label>
+                <div className="mt-1">
+                  <PhoneInput
+                    value={form.whatsapp}
+                    onChange={(v) => setForm((f) => ({ ...f, whatsapp: v }))}
+                    autoComplete="tel"
+                  />
+                </div>
+              </div>
               <label className="block text-sm font-medium text-slate-700 font-['Inter']">
                 Email
                 <input

@@ -14,13 +14,15 @@ import {
   type ClientProfilePayload,
 } from '../../lib/api'
 import {
-  formatRoNational9Display,
+  loadPhoneE164,
+  isPhoneE164Valid,
   sanitizeAddressField,
   sanitizeEmailTyping,
   sanitizePersonName,
   sanitizePostalField,
 } from '../../lib/formInputSanitize'
 import PasswordInput from '../../components/PasswordInput'
+import PhoneInput from '../../components/PhoneInput'
 import EmailNotificationsSettings from '../../components/settings/EmailNotificationsSettings'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getClientSettingsExportTranslations } from '../../i18n/client-settings'
@@ -34,10 +36,6 @@ const inputClass =
   'h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-[\'Inter\'] text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10'
 const inputClassError =
   'h-12 w-full rounded-xl border-2 border-red-500 bg-white px-3.5 text-sm font-[\'Inter\'] text-slate-900 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-500/25'
-const phoneFieldShellClass =
-  'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10'
-const phoneInnerInputClass =
-  'min-w-0 flex-1 border-0 bg-transparent px-3.5 text-sm font-[\'Inter\'] text-slate-900 outline-none placeholder:text-slate-400'
 
 const SETTINGS_NAV: readonly { id: string; label: string; Icon: LucideIcon }[] = [
   { id: 'date-personale', label: 'Date personale', Icon: User },
@@ -270,7 +268,7 @@ export default function ClientSettings() {
     return {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      phone: phone.replace(/\D/g, '').slice(0, 9),
+      phone: phone,
       billAddress: billAddress.trim(),
       billCounty: billCounty.trim(),
       billCity: billCity.trim(),
@@ -299,7 +297,7 @@ export default function ClientSettings() {
         if (profile) {
           setFirstName(profile.firstName || '')
           setLastName(profile.lastName || '')
-          setPhone(profile.phone || '')
+          setPhone(loadPhoneE164(profile.phone))
           setBillAddress(profile.billAddress || '')
           setBillCounty(profile.billCounty || '')
           setBillCity(profile.billCity || '')
@@ -350,8 +348,8 @@ export default function ClientSettings() {
         setFirstNameError('Introdu prenumele (doar litere).')
         hasErr = true
       }
-      if (payload.phone.length !== 9) {
-        setPhoneError('Introdu exact 9 cifre după +40.')
+      if (!isPhoneE164Valid(payload.phone)) {
+        setPhoneError('Introdu un număr de telefon valid.')
         hasErr = true
       }
       if (hasErr) return
@@ -627,36 +625,20 @@ export default function ClientSettings() {
                   ) : null}
                 </label>
               </div>
-              <label className="block">
+              <div>
                 <span className="text-sm font-semibold text-slate-800 font-['Inter']">Telefon</span>
-                <span className="mt-1 mb-1.5 block text-xs text-slate-500 font-['Inter']">
-                  Prefix +40 (fix); introdu exact 9 cifre.
-                </span>
-                <div
-                  className={
-                    phoneError
-                      ? 'flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-xl border-2 border-red-500 bg-white transition-colors focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-500/25'
-                      : phoneFieldShellClass
-                  }
-                >
-                  <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold tabular-nums text-slate-700">
-                    +40
-                  </span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel-national"
-                    className={`${phoneInnerInputClass} mt-0`}
-                    placeholder="7XX XXX XXX"
-                    value={formatRoNational9Display(phone)}
-                    maxLength={11}
-                    aria-invalid={Boolean(phoneError)}
-                    aria-describedby={phoneError ? 'settings-phone-err' : undefined}
-                    onChange={(e) => {
+                <div className="mt-1.5">
+                  <PhoneInput
+                    value={phone}
+                    onChange={(v) => {
                       setPhoneError(null)
                       setPersonalSaveMsg(null)
-                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))
+                      setPhone(v)
                     }}
+                    error={Boolean(phoneError)}
+                    autoComplete="tel"
+                    aria-invalid={Boolean(phoneError)}
+                    aria-describedby={phoneError ? 'settings-phone-err' : undefined}
                   />
                 </div>
                 {phoneError ? (
@@ -664,7 +646,7 @@ export default function ClientSettings() {
                     {phoneError}
                   </p>
                 ) : null}
-              </label>
+              </div>
             </>
           )}
           <div className="flex flex-wrap items-center gap-3">

@@ -1,3 +1,22 @@
+/**
+ * Normalize a phone value loaded from the API into E.164 format for PhoneInput.
+ * Legacy DB values are stored as 9 bare digits (no country code) → prepend +40.
+ * Values already in E.164 (+XXXXXXX) are returned as-is.
+ */
+export function loadPhoneE164(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const s = String(raw).trim()
+  if (!s) return ''
+  if (/^\d{9}$/.test(s)) return `+40${s}`
+  return s
+}
+
+/** Validate that a PhoneInput value has enough digits to be a real number. */
+export function isPhoneE164Valid(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  return digits.length >= 7
+}
+
 /** Nine national digits after +40, shown as XXX XXX XXX while typing. */
 export function formatRoNational9Display(digits: string): string {
   const d = digits.replace(/\D/g, '').slice(0, 9)

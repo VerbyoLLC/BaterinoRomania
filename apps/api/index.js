@@ -155,6 +155,30 @@ function parseTechnicalSpecsModelsBody(v) {
   }
 }
 
+/**
+ * Normalize a phone value to E.164-like format (+XXXXXXXXX).
+ * Accepts:
+ *   - "+40712345678" → "+40712345678"
+ *   - "712345678" (legacy 9-digit Romanian) → "+40712345678"
+ *   - "" / null / undefined → null (invalid)
+ * Returns null when the resulting digit count is < 7 (not a real number).
+ */
+function normalizeE164Phone(v) {
+  if (!v) return null
+  const s = String(v).trim()
+  if (!s) return null
+  // Legacy: exactly 9 bare digits — Romanian mobile without country code
+  if (/^\d{9}$/.test(s)) return `+40${s}`
+  // Already has a + prefix — preserve as-is after stripping whitespace
+  if (s.startsWith('+')) {
+    const digits = s.slice(1).replace(/\D/g, '')
+    return digits.length >= 7 ? `+${digits}` : null
+  }
+  // Bare digits (not 9, e.g. international without +)
+  const digits = s.replace(/\D/g, '')
+  return digits.length >= 7 ? digits : null
+}
+
 /** Cod poștal RO: doar cifre, max 6 */
 function normalizeRoPostalCode(v) {
   if (v === undefined || v === null) return v
@@ -1881,9 +1905,9 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
 
     let data
     if (section === 'personal') {
-      const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
-      if (phoneDigits.length !== 9) {
-        return res.status(400).json({ error: 'Telefon: exact 9 cifre.' })
+      const phone = normalizeE164Phone(body.phone)
+      if (!phone) {
+        return res.status(400).json({ error: 'Telefon invalid.' })
       }
       const firstName = sanitizeGuestOrderPersonName(body.firstName)
       const lastName = sanitizeGuestOrderPersonName(body.lastName)
@@ -1894,7 +1918,7 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
         ...base,
         firstName,
         lastName,
-        phone: phoneDigits,
+        phone,
       }
     } else if (section === 'address') {
       const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
@@ -1922,13 +1946,12 @@ app.put('/api/client/profile', authMiddleware, clientAuthMiddleware, async (req,
         companyPostal: sanitizeGuestOrderPostal(body.companyPostal),
       }
     } else {
-      const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
       const deliveryDifferent = Boolean(body.deliveryDifferent ?? body.differentDeliveryAddress)
       const { delAddress, delCounty, delCity, delPostal } = sanitizeDeliveryBlock(body, deliveryDifferent)
       data = {
         firstName: sanitizeGuestOrderPersonName(body.firstName),
         lastName: sanitizeGuestOrderPersonName(body.lastName),
-        phone: phoneDigits,
+        phone: normalizeE164Phone(body.phone) || String(body.phone || '').trim(),
         billAddress: sanitizeGuestOrderText(body.billAddress),
         billCounty: sanitizeGuestOrderText(body.billCounty),
         billCity: sanitizeGuestOrderText(body.billCity),
@@ -7219,7 +7242,7 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       (isClient || isPartener) && authPayload?.userId ? String(authPayload.userId) : null
 
     const emailRaw = String(body.email || '').trim().toLowerCase()
-    const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(0, 9)
+    const phoneRaw = normalizeE164Phone(body.phone)
     const lastName = sanitizeGuestOrderPersonName(body.nume ?? body.lastName)
     const firstName = sanitizeGuestOrderPersonName(body.prenume ?? body.firstName)
     const buyerType = body.buyerType === 'company' ? 'company' : 'person'
@@ -7281,7 +7304,7 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       }
       emailToStore = tokenEmail
     }
-    if (phoneDigits.length !== 9) {
+    if (!phoneRaw) {
       return res.status(400).json({ error: 'Telefon invalid.' })
     }
     if (!lastName || !firstName) {
@@ -7395,7 +7418,7 @@ app.post('/api/guest-residential-orders', async (req, res) => {
           orderSource,
           userId: userIdForOrder,
           email: emailToStore,
-          phone: phoneDigits,
+          phone: phoneRaw,
           lastName,
           firstName,
           billAddress,

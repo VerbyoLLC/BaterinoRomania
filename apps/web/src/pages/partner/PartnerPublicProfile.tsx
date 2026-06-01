@@ -11,10 +11,11 @@ import {
 import {
   isPartnerWebsiteSyntaxValid,
   normalizePartnerWebsite,
-  sanitizePhonePlusOnly,
+  loadPhoneE164,
   sanitizeRoPostalCode,
   sanitizeStreetLine,
 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 import PartnerPublicProfileCard from '../../components/partner/PartnerPublicProfileCard'
 import { getPartnerServiciiOptions } from '../../i18n/partner/servicii'
@@ -330,8 +331,8 @@ export default function PartnerPublicProfile() {
         setZipCode(p.zipCode ?? '')
         setDescription(p.description ?? '')
         setServicii(p.services ? p.services.split(',').filter(Boolean) : [])
-        setPublicPhone(p.publicPhone ?? '')
-        setWhatsapp(p.whatsapp ?? '')
+        setPublicPhone(loadPhoneE164(p.publicPhone))
+        setWhatsapp(loadPhoneE164(p.whatsapp))
         setWebsite(p.website ?? '')
         setFacebookUrl(p.facebookUrl ?? '')
         setLinkedinUrl(p.linkedinUrl ?? '')
@@ -1202,22 +1203,28 @@ export default function PartnerPublicProfile() {
           {/* Contact */}
           <FormSection icon={<Phone className="h-4 w-4" strokeWidth={2} />} title={tr.sectionContact}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field
-                label={tr.phoneLabel}
-                type="tel"
-                placeholder={tr.phonePlaceholder}
-                value={publicPhone}
-                onChange={(v) => setPublicPhone(sanitizePhonePlusOnly(v))}
-                required
-                invalid={!!fe?.publicPhone}
-              />
-              <Field
-                label={tr.whatsappLabel}
-                type="tel"
-                placeholder={tr.phonePlaceholder}
-                value={whatsapp}
-                onChange={(v) => setWhatsapp(sanitizePhonePlusOnly(v))}
-              />
+              <div>
+                <label className={`mb-1.5 flex items-center gap-1 text-sm font-semibold font-['Inter'] ${fe?.publicPhone ? 'text-red-700' : 'text-slate-700'}`}>
+                  {tr.phoneLabel}<span className="text-red-500">*</span>
+                </label>
+                <PhoneInput
+                  value={publicPhone}
+                  onChange={setPublicPhone}
+                  error={!!fe?.publicPhone}
+                  autoComplete="tel"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1 text-sm font-semibold font-['Inter'] text-slate-700">
+                  {tr.whatsappLabel}
+                </label>
+                <PhoneInput
+                  value={whatsapp}
+                  onChange={setWhatsapp}
+                  placeholder="7XX XXX XXX"
+                  autoComplete="tel"
+                />
+              </div>
             </div>
             <Field
               label={tr.websiteLabel}

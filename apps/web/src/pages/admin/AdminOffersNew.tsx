@@ -6,11 +6,11 @@ import {
   formatPriceInputDisplay,
   sanitizeEmailTyping,
   sanitizePersonName,
-  sanitizePhonePlusOnly,
   sanitizePostalField,
   sanitizePriceInputTyping,
   sanitizeRoPostalCode,
 } from '../../lib/formInputSanitize'
+import PhoneInput from '../../components/PhoneInput'
 import { getAdminProductModels, getAdminAgents, getAdminCommercialOffer, saveAdminCommercialOfferDraft, isAdminAgentAssignable, type AdminProductModelRow, type AdminSalesAgent } from '../../lib/api'
 import {
   buildCommercialOfferDraftV1,
@@ -1263,23 +1263,18 @@ export default function AdminOffersNew() {
                 ) : null}
               </div>
               <div>
-                <label htmlFor="offer-pf-telefon" className={labelClass}>
+                <label className={labelClass}>
                   Număr telefon
                   {offerRequiredMark}
                 </label>
-                <input
-                  id="offer-pf-telefon"
-                  type="tel"
-                  inputMode="tel"
+                <PhoneInput
                   value={clientPerson.telefon}
-                  onChange={(e) => setClientField('telefon', sanitizePhonePlusOnly(e.target.value))}
+                  onChange={(v) => setClientField('telefon', v)}
+                  error={offerFieldInvalid('offer-pf-telefon')}
                   autoComplete="tel"
-                  required
                   aria-invalid={offerFieldInvalid('offer-pf-telefon')}
-                  className={offerFieldInputClass('offer-pf-telefon')}
-                  placeholder="+40 ..."
+                  aria-describedby="offer-pf-telefon"
                 />
-                <p className="mt-1 text-xs text-slate-500 font-['Inter']">Doar + și cifre (ex. +40712345678).</p>
               </div>
             </div>
           </OfferCollapsibleSectionCard>
@@ -1510,23 +1505,18 @@ export default function AdminOffersNew() {
                 ) : null}
               </div>
               <div>
-                <label htmlFor="offer-pj-contact-telefon" className={labelClass}>
+                <label className={labelClass}>
                   Număr telefon
                   {offerRequiredMark}
                 </label>
-                <input
-                  id="offer-pj-contact-telefon"
-                  type="tel"
-                  inputMode="tel"
+                <PhoneInput
                   value={clientCompany.contactTelefon}
-                  onChange={(e) => setCompanyField('contactTelefon', sanitizePhonePlusOnly(e.target.value))}
+                  onChange={(v) => setCompanyField('contactTelefon', v)}
+                  error={offerFieldInvalid('offer-pj-contact-telefon')}
                   autoComplete="tel"
-                  required
                   aria-invalid={offerFieldInvalid('offer-pj-contact-telefon')}
-                  className={offerFieldInputClass('offer-pj-contact-telefon')}
-                  placeholder="+40 ..."
+                  aria-describedby="offer-pj-contact-telefon"
                 />
-                <p className="mt-1 text-xs text-slate-500 font-['Inter']">Doar + și cifre (ex. +40712345678).</p>
               </div>
             </div>
           </OfferCollapsibleSectionCard>
