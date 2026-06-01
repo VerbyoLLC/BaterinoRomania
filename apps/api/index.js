@@ -77,6 +77,17 @@ const {
   SN_INVALID_MESSAGE,
 } = require('./lib/warehouse-serial.js')
 const { warrantyVerifyRateLimitMiddleware } = require('./lib/warranty-verify-rate-limit.js')
+const {
+  loginLimiter,
+  signupLimiter,
+  forgotPasswordLimiter,
+  resendCodeLimiter,
+  verifyIpLimiter,
+  resetPasswordLimiter,
+  googleAuthLimiter,
+  recordOtpFailure,
+  clearOtpAttempts,
+} = require('./lib/auth-rate-limit.js')
 const { mintWarrantyVerifyToken, parseWarrantyVerifyToken } = require('./lib/warranty-verify-token.js')
 const QRCode = require('qrcode')
 const PROFORMA_TEMPLATE_MODULE_PATH = './lib/proforma-template.js'
@@ -847,7 +858,7 @@ async function buildGoogleAuthPayload(userId) {
 }
 
 // ── Auth: Signup (step 1) ─────────────────────────────────────────────
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', signupLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
@@ -930,7 +941,7 @@ app.post('/api/auth/signup', async (req, res) => {
 })
 
 // ── Auth: Resend verification code ───────────────────────────────────
-app.post('/api/auth/resend-code', async (req, res) => {
+app.post('/api/auth/resend-code', resendCodeLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
@@ -1017,7 +1028,7 @@ app.post('/api/auth/verify-email', async (req, res) => {
 })
 
 // ── Auth: Verify code (4 cifre — înregistrare client și partener) ─────────
-app.post('/api/auth/verify', async (req, res) => {
+app.post('/api/auth/verify', verifyIpLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
@@ -1043,9 +1054,21 @@ app.post('/api/auth/verify', async (req, res) => {
     }
 
     if (codeDigits !== String(user.verificationCode)) {
+      const { shouldClearCode } = recordOtpFailure(email)
+      if (shouldClearCode) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verificationCode: null, verificationCodeExpiresAt: null },
+        })
+        return res.status(429).json({
+          error: 'Prea multe încercări incorecte. Solicită un cod nou.',
+          code: 'otp_locked',
+        })
+      }
       return res.status(400).json({ error: 'Cod incorect.' })
     }
 
+    clearOtpAttempts(email)
     await prisma.user.update({
       where: { id: user.id },
       data: { verificationCode: null, verificationCodeExpiresAt: null },
@@ -1064,7 +1087,7 @@ app.post('/api/auth/verify', async (req, res) => {
 })
 
 // ── Auth: Forgot password (request reset link) ──────────────────────────
-app.post('/api/auth/forgot-password', async (req, res) => {
+app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
@@ -1102,7 +1125,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 })
 
 // ── Auth: Reset password (with token) ───────────────────────────────────
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', resetPasswordLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const token = body.token
@@ -1147,7 +1170,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 })
 
 // ── Auth: Login ────────────────────────────────────────────────────────
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
@@ -1189,7 +1212,7 @@ app.post('/api/auth/login', async (req, res) => {
 })
 
 // ── Auth: Google (GIS / FedCM — ID token de la frontend) ────────────────
-app.post('/api/auth/google', async (req, res) => {
+app.post('/api/auth/google', googleAuthLimiter, async (req, res) => {
   try {
     const body = req.body || {}
     const idToken = String(body.idToken || '').trim()
