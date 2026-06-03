@@ -122,6 +122,10 @@ export type HomeTranslations = {
   productsVoltageAll: string
   productsVoltageLow: string
   productsVoltageHigh: string
+  productsLocationAll: string
+  productsLocationIndoor: string
+  productsLocationOutdoor: string
+  clearFilters: string
   includesTVA: string
   disponibilPentruParteneri: string
   /** Residential card: replaces price when visibility is partner-only / hidden */
@@ -358,6 +362,10 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageAll: 'Tensiune',
     productsVoltageLow: 'Tensiune joasă',
     productsVoltageHigh: 'Tensiune înaltă',
+    productsLocationAll: 'Locație',
+    productsLocationIndoor: 'Interior',
+    productsLocationOutdoor: 'Exterior',
+    clearFilters: 'Anulează filtrele',
     includesTVA: 'include TVA',
     disponibilPentruParteneri: 'VEZI DETALII',
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
@@ -585,6 +593,10 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageAll: 'Voltage',
     productsVoltageLow: 'Low Voltage',
     productsVoltageHigh: 'High Voltage',
+    productsLocationAll: 'Location',
+    productsLocationIndoor: 'Indoor',
+    productsLocationOutdoor: 'Outdoor',
+    clearFilters: 'Clear filters',
     includesTVA: 'includes VAT',
     disponibilPentruParteneri: 'VIEW DETAILS',
     catalogDisponibilParteneriPrice: 'Available to partners',
@@ -810,6 +822,10 @@ const translations: Record<LangCode, HomeTranslations> = {
     productsVoltageAll: '电压',
     productsVoltageLow: '低压',
     productsVoltageHigh: '高压',
+    productsLocationAll: '安装位置',
+    productsLocationIndoor: '室内',
+    productsLocationOutdoor: '室外',
+    clearFilters: '清除筛选',
     includesTVA: '含增值税',
     disponibilPentruParteneri: '查看详情',
     catalogDisponibilParteneriPrice: '合作伙伴专享',
