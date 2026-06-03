@@ -178,7 +178,10 @@ function generateKey(originalName, prefix = 'uploads', mimetype, productFolder, 
       (mimetype && MIME_TO_EXT[mimetype]) ||
       (originalName && /\.jpe?g$/i.test(originalName) ? '.jpg' : '') ||
       '.jpg'
-    return `${folder}/${slug}-${imageIndex}${imgExt}`
+    // Always use a timestamp so each upload gets a unique URL and CDN never
+    // serves a stale cached version of a previously-uploaded file.
+    const suffix = imageIndex === 99 ? 'card' : String(imageIndex)
+    return `${folder}/${slug}-${suffix}-${Date.now()}${imgExt}`
   }
 
   const safeName = Buffer.from(originalName || 'file', 'latin1')

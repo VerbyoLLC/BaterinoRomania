@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ReactCrop, { centerCrop, makeAspectCrop, type Crop, type PixelCrop } from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
 import {
   getAdminProductModels,
   getAuthToken,
@@ -106,14 +104,21 @@ export default function AdminProductModels() {
   const [uploadTargetRowId, setUploadTargetRowId] = useState<string | null>(null)
   const [uploadingRowId] = useState<string | null>(null)
   const [availabilitySavingId, setAvailabilitySavingId] = useState<string | null>(null)
+  const [viewModelId, setViewModelId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Image cropper
   const [cropperState, setCropperState] = useState<{ src: string; rowId: string; fileName: string } | null>(null)
-  const [crop, setCrop] = useState<Crop>()
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [cropUploading, setCropUploading] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [panX, setPanX] = useState(0)
+  const [panY, setPanY] = useState(0)
+  const [isPanning, setIsPanning] = useState(false)
+  const isPanningRef = useRef(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
   const imgCropRef = useRef<HTMLImageElement>(null)
+  const cropContainerRef = useRef<HTMLDivElement>(null)
+  const cropBoxRef = useRef<HTMLDivElement>(null)
 
   // Search & filters
   const [search, setSearch] = useState('')
@@ -150,6 +155,7 @@ export default function AdminProductModels() {
   )
 
   const drawerRow = useMemo(() => rowsWithDraft.find((r) => r.id === drawerModelId) ?? null, [rowsWithDraft, drawerModelId])
+  const viewRow = useMemo(() => rowsWithDraft.find((r) => r.id === viewModelId) ?? null, [rowsWithDraft, viewModelId])
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -179,6 +185,7 @@ export default function AdminProductModels() {
         technicalDescription: base.technicalDescription,
         usageType: base.usageType,
         imageUrl: base.imageUrl ?? null,
+        productImageUrl: base.productImageUrl ?? null,
         availableForStock: base.availableForStock !== false,
       }
       return { ...prev, [rowId]: { ...current, [key]: value } }
@@ -232,6 +239,7 @@ export default function AdminProductModels() {
       technicalDescription: composed,
       usageType: drawerRow.usageType,
       imageUrl: drawerRow.imageUrl ?? null,
+      productImageUrl: drawerRow.productImageUrl ?? null,
       availableForStock: drawerRow.availableForStock !== false,
     }
     await saveRow(drawerRow.id, payload)
@@ -255,42 +263,94 @@ export default function AdminProductModels() {
     const reader = new FileReader()
     reader.onload = () => {
       setCropperState({ src: reader.result as string, rowId: uploadTargetRowId, fileName: file.name })
-      setCrop(undefined)
-      setCompletedCrop(undefined)
+      setZoom(1)
+      setPanX(0)
+      setPanY(0)
     }
     reader.readAsDataURL(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setUploadTargetRowId(null)
   }
 
-  const onCropImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget
-    const initialCrop = centerCrop(
-      makeAspectCrop({ unit: '%', width: 80 }, 1, width, height),
-      width,
-      height,
-    )
-    setCrop(initialCrop)
+  const onCropImageLoad = () => {
+    setPanX(0)
+    setPanY(0)
   }
 
+  const onCropMouseDown = (e: React.MouseEvent) => {
+    isPanningRef.current = true
+    setIsPanning(true)
+    panStartRef.current = { x: e.clientX - panX, y: e.clientY - panY }
+  }
+  const onCropMouseMove = (e: React.MouseEvent) => {
+    if (!isPanningRef.current) return
+    setPanX(e.clientX - panStartRef.current.x)
+    setPanY(e.clientY - panStartRef.current.y)
+  }
+  const onCropMouseUp = () => { isPanningRef.current = false; setIsPanning(false) }
+
   const onCropConfirm = async () => {
-    if (!cropperState || !imgCropRef.current || !completedCrop) return
+    if (!cropperState || !imgCropRef.current || !cropContainerRef.current || !cropBoxRef.current) return
     const img = imgCropRef.current
+    const cropBox = cropBoxRef.current
+
+    // getBoundingClientRect gives actual visual positions (includes CSS transforms on img)
+    const imgRect     = img.getBoundingClientRect()      // visual post-transform
+    const cropBoxRect = cropBox.getBoundingClientRect()  // no transform on crop box
+
+    // Crop box content area (subtract 2px border on each side)
+    const border = 2
+    const cropBoxContentLeft = cropBoxRect.left + border
+    const cropBoxContentTop  = cropBoxRect.top  + border
+    const cropSizeVisual = cropBoxRect.width - border * 2   // square content size in screen px
+
+    // Position of crop box content relative to image visual left/top (in screen px)
+    const relX = cropBoxContentLeft - imgRect.left
+    const relY = cropBoxContentTop  - imgRect.top
+
+    // img.width/height are LAYOUT dimensions (CSS transform doesn't affect them)
+    const W_i = img.width
+    const H_i = img.height
+
+    // Convert visual (post-transform) screen px → image layout px (÷ zoom)
+    const displayX = relX / zoom
+    const displayY = relY / zoom
+    const displayW = cropSizeVisual / zoom
+    const displayH = cropSizeVisual / zoom
+
+    // Overlap of crop window with actual image layout bounds [0,W_i]×[0,H_i]
+    const overlapX1 = Math.max(0, displayX)
+    const overlapX2 = Math.min(W_i, displayX + displayW)
+    const overlapY1 = Math.max(0, displayY)
+    const overlapY2 = Math.min(H_i, displayY + displayH)
+
     const canvas = document.createElement('canvas')
     canvas.width = 600
     canvas.height = 600
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const scaleX = img.naturalWidth / img.width
-    const scaleY = img.naturalHeight / img.height
-    ctx.drawImage(
-      img,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0, 0, 600, 600,
-    )
+
+    // White background (visible when crop window extends beyond image)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, 600, 600)
+
+    if (overlapX2 > overlapX1 && overlapY2 > overlapY1) {
+      // Where the image lands in the 600×600 output canvas
+      const outX = ((overlapX1 - displayX) / displayW) * 600
+      const outY = ((overlapY1 - displayY) / displayH) * 600
+      const outW = ((overlapX2 - overlapX1) / displayW) * 600
+      const outH = ((overlapY2 - overlapY1) / displayH) * 600
+
+      // Natural image coordinates
+      const scaleX = img.naturalWidth  / W_i
+      const scaleY = img.naturalHeight / H_i
+      const natX = overlapX1 * scaleX
+      const natY = overlapY1 * scaleY
+      const natW = (overlapX2 - overlapX1) * scaleX
+      const natH = (overlapY2 - overlapY1) * scaleY
+
+      ctx.drawImage(img, natX, natY, natW, natH, outX, outY, outW, outH)
+    }
     canvas.toBlob(async (blob) => {
       if (!blob) return
       const croppedFile = new File([blob], cropperState.fileName.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
@@ -299,8 +359,8 @@ export default function AdminProductModels() {
       setCropUploading(true)
       setError(null)
       try {
-        const uploaded = await uploadAdminFile(croppedFile, `product-models/${row.modelNumber || row.id}`)
-        setDraftField(cropperState.rowId, 'imageUrl', uploaded.url)
+        const uploaded = await uploadAdminFile(croppedFile, `product-models/${row.modelNumber || row.id}-product`)
+        setDraftField(cropperState.rowId, 'productImageUrl', uploaded.url)
         setCropperState(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Eroare la upload imagine.')
@@ -308,6 +368,11 @@ export default function AdminProductModels() {
         setCropUploading(false)
       }
     }, 'image/jpeg', 0.92)
+  }
+
+  const triggerProductImageUpload = (rowId: string) => {
+    setUploadTargetRowId(rowId)
+    fileInputRef.current?.click()
   }
 
   return (
@@ -396,6 +461,9 @@ export default function AdminProductModels() {
                   </th>
                   <th className="px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.25rem] text-center">
                     Available
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8.25rem] text-center">
+                    Product Image
                   </th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.5rem] text-center">
                     Specs
@@ -494,6 +562,28 @@ export default function AdminProductModels() {
                         </span>
                       </button>
                     </td>
+                    {/* ── Product Image (600×600 cropped) ── */}
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-center justify-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1">
+                        <button
+                          type="button"
+                          onClick={() => triggerProductImageUpload(row.id)}
+                          title="Încarcă Product Image (600×600)"
+                          className={btnGhost}
+                        >
+                          Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => row.productImageUrl && setPreviewImageUrl(row.productImageUrl)}
+                          disabled={!row.productImageUrl}
+                          title={row.productImageUrl ? 'Previzualizează Product Image' : 'Nicio imagine'}
+                          className={btnGhost}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-2 py-2.5 text-center">
                       <button
                         type="button"
@@ -526,26 +616,40 @@ export default function AdminProductModels() {
                       </div>
                     </td>
                     <td className="px-2 py-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          saveRow(row.id, {
-                            name: row.name,
-                            brand: row.brand,
-                            series: row.series,
-                            modelNumber: row.modelNumber,
-                            technicalDescription: row.technicalDescription,
-                            usageType: row.usageType,
-                            imageUrl: row.imageUrl ?? null,
-                            availableForStock: row.availableForStock !== false,
-                          })
-                        }
-                        disabled={savingId === row.id}
-                        title={savingId === row.id ? 'Se salvează…' : 'Salvează rândul'}
-                        className="inline-flex h-9 min-w-[4.5rem] items-center justify-center rounded-md bg-slate-900 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50"
-                      >
-                        Save
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setViewModelId(row.id)}
+                          title="Vezi detalii model"
+                          className={btnGhost}
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12C3.75 7.5 7.5 4.5 12 4.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12Z" />
+                            <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            saveRow(row.id, {
+                              name: row.name,
+                              brand: row.brand,
+                              series: row.series,
+                              modelNumber: row.modelNumber,
+                              technicalDescription: row.technicalDescription,
+                              usageType: row.usageType,
+                              imageUrl: row.imageUrl ?? null,
+                              productImageUrl: row.productImageUrl ?? null,
+                              availableForStock: row.availableForStock !== false,
+                            })
+                          }
+                          disabled={savingId === row.id}
+                          title={savingId === row.id ? 'Se salvează…' : 'Salvează rândul'}
+                          className="inline-flex h-9 min-w-[4rem] items-center justify-center rounded-md bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -622,6 +726,88 @@ export default function AdminProductModels() {
         </div>
       )}
 
+      {/* ── Model detail view modal ── */}
+      {viewRow && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setViewModelId(null)}
+          />
+          <div className="relative flex flex-col w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4 shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 font-['Inter']">{viewRow.name}</h2>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">{viewRow.modelNumber}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewModelId(null)}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 shrink-0 ml-4"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Image */}
+              {(viewRow.productImageUrl || viewRow.imageUrl) && (
+                <div className="flex justify-center">
+                  <img
+                    src={viewRow.productImageUrl || viewRow.imageUrl || ''}
+                    alt={viewRow.name}
+                    className="h-48 w-48 object-contain rounded-xl border border-slate-100 bg-slate-50 p-2"
+                  />
+                </div>
+              )}
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Name', value: viewRow.name },
+                  { label: 'Brand', value: viewRow.brand },
+                  { label: 'Series', value: viewRow.series || '—' },
+                  { label: 'Model', value: viewRow.modelNumber },
+                  { label: 'Energy', value: getEnergyValue(viewRow.technicalDescription, viewRow.name) },
+                  { label: 'Type', value: viewRow.usageType === 'residential' ? 'Residential' : 'Industrial' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-widest font-semibold text-slate-400 mb-1">{label}</p>
+                    <p className="text-sm font-semibold text-slate-800 break-words">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Specs table */}
+              {(() => {
+                const specs = parseSpecs(viewRow.technicalDescription).filter((f) => f.label.trim() || f.value.trim())
+                if (specs.length === 0) return null
+                return (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700 font-['Inter'] mb-3">Specificații tehnice</h3>
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="w-full text-sm font-['Inter']">
+                        <tbody className="divide-y divide-slate-100">
+                          {specs.map((f, i) => (
+                            <tr key={f.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                              <td className="px-4 py-2.5 text-xs font-semibold text-slate-500 w-[45%] align-top">{f.label || '—'}</td>
+                              <td className="px-4 py-2.5 text-sm text-slate-800 align-top">{f.value || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {previewImageUrl && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <button
@@ -680,38 +866,104 @@ export default function AdminProductModels() {
               </button>
             </div>
 
-            {/* Crop area */}
-            <div className="flex-1 overflow-auto p-5 flex items-center justify-center bg-slate-100">
-              <ReactCrop
-                crop={crop}
-                onChange={(_, pct) => setCrop(pct)}
-                onComplete={(px) => setCompletedCrop(px)}
-                aspect={1}
-                minWidth={50}
-                minHeight={50}
-                className="max-w-full"
+            {/* Crop area — fixed container, image zooms + pans behind fixed dashed overlay */}
+            <div
+              ref={cropContainerRef}
+              className="relative bg-slate-800 select-none"
+              style={{ height: '55vh', overflow: 'hidden', cursor: isPanning ? 'grabbing' : 'grab' }}
+              onMouseDown={onCropMouseDown}
+              onMouseMove={onCropMouseMove}
+              onMouseUp={onCropMouseUp}
+              onMouseLeave={onCropMouseUp}
+            >
+              {/* The photo — zooms and pans, never affects modal layout */}
+              <img
+                ref={imgCropRef}
+                src={cropperState.src}
+                alt=""
+                onLoad={onCropImageLoad}
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  maxHeight: '85%',
+                  maxWidth: '85%',
+                  objectFit: 'contain',
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  transition: isPanning ? 'none' : 'transform 0.08s ease',
+                }}
+              />
+
+              {/* Fixed dashed crop frame — always centered, never scales */}
+              <div
+                ref={cropBoxRef}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 'min(85%, calc(55vh * 0.82))',
+                  aspectRatio: '1 / 1',
+                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.52)',
+                  border: '2px dashed rgba(255,255,255,0.85)',
+                  boxSizing: 'border-box',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
               >
-                <img
-                  ref={imgCropRef}
-                  src={cropperState.src}
-                  alt="Crop preview"
-                  onLoad={onCropImageLoad}
-                  className="max-h-[55vh] max-w-full object-contain"
-                />
-              </ReactCrop>
+                {/* Corner handles */}
+                <div className="absolute top-0 left-0 h-5 w-5 border-t-[3px] border-l-[3px] border-white" />
+                <div className="absolute top-0 right-0 h-5 w-5 border-t-[3px] border-r-[3px] border-white" />
+                <div className="absolute bottom-0 left-0 h-5 w-5 border-b-[3px] border-l-[3px] border-white" />
+                <div className="absolute bottom-0 right-0 h-5 w-5 border-b-[3px] border-r-[3px] border-white" />
+              </div>
+            </div>
+
+            {/* Zoom controls */}
+            <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-2.5 bg-white shrink-0">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.max(0.25, parseFloat((z - 0.1).toFixed(2))))}
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 text-base leading-none"
+              >−</button>
+              <input
+                type="range"
+                min={0.25}
+                max={4}
+                step={0.05}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="flex-1 accent-slate-900"
+              />
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.min(4, parseFloat((z + 0.1).toFixed(2))))}
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 text-base leading-none"
+              >+</button>
+              <span className="text-xs text-slate-500 font-['Inter'] w-10 text-right tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                title="Resetează zoom"
+                className="text-xs text-slate-400 hover:text-slate-600 font-['Inter']"
+              >↺</button>
             </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 shrink-0">
               <p className="text-xs text-slate-400 font-['Inter']">
-                {completedCrop
-                  ? `Zona selectată: ${Math.round(completedCrop.width)} × ${Math.round(completedCrop.height)} px → redimensionat la 600 × 600 px`
-                  : 'Trage pentru a ajusta zona de decupare'}
+                Trage imaginea pentru a poziționa · zoom {Math.round(zoom * 100)}% · Output: 600 × 600 px
               </p>
               <button
                 type="button"
                 onClick={onCropConfirm}
-                disabled={!completedCrop || cropUploading}
+                disabled={cropUploading}
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 {cropUploading ? (

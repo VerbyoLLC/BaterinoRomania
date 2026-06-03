@@ -62,6 +62,7 @@ export default function AdminProducts() {
   const cardPhotoInputRef = useRef<HTMLInputElement>(null)
   const seoOgImageInputRef = useRef<HTMLInputElement>(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [isLive, setIsLive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -90,6 +91,10 @@ export default function AdminProducts() {
   const [categorieComercial, setCategorieComercial] = useState(false)
   const [categorieMicroGrid, setCategorieMicroGrid] = useState(false)
   const [categorieMaritim, setCategorieMaritim] = useState(false)
+  const [categorieHighVoltage, setCategorieHighVoltage] = useState(false)
+  const [categorieLowVoltage, setCategorieLowVoltage] = useState(false)
+  const [categorieOutdoor, setCategorieOutdoor] = useState(false)
+  const [categorieIndoor, setCategorieIndoor] = useState(false)
   const [energieNominala, setEnergieNominala] = useState('')
   const [capacitate, setCapacitate] = useState('')
   const [curentMaxDescarcare, setCurentMaxDescarcare] = useState('')
@@ -108,6 +113,7 @@ export default function AdminProducts() {
   const [certificari, setCertificari] = useState('')
   const [garantie, setGarantie] = useState('')
   const [tensiuneNominala, setTensiuneNominala] = useState('')
+  const [locatieMontaj, setLocatieMontaj] = useState('')
   const [eficientaCiclu, setEficientaCiclu] = useState('')
   const [temperaturaFunctionareMin, setTemperaturaFunctionareMin] = useState('')
   const [temperaturaFunctionareMax, setTemperaturaFunctionareMax] = useState('')
@@ -134,6 +140,7 @@ export default function AdminProducts() {
   const [productModels, setProductModels] = useState<AdminProductModelRow[]>([])
   const [productModelsLoadError, setProductModelsLoadError] = useState<string | null>(null)
   const [selectedProductModelId, setSelectedProductModelId] = useState('')
+  const [selectedSeries, setSelectedSeries] = useState('')
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
   const [seoOgImagePhoto, setSeoOgImagePhoto] = useState<{
@@ -235,7 +242,10 @@ export default function AdminProducts() {
     const selected = productModels.find((m) => m.id === selectedProductModelId)
     if (!selected) return
     const neededUsage = tipProdus === 'industrial' ? 'industrial' : 'residential'
-    if (selected.usageType !== neededUsage) setSelectedProductModelId('')
+    if (selected.usageType !== neededUsage) {
+      setSelectedProductModelId('')
+      setSelectedSeries('')
+    }
   }, [productModels, selectedProductModelId, tipProdus])
 
   useEffect(() => {
@@ -246,7 +256,10 @@ export default function AdminProducts() {
     const match = productModels.find(
       (m) => m.usageType === neededUsage && String(m.modelNumber || '').trim().toUpperCase() === skuValue.toUpperCase(),
     )
-    if (match) setSelectedProductModelId(match.id)
+    if (match) {
+      setSelectedProductModelId(match.id)
+      if (match.series) setSelectedSeries(match.series)
+    }
   }, [panelOpen, selectedProductModelId, sku, productModels, tipProdus])
 
   const sortedActiveReducerePrograms = useMemo(
@@ -265,6 +278,16 @@ export default function AdminProducts() {
         String(a.modelNumber || '').localeCompare(String(b.modelNumber || ''), 'ro', { sensitivity: 'base' }),
       )
   }, [productModels, tipProdus])
+
+  const availableSeries = useMemo(() => {
+    const all = filteredProductModels.map((m) => m.series).filter(Boolean)
+    return [...new Set(all)].sort((a, b) => a.localeCompare(b, 'ro', { sensitivity: 'base' }))
+  }, [filteredProductModels])
+
+  const seriesFilteredModels = useMemo(() => {
+    if (!selectedSeries) return []
+    return filteredProductModels.filter((m) => m.series === selectedSeries)
+  }, [filteredProductModels, selectedSeries])
 
   const parseUnitValue = (s: string | null | undefined, _unit: string): string => {
     if (!s) return ''
@@ -323,6 +346,10 @@ export default function AdminProducts() {
     setCategorieComercial(cat.includes('comercial'))
     setCategorieMicroGrid(cat.includes('micro_grid'))
     setCategorieMaritim(cat.includes('maritim'))
+    setCategorieHighVoltage(cat.includes('high_voltage'))
+    setCategorieLowVoltage(cat.includes('low_voltage'))
+    setCategorieOutdoor(cat.includes('outdoor'))
+    setCategorieIndoor(cat.includes('indoor'))
     setEnergieNominala(parseUnitValue((row as { energieNominala?: string }).energieNominala, 'Wh'))
     setCapacitate(parseUnitValue((row as { capacitate?: string }).capacitate, 'Ah'))
     setCurentMaxDescarcare(parseUnitValue((row as { curentMaxDescarcare?: string }).curentMaxDescarcare, 'A'))
@@ -342,6 +369,7 @@ export default function AdminProducts() {
     setCertificari((row as { certificari?: string }).certificari || '')
     setGarantie(parseUnitValue((row as { garantie?: string }).garantie, 'ani'))
     setTensiuneNominala(parseUnitValue((row as { tensiuneNominala?: string }).tensiuneNominala, 'V'))
+    setLocatieMontaj((row as { locatieMontaj?: string }).locatieMontaj || '')
     setEficientaCiclu(parseUnitValue((row as { eficientaCiclu?: string }).eficientaCiclu, '%'))
     const tempFunc = parseRange((row as { temperaturaFunctionare?: string }).temperaturaFunctionare)
     setTemperaturaFunctionareMin(tempFunc.min)
@@ -430,6 +458,7 @@ export default function AdminProducts() {
     const tsLoaded = normalizeIndustrialTechnicalSpecs(rawTs) ?? createEmptyIndustrialTechnicalSpecs()
     setTechnicalSpecs(tsLoaded)
     setTechnicalSpecModelExpanded(tsLoaded.entries.map(() => true))
+    setIsLive(row.status === 'published')
     setPanelOpen(true)
   }
 
@@ -450,6 +479,10 @@ export default function AdminProducts() {
     setCategorieComercial(false)
     setCategorieMicroGrid(false)
     setCategorieMaritim(false)
+    setCategorieHighVoltage(false)
+    setCategorieLowVoltage(false)
+    setCategorieOutdoor(false)
+    setCategorieIndoor(false)
     setEnergieNominala('')
     setCapacitate('')
     setCurentMaxDescarcare('')
@@ -468,6 +501,7 @@ export default function AdminProducts() {
     setCertificari('')
     setGarantie('')
     setTensiuneNominala('')
+    setLocatieMontaj('')
     setEficientaCiclu('')
     setTemperaturaFunctionareMin('')
     setTemperaturaFunctionareMax('')
@@ -488,6 +522,7 @@ export default function AdminProducts() {
     setPromovarePeContPartener(false)
     setReducereProgramIds([])
     setSelectedProductModelId('')
+    setSelectedSeries('')
     setSeoTitle('')
     setSeoDescription('')
     setSeoOgImagePhoto((prev) => {
@@ -504,6 +539,7 @@ export default function AdminProducts() {
     })
     setTechnicalSpecs(createEmptyIndustrialTechnicalSpecs())
     setTechnicalSpecModelExpanded([])
+    setIsLive(true)
     images.forEach(({ preview }) => URL.revokeObjectURL(preview))
     setImages([])
     setPanelOpen(true)
@@ -809,6 +845,89 @@ export default function AdminProducts() {
     setTechnicalSpecModelExpanded((prev) => [...prev, true])
   }
 
+  const autoDetectFromModel = (model: AdminProductModelRow) => {
+    const lines = String(model.technicalDescription ?? '').split(/\r?\n/)
+    const getField = (label: string) => {
+      const line = lines.find((l) => l.toLowerCase().startsWith(label.toLowerCase() + ':'))
+      return line ? line.slice(line.indexOf(':') + 1).trim() : ''
+    }
+
+    const voltageStr = getField('Nominal Voltage')
+    if (voltageStr) {
+      const match = voltageStr.match(/([\d.]+)\s*[Vv]/)
+      if (match) {
+        const v = parseFloat(match[1])
+        if (!isNaN(v)) {
+          setCategorieHighVoltage(v >= 100)
+          setCategorieLowVoltage(v < 100)
+        }
+      }
+    }
+
+    const waterproofStr = getField('Waterproof')
+    if (waterproofStr) {
+      const outdoorIp = /IP[5-9]\d/i.test(waterproofStr)
+      setCategorieOutdoor(outdoorIp)
+      setCategorieIndoor(!outdoorIp)
+    }
+  }
+
+  const buildEntryFromModel = (model: AdminProductModelRow) => {
+    const LABEL_ALIASES: Record<string, string> = {
+      'rated output power':  'maxOutputPower',
+      'rated input power':   'maxOutputPower',
+      'dimensions (w×d×h)': 'dimensions',
+      'dimensions (l×w×h)': 'dimensions',
+      'energy':              'nominalEnergy',  // HP1600 uses "Energy:" instead of "Nominal Energy:"
+    }
+    const labelValueMap = new Map<string, string>()
+    String(model.technicalDescription ?? '').split(/\r?\n/).forEach((line) => {
+      const idx = line.indexOf(':')
+      if (idx <= 0) return
+      const label = line.slice(0, idx).trim().toLowerCase()
+      const value = line.slice(idx + 1).trim()
+      if (label) labelValueMap.set(label, value)
+    })
+    const specs: Record<string, string> = {}
+    for (const field of INDUSTRIAL_SPEC_FIELDS) {
+      specs[field.key] = labelValueMap.get(field.label.toLowerCase()) ?? ''
+    }
+    for (const [alias, key] of Object.entries(LABEL_ALIASES)) {
+      if (!specs[key] && labelValueMap.has(alias)) specs[key] = labelValueMap.get(alias)!
+    }
+    return { modelName: model.modelNumber, specs }
+  }
+
+  const addModelFromDropdown = (modelId: string) => {
+    const model = filteredProductModels.find((m) => m.id === modelId)
+    if (!model) return
+    const newEntry = buildEntryFromModel(model)
+    setTechnicalSpecs((prev) => ({ entries: [...prev.entries, newEntry] }))
+    setTechnicalSpecModelExpanded((prev) => [...prev, true])
+    autoDetectFromModel(model)
+  }
+
+  const importSpecsFromModel = () => {
+    const model = filteredProductModels.find((m) => m.id === selectedProductModelId)
+    if (!model) return
+    const newEntry = buildEntryFromModel(model)
+    const modelNumUpper = model.modelNumber.trim().toUpperCase()
+    setTechnicalSpecs((prev) => {
+      const idx = prev.entries.findIndex((e) => e.modelName.trim().toUpperCase() === modelNumUpper)
+      if (idx >= 0) {
+        const next = [...prev.entries]
+        next[idx] = newEntry
+        return { entries: next }
+      }
+      return { entries: [...prev.entries, newEntry] }
+    })
+    setTechnicalSpecModelExpanded((prev) => {
+      const hasExisting = technicalSpecs.entries.some((e) => e.modelName.trim().toUpperCase() === modelNumUpper)
+      if (hasExisting) return prev
+      return [...prev, true]
+    })
+  }
+
   const removeTechnicalSpecModel = (index: number) => {
     setTechnicalSpecs((prev) => ({
       entries: prev.entries.filter((_, i) => i !== index),
@@ -991,6 +1110,10 @@ export default function AdminProducts() {
           categorieMaritim && 'maritim',
           categorieComercial && 'comercial',
           categorieMicroGrid && 'micro_grid',
+          categorieHighVoltage && 'high_voltage',
+          categorieLowVoltage && 'low_voltage',
+          categorieOutdoor && 'outdoor',
+          categorieIndoor && 'indoor',
         ]
           .filter(Boolean)
           .join(',') || undefined,
@@ -1028,6 +1151,7 @@ export default function AdminProducts() {
       certificari: carouselTemplate ? undefined : certificari || undefined,
       garantie: carouselTemplate ? undefined : garantie ? `${parseFormattedNumber(garantie)} ani` : undefined,
       tensiuneNominala: carouselTemplate ? undefined : tensiuneNominala ? `${String(tensiuneNominala).replace(',', '.')} V` : undefined,
+      locatieMontaj: locatieMontaj || undefined,
       eficientaCiclu: carouselTemplate ? undefined : eficientaCiclu ? `${parseFormattedNumber(eficientaCiclu)}%` : undefined,
       temperaturaFunctionare:
         carouselTemplate ? undefined : (temperaturaFunctionareMin || temperaturaFunctionareMax)
@@ -1063,37 +1187,13 @@ export default function AdminProducts() {
     setSaveSuccess(false)
     try {
       const payload = await buildPayload()
+      const targetStatus = isLive ? 'published' : 'draft'
       if (editingProductId) {
-        const updated = await updateProduct(editingProductId, payload, 'published')
+        const updated = await updateProduct(editingProductId, payload, targetStatus)
         setSaveSuccess(true)
         setProducts((prev) => prev.map((p) => (p.id === editingProductId ? (updated as AdminProduct) : p)))
       } else {
-        const created = await createProduct(payload, 'published')
-        setSaveSuccess(true)
-        setProducts((prev) => [created as AdminProduct, ...prev])
-      }
-      await fetchProducts()
-      handleClosePanel()
-      setTimeout(() => setSaveSuccess(false), 4000)
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Eroare la salvare.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleSaveDraft = async () => {
-    setIsSaving(true)
-    setSaveError(null)
-    setSaveSuccess(false)
-    try {
-      const payload = await buildPayload()
-      if (editingProductId) {
-        const updated = await updateProduct(editingProductId, payload, 'draft')
-        setSaveSuccess(true)
-        setProducts((prev) => prev.map((p) => (p.id === editingProductId ? (updated as AdminProduct) : p)))
-      } else {
-        const created = await createProduct(payload, 'draft')
+        const created = await createProduct(payload, targetStatus)
         setSaveSuccess(true)
         setProducts((prev) => [created as AdminProduct, ...prev])
       }
@@ -1325,15 +1425,30 @@ export default function AdminProducts() {
               <h2 id="product-panel-title" className="text-lg font-bold font-['Inter'] text-slate-900">
                 {editingProductId ? 'Editează produs' : 'Adaugă produs'}
               </h2>
-              <button
-                type="button"
-                onClick={handleClosePanel}
-                disabled={isSaving}
-                className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
-                aria-label="Închide"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsLive((prev) => !prev)}
+                  disabled={isSaving}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold font-['Inter'] transition-colors disabled:opacity-50 ${
+                    isLive
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className={`size-2 rounded-full ${isLive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  {isLive ? 'Live' : 'Stop'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClosePanel}
+                  disabled={isSaving}
+                  className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                  aria-label="Închide"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             <form
@@ -1418,6 +1533,26 @@ export default function AdminProducts() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={categorieMaritim} onChange={(e) => setCategorieMaritim(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
                     <span className="text-sm font-['Inter'] text-gray-800">Maritim</span>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieHighVoltage} onChange={(e) => setCategorieHighVoltage(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">High Voltage</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieLowVoltage} onChange={(e) => setCategorieLowVoltage(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Low Voltage</span>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieOutdoor} onChange={(e) => setCategorieOutdoor(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Outdoor</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={categorieIndoor} onChange={(e) => setCategorieIndoor(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
+                    <span className="text-sm font-['Inter'] text-gray-800">Indoor</span>
                   </label>
                 </div>
               </div>
@@ -1507,7 +1642,7 @@ export default function AdminProducts() {
                       <div role="radiogroup" aria-label="Livrare catalog" className="flex flex-col gap-2.5">
                         {(
                           [
-                            { id: 'catalog-delivery-24h', value: '24h' as const, label: '24 de ore' },
+                            { id: 'catalog-delivery-24h', value: '24h' as const, label: '24 ore' },
                             { id: 'catalog-delivery-48h', value: '48h' as const, label: '48 ore' },
                             { id: 'catalog-delivery-7-14d', value: '7_14d' as const, label: '7 - 14 zile' },
                             { id: 'catalog-delivery-60d', value: '60d' as const, label: '60 de zile' },
@@ -1688,30 +1823,21 @@ export default function AdminProducts() {
                   </select>
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="product-model" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                    Model
+                  <label htmlFor="product-series" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                    Serie
                   </label>
                   <select
-                    id="product-model"
-                    value={selectedProductModelId}
+                    id="product-series"
+                    value={selectedSeries}
                     onChange={(e) => {
-                      const nextId = e.target.value
-                      setSelectedProductModelId(nextId)
-                      const selected = filteredProductModels.find((m) => m.id === nextId)
-                      if (!selected) return
-                      setSku(String(selected.modelNumber || '').trim())
-                      if (!String(brand || '').trim() && String(selected.brand || '').trim()) {
-                        setBrand(String(selected.brand).trim())
-                      }
+                      setSelectedSeries(e.target.value)
+                      setSelectedProductModelId('')
                     }}
                     className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white"
                   >
-                    <option value="">Selectează model</option>
-                    {filteredProductModels.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.modelNumber}
-                        {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
-                      </option>
+                    <option value="">Selectează serie</option>
+                    {availableSeries.map((s) => (
+                      <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
                   {productModelsLoadError && (
@@ -1722,6 +1848,36 @@ export default function AdminProducts() {
                       Nu există modele pentru template-ul {tipProdus === 'industrial' ? 'industrial' : 'rezidențial'}.
                     </p>
                   )}
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="product-model" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                    Model
+                  </label>
+                  <select
+                    id="product-model"
+                    value={selectedProductModelId}
+                    disabled={!selectedSeries}
+                    onChange={(e) => {
+                      const nextId = e.target.value
+                      setSelectedProductModelId(nextId)
+                      const selected = seriesFilteredModels.find((m) => m.id === nextId)
+                      if (!selected) return
+                      setSku(String(selected.modelNumber || '').trim())
+                      if (!String(brand || '').trim() && String(selected.brand || '').trim()) {
+                        setBrand(String(selected.brand).trim())
+                      }
+                      autoDetectFromModel(selected)
+                    }}
+                    className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{selectedSeries ? 'Selectează model' : 'Selectează mai întâi seria'}</option>
+                    {seriesFilteredModels.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.modelNumber}
+                        {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere produs</h3>
                 <div className="flex flex-col gap-4">
@@ -2141,6 +2297,14 @@ export default function AdminProducts() {
                     </div>
                   </div>
                   <div>
+                    <label htmlFor="product-locatie-montaj" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Locație montaj</label>
+                    <select id="product-locatie-montaj" value={locatieMontaj} onChange={(e) => setLocatieMontaj(e.target.value)} className="w-full h-11 pl-4 pr-10 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-white cursor-pointer">
+                      <option value="">— Nespecificat —</option>
+                      <option value="indoor">Interior (Indoor)</option>
+                      <option value="outdoor">Exterior (Outdoor)</option>
+                    </select>
+                  </div>
+                  <div>
                     <label htmlFor="product-eficienta-ciclu" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">Eficiență ciclu complet</label>
                     <div className="relative">
                       <input id="product-eficienta-ciclu" type="text" inputMode="numeric" value={eficientaCiclu} onChange={(e) => handleIntegerOnly(e.target.value, setEficientaCiclu)} placeholder="96" className="w-full h-11 pl-4 pr-12 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
@@ -2358,8 +2522,33 @@ export default function AdminProducts() {
                         onClick={addTechnicalSpecModel}
                         className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium font-['Inter'] text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
                       >
-                        + Adaugă model
+                        + Adaugă gol
                       </button>
+                    </div>
+
+                    {/* Model picker — filtered by selected series */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <select
+                        id="add-model-from-list"
+                        disabled={!selectedSeries}
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            addModelFromDropdown(e.target.value)
+                            e.target.value = ''
+                          }
+                        }}
+                        className="flex-1 h-9 px-3 border border-gray-300 rounded-lg text-sm font-['Inter'] text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">
+                          {selectedSeries ? `+ Adaugă model din ${selectedSeries}…` : 'Selectează mai întâi seria'}
+                        </option>
+                        {seriesFilteredModels.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.modelNumber}{m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <p className="text-xs text-gray-500 mb-4">
                       La fiecare model completezi <strong>toate</strong> câmpurile (același set ca în tabelul din șablonul industrial). Pe site, fiecare model devine o <strong>coloană</strong> în tabelul din fila Technical specification.
@@ -2760,14 +2949,6 @@ export default function AdminProducts() {
                   className="flex-1 rounded-[10px] border border-gray-300 px-4 py-2.5 text-sm font-semibold font-['Inter'] hover:bg-neutral-50 disabled:opacity-50"
                 >
                   Anulează
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  disabled={isSaving}
-                  className="flex-1 rounded-[10px] border border-gray-300 px-4 py-2.5 text-sm font-semibold font-['Inter'] hover:bg-neutral-50 disabled:opacity-50"
-                >
-                  Draft
                 </button>
                 <button
                   type="submit"

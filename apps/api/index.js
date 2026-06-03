@@ -6436,8 +6436,9 @@ const uploadHandler = async (req, res) => {
     }
 
     const key = generateKey(req.file.originalname, prefix, req.file.mimetype, productFolder || undefined, imageIndex)
-    console.log('[R2 Upload] prefix:', prefix, 'productFolder:', productFolder || '(none)', 'key:', key)
+    console.log('[R2 Upload] imageIndex:', imageIndex, 'key:', key, 'size:', req.file.size)
     const url = await uploadToR2(req.file.buffer, key, req.file.mimetype)
+    console.log('[R2 Upload] success url:', url)
     return res.json({ url })
   } catch (err) {
     console.error('Upload error:', err)
@@ -6536,6 +6537,7 @@ const createProductHandler = async (req, res) => {
         certificari: body.certificari?.trim() || null,
         garantie: body.garantie?.trim() || null,
         tensiuneNominala: body.tensiuneNominala?.trim() || null,
+        locatieMontaj: body.locatieMontaj?.trim() || null,
         eficientaCiclu: body.eficientaCiclu?.trim() || null,
         temperaturaFunctionare: body.temperaturaFunctionare?.trim() || null,
         temperaturaStocare: body.temperaturaStocare?.trim() || null,
@@ -6617,12 +6619,16 @@ const updateProductHandler = async (req, res) => {
     if (body.certificari !== undefined) data.certificari = body.certificari?.trim() || null
     if (body.garantie !== undefined) data.garantie = body.garantie?.trim() || null
     if (body.tensiuneNominala !== undefined) data.tensiuneNominala = body.tensiuneNominala?.trim() || null
+    if (body.locatieMontaj !== undefined) data.locatieMontaj = body.locatieMontaj?.trim() || null
     if (body.eficientaCiclu !== undefined) data.eficientaCiclu = body.eficientaCiclu?.trim() || null
     if (body.temperaturaFunctionare !== undefined) data.temperaturaFunctionare = body.temperaturaFunctionare?.trim() || null
     if (body.temperaturaStocare !== undefined) data.temperaturaStocare = body.temperaturaStocare?.trim() || null
     if (body.umiditate !== undefined) data.umiditate = body.umiditate?.trim() || null
-    if (body.cardImage !== undefined) data.cardImage = typeof body.cardImage === 'string' && body.cardImage.trim() ? body.cardImage.trim() : null
-    if (Array.isArray(body.images)) data.images = body.images
+    if (body.cardImage !== undefined) {
+      data.cardImage = typeof body.cardImage === 'string' && body.cardImage.trim() ? body.cardImage.trim() : null
+      console.log('[Product Update] cardImage ->', data.cardImage)
+    }
+    if (Array.isArray(body.images)) { data.images = body.images; console.log('[Product Update] images count ->', body.images.length, body.images[0] || '(empty)') }
     if (Array.isArray(body.keyAdvantages)) data.keyAdvantages = body.keyAdvantages
     if (Array.isArray(body.documenteTehnice)) data.documenteTehnice = body.documenteTehnice
     if (Array.isArray(body.faq)) data.faq = body.faq
@@ -8719,6 +8725,7 @@ const listProductModelsHandler = async (req, res) => {
         technicalDescription: r.technicalDescription,
         usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
         imageUrl: r.imageUrl || null,
+        productImageUrl: r.productImageUrl || null,
         availableForStock: r.availableForStock !== false,
         sortOrder: r.sortOrder,
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
@@ -8745,6 +8752,8 @@ const updateProductModelHandler = async (req, res) => {
     const usageType = String(body.usageType ?? 'industrial').trim().toLowerCase()
     const imageUrlRaw = body.imageUrl == null ? '' : String(body.imageUrl).trim()
     const imageUrl = imageUrlRaw ? imageUrlRaw.slice(0, 2000) : null
+    const productImageUrlRaw = body.productImageUrl == null ? '' : String(body.productImageUrl).trim()
+    const productImageUrl = productImageUrlRaw ? productImageUrlRaw.slice(0, 2000) : null
     const availableForStock = body.availableForStock === false ? false : true
 
     if (!name) return res.status(400).json({ error: 'Numele modelului este obligatoriu.' })
@@ -8758,7 +8767,7 @@ const updateProductModelHandler = async (req, res) => {
 
     const updated = await prisma.productModel.update({
       where: { id },
-      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl, availableForStock },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl, productImageUrl, availableForStock },
     })
     return res.json({
       id: updated.id,
@@ -8769,6 +8778,7 @@ const updateProductModelHandler = async (req, res) => {
       technicalDescription: updated.technicalDescription,
       usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
       imageUrl: updated.imageUrl || null,
+      productImageUrl: updated.productImageUrl || null,
       availableForStock: updated.availableForStock !== false,
       sortOrder: updated.sortOrder,
       createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
@@ -8803,6 +8813,7 @@ const patchProductModelAvailableForStockHandler = async (req, res) => {
       technicalDescription: updated.technicalDescription,
       usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
       imageUrl: updated.imageUrl || null,
+      productImageUrl: updated.productImageUrl || null,
       availableForStock: updated.availableForStock !== false,
       sortOrder: updated.sortOrder,
       createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,

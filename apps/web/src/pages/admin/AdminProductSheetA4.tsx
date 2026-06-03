@@ -169,8 +169,8 @@ export default function AdminProductSheetA4({
     String((matchedProduct as { subtitle?: string | null })?.subtitle ?? '').trim() ||
     (model.series ? `${model.series} · ${model.modelNumber}` : `${t.modelPrefix} ${model.modelNumber}`)
 
-  const kpiEnergy = splitKpiDisplay(getSpec(specMap, 'energy'), language)
-  const kpiPower = splitKpiDisplay(getSpec(specMap, 'rated output power'), language)
+  const kpiEnergy = splitKpiDisplay(getSpec(specMap, 'energy', 'nominal energy'), language)
+  const kpiPower = splitKpiDisplay(getSpec(specMap, 'rated output power', 'rated input power', 'max output power'), language)
   const kpiVoltage = splitKpiDisplay(getSpec(specMap, 'nominal voltage'), language)
   const kpiCapacity = splitKpiDisplay(getSpec(specMap, 'nominal capacity'), language)
 

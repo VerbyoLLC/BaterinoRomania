@@ -396,6 +396,7 @@ export type PublicProduct = {
   /** Admin: prioritate în catalog partener */
   promovarePeContPartener?: boolean
   tensiuneNominala?: string | null
+  locatieMontaj?: string | null
   capacitate?: string | null
   compozitie?: string | null
   cicluriDescarcare?: string | null
@@ -2258,6 +2259,7 @@ export type CreateProductPayload = {
   certificari?: string
   garantie?: string
   tensiuneNominala?: string
+  locatieMontaj?: string
   eficientaCiclu?: string
   temperaturaFunctionare?: string
   temperaturaStocare?: string
@@ -2770,6 +2772,8 @@ export type AdminProductModelRow = {
   technicalDescription: string
   usageType: 'industrial' | 'residential'
   imageUrl?: string | null
+  /** 600×600 catalog image uploaded via admin cropper. */
+  productImageUrl?: string | null
   /** When true, model is listed in Stocuri → Add Item. */
   availableForStock: boolean
   sortOrder: number
@@ -2785,6 +2789,7 @@ export type UpdateAdminProductModelPayload = {
   technicalDescription: string
   usageType: 'industrial' | 'residential'
   imageUrl?: string | null
+  productImageUrl?: string | null
   availableForStock: boolean
 }
 

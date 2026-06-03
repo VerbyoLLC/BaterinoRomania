@@ -371,7 +371,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogStockOutOfStock: 'Stoc epuizat',
     catalogStockComingSoon: 'În curând',
     catalogStockOnOrder: 'La comandă',
-    catalogDelivery24h: '24 de ore',
+    catalogDelivery24h: '24 ore',
     catalogDelivery48h: '48 ore',
     catalogDelivery7_14d: '7 - 14 zile',
     catalogDelivery60d: '60 de zile',

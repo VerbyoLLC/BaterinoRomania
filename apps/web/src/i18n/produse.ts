@@ -26,6 +26,9 @@ export type ProduseTranslations = {
   productsVoltageAll: string
   productsVoltageLow: string
   productsVoltageHigh: string
+  productsLocationAll: string
+  productsLocationIndoor: string
+  productsLocationOutdoor: string
   pretLabel: string
   currency: string
   noResults: string
@@ -83,6 +86,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsVoltageAll: 'Tensiune',
     productsVoltageLow: 'Tensiune joasă',
     productsVoltageHigh: 'Tensiune înaltă',
+    productsLocationAll: 'Locație',
+    productsLocationIndoor: 'Interior',
+    productsLocationOutdoor: 'Exterior',
     pretLabel: 'Preț',
     currency: 'RON',
     noResults: 'Niciun produs nu corespunde filtrelor selectate.',
@@ -99,7 +105,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogStockOutOfStock: 'Stoc epuizat',
     catalogStockComingSoon: 'În curând',
     catalogStockOnOrder: 'La comandă',
-    catalogDelivery24h: '24 de ore',
+    catalogDelivery24h: '24 ore',
     catalogDelivery48h: '48 ore',
     catalogDelivery7_14d: '7 - 14 zile',
     catalogDelivery60d: '60 de zile',
@@ -154,6 +160,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsVoltageAll: 'Voltage',
     productsVoltageLow: 'Low Voltage',
     productsVoltageHigh: 'High Voltage',
+    productsLocationAll: 'Location',
+    productsLocationIndoor: 'Indoor',
+    productsLocationOutdoor: 'Outdoor',
     pretLabel: 'Price',
     currency: 'RON',
     noResults: 'No products match the selected filters.',
@@ -225,6 +234,9 @@ const translations: Record<LangCode, ProduseTranslations> = {
     productsVoltageAll: '电压',
     productsVoltageLow: '低压',
     productsVoltageHigh: '高压',
+    productsLocationAll: '安装位置',
+    productsLocationIndoor: '室内',
+    productsLocationOutdoor: '室外',
     pretLabel: '价格',
     currency: 'RON',
     noResults: '没有符合所选过滤条件的产品。',

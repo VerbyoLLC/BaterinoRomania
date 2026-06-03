@@ -379,6 +379,8 @@ export type HorizontalCatalogProductCardProps = Omit<CatalogProductCardBaseProps
   variant?: 'residential' | 'industrial'
   /** Compact feature badges rendered in a single row: stock, delivery, transport, install, reduceri */
   featureBadges?: HorizontalFeatureBadge[]
+  /** Tried if imageSrc fails to load (e.g. stale cardImage URL). */
+  fallbackImageSrc?: string
 }
 
 /**
@@ -404,8 +406,10 @@ export function HorizontalCatalogProductCard({
   shellClassName = '',
   ctaLabel,
   featureBadges = [],
+  fallbackImageSrc,
 }: HorizontalCatalogProductCardProps) {
   const [imgLoaded, setImgLoaded] = useState(true)
+  const [currentSrc, setCurrentSrc] = useState(imageSrc)
   const isIndustrial = variant === 'industrial'
 
   const stockListingTrim =
@@ -441,11 +445,14 @@ export function HorizontalCatalogProductCard({
         {/* ── Image ── */}
         <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[38%] lg:min-h-[180px] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
           <img
-            src={imageSrc}
+            src={currentSrc}
             alt={imageAlt}
             className={`h-full w-full max-h-full max-w-full object-contain object-center transition-all duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            onError={() => {
+              const next = fallbackImageSrc && currentSrc !== fallbackImageSrc ? fallbackImageSrc : '/images/shared/HP2000-all-in-one.png'
+              if (currentSrc !== next) setCurrentSrc(next)
+            }}
           />
           {/* Stock + delivery badges overlaid on image */}
           {imageBadges.length > 0 && (

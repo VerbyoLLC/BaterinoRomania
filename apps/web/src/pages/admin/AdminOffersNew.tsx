@@ -150,8 +150,10 @@ function validateOfferClientRequiredFields(
     miss(Boolean(person.nume.trim()), 'offer-pf-nume')
     miss(Boolean(person.prenume.trim()), 'offer-pf-prenume')
     miss(Boolean(person.adresa.trim()), 'offer-pf-adresa')
-    miss(Boolean(person.judet.trim()), 'offer-pf-judet')
-    miss(Boolean(person.oras.trim()), 'offer-pf-oras')
+    if (isRomaniaCountry(person.tara)) {
+      miss(Boolean(person.judet.trim()), 'offer-pf-judet')
+      miss(Boolean(person.oras.trim()), 'offer-pf-oras')
+    }
     miss(Boolean(person.tara.trim()), 'offer-pf-tara')
     const email = person.email.trim()
     miss(Boolean(email) && isValidEmailSyntax(email), 'offer-pf-email')
@@ -159,8 +161,10 @@ function validateOfferClientRequiredFields(
   } else {
     miss(Boolean(company.companyName.trim()), 'offer-pj-company')
     miss(Boolean(company.strada.trim()), 'offer-pj-strada')
-    miss(Boolean(company.judet.trim()), 'offer-pj-judet')
-    miss(Boolean(company.oras.trim()), 'offer-pj-oras')
+    if (isRomaniaCountry(company.tara)) {
+      miss(Boolean(company.judet.trim()), 'offer-pj-judet')
+      miss(Boolean(company.oras.trim()), 'offer-pj-oras')
+    }
     miss(Boolean(company.tara.trim()), 'offer-pj-tara')
     miss(Boolean(company.contactNume.trim()), 'offer-pj-contact-nume')
     miss(Boolean(company.contactPrenume.trim()), 'offer-pj-contact-prenume')
@@ -635,7 +639,14 @@ export default function AdminOffersNew() {
   }, [startFreshOffer, editOfferIdParam, setSearchParams])
 
   function setClientField<K extends keyof ClientPersonDraft>(key: K, value: ClientPersonDraft[K]) {
-    setClientPerson((prev) => ({ ...prev, [key]: value }))
+    setClientPerson((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'tara' && !isRomaniaCountry(String(value))) {
+        next.judet = ''
+        next.oras = ''
+      }
+      return next
+    })
     const fieldIds: Partial<Record<keyof ClientPersonDraft, string>> = {
       nume: 'offer-pf-nume',
       prenume: 'offer-pf-prenume',
@@ -651,7 +662,14 @@ export default function AdminOffersNew() {
   }
 
   function setCompanyField<K extends keyof ClientCompanyDraft>(key: K, value: ClientCompanyDraft[K]) {
-    setClientCompany((prev) => ({ ...prev, [key]: value }))
+    setClientCompany((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'tara' && !isRomaniaCountry(String(value))) {
+        next.judet = ''
+        next.oras = ''
+      }
+      return next
+    })
     const fieldIds: Partial<Record<keyof ClientCompanyDraft, string>> = {
       companyName: 'offer-pj-company',
       strada: 'offer-pj-strada',
@@ -1135,48 +1153,75 @@ export default function AdminOffersNew() {
                   placeholder="Litere, cifre și spații"
                 />
               </div>
-              <div>
-                <label htmlFor="offer-pf-judet" className={labelClass}>
-                  Județ
-                  {offerRequiredMark}
-                </label>
-                <select
-                  id="offer-pf-judet"
-                  value={clientPerson.judet}
-                  onChange={(e) => onCountyChangePf(e.target.value)}
-                  autoComplete="address-level1"
-                  required
-                  aria-invalid={offerFieldInvalid('offer-pf-judet')}
-                  className={offerFieldSelectClass('offer-pf-judet')}
-                >
-                  <option value="">Selectează județul</option>
-                  {ROMANIAN_COUNTIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="offer-pf-oras" className={labelClass}>
-                  Oraș
-                </label>
-                <select
-                  id="offer-pf-oras"
-                  value={clientPerson.oras}
-                  onChange={(e) => setClientField('oras', e.target.value)}
-                  disabled={!clientPerson.judet}
-                  autoComplete="address-level2"
-                  className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
-                >
-                  <option value="">{clientPerson.judet ? 'Selectează orașul' : 'Alege mai întâi județul'}</option>
-                  {cityOptionsPf.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {isRomaniaCountry(clientPerson.tara) ? (
+                <>
+                  <div>
+                    <label htmlFor="offer-pf-judet" className={labelClass}>
+                      Județ
+                      {offerRequiredMark}
+                    </label>
+                    <select
+                      id="offer-pf-judet"
+                      value={clientPerson.judet}
+                      onChange={(e) => onCountyChangePf(e.target.value)}
+                      autoComplete="address-level1"
+                      required
+                      aria-invalid={offerFieldInvalid('offer-pf-judet')}
+                      className={offerFieldSelectClass('offer-pf-judet')}
+                    >
+                      <option value="">Selectează județul</option>
+                      {ROMANIAN_COUNTIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="offer-pf-oras" className={labelClass}>Oraș</label>
+                    <select
+                      id="offer-pf-oras"
+                      value={clientPerson.oras}
+                      onChange={(e) => setClientField('oras', e.target.value)}
+                      disabled={!clientPerson.judet}
+                      autoComplete="address-level2"
+                      className={`${selectClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
+                    >
+                      <option value="">{clientPerson.judet ? 'Selectează orașul' : 'Alege mai întâi județul'}</option>
+                      {cityOptionsPf.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="offer-pf-judet" className={labelClass}>
+                      Județ / Regiune <span className="font-normal text-slate-500">(opțional)</span>
+                    </label>
+                    <input
+                      id="offer-pf-judet"
+                      value={clientPerson.judet}
+                      onChange={(e) => setClientField('judet', e.target.value)}
+                      autoComplete="address-level1"
+                      className={inputClass}
+                      placeholder="ex. Bavaria"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="offer-pf-oras" className={labelClass}>
+                      Oraș <span className="font-normal text-slate-500">(opțional)</span>
+                    </label>
+                    <input
+                      id="offer-pf-oras"
+                      value={clientPerson.oras}
+                      onChange={(e) => setClientField('oras', e.target.value)}
+                      autoComplete="address-level2"
+                      className={inputClass}
+                      placeholder="ex. München"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label htmlFor="offer-pf-tara" className={labelClass}>
                   Țară
@@ -1339,49 +1384,78 @@ export default function AdminOffersNew() {
                   placeholder="Litere, cifre și spații"
                 />
               </div>
-              <div>
-                <label htmlFor="offer-pj-judet" className={labelClass}>
-                  Județ
-                  {offerRequiredMark}
-                </label>
-                <select
-                  id="offer-pj-judet"
-                  value={clientCompany.judet}
-                  onChange={(e) => onCountyChangePj(e.target.value)}
-                  required
-                  aria-invalid={offerFieldInvalid('offer-pj-judet')}
-                  className={offerFieldSelectClass('offer-pj-judet')}
-                >
-                  <option value="">Selectează județul</option>
-                  {ROMANIAN_COUNTIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="offer-pj-oras" className={labelClass}>
-                  Oraș
-                  {offerRequiredMark}
-                </label>
-                <select
-                  id="offer-pj-oras"
-                  value={clientCompany.oras}
-                  onChange={(e) => setCompanyField('oras', e.target.value)}
-                  disabled={!clientCompany.judet}
-                  required
-                  aria-invalid={offerFieldInvalid('offer-pj-oras')}
-                  className={`${offerFieldSelectClass('offer-pj-oras')} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
-                >
-                  <option value="">{clientCompany.judet ? 'Selectează orașul' : 'Alege mai întâi județul'}</option>
-                  {cityOptionsPj.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {isRomaniaCountry(clientCompany.tara) ? (
+                <>
+                  <div>
+                    <label htmlFor="offer-pj-judet" className={labelClass}>
+                      Județ
+                      {offerRequiredMark}
+                    </label>
+                    <select
+                      id="offer-pj-judet"
+                      value={clientCompany.judet}
+                      onChange={(e) => onCountyChangePj(e.target.value)}
+                      required
+                      aria-invalid={offerFieldInvalid('offer-pj-judet')}
+                      className={offerFieldSelectClass('offer-pj-judet')}
+                    >
+                      <option value="">Selectează județul</option>
+                      {ROMANIAN_COUNTIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="offer-pj-oras" className={labelClass}>
+                      Oraș
+                      {offerRequiredMark}
+                    </label>
+                    <select
+                      id="offer-pj-oras"
+                      value={clientCompany.oras}
+                      onChange={(e) => setCompanyField('oras', e.target.value)}
+                      disabled={!clientCompany.judet}
+                      required
+                      aria-invalid={offerFieldInvalid('offer-pj-oras')}
+                      className={`${offerFieldSelectClass('offer-pj-oras')} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
+                    >
+                      <option value="">{clientCompany.judet ? 'Selectează orașul' : 'Alege mai întâi județul'}</option>
+                      {cityOptionsPj.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="offer-pj-judet" className={labelClass}>
+                      Județ / Regiune <span className="font-normal text-slate-500">(opțional)</span>
+                    </label>
+                    <input
+                      id="offer-pj-judet"
+                      value={clientCompany.judet}
+                      onChange={(e) => setCompanyField('judet', e.target.value)}
+                      autoComplete="address-level1"
+                      className={inputClass}
+                      placeholder="ex. Bavaria"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="offer-pj-oras" className={labelClass}>
+                      Oraș <span className="font-normal text-slate-500">(opțional)</span>
+                    </label>
+                    <input
+                      id="offer-pj-oras"
+                      value={clientCompany.oras}
+                      onChange={(e) => setCompanyField('oras', e.target.value)}
+                      autoComplete="address-level2"
+                      className={inputClass}
+                      placeholder="ex. München"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label htmlFor="offer-pj-tara" className={labelClass}>
                   Țară

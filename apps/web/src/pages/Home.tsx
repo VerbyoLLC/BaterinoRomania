@@ -297,6 +297,8 @@ export default function Home() {
             ) : (
             featuredProducts.map((p) => {
               const img = getProductCardImageUrl(p)
+              const pImgs = Array.isArray(p.images) ? p.images : []
+              const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.png'
               const { specLine1, specLine2 } = getCatalogProductSpecLines(p)
               const stockListingCta = getResidentialCatalogStockListingCta(p, {
                 outOfStock: tr.catalogStockOutOfStock,
@@ -319,6 +321,7 @@ export default function Home() {
               const common = {
                 density: 'home' as const,
                 imageSrc: img,
+                fallbackImageSrc: fallbackImg,
                 imageAlt: p.title,
                 title: p.title,
                 specLine1,

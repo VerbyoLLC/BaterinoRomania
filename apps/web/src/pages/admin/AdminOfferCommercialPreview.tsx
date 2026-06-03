@@ -573,9 +573,6 @@ function CommercialOfferPreviewCore({
                     <div className="aco-pill">
                       {t.validityPrefix} <strong>{validityStr}</strong>
                     </div>
-                    {draft.includeBaterinoBenefits ? (
-                      <div className="aco-pill">{t.metaIncludesBenefits}</div>
-                    ) : null}
                   </div>
                 </div>
                 <div className="aco-qr-wrap-framed">

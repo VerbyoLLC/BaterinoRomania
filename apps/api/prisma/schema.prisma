@@ -331,6 +331,7 @@ model Product {
   certificari           String?
   garantie              String?
   tensiuneNominala      String?
+  locatieMontaj         String?  // "indoor" | "outdoor" | null
   eficientaCiclu        String?
   temperaturaFunctionare String?
   temperaturaStocare    String?
@@ -427,6 +428,8 @@ model ProductModel {
   /** industrial | residential */
   usageType            String   @default("industrial")
   imageUrl             String?  @db.Text
+  /** 600×600 catalog image for the product model (uploaded via admin cropper). */
+  productImageUrl      String?  @db.Text
   /** When true, model appears in Stocuri → Add Item model dropdown. */
   availableForStock  Boolean  @default(true)
   sortOrder            Int      @default(0)

@@ -41,7 +41,7 @@ export default function Produse() {
   const [loading, setLoading] = useState(true)
   const [sector, setSector] = useState('')
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
-  const [voltageExiting, setVoltageExiting] = useState(false)
+  const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
 
   useEffect(() => {
     const sectorParam = searchParams.get('sector')
@@ -79,7 +79,7 @@ export default function Produse() {
         return false
       })
     }
-    if (sector === 'rezidential' && voltageFilter) {
+    if (voltageFilter) {
       list = list.filter((p) => {
         const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
         if (Number.isNaN(v)) return false
@@ -88,8 +88,14 @@ export default function Produse() {
         return true
       })
     }
+    if (locationFilter) {
+      list = list.filter((p) => {
+        const loc = String(p.locatieMontaj || '').toLowerCase().trim()
+        return loc === locationFilter
+      })
+    }
     return list
-  }, [products, sector, voltageFilter])
+  }, [products, sector, voltageFilter, locationFilter])
 
   return (
     <>
@@ -112,8 +118,9 @@ export default function Produse() {
           </p>
         </header>
 
-        {/* ── FILTER BAR (same as Home) ── */}
+        {/* ── FILTER BAR ── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          {/* Left: sector buttons + clear */}
           <div
             className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3"
             role="group"
@@ -126,11 +133,7 @@ export default function Produse() {
                 <button
                   key={val || 'all'}
                   type="button"
-                  onClick={() => {
-                    if (sector === 'rezidential' && val !== 'rezidential') setVoltageExiting(true)
-                    setSector(val)
-                    if (val !== 'rezidential') setVoltageFilter('')
-                  }}
+                  onClick={() => { setSector(val) }}
                   aria-pressed={active}
                   className={`h-10 px-5 rounded-[10px] text-sm font-semibold font-['Inter'] uppercase transition-all duration-200 border-2 ${
                     active
@@ -142,33 +145,10 @@ export default function Produse() {
                 </button>
               )
             })}
-            {(sector === 'rezidential' || voltageExiting) && (
-              <div
-                className={`hidden md:flex items-center gap-2 ${voltageExiting ? 'animate-voltage-exit' : 'animate-voltage-enter'}`}
-                onAnimationEnd={() => voltageExiting && setVoltageExiting(false)}
-              >
-                <span className="flex items-center text-gray-400 px-1" aria-hidden>
-                  <svg width="8" height="14" viewBox="0 0 8 14" fill="none" className="shrink-0">
-                    <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <select
-                  value={voltageFilter}
-                  onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
-                  aria-label={tr.productsVoltageAll}
-                  className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[160px]"
-                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
-                >
-                  <option value="">{tr.productsVoltageAll}</option>
-                  <option value="low">{tr.productsVoltageLow}</option>
-                  <option value="high">{tr.productsVoltageHigh}</option>
-                </select>
-              </div>
-            )}
-            {(sector || voltageFilter) && (
+            {(sector || voltageFilter || locationFilter) && (
               <button
                 type="button"
-                onClick={() => { setSector(''); setVoltageFilter('') }}
+                onClick={() => { setSector(''); setVoltageFilter(''); setLocationFilter('') }}
                 aria-label={tr.clearFilters}
                 className="inline-flex items-center justify-center h-10 w-10 rounded-[10px] border-2 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-800 transition-colors"
               >
@@ -177,6 +157,31 @@ export default function Produse() {
                 </svg>
               </button>
             )}
+          </div>
+          {/* Right: voltage + location dropdowns */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <select
+              value={voltageFilter}
+              onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
+              aria-label={tr.productsVoltageAll}
+              className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[160px]"
+              style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
+            >
+              <option value="">{tr.productsVoltageAll}</option>
+              <option value="low">{tr.productsVoltageLow}</option>
+              <option value="high">{tr.productsVoltageHigh}</option>
+            </select>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter((e.target.value || '') as 'indoor' | 'outdoor' | '')}
+              aria-label={tr.productsLocationAll}
+              className="h-10 pl-4 pr-10 rounded-[10px] text-sm font-semibold font-['Inter'] border-2 border-gray-200 bg-white text-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 appearance-none bg-no-repeat bg-[length:12px] bg-[right_12px_center] min-w-[140px]"
+              style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L2 4h8z'/%3E%3C/svg%3E\")" }}
+            >
+              <option value="">{tr.productsLocationAll}</option>
+              <option value="indoor">{tr.productsLocationIndoor}</option>
+              <option value="outdoor">{tr.productsLocationOutdoor}</option>
+            </select>
           </div>
         </div>
 
@@ -191,6 +196,8 @@ export default function Produse() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
             {filtered.map((product) => {
               const img = getProductCardImageUrl(product)
+              const imgs = Array.isArray(product.images) ? product.images : []
+              const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.png'
               const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
               const stockListingCta = getResidentialCatalogStockListingCta(product, {
                 outOfStock: tr.catalogStockOutOfStock,
@@ -236,6 +243,7 @@ export default function Produse() {
                   key={product.id}
                   variant={product.tipProdus === 'industrial' ? 'industrial' : 'residential'}
                   imageSrc={img}
+                  fallbackImageSrc={fallbackImg}
                   imageAlt={product.title}
                   title={product.title}
                   subtitle={industrialSubtitle}

@@ -45,6 +45,9 @@ export function resolveCatalogForModel(
     })
   }
   if (!imageUrl) {
+    imageUrl = String(model.productImageUrl ?? '').trim()
+  }
+  if (!imageUrl) {
     imageUrl = String(model.imageUrl ?? '').trim()
   }
   if (!imageUrl) {
