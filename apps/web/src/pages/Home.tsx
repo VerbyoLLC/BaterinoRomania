@@ -121,6 +121,7 @@ export default function Home() {
   const tr = getHomeTranslations(language.code)
 
   const [activeTab,  setActiveTab]  = useState<string>('rezidential')
+  const [mobileTabOpen, setMobileTabOpen] = useState(false)
   const [reduceriVisibleCount, setReduceriVisibleCount] = useState(2)
   const [isMobile, setIsMobile] = useState(true)
 
@@ -258,31 +259,96 @@ export default function Home() {
             <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
           </div>
 
-          {/* Product category filters */}
-          <div
-            className="flex flex-col items-center sm:flex-row sm:flex-wrap sm:justify-center gap-1 sm:gap-6 lg:gap-8 mb-8 lg:mb-10"
-            role="group"
-            aria-label={tr.productsSectionTitle}
-          >
-            {(isMobile ? tabs.filter((t) => ['rezidential', 'industrial', 'medical'].includes(t.id)) : tabs).map((tab) => (
+          {/* Product category filters — Mobile: single dropdown */}
+          {isMobile ? (
+            <div className="flex justify-center mb-8">
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                aria-pressed={activeTab === tab.id}
-                aria-label={tab.label}
-                className={`px-2 py-2 text-sm font-semibold font-['Inter'] uppercase transition-colors border-b-2 sm:w-auto ${
-                  isMobile ? 'w-full max-w-xs' : ''
-                } ${
-                  activeTab === tab.id
-                    ? 'text-slate-900 border-slate-900'
-                    : 'text-gray-500 border-transparent hover:text-gray-700'
-                }`}
+                onClick={() => setMobileTabOpen(true)}
+                className="flex items-center gap-2 h-11 px-5 rounded-[10px] border-2 border-slate-900 bg-slate-900 text-white text-sm font-bold font-['Inter'] uppercase tracking-wide"
               >
-                {tab.label}
+                <span>{tabs.find((t) => t.id === activeTab)?.label ?? tabs[0].label}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            /* Desktop: tab row */
+            <div
+              className="flex flex-row flex-wrap justify-center gap-6 lg:gap-8 mb-8 lg:mb-10"
+              role="group"
+              aria-label={tr.productsSectionTitle}
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  aria-pressed={activeTab === tab.id}
+                  aria-label={tab.label}
+                  className={`px-2 py-2 text-sm font-semibold font-['Inter'] uppercase transition-colors border-b-2 ${
+                    activeTab === tab.id
+                      ? 'text-slate-900 border-slate-900'
+                      : 'text-gray-500 border-transparent hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Mobile sector bottom sheet */}
+          {mobileTabOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end bg-black/50 animate-overlay-fade-in"
+              onClick={() => setMobileTabOpen(false)}
+            >
+              <div
+                className="w-full rounded-t-[20px] bg-white animate-sheet-slide-up overflow-hidden"
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-center pt-3 pb-1">
+                  <div className="h-1 w-10 rounded-full bg-gray-200" />
+                </div>
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                  <h2 className="text-base font-bold font-['Inter'] text-black">{tr.productsSectionTitle}</h2>
+                  <button
+                    type="button"
+                    onClick={() => setMobileTabOpen(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                    aria-label="Închide"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 px-5 py-4">
+                  {tabs.map((tab) => {
+                    const active = activeTab === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => { setActiveTab(tab.id); setMobileTabOpen(false) }}
+                        className={`flex items-center gap-3 h-12 px-4 rounded-[10px] text-sm font-semibold font-['Inter'] text-left transition-colors ${
+                          active ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? 'border-white' : 'border-gray-300'}`}>
+                          {active && <span className="h-2 w-2 rounded-full bg-white" />}
+                        </span>
+                        {tab.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Product grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 sm:mb-10">
