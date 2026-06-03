@@ -907,27 +907,6 @@ export default function AdminProducts() {
     autoDetectFromModel(model)
   }
 
-  const importSpecsFromModel = () => {
-    const model = filteredProductModels.find((m) => m.id === selectedProductModelId)
-    if (!model) return
-    const newEntry = buildEntryFromModel(model)
-    const modelNumUpper = model.modelNumber.trim().toUpperCase()
-    setTechnicalSpecs((prev) => {
-      const idx = prev.entries.findIndex((e) => e.modelName.trim().toUpperCase() === modelNumUpper)
-      if (idx >= 0) {
-        const next = [...prev.entries]
-        next[idx] = newEntry
-        return { entries: next }
-      }
-      return { entries: [...prev.entries, newEntry] }
-    })
-    setTechnicalSpecModelExpanded((prev) => {
-      const hasExisting = technicalSpecs.entries.some((e) => e.modelName.trim().toUpperCase() === modelNumUpper)
-      if (hasExisting) return prev
-      return [...prev, true]
-    })
-  }
-
   const removeTechnicalSpecModel = (index: number) => {
     setTechnicalSpecs((prev) => ({
       entries: prev.entries.filter((_, i) => i !== index),
