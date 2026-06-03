@@ -43,6 +43,7 @@ export default function Produse() {
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [mobileSectorOpen, setMobileSectorOpen] = useState(false)
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
 
   useEffect(() => {
@@ -122,40 +123,33 @@ export default function Produse() {
 
         {/* ── FILTER BAR — Mobile ── */}
         <div className="md:hidden mb-6">
-          {/* Sector buttons — one per row */}
-          <div
-            className="flex flex-col gap-2"
-            role="group"
-            aria-label={tr.filterSector}
-          >
-            {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
-              const val = String(opt.value)
-              const active = sector === val
-              return (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => { setSector(active ? '' : val) }}
-                  aria-pressed={active}
-                  className={`w-full h-11 px-5 rounded-[10px] text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 border-2 text-left ${
-                    active
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
+          {/* Single row: sector dropdown + filtre + clear */}
+          <div className="flex items-center gap-2">
+            {/* Sector dropdown button */}
+            <button
+              type="button"
+              onClick={() => setMobileSectorOpen(true)}
+              className={`flex-1 flex items-center justify-between gap-2 h-11 px-4 rounded-[10px] border-2 text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
+                sector
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+            >
+              <span className="truncate">
+                {sector
+                  ? tr.sectorOptions.find((o) => o.value === sector)?.label ?? tr.sectorOptions[0].label
+                  : tr.sectorOptions[0].label}
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
 
-          {/* Filtre + Clear row */}
-          <div className="flex items-center gap-2 mt-2">
             {/* Filtre button */}
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className={`flex-1 flex items-center justify-center gap-2 h-11 px-4 rounded-[10px] border-2 text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
+              className={`shrink-0 flex items-center justify-center gap-2 h-11 px-4 rounded-[10px] border-2 text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
                 advancedFilterCount > 0
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'bg-white text-gray-500 border-gray-200'
@@ -370,6 +364,63 @@ export default function Produse() {
                 >
                   Aplică
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── MOBILE SECTOR BOTTOM SHEET ── */}
+        {mobileSectorOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end bg-black/50 animate-overlay-fade-in"
+            onClick={() => setMobileSectorOpen(false)}
+          >
+            <div
+              className="w-full rounded-t-[20px] bg-white animate-sheet-slide-up overflow-hidden"
+              style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-gray-200" />
+              </div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                <h2 className="text-base font-bold font-['Inter'] text-black">{tr.filterSector}</h2>
+                <button
+                  type="button"
+                  onClick={() => setMobileSectorOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                  aria-label="Închide"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Options */}
+              <div className="flex flex-col gap-2 px-5 py-4">
+                {tr.sectorOptions.map((opt) => {
+                  const val = String(opt.value)
+                  const active = sector === val
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => { setSector(val); setMobileSectorOpen(false) }}
+                      className={`flex items-center gap-3 h-12 px-4 rounded-[10px] text-sm font-semibold font-['Inter'] text-left transition-colors ${
+                        active
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? 'border-white' : 'border-gray-300'}`}>
+                        {active && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </span>
+                      {opt.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
