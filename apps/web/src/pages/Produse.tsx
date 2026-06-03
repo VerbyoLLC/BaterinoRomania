@@ -42,6 +42,8 @@ export default function Produse() {
   const [sector, setSector] = useState('')
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
 
   useEffect(() => {
     const sectorParam = searchParams.get('sector')
@@ -118,11 +120,100 @@ export default function Produse() {
           </p>
         </header>
 
-        {/* ── FILTER BAR ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          {/* Left: sector buttons + clear */}
+        {/* ── FILTER BAR — Mobile ── */}
+        <div className="md:hidden mb-6">
+          <div className="flex items-center gap-2">
+            {/* Horizontal-scroll sector chips */}
+            <div
+              className="flex gap-2 overflow-x-auto flex-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              role="group"
+              aria-label={tr.filterSector}
+            >
+              {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
+                const val = String(opt.value)
+                const active = sector === val
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => { setSector(active ? '' : val) }}
+                    aria-pressed={active}
+                    className={`shrink-0 h-9 px-4 rounded-full text-xs font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 border-2 whitespace-nowrap ${
+                      active
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white text-gray-500 border-gray-200'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Filtre button */}
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(true)}
+              className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-full border-2 text-xs font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
+                advancedFilterCount > 0
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+              aria-label="Filtre"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+              </svg>
+              Filtre
+              {advancedFilterCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-extrabold">
+                  {advancedFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Clear all */}
+            {(sector || voltageFilter || locationFilter) && (
+              <button
+                type="button"
+                onClick={() => { setSector(''); setVoltageFilter(''); setLocationFilter('') }}
+                aria-label={tr.clearFilters}
+                className="shrink-0 flex items-center justify-center h-9 w-9 rounded-full border-2 border-gray-200 text-gray-500"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Active advanced filter chips */}
+          {(voltageFilter || locationFilter) && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {voltageFilter && (
+                <span className="inline-flex items-center gap-1 h-7 pl-3 pr-2 rounded-full bg-slate-100 text-xs font-semibold font-['Inter'] text-slate-700">
+                  {voltageFilter === 'low' ? tr.productsVoltageLow : tr.productsVoltageHigh}
+                  <button type="button" onClick={() => setVoltageFilter('')} className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-slate-200" aria-label="Șterge filtru tensiune">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </span>
+              )}
+              {locationFilter && (
+                <span className="inline-flex items-center gap-1 h-7 pl-3 pr-2 rounded-full bg-slate-100 text-xs font-semibold font-['Inter'] text-slate-700">
+                  {locationFilter === 'indoor' ? tr.productsLocationIndoor : tr.productsLocationOutdoor}
+                  <button type="button" onClick={() => setLocationFilter('')} className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-slate-200" aria-label="Șterge filtru locație">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── FILTER BAR — Desktop ── */}
+        <div className="hidden md:flex md:items-center md:justify-between gap-4 mb-8">
           <div
-            className="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3"
+            className="flex flex-wrap gap-2 lg:gap-3"
             role="group"
             aria-label={tr.filterSector}
           >
@@ -158,8 +249,7 @@ export default function Produse() {
               </button>
             )}
           </div>
-          {/* Right: voltage + location dropdowns */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <select
               value={voltageFilter}
               onChange={(e) => setVoltageFilter((e.target.value || '') as 'low' | 'high' | '')}
@@ -184,6 +274,105 @@ export default function Produse() {
             </select>
           </div>
         </div>
+
+        {/* ── MOBILE FILTER BOTTOM SHEET ── */}
+        {mobileFiltersOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end bg-black/50 animate-overlay-fade-in"
+            onClick={() => setMobileFiltersOpen(false)}
+          >
+            <div
+              className="w-full rounded-t-[20px] bg-white animate-sheet-slide-up overflow-hidden"
+              style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-gray-200" />
+              </div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                <h2 className="text-base font-bold font-['Inter'] text-black">Filtre</h2>
+                <button
+                  type="button"
+                  onClick={() => setMobileFiltersOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                  aria-label="Închide"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Tensiune */}
+              <div className="px-5 pt-4 pb-3">
+                <p className="text-xs font-bold font-['Inter'] uppercase tracking-wider text-gray-400 mb-3">{tr.productsVoltageAll}</p>
+                <div className="flex flex-col gap-2">
+                  {([['', tr.productsVoltageAll], ['low', tr.productsVoltageLow], ['high', tr.productsVoltageHigh]] as [string, string][]).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setVoltageFilter(val as 'low' | 'high' | '')}
+                      className={`flex items-center gap-3 h-11 px-4 rounded-[10px] text-sm font-semibold font-['Inter'] text-left transition-colors ${
+                        voltageFilter === val
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${voltageFilter === val ? 'border-white' : 'border-gray-300'}`}>
+                        {voltageFilter === val && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Locatie */}
+              <div className="px-5 pt-2 pb-4 border-t border-gray-100">
+                <p className="text-xs font-bold font-['Inter'] uppercase tracking-wider text-gray-400 mb-3 mt-4">{tr.productsLocationAll}</p>
+                <div className="flex flex-col gap-2">
+                  {([['', tr.productsLocationAll], ['indoor', tr.productsLocationIndoor], ['outdoor', tr.productsLocationOutdoor]] as [string, string][]).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setLocationFilter(val as 'indoor' | 'outdoor' | '')}
+                      className={`flex items-center gap-3 h-11 px-4 rounded-[10px] text-sm font-semibold font-['Inter'] text-left transition-colors ${
+                        locationFilter === val
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${locationFilter === val ? 'border-white' : 'border-gray-300'}`}>
+                        {locationFilter === val && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 px-5 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => { setVoltageFilter(''); setLocationFilter('') }}
+                  className="flex-1 h-11 rounded-[10px] border-2 border-gray-200 text-sm font-bold font-['Inter'] text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  {tr.clearFilters}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileFiltersOpen(false)}
+                  className="flex-1 h-11 rounded-[10px] bg-slate-900 text-sm font-bold font-['Inter'] text-white hover:bg-slate-800 transition-colors"
+                >
+                  Aplică
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── PRODUCT GRID ── */}
         {loading ? (
