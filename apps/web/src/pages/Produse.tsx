@@ -122,51 +122,52 @@ export default function Produse() {
 
         {/* ── FILTER BAR — Mobile ── */}
         <div className="md:hidden mb-6">
-          <div className="flex items-center gap-2">
-            {/* Horizontal-scroll sector chips */}
-            <div
-              className="flex gap-2 overflow-x-auto flex-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-              role="group"
-              aria-label={tr.filterSector}
-            >
-              {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
-                const val = String(opt.value)
-                const active = sector === val
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => { setSector(active ? '' : val) }}
-                    aria-pressed={active}
-                    className={`shrink-0 h-9 px-4 rounded-full text-xs font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 border-2 whitespace-nowrap ${
-                      active
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-gray-500 border-gray-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
+          {/* Sector buttons — one per row */}
+          <div
+            className="flex flex-col gap-2"
+            role="group"
+            aria-label={tr.filterSector}
+          >
+            {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
+              const val = String(opt.value)
+              const active = sector === val
+              return (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => { setSector(active ? '' : val) }}
+                  aria-pressed={active}
+                  className={`w-full h-11 px-5 rounded-[10px] text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 border-2 text-left ${
+                    active
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-gray-500 border-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
 
+          {/* Filtre + Clear row */}
+          <div className="flex items-center gap-2 mt-2">
             {/* Filtre button */}
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-full border-2 text-xs font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
+              className={`flex-1 flex items-center justify-center gap-2 h-11 px-4 rounded-[10px] border-2 text-sm font-bold font-['Inter'] uppercase tracking-wide transition-all duration-150 ${
                 advancedFilterCount > 0
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'bg-white text-gray-500 border-gray-200'
               }`}
               aria-label="Filtre"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
               </svg>
               Filtre
               {advancedFilterCount > 0 && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-extrabold">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-extrabold">
                   {advancedFilterCount}
                 </span>
               )}
