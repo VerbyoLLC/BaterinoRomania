@@ -265,7 +265,7 @@ export default function Home() {
 
       {/* Mobile: full-screen portrait image slider */}
       <div className="md:hidden">
-        <HomeMobileSlider />
+        <HomeMobileSlider tr={tr} />
       </div>
 
       {/* Desktop: card slider hero */}
