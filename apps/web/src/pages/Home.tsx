@@ -18,6 +18,7 @@ import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import CTABar from '../components/CTABar'
 import HomeHeroV2 from '../components/home/HomeHeroV2'
+import HomeMobileSlider from '../components/home/HomeMobileSlider'
 import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
@@ -262,7 +263,13 @@ export default function Home() {
         lang={language.code}
       />
 
-      <div className="pt-6 lg:pt-10">
+      {/* Mobile: full-screen portrait image slider */}
+      <div className="md:hidden">
+        <HomeMobileSlider />
+      </div>
+
+      {/* Desktop: card slider hero */}
+      <div className="hidden md:block pt-6 lg:pt-10">
         <HomeHeroV2 tr={tr} userType={userType} />
       </div>
 
