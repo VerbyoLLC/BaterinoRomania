@@ -224,8 +224,8 @@ export default function HomeMobileSlider({ tr }: Props) {
   }
 
   const overlays = [
-    <SlideRezidential tr={tr} />,
     <SlideReduceri tr={tr} />,
+    <SlideRezidential tr={tr} />,
     <SlideRezidentialAlt tr={tr} />,
     <SlideMedical tr={tr} />,
     <SlideMaritim tr={tr} />,
