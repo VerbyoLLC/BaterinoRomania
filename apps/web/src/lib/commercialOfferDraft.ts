@@ -73,10 +73,23 @@ export type DraftClientCompany = {
   contactTelefon: string
 }
 
+export type CommercialOfferLineModelSpecs = {
+  energy?: string
+  nominalVoltage?: string
+  cycleLife?: string
+  communication?: string
+  weight?: string
+  warranty?: string
+}
+
 export type CommercialOfferLineDraft = {
   modelLabel: string
   /** ID model (Magazin) — păstrat pentru previzualizare fișă tehnică când state-ul de navigare lipsește. */
   productModelId?: string
+  /** Descriere liberă — prezentă pe linii custom. */
+  description?: string
+  /** Specificații extrase din technicalDescription al modelului selectat. */
+  modelSpecs?: CommercialOfferLineModelSpecs
   priceWithoutVat: string
   qty: string
   vatPercent: string
@@ -486,6 +499,35 @@ function formatAgentContact(agentId: string, agents: AdminSalesAgent[]): {
   return { email, phone }
 }
 
+function normalizeSpecKey(label: string): string {
+  return label.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+function extractModelSpecs(technicalDescription: string): CommercialOfferLineModelSpecs {
+  const specs: CommercialOfferLineModelSpecs = {}
+  const lines = String(technicalDescription ?? '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  for (const line of lines) {
+    const idx = line.indexOf(':')
+    if (idx <= 0) continue
+    const key = normalizeSpecKey(line.slice(0, idx))
+    const val = line.slice(idx + 1).trim()
+    if (!val) continue
+    if (key === 'energy' || key === 'nominal energy' || key === 'energie nominala' || key === 'energie')
+      specs.energy ??= val
+    else if (key === 'nominal voltage' || key === 'tensiune nominala' || key === 'voltage' || key === 'tensiune')
+      specs.nominalVoltage ??= val
+    else if (key === 'cycle life' || key === 'ciclu de viata' || key === 'cicluri de viata' || key === 'cycle')
+      specs.cycleLife ??= val
+    else if (key === 'communication' || key === 'comunicatie' || key === 'comunicatii')
+      specs.communication ??= val
+    else if (key === 'weight' || key === 'greutate' || key === 'masa')
+      specs.weight ??= val
+    else if (key === 'warranty' || key === 'garantie')
+      specs.warranty ??= val
+  }
+  return specs
+}
+
 function modelLabel(productModelId: string, models: AdminProductModelRow[]): string {
   const id = productModelId.trim()
   if (!id) return '— selectează model —'
@@ -527,6 +569,9 @@ export type AdminOfferFormSnapshotV1 = {
   offerProductLines: Array<{
     id: string
     productModelId: string
+    isCustom?: boolean
+    customModel?: string
+    customDescription?: string
     priceWithoutVat: string
     qty: string
     vatPercent: string
@@ -603,6 +648,9 @@ export function buildCommercialOfferDraftV1(params: {
   clientCompany: DraftClientCompany
   productLines: Array<{
     productModelId: string
+    isCustom?: boolean
+    customModel?: string
+    customDescription?: string
     priceWithoutVat: string
     qty: string
     vatPercent: string
@@ -637,13 +685,21 @@ export function buildCommercialOfferDraftV1(params: {
     includeBaterinoBenefits: params.includeBaterinoBenefits,
     clientPerson: params.buyerType === 'person' ? params.clientPerson : null,
     clientCompany: params.buyerType === 'company' ? params.clientCompany : null,
-    lines: params.productLines.map((row) => ({
-      modelLabel: modelLabel(row.productModelId, params.productModels),
-      productModelId: row.productModelId.trim() || undefined,
+    lines: params.productLines.map((row) => {
+      const matchedModel = !row.isCustom && row.productModelId.trim()
+        ? params.productModels.find((m) => m.id === row.productModelId.trim()) ?? null
+        : null
+      return ({
+      modelLabel: row.isCustom && row.customModel?.trim()
+        ? row.customModel.trim()
+        : modelLabel(row.productModelId, params.productModels),
+      productModelId: row.isCustom ? undefined : (row.productModelId.trim() || undefined),
+      description: row.isCustom && row.customDescription?.trim() ? row.customDescription.trim() : undefined,
+      modelSpecs: matchedModel ? extractModelSpecs(matchedModel.technicalDescription) : undefined,
       priceWithoutVat: row.priceWithoutVat,
       qty: row.qty,
       vatPercent: row.vatPercent,
       discountPercent: row.discountPercent,
-    })),
+    })}),
   }
 }

@@ -177,7 +177,9 @@ function validateOfferClientRequiredFields(
 }
 
 function validateOfferProductLines(lines: OfferProductLineDraft[]): string[] {
-  if (lines.some((l) => l.productModelId.trim().length > 0)) return []
+  const isLineValid = (l: OfferProductLineDraft) =>
+    l.isCustom ? (l.customModel?.trim().length ?? 0) > 0 : l.productModelId.trim().length > 0
+  if (lines.some(isLineValid)) return []
   return lines.map((l) => `offer-line-model-${l.id}`)
 }
 
@@ -285,6 +287,9 @@ function newOfferLineId(): string {
 type OfferProductLineDraft = {
   id: string
   productModelId: string
+  isCustom?: boolean
+  customModel?: string
+  customDescription?: string
   priceWithoutVat: string
   qty: string
   vatPercent: string
@@ -295,6 +300,20 @@ function newEmptyOfferProductLine(): OfferProductLineDraft {
   return {
     id: newOfferLineId(),
     productModelId: '',
+    priceWithoutVat: '',
+    qty: '1',
+    vatPercent: '21',
+    discountPercent: '0',
+  }
+}
+
+function newCustomOfferProductLine(): OfferProductLineDraft {
+  return {
+    id: newOfferLineId(),
+    productModelId: '',
+    isCustom: true,
+    customModel: '',
+    customDescription: '',
     priceWithoutVat: '',
     qty: '1',
     vatPercent: '21',
@@ -528,6 +547,9 @@ export default function AdminOffersNew() {
         .map((row) => ({
           id: row.id,
           productModelId: String(row.productModelId ?? ''),
+          isCustom: Boolean(row.isCustom),
+          customModel: typeof row.customModel === 'string' ? row.customModel : '',
+          customDescription: typeof row.customDescription === 'string' ? row.customDescription : '',
           priceWithoutVat: row.priceWithoutVat?.trim()
             ? formatPriceInputDisplay(String(row.priceWithoutVat))
             : '',
@@ -775,7 +797,7 @@ export default function AdminOffersNew() {
     const invalidProducts = validateOfferProductLines(offerProductLines)
     if (invalidProducts.length > 0) {
       setOfferGenerateInvalidFields(new Set(invalidProducts))
-      toast.error('Adaugă cel puțin un produs: selectează un model în secțiunea Produse.')
+      toast.error('Adaugă cel puțin un produs: selectează un model sau completează descrierea în secțiunea Produse.')
       window.requestAnimationFrame(() => {
         document.getElementById(invalidProducts[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       })
@@ -1604,16 +1626,27 @@ export default function AdminOffersNew() {
           title="Produse"
           description="Adaugă linii: model, preț unitar fără TVA, cantitate, TVA și reducere opțională."
           headerAside={
-            <button
-              type="button"
-              onClick={() =>
-                setOfferProductLines((prev) => [...prev, newEmptyOfferProductLine()])
-              }
-              disabled={productModelsLoading || sortedProductModels.length === 0}
-              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium font-['Inter'] text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Adaugă produs
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setOfferProductLines((prev) => [...prev, newEmptyOfferProductLine()])
+                }
+                disabled={productModelsLoading || sortedProductModels.length === 0}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium font-['Inter'] text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Adaugă produs
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setOfferProductLines((prev) => [...prev, newCustomOfferProductLine()])
+                }
+                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium font-['Inter'] text-slate-800 shadow-sm hover:bg-slate-50"
+              >
+                Adaugă câmp
+              </button>
+            </div>
           }
         >
           {productModelsLoading ? (
@@ -1648,34 +1681,80 @@ export default function AdminOffersNew() {
                   key={line.id}
                   className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-[minmax(0,1fr)_140px_100px_80px_80px_auto] md:items-end md:gap-4 md:border-t-0 md:pt-0"
                 >
-                  <div>
-                    <label htmlFor={`offer-line-model-${line.id}`} className={`${labelClass} md:sr-only`}>
-                      Model
-                    </label>
-                    <select
-                      id={`offer-line-model-${line.id}`}
-                      value={line.productModelId}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setOfferProductLines((prev) =>
-                          prev.map((row) =>
-                            row.id === line.id ? { ...row, productModelId: v } : row,
-                          ),
-                        )
-                        if (v.trim()) clearOfferGenerateFieldError(`offer-line-model-${line.id}`)
-                      }}
-                      required
-                      aria-invalid={offerFieldInvalid(`offer-line-model-${line.id}`)}
-                      className={offerFieldSelectClass(`offer-line-model-${line.id}`)}
-                    >
-                      <option value="">Selectează modelul</option>
-                      {sortedProductModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.modelNumber}
-                          {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <label htmlFor={`offer-line-model-${line.id}`} className={`${labelClass} md:sr-only`}>
+                        Model
+                      </label>
+                      {line.isCustom ? (
+                        <input
+                          id={`offer-line-model-${line.id}`}
+                          type="text"
+                          autoComplete="off"
+                          placeholder="Model produs"
+                          value={line.customModel ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setOfferProductLines((prev) =>
+                              prev.map((row) =>
+                                row.id === line.id ? { ...row, customModel: v } : row,
+                              ),
+                            )
+                            if (v.trim()) clearOfferGenerateFieldError(`offer-line-model-${line.id}`)
+                          }}
+                          required
+                          aria-invalid={offerFieldInvalid(`offer-line-model-${line.id}`)}
+                          className={offerFieldInputClass(`offer-line-model-${line.id}`)}
+                        />
+                      ) : (
+                        <select
+                          id={`offer-line-model-${line.id}`}
+                          value={line.productModelId}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setOfferProductLines((prev) =>
+                              prev.map((row) =>
+                                row.id === line.id ? { ...row, productModelId: v } : row,
+                              ),
+                            )
+                            if (v.trim()) clearOfferGenerateFieldError(`offer-line-model-${line.id}`)
+                          }}
+                          required
+                          aria-invalid={offerFieldInvalid(`offer-line-model-${line.id}`)}
+                          className={offerFieldSelectClass(`offer-line-model-${line.id}`)}
+                        >
+                          <option value="">Selectează modelul</option>
+                          {sortedProductModels.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.modelNumber}
+                              {m.name && m.name !== m.modelNumber ? ` — ${m.name}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    {line.isCustom ? (
+                      <div>
+                        <label htmlFor={`offer-line-desc-${line.id}`} className={`${labelClass} md:sr-only`}>
+                          Descriere
+                        </label>
+                        <input
+                          id={`offer-line-desc-${line.id}`}
+                          type="text"
+                          autoComplete="off"
+                          placeholder="Descriere produs"
+                          value={line.customDescription ?? ''}
+                          onChange={(e) =>
+                            setOfferProductLines((prev) =>
+                              prev.map((row) =>
+                                row.id === line.id ? { ...row, customDescription: e.target.value } : row,
+                              ),
+                            )
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <div>
                     <label htmlFor={`offer-line-price-${line.id}`} className={`${labelClass} md:sr-only`}>

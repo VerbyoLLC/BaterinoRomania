@@ -657,9 +657,21 @@ function CommercialOfferPreviewCore({
                     const lt = totals?.lines[i]
                     const { title: modelNumber, desc: productName } = splitModelLabel(line.modelLabel)
                     const disc = parseInt(String(line.discountPercent).replace(/\D/g, ''), 10) || 0
-                    const modelSubline = productName
-                      ? `${modelNumber}${OFFER_MODEL_BATTERY_SUFFIX}`
-                      : OFFER_MODEL_BATTERY_SUFFIX.slice(3)
+                    const modelSubline = line.description != null
+                      ? line.description.trim()
+                      : productName
+                        ? `${modelNumber}${OFFER_MODEL_BATTERY_SUFFIX}`
+                        : OFFER_MODEL_BATTERY_SUFFIX.slice(3)
+                    const specsLine = line.modelSpecs
+                      ? [
+                          line.modelSpecs.energy ? `Energy: ${line.modelSpecs.energy}` : '',
+                          line.modelSpecs.nominalVoltage ? `Nominal Voltage: ${line.modelSpecs.nominalVoltage}` : '',
+                          line.modelSpecs.cycleLife ? `Cycle life: ${line.modelSpecs.cycleLife}` : '',
+                          line.modelSpecs.communication ? `Communication: ${line.modelSpecs.communication}` : '',
+                          line.modelSpecs.weight ? `Weight: ${line.modelSpecs.weight}` : '',
+                          line.modelSpecs.warranty ? `Warranty: ${line.modelSpecs.warranty}` : '',
+                        ].filter(Boolean).join(' · ')
+                      : ''
                     const secondaryParts = [
                       modelSubline,
                       disc > 0 ? `${t.lineDiscountPrefix}: ${disc}%` : '',
@@ -670,6 +682,9 @@ function CommercialOfferPreviewCore({
                           <div className="aco-prod-name">{productName || modelNumber}</div>
                           {secondaryParts.length > 0 ? (
                             <div className="aco-prod-desc">{secondaryParts.join(' · ')}</div>
+                          ) : null}
+                          {specsLine ? (
+                            <div className="aco-prod-desc">{specsLine}</div>
                           ) : null}
                         </td>
                         <td>{t.unitPiece}</td>

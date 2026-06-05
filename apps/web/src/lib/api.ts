@@ -3006,6 +3006,20 @@ export async function saveAdminCommercialOfferDraft(params: {
   return json.offer
 }
 
+export async function deleteAdminCommercialOffer(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error('Oferta nu mai există.')
+    throw new Error(json.error || 'Nu s-a putut șterge oferta.')
+  }
+}
+
 export async function updateAdminProductModel(
   id: string,
   payload: UpdateAdminProductModelPayload,

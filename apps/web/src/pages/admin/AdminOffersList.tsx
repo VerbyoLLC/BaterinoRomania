@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAdminCommercialOffers, type AdminCommercialOfferRow } from '../../lib/api'
+import { getAdminCommercialOffers, deleteAdminCommercialOffer, type AdminCommercialOfferRow } from '../../lib/api'
 import {
   adminOfferEditPath,
   adminOfferNewFreshPath,
   commercialOfferBuyerTypeLabelRo,
 } from '../../lib/commercialOfferDraft'
+import { useToast } from '../../contexts/ToastContext'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -40,9 +41,35 @@ function formatMoney(amount: string, currency: string): string {
 }
 
 export default function AdminOffersList() {
+  const toast = useToast()
   const [offers, setOffers] = useState<AdminCommercialOfferRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // single-row menu
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // delete confirmation (single id OR null = bulk)
+  const [confirmDelete, setConfirmDelete] = useState<'single' | 'bulk' | null>(null)
+  const [confirmSingleId, setConfirmSingleId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // close menu on outside click
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+        setMenuPos(null)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -59,10 +86,70 @@ export default function AdminOffersList() {
       }
     }
     void load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
+
+  // ── selection helpers ────────────────────────────────────────────────────────
+
+  const allSelected = offers.length > 0 && selectedIds.size === offers.length
+  const someSelected = selectedIds.size > 0 && !allSelected
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(offers.map((o) => o.id)))
+  }
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // ── delete ───────────────────────────────────────────────────────────────────
+
+  function openSingleDelete(id: string) {
+    setOpenMenuId(null)
+    setConfirmSingleId(id)
+    setConfirmDelete('single')
+  }
+
+  function openBulkDelete() {
+    setConfirmSingleId(null)
+    setConfirmDelete('bulk')
+  }
+
+  async function handleConfirmDelete() {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      const ids = confirmDelete === 'single' && confirmSingleId
+        ? [confirmSingleId]
+        : Array.from(selectedIds)
+
+      await Promise.all(ids.map((id) => deleteAdminCommercialOffer(id)))
+
+      const deletedSet = new Set(ids)
+      setOffers((prev) => prev.filter((o) => !deletedSet.has(o.id)))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
+
+      toast.success(ids.length === 1 ? 'Oferta a fost ștearsă.' : `${ids.length} oferte șterse.`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Eroare la ștergere.')
+    } finally {
+      setDeleting(false)
+      setConfirmDelete(null)
+      setConfirmSingleId(null)
+    }
+  }
+
+  const confirmSingleRow = confirmSingleId ? offers.find((o) => o.id === confirmSingleId) : null
+
+  // ── render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="box-border w-full min-w-0 shrink max-w-full p-6 sm:p-8 lg:p-10">
@@ -73,12 +160,23 @@ export default function AdminOffersList() {
             Ciorne și oferte generate — editează ciornele sau descarcă PDF-ul ofertei finalizate.
           </p>
         </div>
-        <Link
-          to={adminOfferNewFreshPath()}
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#1e46b4] px-4 py-2.5 text-sm font-semibold font-['Inter'] text-white shadow-sm hover:bg-[#163899]"
-        >
-          Ofertă nouă
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          {selectedIds.size > 0 ? (
+            <button
+              type="button"
+              onClick={openBulkDelete}
+              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold font-['Inter'] text-red-700 hover:bg-red-100"
+            >
+              Șterge selecția ({selectedIds.size})
+            </button>
+          ) : null}
+          <Link
+            to={adminOfferNewFreshPath()}
+            className="inline-flex items-center justify-center rounded-lg bg-[#1e46b4] px-4 py-2.5 text-sm font-semibold font-['Inter'] text-white shadow-sm hover:bg-[#163899]"
+          >
+            Ofertă nouă
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -87,135 +185,249 @@ export default function AdminOffersList() {
         </p>
       ) : null}
 
-      <section className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/5 overflow-hidden">
-        <table className="w-full min-w-0 table-fixed text-left text-sm font-['Inter']">
-            <colgroup>
-              <col className="w-[11%]" />
-              <col className="w-[8%]" />
-              <col className="w-[9%]" />
-              <col className="w-[16%]" />
-              <col className="w-[14%]" />
-              <col className="w-[10%]" />
-              <col className="w-[12%]" />
-              <col className="w-[7%]" />
-              <col className="w-[13%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/90 text-slate-600">
-                <th className="px-3 py-2.5 font-semibold">Dată</th>
-                <th className="px-3 py-2.5 font-semibold">Status</th>
-                <th className="px-3 py-2.5 font-semibold">Tip</th>
-                <th className="px-3 py-2.5 font-semibold">Client / companie</th>
-                <th className="px-3 py-2.5 font-semibold">Email</th>
-                <th className="px-3 py-2.5 font-semibold">Telefon</th>
-                <th className="px-3 py-2.5 font-semibold">Sumă</th>
-                <th className="px-3 py-2.5 font-semibold">Produse</th>
-                <th className="px-3 py-2.5 font-semibold">Acțiuni</th>
+      <section className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/5 overflow-visible">
+        <table className="w-full min-w-0 table-fixed text-left text-sm font-['Inter'] [border-collapse:separate] [border-spacing:0] overflow-hidden rounded-2xl">
+          <colgroup>
+            <col className="w-[3%]" />
+            <col className="w-[10%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[15%]" />
+            <col className="w-[13%]" />
+            <col className="w-[10%]" />
+            <col className="w-[11%]" />
+            <col className="w-[6%]" />
+            <col className="w-[8%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/90 text-slate-600">
+              <th className="px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected }}
+                  onChange={toggleAll}
+                  aria-label="Selectează tot"
+                  className="h-4 w-4 rounded border-slate-300 text-[#1e46b4] focus:ring-[#1e46b4]"
+                />
+              </th>
+              <th className="px-3 py-2.5 font-semibold">Dată</th>
+              <th className="px-3 py-2.5 font-semibold">Status</th>
+              <th className="px-3 py-2.5 font-semibold">Tip</th>
+              <th className="px-3 py-2.5 font-semibold">Client / companie</th>
+              <th className="px-3 py-2.5 font-semibold">Email</th>
+              <th className="px-3 py-2.5 font-semibold">Telefon</th>
+              <th className="px-3 py-2.5 font-semibold">Sumă</th>
+              <th className="px-3 py-2.5 font-semibold text-center">Produse</th>
+              <th className="px-3 py-2.5 font-semibold text-center">Acțiuni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={10} className="px-3 py-12 text-center text-slate-500">
+                  Se încarcă…
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-3 py-12 text-center text-slate-500">
-                    Se încarcă…
-                  </td>
-                </tr>
-              ) : offers.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-3 py-12 text-center text-slate-500">
-                    Nu există oferte încă. Folosește „Draft” sau „Generează ofertă” din formularul de ofertă
-                    nouă.
-                  </td>
-                </tr>
-              ) : (
-                offers.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60">
+            ) : offers.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-3 py-12 text-center text-slate-500">
+                  Nu există oferte încă. Folosește „Draft" sau „Generează ofertă" din formularul de ofertă nouă.
+                </td>
+              </tr>
+            ) : (
+              offers.map((row) => {
+                const isSelected = selectedIds.has(row.id)
+                return (
+                  <tr
+                    key={row.id}
+                    className={`border-b border-slate-100 last:border-b-0 ${isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+                  >
+                    {/* checkbox */}
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRow(row.id)}
+                        aria-label={`Selectează oferta ${row.clientLabel || row.id}`}
+                        className="h-4 w-4 rounded border-slate-300 text-[#1e46b4] focus:ring-[#1e46b4]"
+                      />
+                    </td>
+
                     <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate" title={formatDateTime(row.updatedAt || row.createdAt)}>
                       {formatDateShort(row.updatedAt || row.createdAt)}
                     </td>
+
                     <td className="px-3 py-2.5">
-                      <span
-                        className={`inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          row.status === 'draft'
-                            ? 'bg-amber-100 text-amber-900'
-                            : 'bg-emerald-100 text-emerald-900'
-                        }`}
-                      >
+                      <span className={`inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.status === 'draft' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
                         {row.status === 'draft' ? 'Ciornă' : 'Generată'}
                       </span>
                     </td>
+
                     <td className="px-3 py-2.5">
                       <span
-                        className={`inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          row.buyerType === 'company'
-                            ? 'bg-sky-100 text-sky-900'
-                            : 'bg-violet-100 text-violet-900'
-                        }`}
+                        className={`inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.buyerType === 'company' ? 'bg-sky-100 text-sky-900' : 'bg-violet-100 text-violet-900'}`}
                         title={commercialOfferBuyerTypeLabelRo(row.buyerType)}
                       >
                         {buyerTypeShortLabel(row.buyerType)}
                       </span>
                     </td>
+
                     <td className="px-3 py-2.5 text-slate-900 font-medium max-w-0 truncate" title={row.clientLabel || undefined}>
                       {row.clientLabel || '—'}
                     </td>
+
                     <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate" title={row.clientEmail || undefined}>
                       {row.clientEmail?.trim() ? (
-                        <a
-                          href={`mailto:${row.clientEmail.trim()}`}
-                          className="block truncate text-[#1e46b4] hover:text-[#163899] hover:underline"
-                        >
+                        <a href={`mailto:${row.clientEmail.trim()}`} className="block truncate text-[#1e46b4] hover:text-[#163899] hover:underline">
                           {row.clientEmail.trim()}
                         </a>
-                      ) : (
-                        '—'
-                      )}
+                      ) : '—'}
                     </td>
+
                     <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate tabular-nums" title={row.clientPhone?.trim() || undefined}>
                       {row.clientPhone?.trim() ? (
-                        <a
-                          href={`tel:${row.clientPhone.trim().replace(/\s/g, '')}`}
-                          className="block truncate text-[#1e46b4] hover:text-[#163899] hover:underline"
-                        >
+                        <a href={`tel:${row.clientPhone.trim().replace(/\s/g, '')}`} className="block truncate text-[#1e46b4] hover:text-[#163899] hover:underline">
                           {row.clientPhone.trim()}
                         </a>
-                      ) : (
-                        '—'
-                      )}
+                      ) : '—'}
                     </td>
+
                     <td className="px-3 py-2.5 text-slate-800 max-w-0 truncate tabular-nums" title={formatMoney(row.amountGross, row.currency)}>
                       {formatMoney(row.amountGross, row.currency)}
                     </td>
+
                     <td className="px-3 py-2.5 text-slate-700 tabular-nums text-center">{row.productCount}</td>
-                    <td className="px-3 py-2.5 max-w-0 truncate">
-                      {row.status === 'draft' ? (
-                        <Link
-                          to={adminOfferEditPath(row.id)}
-                          className="text-sm font-semibold text-[#1e46b4] hover:text-[#163899] underline underline-offset-2"
+
+                    {/* actions: download icon (outside menu) + 3-dot menu */}
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* download icon — always outside the menu */}
+                        {row.pdfUrl ? (
+                          <a
+                            href={row.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            title="Descarcă PDF"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                          >
+                            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4" aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5.5 7.5M8 10l2.5-2.5M3 13h10" />
+                            </svg>
+                          </a>
+                        ) : (
+                          <span className="h-7 w-7" />
+                        )}
+
+                        {/* 3-dot menu — dropdown rendered fixed below */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            if (openMenuId === row.id) {
+                              setOpenMenuId(null)
+                              setMenuPos(null)
+                            } else {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                              setOpenMenuId(row.id)
+                            }
+                          }}
+                          aria-label="Mai multe acțiuni"
+                          aria-expanded={openMenuId === row.id}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
                         >
-                          Editează
-                        </Link>
-                      ) : row.pdfUrl ? (
-                        <a
-                          href={row.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download
-                          className="text-sm font-semibold text-[#1e46b4] hover:text-[#163899] underline underline-offset-2"
-                          title="Descarcă oferta"
-                        >
-                          Descarcă
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="size-4" aria-hidden>
+                            <circle cx="3" cy="8" r="1.5" />
+                            <circle cx="8" cy="8" r="1.5" />
+                            <circle cx="13" cy="8" r="1.5" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </section>
+
+      {/* fixed dropdown — escapes all overflow clipping */}
+      {openMenuId && menuPos ? (() => {
+        const row = offers.find((o) => o.id === openMenuId)
+        if (!row) return null
+        return (
+          <div
+            ref={menuRef}
+            style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 50 }}
+            className="min-w-[140px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+          >
+            {row.status === 'draft' ? (
+              <Link
+                to={adminOfferEditPath(row.id)}
+                onClick={() => { setOpenMenuId(null); setMenuPos(null) }}
+                className="flex w-full items-center px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 font-['Inter']"
+              >
+                Editează
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => { setMenuPos(null); openSingleDelete(row.id) }}
+              className="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 font-['Inter']"
+            >
+              Șterge
+            </button>
+          </div>
+        )
+      })() : null}
+
+      {/* confirm delete dialog */}
+      {confirmDelete ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setConfirmDelete(null) }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-offer-title"
+          >
+            <h2 id="delete-offer-title" className="text-base font-bold text-slate-900 font-['Inter']">
+              {confirmDelete === 'bulk' ? `Șterge ${selectedIds.size} oferte?` : 'Șterge oferta?'}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+              {confirmDelete === 'bulk'
+                ? `Cele ${selectedIds.size} oferte selectate vor fi șterse permanent, inclusiv PDF-urile stocate.`
+                : confirmSingleRow
+                  ? `Oferta pentru „${confirmSingleRow.clientLabel || '—'}" va fi ștearsă permanent, inclusiv PDF-ul stocat.`
+                  : 'Oferta va fi ștearsă permanent, inclusiv PDF-ul stocat.'}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 font-['Inter']">Această acțiune nu poate fi anulată.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']"
+              >
+                Anulează
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 font-['Inter']"
+              >
+                {deleting ? 'Se șterge…' : 'Șterge'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

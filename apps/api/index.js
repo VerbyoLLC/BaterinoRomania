@@ -9246,6 +9246,41 @@ app.post(
   adminCommercialOfferPdfHandler,
 )
 
+async function deleteAdminCommercialOfferHandler(req, res) {
+  try {
+    const { id } = req.params
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const offer = await prisma.adminCommercialOffer.findUnique({ where: { id } })
+    if (!offer) return res.status(404).json({ error: 'Oferta nu există.' })
+    if (offer.pdfUrl) {
+      const key = urlToKey(offer.pdfUrl)
+      if (key) {
+        await deleteFromR2(key).catch((e) =>
+          console.warn('[Commercial offer delete] R2 delete failed:', e?.message || e),
+        )
+      }
+    }
+    await prisma.adminCommercialOffer.delete({ where: { id } })
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('Delete commercial offer error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la ștergerea ofertei.' })
+  }
+}
+
+app.delete(
+  '/api/admin/commercial-offers/:id',
+  authMiddleware,
+  adminAuthMiddleware,
+  deleteAdminCommercialOfferHandler,
+)
+app.delete(
+  '/admin/commercial-offers/:id',
+  authMiddleware,
+  adminAuthMiddleware,
+  deleteAdminCommercialOfferHandler,
+)
+
 app.post(
   '/api/admin/product-models/:id/technical-brochure',
   authMiddleware,
