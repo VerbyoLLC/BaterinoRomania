@@ -8,6 +8,7 @@ import {
   uploadAdminFile,
   updateAdminProductModel,
   deleteAdminProductModel,
+  createAdminProductModel,
   type AdminProductModelRow,
   type UpdateAdminProductModelPayload,
   type ProductModelType,
@@ -109,6 +110,13 @@ export default function AdminProductModels() {
   const menuRef = useRef<HTMLDivElement>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [addForm, setAddForm] = useState<ProductModelDraft>({
+    name: '', brand: '', series: '', modelNumber: '', technicalDescription: '',
+    usageType: 'industrial', productType: 'ESS', imageUrl: null, productImageUrl: null, availableForStock: true,
+  })
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const [drawerModelId, setDrawerModelId] = useState<string | null>(null)
   const [specFields, setSpecFields] = useState<SpecField[]>([])
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
@@ -267,6 +275,24 @@ export default function AdminProductModels() {
     } finally {
       setDeleting(false)
       setConfirmDeleteId(null)
+    }
+  }
+
+  async function handleAddModel(e: React.FormEvent) {
+    e.preventDefault()
+    if (addSaving) return
+    setAddSaving(true)
+    setAddError(null)
+    try {
+      const created = await createAdminProductModel(addForm)
+      setRows((prev) => [created, ...prev])
+      setAddModalOpen(false)
+      setAddForm({ name: '', brand: '', series: '', modelNumber: '', technicalDescription: '', usageType: 'industrial', productType: 'ESS', imageUrl: null, productImageUrl: null, availableForStock: true })
+      toast.success('Modelul a fost adăugat.')
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : 'Eroare la creare.')
+    } finally {
+      setAddSaving(false)
     }
   }
 
@@ -438,7 +464,7 @@ export default function AdminProductModels() {
       )}
 
       {/* Search & Filters */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap sm:justify-between">
         <input
           type="search"
           value={search}
@@ -475,6 +501,16 @@ export default function AdminProductModels() {
             {filteredRows.length} / {rowsWithDraft.length} rezultate
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => { setAddError(null); setAddModalOpen(true) }}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 font-['Inter']"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Adaugă model
+        </button>
       </div>
 
       <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden ring-1 ring-slate-900/[0.04]">
@@ -708,6 +744,110 @@ export default function AdminProductModels() {
           </div>
         )}
       </div>
+
+      {/* Add Model modal */}
+      {addModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget && !addSaving) setAddModalOpen(false) }}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl"
+            role="dialog" aria-modal="true" aria-labelledby="add-model-title"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h2 id="add-model-title" className="text-base font-bold text-slate-900 font-['Inter']">Adaugă model nou</h2>
+              <button type="button" onClick={() => setAddModalOpen(false)} disabled={addSaving}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" className="size-4" aria-hidden>
+                  <path strokeLinecap="round" d="M3 3l10 10M13 3L3 13" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddModel} className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              {addError ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 font-['Inter']">{addError}</p>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Nume <span className="text-red-500">*</span></label>
+                  <input required value={addForm.name}
+                    onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-['Inter'] text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Model Number <span className="text-red-500">*</span></label>
+                  <input required value={addForm.modelNumber}
+                    onChange={(e) => setAddForm((p) => ({ ...p, modelNumber: e.target.value }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-mono font-['Inter'] text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Brand <span className="text-red-500">*</span></label>
+                  <input required value={addForm.brand}
+                    onChange={(e) => setAddForm((p) => ({ ...p, brand: e.target.value }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-['Inter'] text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Series <span className="text-red-500">*</span></label>
+                  <input required value={addForm.series}
+                    onChange={(e) => setAddForm((p) => ({ ...p, series: e.target.value }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-['Inter'] text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Usage</label>
+                  <select value={addForm.usageType}
+                    onChange={(e) => setAddForm((p) => ({ ...p, usageType: e.target.value === 'residential' ? 'residential' : 'industrial' }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-['Inter'] text-slate-900 bg-white focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer">
+                    <option value="industrial">Industrial</option>
+                    <option value="residential">Residential</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Type</label>
+                  <select value={addForm.productType}
+                    onChange={(e) => setAddForm((p) => ({ ...p, productType: e.target.value as ProductModelType }))}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-mono font-['Inter'] text-slate-900 bg-white focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer">
+                    {PRODUCT_MODEL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">Specificații tehnice</label>
+                <textarea value={addForm.technicalDescription}
+                  onChange={(e) => setAddForm((p) => ({ ...p, technicalDescription: e.target.value }))}
+                  rows={5}
+                  placeholder={'Energy: 16 kWh\nNominal Voltage: 51.2V\nCycle life: 6000\nCommunication: RS485\nWeight: 150 kg\nWarranty: 5 years'}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono font-['Inter'] text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-y" />
+                <p className="mt-1 text-[11px] text-slate-400 font-['Inter']">Un câmp per linie, format: Etichetă: Valoare</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="add-available" checked={addForm.availableForStock}
+                  onChange={(e) => setAddForm((p) => ({ ...p, availableForStock: e.target.checked }))}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900" />
+                <label htmlFor="add-available" className="text-sm font-medium text-slate-700 font-['Inter'] cursor-pointer">
+                  Disponibil pentru stoc
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onClick={() => setAddModalOpen(false)} disabled={addSaving}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']">
+                  Anulează
+                </button>
+                <button type="submit" disabled={addSaving}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50 font-['Inter']">
+                  {addSaving ? 'Se salvează…' : 'Adaugă model'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {/* 3-dot dropdown */}
       {menuOpenId && menuPos ? (() => {

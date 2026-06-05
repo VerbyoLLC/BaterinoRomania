@@ -3096,6 +3096,24 @@ export async function patchAdminProductModelAvailableForStock(
   return { ...row, availableForStock: row.availableForStock !== false }
 }
 
+export async function createAdminProductModel(
+  payload: UpdateAdminProductModelPayload,
+): Promise<AdminProductModelRow> {
+  const res = await fetch(`${API_BASE}/admin/product-models`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<AdminProductModelRow>
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 409) throw new Error('Model number există deja.')
+    throw new Error((json as { error?: string }).error || 'Eroare la crearea modelului.')
+  }
+  const row = json as AdminProductModelRow
+  return { ...row, availableForStock: row.availableForStock !== false }
+}
+
 export async function deleteAdminProductModel(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}`, {
     method: 'DELETE',

@@ -9369,6 +9369,57 @@ async function deleteProductModelHandler(req, res) {
 
 app.delete('/api/admin/product-models/:id', authMiddleware, adminAuthMiddleware, deleteProductModelHandler)
 app.delete('/admin/product-models/:id', authMiddleware, adminAuthMiddleware, deleteProductModelHandler)
+
+async function createProductModelHandler(req, res) {
+  try {
+    const body = req.body || {}
+    const name = String(body.name ?? '').trim()
+    const brand = String(body.brand ?? '').trim()
+    const series = String(body.series ?? '').trim()
+    const modelNumber = String(body.modelNumber ?? '').trim()
+    const technicalDescription = String(body.technicalDescription ?? '').trim()
+    const usageType = String(body.usageType ?? 'industrial').trim().toLowerCase()
+    const VALID_PRODUCT_TYPES = ['ESS','INV','PV','PCS','BMS','ACC','CHG']
+    const productTypeRaw = String(body.productType ?? 'ESS').trim().toUpperCase()
+    const productType = VALID_PRODUCT_TYPES.includes(productTypeRaw) ? productTypeRaw : 'ESS'
+    const availableForStock = body.availableForStock === false ? false : true
+
+    if (!name) return res.status(400).json({ error: 'Numele modelului este obligatoriu.' })
+    if (!brand) return res.status(400).json({ error: 'Brand-ul este obligatoriu.' })
+    if (!series) return res.status(400).json({ error: 'Series este obligatoriu.' })
+    if (!modelNumber) return res.status(400).json({ error: 'Model number este obligatoriu.' })
+    if (!['industrial', 'residential'].includes(usageType)) {
+      return res.status(400).json({ error: 'Tip invalid.' })
+    }
+
+    const created = await prisma.productModel.create({
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, availableForStock, sortOrder: 0 },
+    })
+    return res.status(201).json({
+      id: created.id,
+      name: created.name,
+      brand: created.brand,
+      series: created.series || '',
+      modelNumber: created.modelNumber,
+      technicalDescription: created.technicalDescription,
+      usageType: created.usageType === 'residential' ? 'residential' : 'industrial',
+      productType: created.productType || 'ESS',
+      imageUrl: null,
+      productImageUrl: null,
+      availableForStock: created.availableForStock !== false,
+      sortOrder: created.sortOrder,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    })
+  } catch (err) {
+    if (err?.code === 'P2002') return res.status(409).json({ error: 'Model number există deja.' })
+    console.error('Create product model error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la crearea modelului.' })
+  }
+}
+
+app.post('/api/admin/product-models', authMiddleware, adminAuthMiddleware, createProductModelHandler)
+app.post('/admin/product-models', authMiddleware, adminAuthMiddleware, createProductModelHandler)
 app.patch(
   '/api/admin/product-models/:id/available-for-stock',
   authMiddleware,
