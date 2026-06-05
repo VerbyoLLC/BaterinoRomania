@@ -15,6 +15,8 @@ const PAGES: PageMeta[] = [
   { key: 'produse',       label: 'Catalog Produse',             path: '/produse' },
   { key: 'rezidential',   label: 'Stocare Energie Rezidențial', path: '/divizii/rezidential' },
   { key: 'industrial',    label: 'Stocare Energie Industrial',  path: '/divizii/industrial' },
+  { key: 'medical',       label: 'Stocare Energie Medical',     path: '/divizii/medical' },
+  { key: 'maritim',       label: 'Maritim',                     path: '/divizii/maritim' },
   { key: 'blog',          label: 'Blog',                        path: '/blog' },
   { key: 'faq',           label: 'Întrebări Frecvente',         path: '/intrebari-frecvente' },
   { key: 'garantie',      label: 'Verificare Garanție',         path: '/verificare-garantie' },
