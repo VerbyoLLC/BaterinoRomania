@@ -1896,7 +1896,7 @@ export default function AdminProducts() {
                           </label>
                           {productSlug ? (
                             <a
-                              href={`/produse/${productSlug}`}
+                              href={`/produse/${[categories.find((c) => c.id === categoryId)?.slug, productSlug].filter(Boolean).join('/')}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-[#1e46b4] hover:underline font-['Inter']"

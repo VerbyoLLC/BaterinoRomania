@@ -229,6 +229,7 @@ export default function App() {
                 path="companii-instalatori-fotovoltaice/:handle"
                 element={<PartnerCompanyPublicPage />}
               />
+              <Route path="produse/:categorySlug/:slug" element={<ProductRezidential />} />
               <Route path="produse/:slug" element={<ProductRezidential />} />
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />

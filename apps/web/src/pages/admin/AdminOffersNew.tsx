@@ -179,8 +179,28 @@ function validateOfferClientRequiredFields(
 function validateOfferProductLines(lines: OfferProductLineDraft[]): string[] {
   const isLineValid = (l: OfferProductLineDraft) =>
     l.isCustom ? (l.customModel?.trim().length ?? 0) > 0 : l.productModelId.trim().length > 0
-  if (lines.some(isLineValid)) return []
-  return lines.map((l) => `offer-line-model-${l.id}`)
+
+  if (!lines.some(isLineValid)) {
+    return lines.map((l) => `offer-line-model-${l.id}`)
+  }
+
+  // Check mandatory fields for valid lines
+  const invalidFields: string[] = []
+  for (const line of lines) {
+    if (!isLineValid(line)) continue
+
+    if (!line.priceWithoutVat.trim()) {
+      invalidFields.push(`offer-line-price-${line.id}`)
+    }
+    if (!line.qty.trim()) {
+      invalidFields.push(`offer-line-qty-${line.id}`)
+    }
+    if (!line.vatPercent.trim()) {
+      invalidFields.push(`offer-line-vat-${line.id}`)
+    }
+  }
+
+  return invalidFields
 }
 
 const offerRequiredMark = (
@@ -797,7 +817,7 @@ export default function AdminOffersNew() {
     const invalidProducts = validateOfferProductLines(offerProductLines)
     if (invalidProducts.length > 0) {
       setOfferGenerateInvalidFields(new Set(invalidProducts))
-      toast.error('Adaugă cel puțin un produs: selectează un model sau completează descrierea în secțiunea Produse.')
+      toast.error('Completează toate câmpurile obligatorii ale produselor: model/descriere, preț unitar, cantitate și TVA.')
       window.requestAnimationFrame(() => {
         document.getElementById(invalidProducts[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       })
@@ -1624,7 +1644,7 @@ export default function AdminOffersNew() {
         <OfferCollapsibleSectionCard
           sectionId="offer-section-products"
           title="Produse"
-          description="Adaugă linii: model, preț unitar fără TVA, cantitate, TVA și reducere opțională."
+          description="Adaugă linii: model, pret UM fara TVA, cantitate, TVA și reducere opțională."
           headerAside={
             <div className="flex items-center gap-2">
               <button
@@ -1670,7 +1690,7 @@ export default function AdminOffersNew() {
                   Model
                   {offerRequiredMark}
                 </span>
-                <span className={labelClass}>Preț unitar fără TVA ({offerCurrency})</span>
+                <span className={labelClass}>Pret UM fara TVA ({offerCurrency})</span>
                 <span className={labelClass}>Cantitate</span>
                 <span className={labelClass}>TVA (%)</span>
                 <span className={labelClass}>Reducere (%)</span>
@@ -1758,7 +1778,7 @@ export default function AdminOffersNew() {
                   </div>
                   <div>
                     <label htmlFor={`offer-line-price-${line.id}`} className={`${labelClass} md:sr-only`}>
-                      Preț unitar fără TVA ({offerCurrency})
+                      Pret UM fara TVA ({offerCurrency})
                     </label>
                     <input
                       id={`offer-line-price-${line.id}`}

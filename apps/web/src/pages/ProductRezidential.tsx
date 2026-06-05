@@ -732,7 +732,7 @@ function CeSePoateAlimentaModal({
 
 /* ── Page ───────────────────────────────────────────────────────── */
 export default function ProductRezidential() {
-  const { slug } = useParams<{ slug: string }>()
+  const { slug, categorySlug } = useParams<{ slug: string; categorySlug?: string }>()
   const location = useLocation()
   const navTip = (location.state as ProductPageLocationState | null)?.tipProdus
   const cachedTip = slug ? readCachedProductTip(slug) : undefined
@@ -854,7 +854,7 @@ export default function ProductRezidential() {
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
 
   const rezProductQrUrl = (() => {
-    const path = product.slug ? `/produse/${product.slug}` : `/produse/${product.id}`
+    const path = `/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://baterino.ro'
     const url = encodeURIComponent(`${origin}${path}`)
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
@@ -881,7 +881,7 @@ export default function ProductRezidential() {
       <SEO
         title={templateSeo.title}
         description={templateSeo.description}
-        canonical={`/produse/${product.slug || product.id}`}
+        canonical={`/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`}
         lang={language.code}
         ogImage={templateSeo.ogImage}
       />
@@ -958,17 +958,6 @@ export default function ProductRezidential() {
                     className="h-20 w-40 max-w-[55%] object-contain opacity-[0.14]"
                   />
                 </div>
-                <div className="absolute bottom-3 right-3 z-30 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
-                  <img
-                    src={rezProductQrUrl}
-                    alt="QR Code produs"
-                    width={72}
-                    height={72}
-                    className="block rounded-lg w-[72px] h-[72px] lg:w-20 lg:h-20"
-                    loading="eager"
-                    draggable={false}
-                  />
-                </div>
                 {imgs.length > 1 ? (
                   <>
                     <div className="pointer-events-none absolute top-4 right-4 z-20 hidden items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1.5 shadow-sm lg:flex">
@@ -1023,6 +1012,10 @@ export default function ProductRezidential() {
                 ) : (
                   <div className="relative z-10 flex h-full w-full items-center justify-center">
                     <ProductImageWithLoader src={img} alt={product.title} />
+                    <div className="absolute top-4 right-4 z-20 p-1 bg-white rounded-lg shadow-md border border-neutral-200/80">
+                      <img src={rezProductQrUrl} alt="QR Code produs" width={36} height={36}
+                        className="block rounded-md w-9 h-9" loading="eager" draggable={false} />
+                    </div>
                   </div>
                 )}
               </div>

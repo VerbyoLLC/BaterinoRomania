@@ -520,7 +520,7 @@ export default function Home() {
                     : formatResidentialCatalogPriceDisplay(p, language.code, currency)
               const industrialHasPrice = p.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
               const showIndustrialPriceExtras = industrialHasPrice
-              const to = `/produse/${p.slug || p.id}`
+              const to = `/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`
               const linkState = { tipProdus: p.tipProdus }
               const common = {
                 density: 'home' as const,

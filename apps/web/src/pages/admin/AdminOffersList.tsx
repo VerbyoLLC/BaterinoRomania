@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getAdminCommercialOffers,
@@ -195,6 +195,11 @@ export default function AdminOffersList() {
 
   const [notesOffer, setNotesOffer] = useState<AdminCommercialOfferRow | null>(null)
 
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'generated'>('all')
+  const [filterType, setFilterType] = useState<'all' | 'person' | 'company'>('all')
+  const [filterCountry, setFilterCountry] = useState<string>('all')
+
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -226,6 +231,26 @@ export default function AdminOffersList() {
 
   const allSelected = offers.length > 0 && selectedIds.size === offers.length
   const someSelected = selectedIds.size > 0 && !allSelected
+
+  const uniqueCountries = useMemo(() => {
+    const countries = new Set(offers.map((o: AdminCommercialOfferRow) => o.country).filter((c: string) => c && c !== '—'))
+    return Array.from(countries).sort()
+  }, [offers])
+
+  const filteredOffers = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return offers.filter((offer: AdminCommercialOfferRow) => {
+      if (q) {
+        const clientMatches = offer.clientLabel.toLowerCase().includes(q)
+        const offerNumMatches = offer.offerNumber.toLowerCase().includes(q)
+        if (!clientMatches && !offerNumMatches) return false
+      }
+      if (filterStatus !== 'all' && offer.status !== filterStatus) return false
+      if (filterType !== 'all' && offer.buyerType !== filterType) return false
+      if (filterCountry !== 'all' && offer.country !== filterCountry) return false
+      return true
+    })
+  }, [offers, search, filterStatus, filterType, filterCountry])
 
   function toggleAll() {
     setSelectedIds(allSelected ? new Set() : new Set(offers.map((o) => o.id)))
@@ -299,17 +324,62 @@ export default function AdminOffersList() {
         <p className="mb-4 text-sm font-['Inter'] text-red-800 bg-red-50 border border-red-100 rounded-lg px-3 py-2" role="alert">{error}</p>
       ) : null}
 
+      <div className="mb-6 flex flex-col gap-3 sm:grid sm:grid-cols-4 sm:gap-3">
+        <input
+          type="search"
+          placeholder="Cauta dupa nume sau numar oferta..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white cursor-pointer"
+        >
+          <option value="all">Status: Toate</option>
+          <option value="draft">Draft</option>
+          <option value="generated">Generata</option>
+        </select>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value as any)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white cursor-pointer"
+        >
+          <option value="all">Tip: Toate</option>
+          <option value="person">P.F.</option>
+          <option value="company">Companie</option>
+        </select>
+        <select
+          value={filterCountry}
+          onChange={(e) => setFilterCountry(e.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white cursor-pointer"
+        >
+          <option value="all">Tara: Toate</option>
+          {uniqueCountries.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      {(search || filterStatus !== 'all' || filterType !== 'all' || filterCountry !== 'all') && (
+        <p className="mb-3 text-sm text-slate-500">
+          {filteredOffers.length} rezultate
+        </p>
+      )}
+
       <section className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/5 overflow-visible">
         <table className="w-full min-w-0 table-fixed text-left text-sm font-['Inter'] [border-collapse:separate] [border-spacing:0] overflow-hidden rounded-2xl">
           <colgroup>
             <col className="w-[3%]" />
+            <col className="w-[8%]" />
+            <col className="w-[6%]" />
+            <col className="w-[6%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[10%]" />
             <col className="w-[9%]" />
-            <col className="w-[7%]" />
-            <col className="w-[7%]" />
-            <col className="w-[13%]" />
-            <col className="w-[12%]" />
-            <col className="w-[9%]" />
-            <col className="w-[11%]" />
+            <col className="w-[10%]" />
             <col className="w-[5%]" />
             <col className="w-[5%]" />
             <col className="w-[5%]" />
@@ -330,6 +400,8 @@ export default function AdminOffersList() {
               <th className="px-3 py-2.5 font-semibold">Dată</th>
               <th className="px-3 py-2.5 font-semibold">Status</th>
               <th className="px-3 py-2.5 font-semibold">Tip</th>
+              <th className="px-3 py-2.5 font-semibold">Numar oferta</th>
+              <th className="px-3 py-2.5 font-semibold">Tara</th>
               <th className="px-3 py-2.5 font-semibold">Client / companie</th>
               <th className="px-3 py-2.5 font-semibold">Email</th>
               <th className="px-3 py-2.5 font-semibold">Telefon</th>
@@ -342,11 +414,11 @@ export default function AdminOffersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={12} className="px-3 py-12 text-center text-slate-500">Se încarcă…</td></tr>
-            ) : offers.length === 0 ? (
-              <tr><td colSpan={12} className="px-3 py-12 text-center text-slate-500">Nu există oferte încă.</td></tr>
+              <tr><td colSpan={14} className="px-3 py-12 text-center text-slate-500">Se încarcă…</td></tr>
+            ) : filteredOffers.length === 0 ? (
+              <tr><td colSpan={14} className="px-3 py-12 text-center text-slate-500">Nu există oferte care se potrivesc filtrelor.</td></tr>
             ) : (
-              offers.map((row) => {
+              filteredOffers.map((row) => {
                 const isSelected = selectedIds.has(row.id)
                 return (
                   <tr key={row.id} className={`border-b border-slate-100 last:border-b-0 ${isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}>
@@ -368,6 +440,12 @@ export default function AdminOffersList() {
                         title={commercialOfferBuyerTypeLabelRo(row.buyerType)}>
                         {buyerTypeShortLabel(row.buyerType)}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate font-mono text-xs" title={row.offerNumber || undefined}>
+                      {row.offerNumber || '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate" title={row.country || undefined}>
+                      {row.country || '—'}
                     </td>
                     <td className="px-3 py-2.5 text-slate-900 font-medium max-w-0 truncate" title={row.clientLabel || undefined}>{row.clientLabel || '—'}</td>
                     <td className="px-3 py-2.5 text-slate-700 max-w-0 truncate" title={row.clientEmail || undefined}>
