@@ -689,7 +689,7 @@ if (String(process.env.TRUST_PROXY || '').trim() === '1') {
 app.use(cors({
   origin: true,
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index', 'X-Upload-Prefix'],
   exposedHeaders: ['Content-Disposition'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }))
