@@ -852,6 +852,13 @@ export default function ProductRezidential() {
 
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
+
+  const rezProductQrUrl = (() => {
+    const path = product.slug ? `/produse/${product.slug}` : `/produse/${product.id}`
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://baterino.ro'
+    const url = encodeURIComponent(`${origin}${path}`)
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
+  })()
   const specs = buildSpecs(product, tr)
   const techData = buildTechData(product, tr)
   const badges = getBadges(tr)
@@ -949,6 +956,17 @@ export default function ProductRezidential() {
                     src="/images/shared/baterino-logo-black.svg"
                     alt=""
                     className="h-20 w-40 max-w-[55%] object-contain opacity-[0.14]"
+                  />
+                </div>
+                <div className="absolute bottom-3 right-3 z-10 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
+                  <img
+                    src={rezProductQrUrl}
+                    alt="QR Code produs"
+                    width={72}
+                    height={72}
+                    className="block rounded-lg w-[72px] h-[72px] lg:w-20 lg:h-20"
+                    loading="lazy"
+                    draggable={false}
                   />
                 </div>
                 {imgs.length > 1 ? (
