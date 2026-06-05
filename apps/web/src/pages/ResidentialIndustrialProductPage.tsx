@@ -271,6 +271,14 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
   const canonical = `/produse/${product.slug || product.id}`
 
+  const productQrUrl = product.slug
+    ? (() => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://baterino.ro'
+        const url = encodeURIComponent(`${origin}/produse/${product.slug}`)
+        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
+      })()
+    : null
+
   const tabLabel = (id: TabId) => {
     switch (id) {
       case 'advantages':
@@ -379,6 +387,20 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                 )}
               </div>
             )}
+
+            {productQrUrl ? (
+              <div className="absolute bottom-3 right-3 z-10 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
+                <img
+                  src={productQrUrl}
+                  alt="QR Code produs"
+                  width={72}
+                  height={72}
+                  className="block rounded-lg w-[72px] h-[72px] sm:w-20 sm:h-20"
+                  loading="lazy"
+                  draggable={false}
+                />
+              </div>
+            ) : null}
 
             {imgs.length > 1 && (
               <>
