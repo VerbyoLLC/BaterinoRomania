@@ -428,6 +428,8 @@ model ProductModel {
   technicalDescription String   @db.Text
   /** industrial | residential */
   usageType            String   @default("industrial")
+  /** ESS | INV | PV | PCS | BMS | ACC | CHG */
+  productType          String   @default("ESS")
   imageUrl             String?  @db.Text
   /** 600×600 catalog image for the product model (uploaded via admin cropper). */
   productImageUrl      String?  @db.Text

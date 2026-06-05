@@ -8724,6 +8724,7 @@ const listProductModelsHandler = async (req, res) => {
         modelNumber: r.modelNumber,
         technicalDescription: r.technicalDescription,
         usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
+        productType: r.productType || 'ESS',
         imageUrl: r.imageUrl || null,
         productImageUrl: r.productImageUrl || null,
         availableForStock: r.availableForStock !== false,
@@ -8750,6 +8751,9 @@ const updateProductModelHandler = async (req, res) => {
     const modelNumber = String(body.modelNumber ?? '').trim()
     const technicalDescription = String(body.technicalDescription ?? '').trim()
     const usageType = String(body.usageType ?? 'industrial').trim().toLowerCase()
+    const VALID_PRODUCT_TYPES = ['ESS','INV','PV','PCS','BMS','ACC','CHG']
+    const productTypeRaw = String(body.productType ?? 'ESS').trim().toUpperCase()
+    const productType = VALID_PRODUCT_TYPES.includes(productTypeRaw) ? productTypeRaw : 'ESS'
     const imageUrlRaw = body.imageUrl == null ? '' : String(body.imageUrl).trim()
     const imageUrl = imageUrlRaw ? imageUrlRaw.slice(0, 2000) : null
     const productImageUrlRaw = body.productImageUrl == null ? '' : String(body.productImageUrl).trim()
@@ -8767,7 +8771,7 @@ const updateProductModelHandler = async (req, res) => {
 
     const updated = await prisma.productModel.update({
       where: { id },
-      data: { name, brand, series, modelNumber, technicalDescription, usageType, imageUrl, productImageUrl, availableForStock },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, imageUrl, productImageUrl, availableForStock },
     })
     return res.json({
       id: updated.id,
@@ -8777,6 +8781,7 @@ const updateProductModelHandler = async (req, res) => {
       modelNumber: updated.modelNumber,
       technicalDescription: updated.technicalDescription,
       usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
+      productType: updated.productType || 'ESS',
       imageUrl: updated.imageUrl || null,
       productImageUrl: updated.productImageUrl || null,
       availableForStock: updated.availableForStock !== false,

@@ -2763,6 +2763,10 @@ export async function createWarehouseStockUnit(payload: {
 }
 
 /** Rând din tabelul DB `product_models` (modele produs / specificații). */
+export type ProductModelType = 'ESS' | 'INV' | 'PV' | 'PCS' | 'BMS' | 'ACC' | 'CHG'
+
+export const PRODUCT_MODEL_TYPES: ProductModelType[] = ['ESS', 'INV', 'PV', 'PCS', 'BMS', 'ACC', 'CHG']
+
 export type AdminProductModelRow = {
   id: string
   name: string
@@ -2771,6 +2775,8 @@ export type AdminProductModelRow = {
   modelNumber: string
   technicalDescription: string
   usageType: 'industrial' | 'residential'
+  /** ESS | INV | PV | PCS | BMS | ACC | CHG */
+  productType: ProductModelType
   imageUrl?: string | null
   /** 600×600 catalog image uploaded via admin cropper. */
   productImageUrl?: string | null
@@ -2788,6 +2794,7 @@ export type UpdateAdminProductModelPayload = {
   modelNumber: string
   technicalDescription: string
   usageType: 'industrial' | 'residential'
+  productType: ProductModelType
   imageUrl?: string | null
   productImageUrl?: string | null
   availableForStock: boolean

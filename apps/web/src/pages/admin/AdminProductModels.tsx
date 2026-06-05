@@ -8,6 +8,8 @@ import {
   updateAdminProductModel,
   type AdminProductModelRow,
   type UpdateAdminProductModelPayload,
+  type ProductModelType,
+  PRODUCT_MODEL_TYPES,
 } from '../../lib/api'
 
 type ProductModelDraft = UpdateAdminProductModelPayload
@@ -184,6 +186,7 @@ export default function AdminProductModels() {
         modelNumber: base.modelNumber,
         technicalDescription: base.technicalDescription,
         usageType: base.usageType,
+        productType: base.productType ?? 'ESS',
         imageUrl: base.imageUrl ?? null,
         productImageUrl: base.productImageUrl ?? null,
         availableForStock: base.availableForStock !== false,
@@ -238,6 +241,7 @@ export default function AdminProductModels() {
       modelNumber: drawerRow.modelNumber,
       technicalDescription: composed,
       usageType: drawerRow.usageType,
+      productType: drawerRow.productType ?? 'ESS',
       imageUrl: drawerRow.imageUrl ?? null,
       productImageUrl: drawerRow.productImageUrl ?? null,
       availableForStock: drawerRow.availableForStock !== false,
@@ -456,7 +460,10 @@ export default function AdminProductModels() {
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
                     Energy
                   </th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8%]">
+                    Usage
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[7%]">
                     Type
                   </th>
                   <th className="px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.25rem] text-center">
@@ -533,6 +540,19 @@ export default function AdminProductModels() {
                       >
                         <option value="industrial">Industrial</option>
                         <option value="residential">Residential</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select
+                        value={row.productType ?? 'ESS'}
+                        onChange={(e) =>
+                          setDraftField(row.id, 'productType', e.target.value as ProductModelType)
+                        }
+                        className={`${inputCellClass} cursor-pointer pr-7 text-sm font-mono`}
+                      >
+                        {PRODUCT_MODEL_TYPES.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
                       </select>
                     </td>
                     <td className="px-2 py-2.5 text-center">
@@ -638,6 +658,7 @@ export default function AdminProductModels() {
                               modelNumber: row.modelNumber,
                               technicalDescription: row.technicalDescription,
                               usageType: row.usageType,
+                              productType: row.productType ?? 'ESS',
                               imageUrl: row.imageUrl ?? null,
                               productImageUrl: row.productImageUrl ?? null,
                               availableForStock: row.availableForStock !== false,
