@@ -9281,6 +9281,50 @@ app.delete(
   deleteAdminCommercialOfferHandler,
 )
 
+async function listAdminOfferNotesHandler(req, res) {
+  try {
+    const { id } = req.params
+    const notes = await prisma.adminCommercialOfferNote.findMany({
+      where: { offerId: id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, createdAt: true, authorName: true, body: true },
+    })
+    return res.json({ notes })
+  } catch (err) {
+    console.error('List offer notes error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea notițelor.' })
+  }
+}
+
+async function addAdminOfferNoteHandler(req, res) {
+  try {
+    const { id } = req.params
+    const body = String(req.body?.body ?? '').trim()
+    if (!body) return res.status(400).json({ error: 'Notița nu poate fi goală.' })
+    const offer = await prisma.adminCommercialOffer.findUnique({ where: { id } })
+    if (!offer) return res.status(404).json({ error: 'Oferta nu există.' })
+    const user = req.userId
+      ? await prisma.user.findUnique({ where: { id: req.userId }, select: { firstName: true, lastName: true, email: true } })
+      : null
+    const authorName = user
+      ? (`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email || '')
+      : ''
+    const note = await prisma.adminCommercialOfferNote.create({
+      data: { offerId: id, authorId: req.userId || null, authorName, body },
+      select: { id: true, createdAt: true, authorName: true, body: true },
+    })
+    return res.status(201).json({ note })
+  } catch (err) {
+    console.error('Add offer note error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea notiței.' })
+  }
+}
+
+app.get('/api/admin/commercial-offers/:id/notes', authMiddleware, adminAuthMiddleware, listAdminOfferNotesHandler)
+app.get('/admin/commercial-offers/:id/notes', authMiddleware, adminAuthMiddleware, listAdminOfferNotesHandler)
+app.post('/api/admin/commercial-offers/:id/notes', authMiddleware, adminAuthMiddleware, addAdminOfferNoteHandler)
+app.post('/admin/commercial-offers/:id/notes', authMiddleware, adminAuthMiddleware, addAdminOfferNoteHandler)
+
 app.post(
   '/api/admin/product-models/:id/technical-brochure',
   authMiddleware,

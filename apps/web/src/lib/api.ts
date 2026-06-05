@@ -3020,6 +3020,34 @@ export async function deleteAdminCommercialOffer(id: string): Promise<void> {
   }
 }
 
+export type AdminOfferNote = {
+  id: string
+  createdAt: string
+  authorName: string
+  body: string
+}
+
+export async function getAdminOfferNotes(offerId: string): Promise<AdminOfferNote[]> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers/${encodeURIComponent(offerId)}/notes`, {
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; notes?: AdminOfferNote[] }
+  if (!res.ok) throw new Error(json.error || 'Eroare la încărcarea notițelor.')
+  return json.notes ?? []
+}
+
+export async function addAdminOfferNote(offerId: string, body: string): Promise<AdminOfferNote> {
+  const res = await fetch(`${API_BASE}/admin/commercial-offers/${encodeURIComponent(offerId)}/notes`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string; note?: AdminOfferNote }
+  if (!res.ok) throw new Error(json.error || 'Eroare la salvarea notiței.')
+  if (!json.note) throw new Error('Răspuns invalid.')
+  return json.note
+}
+
 export async function updateAdminProductModel(
   id: string,
   payload: UpdateAdminProductModelPayload,

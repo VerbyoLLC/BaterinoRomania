@@ -49,6 +49,7 @@ model User {
   salesAgentProfile         SalesAgent? @relation("UserSalesAgent")
   retururi                  Retur[]
   adminCommercialOffers     AdminCommercialOffer[]
+  commercialOfferNotes      AdminCommercialOfferNote[] @relation("UserOfferNotes")
   salesLeadsCreated         SalesLead[]
   salesLeadActivities       SalesLeadActivity[]
   salesLeadUserStates       SalesLeadUserState[]
@@ -694,11 +695,28 @@ model AdminCommercialOffer {
   pdfUrl          String
   createdByUserId String?
   createdBy       User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notes           AdminCommercialOfferNote[]
 
   @@index([createdAt])
   @@index([buyerType])
   @@index([status])
   @@map("admin_commercial_offer")
+}
+
+/** Notă internă atașată unei oferte comerciale. */
+model AdminCommercialOfferNote {
+  id          String               @id @default(cuid())
+  createdAt   DateTime             @default(now())
+  offerId     String
+  offer       AdminCommercialOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  authorId    String?
+  author      User?                @relation("UserOfferNotes", fields: [authorId], references: [id], onDelete: SetNull)
+  authorName  String               @default("")
+  body        String
+
+  @@index([offerId])
+  @@index([createdAt])
+  @@map("admin_commercial_offer_note")
 }
 
 /** Lead comercial — creat de agent vânzări sau (viitor) din alte surse. */
