@@ -87,6 +87,8 @@ import SalesAgentSettings from './pages/sales-agent/SalesAgentSettings'
 import { INSTALATORI_ONLY } from './lib/siteMode'
 import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
 import { CartProvider } from './contexts/CartContext'
+import { SeoConfigProvider } from './contexts/SeoConfigContext'
+import AdminSiteSeo from './pages/admin/AdminSiteSeo'
 import ClientOutlet from './pages/client/ClientOutlet'
 import ClientDashboard from './pages/client/ClientDashboard'
 import ClientOrders from './pages/client/ClientOrders'
@@ -113,6 +115,7 @@ export default function App() {
     <Helmet defaultTitle="Baterino Romania" />
     <BrowserRouter>
       <CookieConsentProvider>
+      <SeoConfigProvider>
       <ToastProvider>
       <CartProvider>
       <CatalogCurrencyProvider>
@@ -153,6 +156,7 @@ export default function App() {
           <Route path="company-data" element={<AdminCompanyData />} />
           <Route path="phone-numbers" element={<AdminPhoneNumbers />} />
           <Route path="agents" element={<AdminAgents />} />
+          <Route path="site-seo" element={<AdminSiteSeo />} />
           <Route path="warranty-certificate-preview" element={<AdminWarrantyCertificatePreview />} />
         </Route>
 
@@ -276,6 +280,7 @@ export default function App() {
       </CatalogCurrencyProvider>
       </CartProvider>
       </ToastProvider>
+      </SeoConfigProvider>
       </CookieConsentProvider>
     </BrowserRouter>
     </HelmetProvider>

@@ -15,6 +15,7 @@ import {
 import { getCitiesForCounty, ROMANIAN_COUNTIES, type RomanianCounty } from '../lib/romanian-counties-cities'
 import { getReturnareProduseTranslations } from '../i18n/returnare-produse'
 import SEO from '../components/SEO'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 
 const inputClass =
   'box-border h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300/80 font-[\'Inter\']'
@@ -358,6 +359,7 @@ function renderInlineBold(text: string) {
 export default function ReturnareProduse() {
   const { language } = useLanguage()
   const tr = getReturnareProduseTranslations(language.code)
+  const seo = useSeoPage('returnare')
   const f = tr.clientInfoForm
   const uid = useId().replace(/:/g, '')
 
@@ -941,9 +943,12 @@ export default function ReturnareProduse() {
   return (
     <>
       <SEO
-        title={tr.seoTitle}
-        description={tr.seoDesc}
+        title={seo.title || tr.seoTitle}
+        description={seo.description || tr.seoDesc}
         canonical="/returnare-produse"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
 

@@ -469,6 +469,18 @@ model DepartmentPhone {
   updatedAt  DateTime @updatedAt
 }
 
+/** SEO per pagină statică — cheie primară = pageKey (slug pagină). */
+model PageSeo {
+  pageKey     String   @id
+  title       String   @default("")
+  description String   @default("") @db.Text
+  ogTitle     String   @default("")
+  ogDescription String @default("") @db.Text
+  ogImage     String   @default("")
+  updatedAt   DateTime @updatedAt
+  @@map("page_seo")
+}
+
 /** Setări site cheie–valoare (ex. catalog_currency = EUR | RON | …) */
 model SiteSetting {
   key       String   @id

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, Search } from 'lucide-react'
 import SEO from '../components/SEO'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getIntrebariFrecventeTranslations } from '../i18n/intrebari-frecvente'
 
 function normalizeSearchText(value: string): string {
@@ -16,6 +17,7 @@ function normalizeSearchText(value: string): string {
 export default function IntrebariFrecvente() {
   const { language } = useLanguage()
   const tr = getIntrebariFrecventeTranslations(language.code)
+  const seo = useSeoPage('faq')
   const [query, setQuery] = useState('')
 
   const filteredSections = useMemo(() => {
@@ -38,9 +40,12 @@ export default function IntrebariFrecvente() {
   return (
     <>
       <SEO
-        title={tr.pageTitle}
-        description={tr.pageDescription}
+        title={seo.title || tr.pageTitle}
+        description={seo.description || tr.pageDescription}
         canonical="/intrebari-frecvente"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
 

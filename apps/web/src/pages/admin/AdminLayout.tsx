@@ -268,6 +268,15 @@ function IconAgents() {
     </svg>
   )
 }
+function IconSeo() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <circle cx="11" cy="11" r="7" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h6M8 14h4" />
+    </svg>
+  )
+}
 function IconTemplates() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -334,6 +343,7 @@ const ADMIN_SETARI_LINKS: { to: string; label: string; icon: ReactNode }[] = [
   { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
   { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
   { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },
+  { to: '/admin/site-seo', label: 'Site SEO', icon: <IconSeo /> },
 ]
 const PARTENERI_PATHS = ['/admin/clients', '/admin/companies'] as const
 const MEDIA_PATHS = ['/admin/articles', '/admin/studii-de-caz', '/admin/discounts'] as const

@@ -1,11 +1,16 @@
 import SEO from '../components/SEO'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 
 export default function Blog() {
+  const seo = useSeoPage('blog')
   return (
     <>
       <SEO
-        title="Blog – Baterino România"
-        description="Știri și articole despre baterii LiFePO4, sisteme fotovoltaice și stocare energetică."
+        title={seo.title || 'Blog – Baterino România'}
+        description={seo.description || 'Știri și articole despre baterii LiFePO4, sisteme fotovoltaice și stocare energetică.'}
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
       />
       <div className="max-w-content mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Blog</h1>

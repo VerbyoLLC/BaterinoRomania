@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import SEO from '../components/SEO'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getVerificareGarantieTranslations } from '../i18n/verificare-garantie'
 import {
   extractWarrantyVerifyTokenFromPaste,
@@ -22,6 +23,7 @@ type WarrantyDialogState =
 export default function VerificareGarantie() {
   const { language } = useLanguage()
   const tr = getVerificareGarantieTranslations(language.code)
+  const seo = useSeoPage('garantie')
   const [searchParams] = useSearchParams()
   const [serialNumber, setSerialNumber] = useState('')
   const [dialog, setDialog] = useState<WarrantyDialogState>(null)
@@ -261,9 +263,12 @@ export default function VerificareGarantie() {
   return (
     <>
       <SEO
-        title={tr.pageTitle}
-        description={tr.pageDescription}
+        title={seo.title || tr.pageTitle}
+        description={seo.description || tr.pageDescription}
         canonical="/verificare-garantie"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
 

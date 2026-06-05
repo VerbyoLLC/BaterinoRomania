@@ -4257,6 +4257,42 @@ export async function getAdminCompanyData(): Promise<AdminCompanyData> {
   return normalizeAdminCompanyData(json)
 }
 
+// ── Page SEO ────────────────────────────────────────────────────────────
+
+export type PageSeoDto = {
+  pageKey: string
+  title: string
+  description: string
+  ogTitle: string
+  ogDescription: string
+  ogImage: string
+}
+
+export async function getPageSeoAll(): Promise<PageSeoDto[]> {
+  try {
+    const res = await fetch(`${API_BASE}/page-seo`, { cache: 'no-store' })
+    if (!res.ok) return []
+    const json = await res.json().catch(() => [])
+    return Array.isArray(json) ? json : []
+  } catch {
+    return []
+  }
+}
+
+export async function saveAdminPageSeo(
+  pageKey: string,
+  data: Omit<PageSeoDto, 'pageKey'>,
+): Promise<PageSeoDto> {
+  const res = await fetch(`${API_BASE}/admin/page-seo/${encodeURIComponent(pageKey)}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((json as { error?: string }).error || 'Eroare la salvare.')
+  return json as PageSeoDto
+}
+
 export async function saveAdminCompanyData(data: AdminCompanyData): Promise<AdminCompanyData> {
   const res = await fetch(`${API_BASE}/admin/company-data`, {
     method: 'PUT',

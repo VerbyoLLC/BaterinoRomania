@@ -16,6 +16,7 @@ import {
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 import CTABar from '../components/CTABar'
 import HomeHeroV2 from '../components/home/HomeHeroV2'
 import HomeMobileSlider from '../components/home/HomeMobileSlider'
@@ -120,6 +121,7 @@ export default function Home() {
   const { language } = useLanguage()
   const { currency } = useCatalogCurrency()
   const tr = getHomeTranslations(language.code)
+  const seo = useSeoPage('home')
 
   const [activeTab,  setActiveTab]  = useState<string>('rezidential')
   const [mobileTabOpen, setMobileTabOpen] = useState(false)
@@ -256,10 +258,12 @@ export default function Home() {
   return (
     <>
       <SEO
-        title={tr.seoTitle}
-        description={tr.seoDesc}
+        title={seo.title || tr.seoTitle}
+        description={seo.description || tr.seoDesc}
         canonical="/"
-        ogImage="/images/home/og-baterino-romania.jpg"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || '/images/home/og-baterino-romania.jpg'}
         lang={language.code}
       />
 

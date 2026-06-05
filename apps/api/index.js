@@ -9630,6 +9630,51 @@ app.get('/api/download-proxy', async (req, res) => {
   }
 })
 
+// ── Page SEO ────────────────────────────────────────────────────────────
+const PAGE_SEO_ALLOWED_KEYS = new Set([
+  'home', 'produse', 'blog', 'faq', 'garantie', 'service', 'returnare',
+  'rezidential', 'industrial', 'medical', 'maritim', 'lithtech', 'instalatori',
+  'viziune', 'studii-de-caz', 'contact', 'cariere',
+])
+
+const getPageSeoHandler = async (req, res) => {
+  try {
+    const rows = await prisma.pageSeo.findMany()
+    res.json(rows)
+  } catch (err) {
+    console.error('page-seo get:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+
+const putAdminPageSeoHandler = async (req, res) => {
+  try {
+    const { pageKey } = req.params
+    if (!PAGE_SEO_ALLOWED_KEYS.has(pageKey)) {
+      return res.status(400).json({ error: 'pageKey invalid.' })
+    }
+    const title = String(req.body?.title ?? '').trim()
+    const description = String(req.body?.description ?? '').trim()
+    const ogTitle = String(req.body?.ogTitle ?? '').trim()
+    const ogDescription = String(req.body?.ogDescription ?? '').trim()
+    const ogImage = String(req.body?.ogImage ?? '').trim()
+    const row = await prisma.pageSeo.upsert({
+      where: { pageKey },
+      create: { pageKey, title, description, ogTitle, ogDescription, ogImage },
+      update: { title, description, ogTitle, ogDescription, ogImage },
+    })
+    res.json(row)
+  } catch (err) {
+    console.error('admin page-seo put:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+}
+
+app.get('/api/page-seo', getPageSeoHandler)
+app.get('/page-seo', getPageSeoHandler)
+app.put('/api/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
+app.put('/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
+
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────
 app.use((req, res) => {
   console.log('[404]', req.method, req.url)

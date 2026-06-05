@@ -15,6 +15,7 @@ import {
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 import {
   CatalogProductCardSkeleton,
   HorizontalCatalogProductCard,
@@ -34,6 +35,7 @@ const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
 
 export default function Produse() {
   const { language } = useLanguage()
+  const seo = useSeoPage('produse')
   const { currency } = useCatalogCurrency()
   const tr = getProduseTranslations(language.code)
   const [searchParams] = useSearchParams()
@@ -103,9 +105,12 @@ export default function Produse() {
   return (
     <>
       <SEO
-        title={tr.seoTitle}
-        description={tr.seoDesc}
+        title={seo.title || tr.seoTitle}
+        description={seo.description || tr.seoDesc}
         canonical="/produse"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
 

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import SEO from '../components/SEO'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getServiceLithtechTranslations } from '../i18n/service-lithtech'
 
 const SUPPORT_CONTACT_PATH = '/contact?requestType=service'
@@ -35,14 +36,18 @@ function SupportCtaLink({ label, className }: { label: string; className?: strin
 export default function ServiceLithtech() {
   const { language } = useLanguage()
   const tr = getServiceLithtechTranslations(language.code)
+  const seo = useSeoPage('service')
   const authorizedBadge = AUTHORIZED_BADGE[language.code] ?? AUTHORIZED_BADGE.ro
 
   return (
     <>
       <SEO
-        title={tr.seoTitle}
-        description={tr.seoDesc}
+        title={seo.title || tr.seoTitle}
+        description={seo.description || tr.seoDesc}
         canonical="/service-lithtech-romania"
+        ogTitle={seo.ogTitle || undefined}
+        ogDescription={seo.ogDescription || undefined}
+        ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
 
