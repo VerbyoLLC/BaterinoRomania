@@ -1466,33 +1466,12 @@ export default function AdminProducts() {
                   </div>
                 ) : null}
 
-              {/* Categorie produs */}
-              <div>
-                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">Categorie produs</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setCategoryId(val)
-                    const cat = categories.find((c) => c.id === val)
-                    if (cat?.slug === 'baterii-solare') setTipProdus('rezidential')
-                    else if (cat?.slug === 'sisteme-bess') setTipProdus('industrial')
-                  }}
-                  className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-['Inter'] text-gray-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
-                >
-                  <option value="">— Fără categorie —</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tip Produs */}
+              {/* Template Produs */}
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <label className="block text-sm font-bold font-['Inter'] text-gray-900 m-0">Tip Produs</label>
+                  <label className="block text-sm font-bold font-['Inter'] text-gray-900 m-0">Template Produs</label>
                   <AdminInfoTooltip
-                    label="Informații tip produs"
+                    label="Informații template produs"
                     text="Determină șablonul folosit la afișare. Rezidențial — descriere, preț, specificații tehnice, documente, FAQ. Industrial — carousel, Overview, avantaje cheie și broșură PDF."
                   />
                 </div>
@@ -1522,9 +1501,30 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Categorie */}
+              {/* Categorie produs */}
               <div>
-                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-3">Categorie</label>
+                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">Categorie produs</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCategoryId(val)
+                    const cat = categories.find((c) => c.id === val)
+                    if (cat?.slug === 'baterii-solare') setTipProdus('rezidential')
+                    else if (cat?.slug === 'sisteme-bess') setTipProdus('industrial')
+                  }}
+                  className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-['Inter'] text-gray-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
+                >
+                  <option value="">— Fără categorie —</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtre */}
+              <div>
+                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-3">Filtre</label>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={categorieRezidential} onChange={(e) => setCategorieRezidential(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900" />
