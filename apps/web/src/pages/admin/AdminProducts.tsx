@@ -8,6 +8,7 @@ import {
   getAdminProduct,
   getAdminProductModels,
   getAdminReducerePrograms,
+  getProductCategories,
   updateProductStatus,
   deleteProduct,
   normalizeProductReducereProgramIds,
@@ -15,6 +16,7 @@ import {
   type AdminProduct,
   type CreateProductPayload,
   type ReducereProgramRow,
+  type ProductCategory,
 } from '../../lib/api'
 import {
   INDUSTRIAL_SPEC_FIELDS,
@@ -85,6 +87,8 @@ export default function AdminProducts() {
   const advantageUploadIndexRef = useRef(0)
   const [images, setImages] = useState<{ file: File | null; preview: string; url?: string }[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [categories, setCategories] = useState<ProductCategory[]>([])
+  const [categoryId, setCategoryId] = useState<string>('')
   const [tipProdus, setTipProdus] = useState<'rezidential' | 'industrial'>('rezidential')
   const [categorieRezidential, setCategorieRezidential] = useState(false)
   const [categorieIndustrial, setCategorieIndustrial] = useState(false)
@@ -188,6 +192,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     fetchProducts()
+    getProductCategories().then(setCategories).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -345,6 +350,7 @@ export default function AdminProducts() {
         | 'rezidential'
         | 'industrial'
     )
+    setCategoryId((row as { categoryId?: string | null }).categoryId ?? '')
     const cat = String((row as { categorie?: string }).categorie || '').toLowerCase()
     setCategorieRezidential(cat.includes('rezidential'))
     setCategorieIndustrial(cat.includes('industrial'))
@@ -480,6 +486,7 @@ export default function AdminProducts() {
     setDescription('')
     setKeyAdvantages([])
     setTipProdus('rezidential')
+    setCategoryId('')
     setCategorieRezidential(false)
     setCategorieIndustrial(false)
     setCategorieMedical(false)
@@ -1089,6 +1096,7 @@ export default function AdminProducts() {
       slug: productSlug.trim() || undefined,
       description: descriptionOut,
       tipProdus,
+      categoryId: categoryId || null,
       categorie:
         [
           categorieRezidential && 'rezidential',
@@ -1457,6 +1465,27 @@ export default function AdminProducts() {
                     Produsul a fost salvat.
                   </div>
                 ) : null}
+
+              {/* Categorie produs */}
+              <div>
+                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">Categorie produs</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCategoryId(val)
+                    const cat = categories.find((c) => c.id === val)
+                    if (cat?.slug === 'baterii-solare') setTipProdus('rezidential')
+                    else if (cat?.slug === 'sisteme-bess') setTipProdus('industrial')
+                  }}
+                  className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-['Inter'] text-gray-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
+                >
+                  <option value="">— Fără categorie —</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Tip Produs */}
               <div>

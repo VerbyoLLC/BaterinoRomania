@@ -6514,6 +6514,7 @@ const createProductHandler = async (req, res) => {
           body.seoOgImage != null && String(body.seoOgImage).trim() ? String(body.seoOgImage).trim() : null,
         tipProdus,
         categorie: body.categorie?.trim() || null,
+        categoryId: body.categoryId?.trim() || null,
         priceVisibility: parsePriceVisibility(body.priceVisibility),
         pricePresentation: parsePricePresentation(body.pricePresentation),
         catalogStockStatus:
@@ -6613,6 +6614,7 @@ const updateProductHandler = async (req, res) => {
     if (body.seoOgImage !== undefined)
       data.seoOgImage = body.seoOgImage != null && String(body.seoOgImage).trim() ? String(body.seoOgImage).trim() : null
     if (body.categorie !== undefined) data.categorie = body.categorie?.trim() || null
+    if (body.categoryId !== undefined) data.categoryId = body.categoryId?.trim() || null
     if (body.priceVisibility !== undefined) data.priceVisibility = parsePriceVisibility(body.priceVisibility)
     if (body.pricePresentation !== undefined) data.pricePresentation = parsePricePresentation(body.pricePresentation)
     if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
@@ -7980,13 +7982,16 @@ app.patch(
 const listPublicProductsHandler = async (req, res) => {
   try {
     if (!prisma.product) return res.status(500).json({ error: 'Server misconfiguration.' })
+    const productInclude = { category: { select: { id: true, slug: true, name: true } } }
     let products = await prisma.product.findMany({
       where: { status: 'published' },
       orderBy: { createdAt: 'desc' },
+      include: productInclude,
     })
     if (products.length === 0) {
       products = await prisma.product.findMany({
         orderBy: { createdAt: 'desc' },
+        include: productInclude,
       })
     }
     products = sortProductsResidentialFirst(products)
@@ -8003,6 +8008,24 @@ const listPublicProductsHandler = async (req, res) => {
 }
 app.get('/api/products', listPublicProductsHandler)
 app.get('/products', listPublicProductsHandler)
+
+// ── Public: list product categories ────────────────────────────────────
+app.get('/api/product-categories', async (_req, res) => {
+  try {
+    const cats = await prisma.productCategory.findMany({ orderBy: { order: 'asc' } })
+    return res.json(cats)
+  } catch (err) {
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+app.get('/product-categories', async (_req, res) => {
+  try {
+    const cats = await prisma.productCategory.findMany({ orderBy: { order: 'asc' } })
+    return res.json(cats)
+  } catch (err) {
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
 
 /** Modele produs (catalog) pentru formulare publice (ex. retur) — fără auth, fără specificații tehnice complete. */
 const listPublicProductModelsHandler = async (_req, res) => {
@@ -8054,17 +8077,20 @@ const getPublicProductHandler = async (req, res) => {
   try {
     const { id } = req.params
     const isCuid = /^c[a-z0-9]{24}$/.test(id)
+    const catInclude = { category: { select: { id: true, slug: true, name: true } } }
     let product = await prisma.product.findFirst({
       where: {
         status: 'published',
         ...(isCuid ? { id } : { slug: id }),
       },
+      include: catInclude,
     })
     if (!product) {
       const publishedCount = await prisma.product.count({ where: { status: 'published' } })
       if (publishedCount === 0) {
         product = await prisma.product.findFirst({
           where: isCuid ? { id } : { slug: id },
+          include: catInclude,
         })
       }
     }

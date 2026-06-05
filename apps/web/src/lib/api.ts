@@ -356,12 +356,29 @@ export function getProductCardImageUrl(
 }
 
 /** Produs public (pagina /produse) */
+export type ProductCategory = {
+  id: string
+  slug: string
+  name: string
+  order: number
+  createdAt: string
+}
+
+export async function getProductCategories(): Promise<ProductCategory[]> {
+  const res = await fetch(`${API_BASE}/product-categories`)
+  if (!res.ok) return []
+  const json = await res.json().catch(() => [])
+  return Array.isArray(json) ? json : []
+}
+
 export type PublicProduct = {
   id: string
   slug?: string | null
   title: string
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string | null
+  categoryId?: string | null
+  category?: ProductCategory | null
   description?: string | null
   subtitle?: string | null
   overview?: string | null
@@ -2227,6 +2244,7 @@ export type CreateProductPayload = {
   keyAdvantages?: { title: string; image: string }[]
   tipProdus: 'rezidential' | 'industrial'
   categorie?: string
+  categoryId?: string | null
   priceVisibility?: 'hidden' | 'public' | 'partner_only'
   pricePresentation?: 'simple' | 'detailed'
   /** Doar rezidențial; la industrial se trimite null din admin */
