@@ -534,10 +534,13 @@ export default function AdminProductModels() {
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8%]">
                     Series
                   </th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[11%]">
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
                     Model
                   </th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[10%]">
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[13%]">
+                    SKU
+                  </th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[9%]">
                     Energy
                   </th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8%]">
@@ -605,6 +608,14 @@ export default function AdminProductModels() {
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
                         className={`${inputCellClass} font-mono text-[13px]`}
                       />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-xs font-mono font-medium leading-snug text-slate-700 truncate"
+                        title={row.sku || `${row.brand}-${row.productType ?? 'ESS'}-${row.modelNumber}`}
+                      >
+                        {row.sku || `${row.brand}-${row.productType ?? 'ESS'}-${row.modelNumber}`}
+                      </span>
                     </td>
                     <td className="px-3 py-2.5">
                       <span

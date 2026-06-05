@@ -8709,6 +8709,13 @@ app.get(
   downloadAdminWarehouseWarrantyCertificateHandler,
 )
 
+function buildModelSku(brand, productType, modelNumber) {
+  const b = String(brand || '').trim()
+  const t = String(productType || 'ESS').trim()
+  const m = String(modelNumber || '').trim()
+  return [b, t, m].filter(Boolean).join('-')
+}
+
 const listProductModelsHandler = async (req, res) => {
   try {
     const rows = await prisma.productModel.findMany({
@@ -8725,6 +8732,7 @@ const listProductModelsHandler = async (req, res) => {
         technicalDescription: r.technicalDescription,
         usageType: r.usageType === 'residential' ? 'residential' : 'industrial',
         productType: r.productType || 'ESS',
+        sku: r.sku || buildModelSku(r.brand, r.productType, r.modelNumber),
         imageUrl: r.imageUrl || null,
         productImageUrl: r.productImageUrl || null,
         availableForStock: r.availableForStock !== false,
@@ -8769,9 +8777,10 @@ const updateProductModelHandler = async (req, res) => {
       return res.status(400).json({ error: 'Tip invalid. Folosește industrial sau residential.' })
     }
 
+    const sku = buildModelSku(brand, productType, modelNumber)
     const updated = await prisma.productModel.update({
       where: { id },
-      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, imageUrl, productImageUrl, availableForStock },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, sku, imageUrl, productImageUrl, availableForStock },
     })
     return res.json({
       id: updated.id,
@@ -8782,6 +8791,7 @@ const updateProductModelHandler = async (req, res) => {
       technicalDescription: updated.technicalDescription,
       usageType: updated.usageType === 'residential' ? 'residential' : 'industrial',
       productType: updated.productType || 'ESS',
+      sku: updated.sku || buildModelSku(updated.brand, updated.productType, updated.modelNumber),
       imageUrl: updated.imageUrl || null,
       productImageUrl: updated.productImageUrl || null,
       availableForStock: updated.availableForStock !== false,
@@ -9392,8 +9402,9 @@ async function createProductModelHandler(req, res) {
       return res.status(400).json({ error: 'Tip invalid.' })
     }
 
+    const sku = buildModelSku(brand, productType, modelNumber)
     const created = await prisma.productModel.create({
-      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, availableForStock, sortOrder: 0 },
+      data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, sku, availableForStock, sortOrder: 0 },
     })
     return res.status(201).json({
       id: created.id,
@@ -9404,6 +9415,7 @@ async function createProductModelHandler(req, res) {
       technicalDescription: created.technicalDescription,
       usageType: created.usageType === 'residential' ? 'residential' : 'industrial',
       productType: created.productType || 'ESS',
+      sku: created.sku || buildModelSku(created.brand, created.productType, created.modelNumber),
       imageUrl: null,
       productImageUrl: null,
       availableForStock: created.availableForStock !== false,

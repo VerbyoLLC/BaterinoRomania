@@ -430,6 +430,8 @@ model ProductModel {
   usageType            String   @default("industrial")
   /** ESS | INV | PV | PCS | BMS | ACC | CHG */
   productType          String   @default("ESS")
+  /** Auto-generated: Brand-Type-ModelNumber */
+  sku                  String   @default("")
   imageUrl             String?  @db.Text
   /** 600×600 catalog image for the product model (uploaded via admin cropper). */
   productImageUrl      String?  @db.Text

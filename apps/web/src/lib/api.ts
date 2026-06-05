@@ -2777,6 +2777,8 @@ export type AdminProductModelRow = {
   usageType: 'industrial' | 'residential'
   /** ESS | INV | PV | PCS | BMS | ACC | CHG */
   productType: ProductModelType
+  /** Auto-generated: Brand-Type-ModelNumber */
+  sku: string
   imageUrl?: string | null
   /** 600×600 catalog image uploaded via admin cropper. */
   productImageUrl?: string | null
