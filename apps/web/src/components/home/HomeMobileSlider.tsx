@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgePercent, Headphones, ShieldCheck, Truck } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
 const SLIDES = [
   '/images/slider2mobile/slide1.jpg',
-  '/images/slider2mobile/slide2.png',
   '/images/slider2mobile/slide3.jpg',
   '/images/slider2mobile/slide4.jpg',
   '/images/slider2mobile/slide6.jpg',
@@ -13,14 +12,9 @@ const SLIDES = [
 ]
 
 const CARD_HEIGHT = 450
-const AUTO_MS = 4500
 const CARD_W = 'calc(100vw - 2.5rem)' // ~85 % viewport, leaving a peek of next card
 
 const textShadow = { textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.5)' }
-
-function Dot({ light = false }: { light?: boolean }) {
-  return <span className={`mt-[0.35rem] size-1 shrink-0 rounded-full ${light ? 'bg-white/70' : 'bg-slate-400'}`} aria-hidden />
-}
 
 // ── Per-slide overlay components ─────────────────────────────────────────────
 
@@ -64,32 +58,6 @@ function SlideReduceri({ tr }: { tr: HomeTranslations }) {
         <p className="text-sm font-normal leading-snug normal-case text-white font-['Inter']">{tr.heroV2Card2Subtitle}</p>
         <Link to="/reduceri" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2Card2Cta}
-        </Link>
-      </div>
-    </>
-  )
-}
-
-function SlideRezidentialAlt({ tr }: { tr: HomeTranslations }) {
-  return (
-    <>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0.10) 65%, transparent 80%)' }} aria-hidden />
-      <span className="absolute top-4 right-4 z-10 inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black font-['Inter'] pointer-events-none">
-        {tr.heroV2MedStockTag}
-      </span>
-      <div className="absolute inset-x-4 bottom-5 z-10 pointer-events-none" style={textShadow}>
-        <p className="mb-1 text-xs font-medium text-white/75 font-['Inter']">{tr.heroV2RezProductSubtitle}</p>
-        <h2 className="text-xl font-bold leading-tight text-white font-['Inter']">{tr.heroV2RezProductTitle}</h2>
-        <ul className="mt-3 space-y-2">
-          {[tr.heroV2RezBadgeGarantie, tr.heroV2RezBadgeService, tr.heroV2RezBadgeSwap].map((label) => (
-            <li key={label} className="flex items-start gap-2 text-sm text-white/90 font-['Inter']">
-              <Dot light />
-              {label}
-            </li>
-          ))}
-        </ul>
-        <Link to="/produse?sector=rezidential" className="mt-4 pointer-events-auto inline-flex h-10 w-full items-center justify-center rounded-[8px] bg-white px-4 text-sm font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
-          {tr.heroCardCta}
         </Link>
       </div>
     </>
@@ -181,19 +149,8 @@ type Props = { tr: HomeTranslations }
 export default function HomeMobileSlider({ tr }: Props) {
   const [current, setCurrent] = useState(0)
   const touchStartX = useRef<number | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => setCurrent((c) => (c + 1) % SLIDES.length), AUTO_MS)
-  }, [])
-
-  useEffect(() => {
-    startTimer()
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [startTimer])
-
-  const goTo = (index: number) => { setCurrent(index); startTimer() }
+  const goTo = (index: number) => setCurrent(index)
 
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -201,14 +158,12 @@ export default function HomeMobileSlider({ tr }: Props) {
     const dx = e.changedTouches[0].clientX - touchStartX.current
     if (Math.abs(dx) > 40) {
       setCurrent((c) => dx < 0 ? (c + 1) % SLIDES.length : (c - 1 + SLIDES.length) % SLIDES.length)
-      startTimer()
     }
     touchStartX.current = null
   }
 
   const overlays = [
     <SlideReduceri tr={tr} />,
-    <SlideRezidentialAlt tr={tr} />,
     <SlideRezidential tr={tr} />,
     <SlideMaritim tr={tr} />,
     <SlideMedical tr={tr} />,
