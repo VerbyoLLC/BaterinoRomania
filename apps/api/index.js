@@ -9130,6 +9130,8 @@ async function listAdminCommercialOffersHandler(req, res) {
         currency: true,
         productCount: true,
         pdfUrl: true,
+        offerNumber: true,
+        country: true,
         draftSnapshot: true,
         _count: { select: { notes: true } },
       },
