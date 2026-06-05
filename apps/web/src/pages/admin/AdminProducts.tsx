@@ -69,6 +69,7 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [productSlug, setProductSlug] = useState<string | null>(null)
   const [productsError, setProductsError] = useState<string | null>(null)
   const [filterCategorie, setFilterCategorie] = useState<'all' | 'rezidential' | 'industrial' | 'medical' | 'maritim'>('all')
   const [brand, setBrand] = useState('')
@@ -321,6 +322,7 @@ export default function AdminProducts() {
       /* fallback: grid row (may omit nested JSON if response was ever truncated) */
     }
 
+    setProductSlug((row as { slug?: string }).slug || null)
     setBrand(row.brand || '')
     setTitle(row.title || '')
     setSku(row.sku || '')
@@ -468,6 +470,7 @@ export default function AdminProducts() {
 
   const handleOpenPanel = () => {
     setEditingProductId(null)
+    setProductSlug(null)
     setSaveError(null)
     setBrand('')
     setTitle('')
@@ -1855,6 +1858,20 @@ export default function AdminProducts() {
                       placeholder={tipProdus === 'industrial' ? 'Titlu principal (hero)' : 'Ex: EcoHome 5 kWh'}
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
+                    {productSlug ? (
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400 font-['Inter'] shrink-0">Slug:</span>
+                        <a
+                          href={`/produse/${productSlug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono text-[#1e46b4] hover:underline truncate"
+                          title={`/produse/${productSlug}`}
+                        >
+                          /produse/{productSlug}
+                        </a>
+                      </div>
+                    ) : null}
                   </div>
                   {tipProdus === 'industrial' ? (
                     <div>
