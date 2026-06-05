@@ -9351,6 +9351,24 @@ app.get('/api/admin/product-models', authMiddleware, adminAuthMiddleware, listPr
 app.get('/admin/product-models', authMiddleware, adminAuthMiddleware, listProductModelsHandler)
 app.patch('/api/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
 app.patch('/admin/product-models/:id', authMiddleware, adminAuthMiddleware, updateProductModelHandler)
+
+async function deleteProductModelHandler(req, res) {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const existing = await prisma.productModel.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ error: 'Modelul nu a fost găsit.' })
+    await prisma.productModel.delete({ where: { id } })
+    return res.json({ ok: true })
+  } catch (err) {
+    if (err?.code === 'P2025') return res.status(404).json({ error: 'Modelul nu a fost găsit.' })
+    console.error('Delete product model error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la ștergerea modelului.' })
+  }
+}
+
+app.delete('/api/admin/product-models/:id', authMiddleware, adminAuthMiddleware, deleteProductModelHandler)
+app.delete('/admin/product-models/:id', authMiddleware, adminAuthMiddleware, deleteProductModelHandler)
 app.patch(
   '/api/admin/product-models/:id/available-for-stock',
   authMiddleware,

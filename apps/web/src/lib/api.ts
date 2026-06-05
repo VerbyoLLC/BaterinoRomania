@@ -3096,6 +3096,20 @@ export async function patchAdminProductModelAvailableForStock(
   return { ...row, availableForStock: row.availableForStock !== false }
 }
 
+export async function deleteAdminProductModel(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error('Modelul nu mai există.')
+    throw new Error(json.error || 'Nu s-a putut șterge modelul.')
+  }
+}
+
 /** One product for admin editor — includes nested JSON (e.g. technicalSpecsModels). */
 export async function getAdminProduct(id: string): Promise<AdminProduct> {
   const res = await fetch(`${API_BASE}/admin/products/${encodeURIComponent(id)}`, {

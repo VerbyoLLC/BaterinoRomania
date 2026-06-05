@@ -7,6 +7,7 @@ import {
   patchAdminProductModelAvailableForStock,
   uploadAdminFile,
   updateAdminProductModel,
+  deleteAdminProductModel,
   type AdminProductModelRow,
   type UpdateAdminProductModelPayload,
   type ProductModelType,
@@ -103,6 +104,11 @@ export default function AdminProductModels() {
   const [draftById, setDraftById] = useState<Record<string, ProductModelDraft>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [pendingSave, setPendingSave] = useState<{ rowId: string; draft: ProductModelDraft } | null>(null)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [drawerModelId, setDrawerModelId] = useState<string | null>(null)
   const [specFields, setSpecFields] = useState<SpecField[]>([])
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
@@ -111,7 +117,6 @@ export default function AdminProductModels() {
   const [availabilitySavingId, setAvailabilitySavingId] = useState<string | null>(null)
   const [viewModelId, setViewModelId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const autoSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const draftByIdRef = useRef<Record<string, ProductModelDraft>>({})
 
   // Image cropper
@@ -180,17 +185,20 @@ export default function AdminProductModels() {
     })
   }, [rowsWithDraft, search, filterType, filterAvailable])
 
-  useEffect(() => {
-    draftByIdRef.current = draftById
-  }, [draftById])
+  const handleFieldCommit = useCallback((rowId: string) => {
+    const draft = draftByIdRef.current[rowId]
+    if (draft) setPendingSave({ rowId, draft })
+  }, [])
 
-  const scheduleAutoSave = useCallback((rowId: string) => {
-    if (autoSaveTimersRef.current[rowId]) clearTimeout(autoSaveTimersRef.current[rowId])
-    autoSaveTimersRef.current[rowId] = setTimeout(() => {
-      delete autoSaveTimersRef.current[rowId]
-      const draft = draftByIdRef.current[rowId]
-      if (draft) setPendingSave({ rowId, draft })
-    }, 700)
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null)
+        setMenuPos(null)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [])
 
   const setDraftField = <K extends keyof ProductModelDraft>(rowId: string, key: K, value: ProductModelDraft[K]) => {
@@ -209,9 +217,10 @@ export default function AdminProductModels() {
         productImageUrl: base.productImageUrl ?? null,
         availableForStock: base.availableForStock !== false,
       }
-      return { ...prev, [rowId]: { ...current, [key]: value } }
+      const next = { ...prev, [rowId]: { ...current, [key]: value } }
+      draftByIdRef.current = next
+      return next
     })
-    scheduleAutoSave(rowId)
   }
 
   const patchAvailability = async (rowId: string, next: boolean) => {
@@ -243,6 +252,21 @@ export default function AdminProductModels() {
       setError(e instanceof Error ? e.message : 'Eroare la salvare.')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirmDeleteId || deleting) return
+    setDeleting(true)
+    try {
+      await deleteAdminProductModel(confirmDeleteId)
+      setRows((prev) => prev.filter((r) => r.id !== confirmDeleteId))
+      toast.success('Modelul a fost șters.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Eroare la ștergere.')
+    } finally {
+      setDeleting(false)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -498,7 +522,7 @@ export default function AdminProductModels() {
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[8.25rem] text-center">
                     Image
                   </th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[5.5rem] text-center">
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-[4.5rem] text-center">
                     Actions
                   </th>
                 </tr>
@@ -513,6 +537,8 @@ export default function AdminProductModels() {
                       <input
                         value={row.name}
                         onChange={(e) => setDraftField(row.id, 'name', e.target.value)}
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
                         className={`${inputCellClass} font-semibold text-slate-900`}
                       />
                     </td>
@@ -520,6 +546,8 @@ export default function AdminProductModels() {
                       <input
                         value={row.brand}
                         onChange={(e) => setDraftField(row.id, 'brand', e.target.value)}
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
                         className={inputCellClass}
                       />
                     </td>
@@ -527,6 +555,8 @@ export default function AdminProductModels() {
                       <input
                         value={row.series}
                         onChange={(e) => setDraftField(row.id, 'series', e.target.value)}
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
                         className={inputCellClass}
                         placeholder="—"
                       />
@@ -535,6 +565,8 @@ export default function AdminProductModels() {
                       <input
                         value={row.modelNumber}
                         onChange={(e) => setDraftField(row.id, 'modelNumber', e.target.value)}
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
                         className={`${inputCellClass} font-mono text-[13px]`}
                       />
                     </td>
@@ -549,13 +581,10 @@ export default function AdminProductModels() {
                     <td className="px-3 py-2.5">
                       <select
                         value={row.usageType}
-                        onChange={(e) =>
-                          setDraftField(
-                            row.id,
-                            'usageType',
-                            e.target.value === 'residential' ? 'residential' : 'industrial',
-                          )
-                        }
+                        onChange={(e) => {
+                          setDraftField(row.id, 'usageType', e.target.value === 'residential' ? 'residential' : 'industrial')
+                          handleFieldCommit(row.id)
+                        }}
                         className={`${inputCellClass} cursor-pointer pr-7 text-sm`}
                       >
                         <option value="industrial">Industrial</option>
@@ -565,9 +594,10 @@ export default function AdminProductModels() {
                     <td className="px-3 py-2.5">
                       <select
                         value={row.productType ?? 'ESS'}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setDraftField(row.id, 'productType', e.target.value as ProductModelType)
-                        }
+                          handleFieldCommit(row.id)
+                        }}
                         className={`${inputCellClass} cursor-pointer pr-7 text-sm font-mono`}
                       >
                         {PRODUCT_MODEL_TYPES.map((t) => (
@@ -645,12 +675,31 @@ export default function AdminProductModels() {
                       </div>
                     </td>
                     <td className="px-2 py-2.5 text-center">
-                      <button type="button" onClick={() => setViewModelId(row.id)} title="Vezi detalii model" className={btnGhost}>
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12C3.75 7.5 7.5 4.5 12 4.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12Z" />
-                          <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button type="button" onClick={() => setViewModelId(row.id)} title="Vezi detalii model" className={btnGhost}>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12C3.75 7.5 7.5 4.5 12 4.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12Z" />
+                            <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            if (menuOpenId === row.id) { setMenuOpenId(null); setMenuPos(null) }
+                            else {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                              setMenuOpenId(row.id)
+                            }
+                          }}
+                          aria-label="Mai multe acțiuni"
+                          className={btnGhost}
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4" aria-hidden>
+                            <circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="13" cy="8" r="1.4" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -659,6 +708,61 @@ export default function AdminProductModels() {
           </div>
         )}
       </div>
+
+      {/* 3-dot dropdown */}
+      {menuOpenId && menuPos ? (() => {
+        const row = rows.find((r) => r.id === menuOpenId)
+        if (!row) return null
+        return (
+          <div
+            ref={menuRef}
+            style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 60 }}
+            className="min-w-[130px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+          >
+            <button
+              type="button"
+              onClick={() => { setMenuOpenId(null); setMenuPos(null); setConfirmDeleteId(row.id) }}
+              className="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 font-['Inter']"
+            >
+              Șterge
+            </button>
+          </div>
+        )
+      })() : null}
+
+      {/* Confirm delete dialog */}
+      {confirmDeleteId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setConfirmDeleteId(null) }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            role="dialog" aria-modal="true" aria-labelledby="delete-model-title">
+            <h2 id="delete-model-title" className="text-base font-bold text-slate-900 font-['Inter']">
+              Șterge modelul?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+              Modelul{' '}
+              <span className="font-semibold text-slate-800">
+                {rows.find((r) => r.id === confirmDeleteId)?.modelNumber}
+              </span>{' '}
+              și toate datele asociate vor fi șterse permanent.
+            </p>
+            <p className="mt-1 text-xs text-slate-500 font-['Inter']">Această acțiune nu poate fi anulată.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setConfirmDeleteId(null)} disabled={deleting}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']">
+                Anulează
+              </button>
+              <button type="button" onClick={() => void handleDelete()} disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 font-['Inter']">
+                {deleting ? 'Se șterge…' : 'Șterge'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Confirm save dialog */}
       {pendingSave ? (
