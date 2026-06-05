@@ -8709,8 +8709,15 @@ app.get(
   downloadAdminWarehouseWarrantyCertificateHandler,
 )
 
+const BRAND_CODES = { lithtech: 'LTC' }
+
+function brandCode(brand) {
+  const key = String(brand || '').trim().toLowerCase()
+  return BRAND_CODES[key] || String(brand || '').trim()
+}
+
 function buildModelSku(brand, productType, modelNumber) {
-  const b = String(brand || '').trim()
+  const b = brandCode(brand)
   const t = String(productType || 'ESS').trim()
   const m = String(modelNumber || '').trim()
   return [b, t, m].filter(Boolean).join('-')

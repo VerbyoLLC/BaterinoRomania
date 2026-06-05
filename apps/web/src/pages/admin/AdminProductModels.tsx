@@ -612,9 +612,9 @@ export default function AdminProductModels() {
                     <td className="px-3 py-2.5">
                       <span
                         className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-xs font-mono font-medium leading-snug text-slate-700 truncate"
-                        title={row.sku || `${row.brand}-${row.productType ?? 'ESS'}-${row.modelNumber}`}
+                        title={row.sku}
                       >
-                        {row.sku || `${row.brand}-${row.productType ?? 'ESS'}-${row.modelNumber}`}
+                        {row.sku}
                       </span>
                     </td>
                     <td className="px-3 py-2.5">
