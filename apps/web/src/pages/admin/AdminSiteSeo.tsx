@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAuthToken, getPageSeoAll, saveAdminPageSeo, type PageSeoDto } from '../../lib/api'
+import {
+  getAuthToken,
+  getPageSeoAll,
+  saveAdminPageSeo,
+  uploadPageSeoOgImage,
+  type PageSeoDto,
+} from '../../lib/api'
 
 type PageMeta = { key: string; label: string; path: string }
 
@@ -45,6 +51,12 @@ function sectionId(key: string) {
   return `seo-section-${key}`
 }
 
+function resolveImageSrc(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `https://baterino.ro${url.startsWith('/') ? '' : '/'}${url}`
+}
+
 export default function AdminSiteSeo() {
   const navigate = useNavigate()
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDraftMap([]))
@@ -52,10 +64,12 @@ export default function AdminSiteSeo() {
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [activeKey, setActiveKey] = useState<string>(PAGES[0].key)
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
     if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return }
@@ -67,8 +81,8 @@ export default function AdminSiteSeo() {
   // Track which section is in view
   useEffect(() => {
     if (loading) return
-    const observers: IntersectionObserver[] = []
     const visibilityMap: Record<string, number> = {}
+    const observers: IntersectionObserver[] = []
 
     for (const page of PAGES) {
       const el = sectionRefs.current[page.key]
@@ -99,6 +113,19 @@ export default function AdminSiteSeo() {
 
   function setField(pageKey: string, field: keyof Omit<PageSeoDto, 'pageKey'>, value: string) {
     setDrafts((prev) => ({ ...prev, [pageKey]: { ...prev[pageKey], [field]: value } }))
+  }
+
+  async function handleOgImageUpload(pageKey: string, file: File) {
+    setUploading((u) => ({ ...u, [pageKey]: true }))
+    setErrors((e) => ({ ...e, [pageKey]: '' }))
+    try {
+      const { url } = await uploadPageSeoOgImage(file, pageKey)
+      setField(pageKey, 'ogImage', url)
+    } catch (err) {
+      setErrors((e) => ({ ...e, [pageKey]: err instanceof Error ? err.message : 'Eroare la upload.' }))
+    } finally {
+      setUploading((u) => ({ ...u, [pageKey]: false }))
+    }
   }
 
   async function handleSave(pageKey: string) {
@@ -144,6 +171,9 @@ export default function AdminSiteSeo() {
             {PAGES.map((page) => {
               const d = drafts[page.key] ?? EMPTY_DRAFT()
               const isExpanded = !!expanded[page.key]
+              const isUploading = !!uploading[page.key]
+              const ogImageSrc = resolveImageSrc(d.ogImage)
+
               return (
                 <div
                   key={page.key}
@@ -230,15 +260,68 @@ export default function AdminSiteSeo() {
                           maxLength={300}
                         />
                       </div>
+
+                      {/* OG Image */}
                       <div>
-                        <label className={labelCls}>OG Image <span className="font-normal text-gray-400">(URL absolut sau relativ)</span></label>
-                        <input
-                          type="text"
-                          value={d.ogImage}
-                          onChange={(e) => setField(page.key, 'ogImage', e.target.value)}
-                          placeholder="/images/home/og-baterino-romania.jpg"
-                          className={inputCls}
-                        />
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <label className={labelCls + ' mb-0'}>OG Image</label>
+                          <span className="text-[11px] text-gray-400 font-['Inter']">1200 × 630 px recomandați</span>
+                        </div>
+
+                        {/* Preview */}
+                        {ogImageSrc && (
+                          <div className="mb-2 relative w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200" style={{ aspectRatio: '1200/630' }}>
+                            <img
+                              src={ogImageSrc}
+                              alt="OG preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setField(page.key, 'ogImage', '')}
+                              className="absolute top-2 right-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-['Inter'] text-gray-700 hover:bg-red-50 hover:text-red-600 shadow transition-colors"
+                            >
+                              Șterge
+                            </button>
+                            <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white font-['Inter']">
+                              1200 × 630 px
+                            </span>
+                          </div>
+                        )}
+
+                        {/* URL input + upload button */}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={d.ogImage}
+                            onChange={(e) => setField(page.key, 'ogImage', e.target.value)}
+                            placeholder="/images/home/og-baterino-romania.jpg"
+                            className={inputCls}
+                          />
+                          <button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => fileInputRefs.current[page.key]?.click()}
+                            className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-['Inter'] text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors whitespace-nowrap"
+                          >
+                            {isUploading ? 'Se încarcă…' : '↑ Upload'}
+                          </button>
+                          <input
+                            ref={(el) => { fileInputRefs.current[page.key] = el }}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleOgImageUpload(page.key, file)
+                              e.target.value = ''
+                            }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-['Inter'] mt-1">
+                          JPG, PNG sau WebP · max 1200×630 px · folosit de Facebook, LinkedIn, WhatsApp la partajare
+                        </p>
                       </div>
                     </div>
                   )}

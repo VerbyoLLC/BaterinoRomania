@@ -4279,6 +4279,10 @@ export async function getPageSeoAll(): Promise<PageSeoDto[]> {
   }
 }
 
+export async function uploadPageSeoOgImage(file: File, pageKey: string): Promise<{ url: string }> {
+  return uploadAdminFile(file, pageKey, undefined, { prefix: 'page-seo' })
+}
+
 export async function saveAdminPageSeo(
   pageKey: string,
   data: Omit<PageSeoDto, 'pageKey'>,
