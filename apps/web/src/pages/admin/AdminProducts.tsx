@@ -69,7 +69,7 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
-  const [productSlug, setProductSlug] = useState<string | null>(null)
+  const [productSlug, setProductSlug] = useState('')
   const [productsError, setProductsError] = useState<string | null>(null)
   const [filterCategorie, setFilterCategorie] = useState<'all' | 'rezidential' | 'industrial' | 'medical' | 'maritim'>('all')
   const [brand, setBrand] = useState('')
@@ -322,7 +322,7 @@ export default function AdminProducts() {
       /* fallback: grid row (may omit nested JSON if response was ever truncated) */
     }
 
-    setProductSlug((row as { slug?: string }).slug || null)
+    setProductSlug((row as { slug?: string }).slug || '')
     setBrand(row.brand || '')
     setTitle(row.title || '')
     setSku(row.sku || '')
@@ -470,7 +470,7 @@ export default function AdminProducts() {
 
   const handleOpenPanel = () => {
     setEditingProductId(null)
-    setProductSlug(null)
+    setProductSlug('')
     setSaveError(null)
     setBrand('')
     setTitle('')
@@ -1086,6 +1086,7 @@ export default function AdminProducts() {
       brand: brand || undefined,
       title: title.trim() || 'Fără titlu',
       sku: sku.trim() || `SKU-${Date.now()}`,
+      slug: productSlug.trim() || undefined,
       description: descriptionOut,
       tipProdus,
       categorie:
@@ -1858,18 +1859,50 @@ export default function AdminProducts() {
                       placeholder={tipProdus === 'industrial' ? 'Titlu principal (hero)' : 'Ex: EcoHome 5 kWh'}
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
-                    {productSlug ? (
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <span className="text-xs text-gray-400 font-['Inter'] shrink-0">Slug:</span>
-                        <a
-                          href={`/produse/${productSlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-mono text-[#1e46b4] hover:underline truncate"
-                          title={`/produse/${productSlug}`}
-                        >
-                          /produse/{productSlug}
-                        </a>
+                    {editingProductId ? (
+                      <div className="mt-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <label htmlFor="product-slug" className="block text-sm font-semibold font-['Inter'] text-gray-700">
+                            Slug
+                          </label>
+                          {productSlug ? (
+                            <a
+                              href={`/produse/${productSlug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-[#1e46b4] hover:underline font-['Inter']"
+                              title="Deschide pagina produsului"
+                            >
+                              ↗ previzualizează
+                            </a>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center rounded-xl border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-slate-900">
+                          <span className="px-3 h-11 flex items-center text-sm text-gray-400 font-['Inter'] bg-gray-50 border-r border-gray-300 shrink-0 select-none">
+                            /produse/
+                          </span>
+                          <input
+                            id="product-slug"
+                            type="text"
+                            value={productSlug}
+                            onChange={(e) => {
+                              const sanitized = e.target.value
+                                .toLowerCase()
+                                .normalize('NFD')
+                                .replace(/[̀-ͯ]/g, '')
+                                .replace(/[^a-z0-9-]/g, '-')
+                                .replace(/-+/g, '-')
+                                .replace(/^-/, '')
+                                .slice(0, 100)
+                              setProductSlug(sanitized)
+                            }}
+                            placeholder="se generează automat din titlu"
+                            className="flex-1 h-11 px-3 text-sm font-mono font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none bg-white"
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-gray-400 font-['Inter']">
+                          Lasă gol pentru a regenera automat din titlu la salvare.
+                        </p>
                       </div>
                     ) : null}
                   </div>

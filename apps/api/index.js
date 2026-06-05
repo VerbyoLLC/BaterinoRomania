@@ -6713,7 +6713,14 @@ const updateProductHandler = async (req, res) => {
     if (body.promovarePeContPartener !== undefined)
       data.promovarePeContPartener = body.promovarePeContPartener === true
 
-    if (title) {
+    const explicitSlug = body.slug != null ? slugify(String(body.slug)) : null
+    if (explicitSlug) {
+      const existing = await prisma.product.findFirst({ where: { slug: explicitSlug } })
+      if (existing && existing.id !== id) {
+        return res.status(409).json({ error: `Slug-ul „${explicitSlug}" este deja folosit de alt produs.` })
+      }
+      data.slug = explicitSlug
+    } else if (title) {
       let baseSlug = slugify(title)
       let newSlug = baseSlug
       let suffix = 0

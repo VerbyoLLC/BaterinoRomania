@@ -2217,6 +2217,7 @@ export type CreateProductPayload = {
   brand?: string
   title: string
   sku: string
+  slug?: string
   description?: string
   subtitle?: string
   overview?: string
