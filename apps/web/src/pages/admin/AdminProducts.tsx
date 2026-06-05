@@ -1755,43 +1755,6 @@ export default function AdminProducts() {
                 </div>
               )}
 
-              {/* SKU */}
-              <div className="pt-2 border-t border-gray-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <label htmlFor="product-sku" className="block text-sm font-semibold font-['Inter'] text-gray-700">
-                    SKU
-                  </label>
-                  <div className="relative group">
-                    <button
-                      type="button"
-                      className="w-5 h-5 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 flex items-center justify-center transition-colors"
-                      aria-label="Format SKU"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                    <div className="absolute left-0 top-full mt-1 z-10 hidden group-hover:block w-64 p-3 bg-gray-900 text-white text-xs font-['Inter'] rounded-lg shadow-lg">
-                      <p className="font-semibold mb-2">Format: BAT-LFP-51V-100AH-LT</p>
-                      <ul className="space-y-1 text-gray-300">
-                        <li>LFP = LiFePO4</li>
-                        <li>51V = Tensiune (rotunjită)</li>
-                        <li>100AH = Amp-oră</li>
-                        <li>LT = Lithtech</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <input
-                  id="product-sku"
-                  type="text"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  placeholder="BAT-LFP-51V-100AH-LT"
-                  className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
-                />
-              </div>
-
               {/* Brand + Descriere Produs */}
               <div className="pt-2 border-t border-gray-200">
                 <div className="mb-4">
@@ -1857,6 +1820,22 @@ export default function AdminProducts() {
                       </option>
                     ))}
                   </select>
+                </div>
+                {/* SKU — read-only, set from model */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <label className="block text-sm font-semibold font-['Inter'] text-gray-700">SKU</label>
+                    <span className="text-[11px] font-medium text-slate-400 font-['Inter']">(se setează din Modele)</span>
+                  </div>
+                  <input
+                    id="product-sku"
+                    type="text"
+                    value={sku}
+                    readOnly
+                    tabIndex={-1}
+                    placeholder="Se completează automat din model"
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm font-['Inter'] text-gray-500 bg-gray-50 cursor-not-allowed select-none"
+                  />
                 </div>
                 <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Descriere produs</h3>
                 <div className="flex flex-col gap-4">
