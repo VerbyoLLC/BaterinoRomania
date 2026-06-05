@@ -1804,7 +1804,7 @@ export default function AdminProducts() {
                       setSelectedProductModelId(nextId)
                       const selected = seriesFilteredModels.find((m) => m.id === nextId)
                       if (!selected) return
-                      setSku(String(selected.modelNumber || '').trim())
+                      setSku(String(selected.sku || selected.modelNumber || '').trim())
                       if (!String(brand || '').trim() && String(selected.brand || '').trim()) {
                         setBrand(String(selected.brand).trim())
                       }
