@@ -32,9 +32,13 @@ export function resolveCatalogForModel(
   model: AdminProductModelRow,
   products: AdminProduct[],
 ): { title: string; imageUrl: string; matchedProduct: AdminProduct | null } {
-  const key = normalizeSku(model.modelNumber)
+  const keyModelNumber = normalizeSku(model.modelNumber)
+  const keySku = normalizeSku(model.sku || '')
   const matched =
-    products.find((p) => normalizeSku(String(p.sku ?? '')) === key) ?? null
+    products.find((p) => {
+      const pSku = normalizeSku(String(p.sku ?? ''))
+      return pSku === keyModelNumber || (keySku && pSku === keySku)
+    }) ?? null
   const title =
     (matched?.title && matched.title.trim()) || model.name.trim() || model.modelNumber
   let imageUrl = ''
