@@ -1908,7 +1908,7 @@ export default function AdminProducts() {
                         </div>
                         <div className="flex items-center rounded-xl border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-slate-900">
                           <span className="px-3 h-11 flex items-center text-sm text-gray-400 font-['Inter'] bg-gray-50 border-r border-gray-300 shrink-0 select-none">
-                            /produse/
+                            {`/produse/${categories.find((c) => c.id === categoryId)?.slug ? `${categories.find((c) => c.id === categoryId)!.slug}/` : ''}`}
                           </span>
                           <input
                             id="product-slug"
