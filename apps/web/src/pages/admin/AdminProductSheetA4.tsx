@@ -314,8 +314,21 @@ export default function AdminProductSheetA4({
           ) : null}
         </div>
 
-        <div className="aps-hero-right">
+        <div className="aps-hero-right" style={{ position: 'relative' }}>
           <img src={imageUrl} alt="" />
+          {(() => {
+            const slug = matchedProduct?.['slug'] as string | null | undefined
+            const productId = matchedProduct?.id
+            const path = slug ? `/produse/${slug}` : productId ? `/produse/${productId}` : null
+            if (!path) return null
+            const url = encodeURIComponent(`https://baterino.ro${path}`)
+            const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
+            return (
+              <div style={{ position: 'absolute', bottom: 8, right: 8, background: '#fff', borderRadius: 8, padding: 4, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
+                <img src={qrSrc} alt="QR" width={56} height={56} style={{ display: 'block', borderRadius: 4 }} />
+              </div>
+            )
+          })()}
         </div>
       </div>
 
