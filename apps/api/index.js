@@ -5521,10 +5521,26 @@ app.post('/sales-agent/leads/:id/comments', authMiddleware, salesAgentAuthMiddle
 app.post('/api/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, createSalesAgentLeadHandler)
 app.post('/sales-agent/leads', authMiddleware, salesAgentAuthMiddleware, createSalesAgentLeadHandler)
 
+async function deleteAdminSalesLeadHandler(req, res) {
+  try {
+    const id = String(req.params?.id ?? '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const existing = await prisma.salesLead.findUnique({ where: { id }, select: { id: true } })
+    if (!existing) return res.status(404).json({ error: 'Lead negăsit.' })
+    await prisma.salesLead.delete({ where: { id } })
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('Delete sales lead error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la ștergerea lead-ului.' })
+  }
+}
+
 app.get('/api/admin/leads', authMiddleware, adminAuthMiddleware, listAdminSalesLeadsHandler)
 app.get('/admin/leads', authMiddleware, adminAuthMiddleware, listAdminSalesLeadsHandler)
 app.post('/api/admin/leads', authMiddleware, adminAuthMiddleware, createAdminSalesLeadHandler)
 app.post('/admin/leads', authMiddleware, adminAuthMiddleware, createAdminSalesLeadHandler)
+app.delete('/api/admin/leads/:id', authMiddleware, adminAuthMiddleware, deleteAdminSalesLeadHandler)
+app.delete('/admin/leads/:id', authMiddleware, adminAuthMiddleware, deleteAdminSalesLeadHandler)
 app.get('/api/admin/leads/:id/activities', authMiddleware, adminAuthMiddleware, getSalesLeadActivitiesHandler)
 app.get('/admin/leads/:id/activities', authMiddleware, adminAuthMiddleware, getSalesLeadActivitiesHandler)
 app.post('/api/admin/leads/:id/viewed', authMiddleware, adminAuthMiddleware, markSalesLeadViewedHandler)

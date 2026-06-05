@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useToast } from '../../contexts/ToastContext'
 import {
   dateLocaleForLang,
@@ -19,6 +19,7 @@ import {
   markSalesLeadViewed,
   markSalesLeadCommentsSeen,
   patchSalesLeadStatus,
+  deleteAdminSalesLead,
   getAuthUserId,
   type SalesLeadActivity,
   type SalesLeadRow,
@@ -458,6 +459,12 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
   const [infoLead, setInfoLead] = useState<SalesLeadRow | null>(null)
   const [commentsLead, setCommentsLead] = useState<SalesLeadRow | null>(null)
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -476,6 +483,32 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
       cancelled = true
     }
   }, [audience, tr.loadError, toast])
+
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+        setMenuPos(null)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [])
+
+  async function handleConfirmDelete() {
+    if (!confirmDeleteId || deleting) return
+    setDeleting(true)
+    try {
+      await deleteAdminSalesLead(confirmDeleteId)
+      setLeads((prev) => prev.filter((r) => r.id !== confirmDeleteId))
+      toast.success('Lead-ul a fost șters.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Eroare la ștergere.')
+    } finally {
+      setDeleting(false)
+      setConfirmDeleteId(null)
+    }
+  }
 
   const handleLeadUpdated = useCallback((updated: SalesLeadRow) => {
     setLeads((prev) => prev.map((row) => (row.id === updated.id ? updated : row)))
@@ -516,7 +549,7 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
     }
   }
 
-  const colSpan = 9
+  const colSpan = audience === 'admin' ? 10 : 9
 
   const thClass = 'px-3 py-2.5 font-semibold sm:px-4 sm:py-3'
   const tdClass = 'px-3 py-2.5 sm:px-4 sm:py-3'
@@ -548,6 +581,9 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
                       />
                     </svg>
                   </th>
+                  {audience === 'admin' ? (
+                    <th className={`${thClass} w-12`}><span className="sr-only">Acțiuni</span></th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody aria-busy={loading} aria-label={loading ? tr.loading : undefined}>
@@ -653,6 +689,28 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
                           ) : null}
                         </button>
                       </td>
+                      {audience === 'admin' ? (
+                        <td className={`${tdClass} text-center`} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            aria-label="Mai multe acțiuni"
+                            aria-expanded={openMenuId === row.id}
+                            onClick={(e) => {
+                              if (openMenuId === row.id) { setOpenMenuId(null); setMenuPos(null) }
+                              else {
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                                setOpenMenuId(row.id)
+                              }
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                          >
+                            <svg viewBox="0 0 16 16" fill="currentColor" className="size-4" aria-hidden>
+                              <circle cx="3" cy="8" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="13" cy="8" r="1.5" />
+                            </svg>
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))
                 )}
@@ -683,6 +741,63 @@ export function SalesLeadsTable({ audience, tr, langCode }: SalesLeadsTableProps
           onCommentAdded={() => bumpActivityCount(commentsLead.id)}
           onLeadUpdated={handleLeadUpdated}
         />
+      ) : null}
+
+      {openMenuId && menuPos ? (
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 50 }}
+          className="min-w-[130px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+        >
+          <button
+            type="button"
+            onClick={() => { setConfirmDeleteId(openMenuId); setOpenMenuId(null); setMenuPos(null) }}
+            className="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 font-['Inter']"
+          >
+            Șterge
+          </button>
+        </div>
+      ) : null}
+
+      {confirmDeleteId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setConfirmDeleteId(null) }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-lead-title"
+          >
+            <h2 id="delete-lead-title" className="text-base font-bold text-slate-900 font-['Inter']">
+              Șterge lead?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+              Lead-ul „{leads.find((r) => r.id === confirmDeleteId)?.name ?? '—'}" va fi șters permanent, inclusiv comentariile.
+            </p>
+            <p className="mt-1 text-xs text-slate-500 font-['Inter']">Această acțiune nu poate fi anulată.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deleting}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']"
+              >
+                Anulează
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 font-['Inter']"
+              >
+                {deleting ? 'Se șterge…' : 'Șterge'}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   )

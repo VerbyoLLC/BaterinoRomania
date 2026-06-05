@@ -3846,6 +3846,22 @@ export async function patchSalesLeadStatus(
   return json.lead
 }
 
+export async function deleteAdminSalesLead(leadId: string): Promise<void> {
+  const id = String(leadId || '').trim()
+  if (!id) throw new Error('ID lead lipsă.')
+  const res = await fetch(`${API_BASE}/admin/leads/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error('Lead negăsit.')
+    throw new Error(json.error || 'Nu s-a putut șterge lead-ul.')
+  }
+}
+
 export async function createAdminLead(payload: CreateSalesLeadPayload): Promise<SalesLeadRow> {
   const res = await fetch(`${API_BASE}/admin/leads`, {
     method: 'POST',
