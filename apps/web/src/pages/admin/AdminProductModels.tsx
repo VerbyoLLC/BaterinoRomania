@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useToast } from '../../contexts/ToastContext'
 import {
   getAdminProductModels,
   getAuthToken,
@@ -95,11 +96,13 @@ function getEnergyValue(technicalDescription: string, name?: string): string {
 
 export default function AdminProductModels() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [rows, setRows] = useState<AdminProductModelRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [draftById, setDraftById] = useState<Record<string, ProductModelDraft>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [pendingSave, setPendingSave] = useState<{ rowId: string; draft: ProductModelDraft } | null>(null)
   const [drawerModelId, setDrawerModelId] = useState<string | null>(null)
   const [specFields, setSpecFields] = useState<SpecField[]>([])
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
@@ -186,9 +189,9 @@ export default function AdminProductModels() {
     autoSaveTimersRef.current[rowId] = setTimeout(() => {
       delete autoSaveTimersRef.current[rowId]
       const draft = draftByIdRef.current[rowId]
-      if (draft) void saveRow(rowId, draft)
+      if (draft) setPendingSave({ rowId, draft })
     }, 700)
-  }, []) // saveRow is stable within the component lifecycle
+  }, [])
 
   const setDraftField = <K extends keyof ProductModelDraft>(rowId: string, key: K, value: ProductModelDraft[K]) => {
     setDraftById((prev) => {
@@ -235,6 +238,7 @@ export default function AdminProductModels() {
         delete next[rowId]
         return next
       })
+      toast.success('Câmpul a fost salvat.')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Eroare la salvare.')
     } finally {
@@ -655,6 +659,70 @@ export default function AdminProductModels() {
           </div>
         )}
       </div>
+
+      {/* Confirm save dialog */}
+      {pendingSave ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target !== e.currentTarget) return
+            // cancel: revert draft
+            setDraftById((prev) => {
+              const next = { ...prev }
+              delete next[pendingSave.rowId]
+              return next
+            })
+            setPendingSave(null)
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-save-title"
+          >
+            <h2 id="confirm-save-title" className="text-base font-bold text-slate-900 font-['Inter']">
+              Salvezi modificarea?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+              Ai modificat câmpuri din modelul{' '}
+              <span className="font-semibold text-slate-800">
+                {rows.find((r) => r.id === pendingSave.rowId)?.modelNumber || pendingSave.rowId}
+              </span>
+              . Dorești să salvezi?
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftById((prev) => {
+                    const next = { ...prev }
+                    delete next[pendingSave.rowId]
+                    return next
+                  })
+                  setPendingSave(null)
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 font-['Inter']"
+              >
+                Renunță
+              </button>
+              <button
+                type="button"
+                disabled={savingId === pendingSave.rowId}
+                onClick={() => {
+                  const { rowId, draft } = pendingSave
+                  setPendingSave(null)
+                  void saveRow(rowId, draft)
+                }}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50 font-['Inter']"
+              >
+                {savingId === pendingSave.rowId ? 'Se salvează…' : 'Salvează'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {drawerRow && (
         <div className="fixed inset-0 z-50">
