@@ -8926,14 +8926,17 @@ function sanitizeOfferDraftSnapshot(raw) {
   const buyerType =
     raw.buyerType === 'company' ? 'company' : raw.buyerType === 'person' ? 'person' : null
   if (!buyerType) return null
+  const generatedAt = typeof raw.generatedAt === 'string' && raw.generatedAt ? raw.generatedAt : undefined
   if (buyerType === 'person') {
     const p = raw.clientPerson
     if (!p || typeof p !== 'object') return null
     return {
       buyerType,
+      ...(generatedAt ? { generatedAt } : {}),
       clientPerson: {
         email: String(p.email ?? '').trim().slice(0, 254),
         telefon: String(p.telefon ?? '').trim().slice(0, 32),
+        tara: String(p.tara ?? '').trim().slice(0, 80),
       },
     }
   }
@@ -8941,9 +8944,11 @@ function sanitizeOfferDraftSnapshot(raw) {
   if (!c || typeof c !== 'object') return null
   return {
     buyerType,
+    ...(generatedAt ? { generatedAt } : {}),
     clientCompany: {
       contactEmail: String(c.contactEmail ?? '').trim().slice(0, 254),
       contactTelefon: String(c.contactTelefon ?? '').trim().slice(0, 32),
+      tara: String(c.tara ?? '').trim().slice(0, 80),
     },
   }
 }
@@ -9051,8 +9056,43 @@ function normalizeCommercialOfferDraftMeta(raw) {
   return base
 }
 
+function buildOfferNumberFromGeneratedAt(generatedAt) {
+  if (!generatedAt || typeof generatedAt !== 'string') return ''
+  const t = new Date(generatedAt)
+  if (isNaN(t.getTime())) return ''
+  const y = t.getFullYear()
+  const m = String(t.getMonth() + 1).padStart(2, '0')
+  const day = String(t.getDate()).padStart(2, '0')
+  const tail = generatedAt.replace(/\W/g, '').slice(-6) || String(t.getTime()).slice(-6)
+  return `OC-${y}${m}${day}-${tail}`
+}
+
+function extractCountryFromSnapshot(snapshot, buyerType) {
+  if (!snapshot || typeof snapshot !== 'object') return ''
+  try {
+    const form = snapshot.form || snapshot
+    if (buyerType === 'person' && form.clientPerson?.tara) return form.clientPerson.tara
+    if (buyerType === 'company' && form.clientCompany?.tara) return form.clientCompany.tara
+  } catch (e) { /* ignore */ }
+  return ''
+}
+
 function serializeAdminCommercialOfferRow(row) {
   const contact = resolveOfferRowClientContact(row)
+
+  // Prefer DB columns; fall back to snapshot for rows saved before the migration
+  let offerNumber = row.offerNumber || ''
+  let country = row.country || ''
+  if ((!offerNumber || !country) && row.draftSnapshot) {
+    try {
+      const draft = typeof row.draftSnapshot === 'string'
+        ? JSON.parse(row.draftSnapshot)
+        : row.draftSnapshot
+      if (!offerNumber) offerNumber = buildOfferNumberFromGeneratedAt(draft.generatedAt)
+      if (!country) country = extractCountryFromSnapshot(draft, row.buyerType)
+    } catch (e) { /* ignore */ }
+  }
+
   return {
     id: row.id,
     createdAt: row.createdAt.toISOString(),
@@ -9067,6 +9107,8 @@ function serializeAdminCommercialOfferRow(row) {
     productCount: row.productCount,
     pdfUrl: row.pdfUrl,
     noteCount: row._count?.notes ?? 0,
+    offerNumber: offerNumber || '—',
+    country: country || '—',
   }
 }
 
@@ -9075,7 +9117,22 @@ async function listAdminCommercialOffersHandler(req, res) {
     const rows = await prisma.adminCommercialOffer.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 500,
-      include: { _count: { select: { notes: true } } },
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        status: true,
+        buyerType: true,
+        clientLabel: true,
+        clientEmail: true,
+        clientPhone: true,
+        amountGross: true,
+        currency: true,
+        productCount: true,
+        pdfUrl: true,
+        draftSnapshot: true,
+        _count: { select: { notes: true } },
+      },
     })
     return res.json({ offers: rows.map(serializeAdminCommercialOfferRow) })
   } catch (err) {
@@ -9120,6 +9177,7 @@ async function saveAdminCommercialOfferDraftHandler(req, res) {
       currency: meta.currency,
       productCount: meta.productCount,
       draftSnapshot: formSnapshot,
+      country: extractCountryFromSnapshot(formSnapshot, meta.buyerType),
       pdfUrl: '',
     }
 
@@ -9179,6 +9237,8 @@ async function adminCommercialOfferPdfHandler(req, res) {
             currency: saveMeta.currency,
             productCount: saveMeta.productCount,
             status: 'generated',
+            offerNumber: draftSnapshot ? buildOfferNumberFromGeneratedAt(draftSnapshot.generatedAt) : '',
+            country: draftSnapshot ? extractCountryFromSnapshot(draftSnapshot, saveMeta.buyerType) : '',
           }
           let targetId = offerId
           if (targetId) {

@@ -2935,6 +2935,8 @@ export type AdminCommercialOfferRow = {
   productCount: number
   pdfUrl: string
   noteCount: number
+  offerNumber: string
+  country: string
 }
 
 export type AdminCommercialOfferDetail = AdminCommercialOfferRow & {

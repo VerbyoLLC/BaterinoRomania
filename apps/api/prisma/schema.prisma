@@ -697,6 +697,8 @@ model AdminCommercialOffer {
   currency        String
   productCount    Int
   pdfUrl          String
+  offerNumber     String   @default("")
+  country         String   @default("")
   createdByUserId String?
   createdBy       User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   notes           AdminCommercialOfferNote[]

@@ -426,18 +426,22 @@ export function commercialOfferDraftSnapshotFromDraft(draft: CommercialOfferDraf
   if (draft.buyerType === 'person' && draft.clientPerson) {
     return {
       buyerType: 'person' as const,
+      generatedAt: draft.generatedAt,
       clientPerson: {
         email: draft.clientPerson.email,
         telefon: draft.clientPerson.telefon,
+        tara: draft.clientPerson.tara,
       },
     }
   }
   if (draft.buyerType === 'company' && draft.clientCompany) {
     return {
       buyerType: 'company' as const,
+      generatedAt: draft.generatedAt,
       clientCompany: {
         contactEmail: draft.clientCompany.contactEmail,
         contactTelefon: draft.clientCompany.contactTelefon,
+        tara: draft.clientCompany.tara,
       },
     }
   }
