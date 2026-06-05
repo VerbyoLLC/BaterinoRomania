@@ -42,9 +42,10 @@ function formatMoney(amount: string, currency: string): string {
 type NotesPanelProps = {
   offer: AdminCommercialOfferRow
   onClose: () => void
+  onNoteAdded: (offerId: string) => void
 }
 
-function NotesPanel({ offer, onClose }: NotesPanelProps) {
+function NotesPanel({ offer, onClose, onNoteAdded }: NotesPanelProps) {
   const toast = useToast()
   const [notes, setNotes] = useState<AdminOfferNote[]>([])
   const [loadingNotes, setLoadingNotes] = useState(true)
@@ -75,6 +76,7 @@ function NotesPanel({ offer, onClose }: NotesPanelProps) {
       const note = await addAdminOfferNote(offer.id, text)
       setNotes((prev) => [...prev, note])
       setDraft('')
+      onNoteAdded(offer.id)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Eroare la salvare.')
     } finally {
@@ -304,13 +306,14 @@ export default function AdminOffersList() {
             <col className="w-[9%]" />
             <col className="w-[7%]" />
             <col className="w-[7%]" />
-            <col className="w-[14%]" />
             <col className="w-[13%]" />
-            <col className="w-[10%]" />
+            <col className="w-[12%]" />
+            <col className="w-[9%]" />
             <col className="w-[11%]" />
             <col className="w-[5%]" />
             <col className="w-[5%]" />
-            <col className="w-[8%]" />
+            <col className="w-[5%]" />
+            <col className="w-[5%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/90 text-slate-600">
@@ -333,14 +336,15 @@ export default function AdminOffersList() {
               <th className="px-3 py-2.5 font-semibold">Sumă</th>
               <th className="px-3 py-2.5 font-semibold text-center">Prod.</th>
               <th className="px-3 py-2.5 font-semibold text-center">PDF</th>
+              <th className="px-3 py-2.5 font-semibold text-center">Note</th>
               <th className="px-3 py-2.5 font-semibold text-center">Acțiuni</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} className="px-3 py-12 text-center text-slate-500">Se încarcă…</td></tr>
+              <tr><td colSpan={12} className="px-3 py-12 text-center text-slate-500">Se încarcă…</td></tr>
             ) : offers.length === 0 ? (
-              <tr><td colSpan={11} className="px-3 py-12 text-center text-slate-500">Nu există oferte încă.</td></tr>
+              <tr><td colSpan={12} className="px-3 py-12 text-center text-slate-500">Nu există oferte încă.</td></tr>
             ) : (
               offers.map((row) => {
                 const isSelected = selectedIds.has(row.id)
@@ -393,17 +397,22 @@ export default function AdminOffersList() {
                       ) : <span className="text-slate-300">—</span>}
                     </td>
 
-                    {/* actions: notes + 3-dot menu */}
+                    {/* notes column */}
+                    <td className="px-3 py-2.5 text-center">
+                      <button type="button" onClick={() => setNotesOffer(row)} title="Notițe"
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 h-7 text-slate-500 hover:bg-slate-100 hover:text-slate-800">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4 shrink-0" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v7A1.5 1.5 0 0112.5 12H9l-3 2.5V12H3.5A1.5 1.5 0 012 10.5v-7z" />
+                        </svg>
+                        {row.noteCount > 0 ? (
+                          <span className="text-[11px] font-semibold tabular-nums text-slate-600">{row.noteCount}</span>
+                        ) : null}
+                      </button>
+                    </td>
+
+                    {/* actions: 3-dot menu */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-center gap-1">
-                        {/* notes icon */}
-                        <button type="button" onClick={() => setNotesOffer(row)} title="Notițe"
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800">
-                          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4" aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v7A1.5 1.5 0 0112.5 12H9l-3 2.5V12H3.5A1.5 1.5 0 012 10.5v-7z" />
-                          </svg>
-                        </button>
-
                         {/* 3-dot menu */}
                         <button type="button"
                           onClick={(e) => {
@@ -452,7 +461,17 @@ export default function AdminOffersList() {
       })() : null}
 
       {/* notes panel */}
-      {notesOffer ? <NotesPanel offer={notesOffer} onClose={() => setNotesOffer(null)} /> : null}
+      {notesOffer ? (
+        <NotesPanel
+          offer={notesOffer}
+          onClose={() => setNotesOffer(null)}
+          onNoteAdded={(id) =>
+            setOffers((prev) =>
+              prev.map((o) => (o.id === id ? { ...o, noteCount: o.noteCount + 1 } : o)),
+            )
+          }
+        />
+      ) : null}
 
       {/* confirm delete dialog */}
       {confirmDelete ? (

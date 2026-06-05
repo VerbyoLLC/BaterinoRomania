@@ -2924,6 +2924,7 @@ export type AdminCommercialOfferRow = {
   currency: string
   productCount: number
   pdfUrl: string
+  noteCount: number
 }
 
 export type AdminCommercialOfferDetail = AdminCommercialOfferRow & {

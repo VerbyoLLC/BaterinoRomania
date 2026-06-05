@@ -9037,6 +9037,7 @@ function serializeAdminCommercialOfferRow(row) {
     currency: row.currency,
     productCount: row.productCount,
     pdfUrl: row.pdfUrl,
+    noteCount: row._count?.notes ?? 0,
   }
 }
 
@@ -9045,6 +9046,7 @@ async function listAdminCommercialOffersHandler(req, res) {
     const rows = await prisma.adminCommercialOffer.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 500,
+      include: { _count: { select: { notes: true } } },
     })
     return res.json({ offers: rows.map(serializeAdminCommercialOfferRow) })
   } catch (err) {
