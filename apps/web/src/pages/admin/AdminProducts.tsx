@@ -253,8 +253,12 @@ export default function AdminProducts() {
     const skuValue = String(sku || '').trim()
     if (!skuValue) return
     const neededUsage = tipProdus === 'industrial' ? 'industrial' : 'residential'
+    const skuUpper = skuValue.toUpperCase()
     const match = productModels.find(
-      (m) => m.usageType === neededUsage && String(m.modelNumber || '').trim().toUpperCase() === skuValue.toUpperCase(),
+      (m) =>
+        m.usageType === neededUsage &&
+        (String(m.modelNumber || '').trim().toUpperCase() === skuUpper ||
+          String(m.sku || '').trim().toUpperCase() === skuUpper),
     )
     if (match) {
       setSelectedProductModelId(match.id)
