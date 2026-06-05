@@ -958,14 +958,14 @@ export default function ProductRezidential() {
                     className="h-20 w-40 max-w-[55%] object-contain opacity-[0.14]"
                   />
                 </div>
-                <div className="absolute bottom-3 right-3 z-10 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
+                <div className="absolute bottom-3 right-3 z-30 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
                   <img
                     src={rezProductQrUrl}
                     alt="QR Code produs"
                     width={72}
                     height={72}
                     className="block rounded-lg w-[72px] h-[72px] lg:w-20 lg:h-20"
-                    loading="lazy"
+                    loading="eager"
                     draggable={false}
                   />
                 </div>
