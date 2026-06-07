@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgePercent, Headphones, ShieldCheck, Truck } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
@@ -144,10 +144,16 @@ function SlideInstalatori({ tr }: { tr: HomeTranslations }) {
 
 // ── Main slider ───────────────────────────────────────────────────────────────
 
-type Props = { tr: HomeTranslations }
+type Props = { tr: HomeTranslations; jumpTo?: number }
 
-export default function HomeMobileSlider({ tr }: Props) {
-  const [current, setCurrent] = useState(0)
+export const MOBILE_SLIDE_COUNT = SLIDES.length
+
+export default function HomeMobileSlider({ tr, jumpTo }: Props) {
+  const [current, setCurrent] = useState(jumpTo ?? 0)
+
+  useEffect(() => {
+    if (jumpTo !== undefined) setCurrent(jumpTo)
+  }, [jumpTo])
   const touchStartX = useRef<number | null>(null)
 
   const goTo = (index: number) => setCurrent(index)

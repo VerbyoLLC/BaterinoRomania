@@ -21,10 +21,7 @@ const FALLBACK_DESCRIPTION: Record<LangCode, { residential: string; industrial: 
     industrial:
       'Industrial energy storage and BESS solutions — engineering, integration, and support from Baterino.',
   },
-  zh: {
-    residential: '住宅 LifePO₄ 储能电池 — 安全、长寿命与 Baterino 本地支持。',
-    industrial: '工业与集装箱储能（BESS）解决方案 — Baterino 提供集成与支持。',
-  },
+
 }
 
 function clip(s: string, max: number): string {
@@ -38,7 +35,7 @@ function clip(s: string, max: number): string {
 function derivedTitle(product: Pick<PublicProduct, 'title'>, lang: LangCode): string {
   return (
     String(product.title || '').trim() ||
-    (lang === 'ro' ? 'Produs' : lang === 'zh' ? '产品' : 'Product')
+    (lang === 'ro' ? 'Produs' : 'Product')
   )
 }
 

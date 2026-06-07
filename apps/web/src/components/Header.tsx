@@ -113,9 +113,9 @@ export default function Header() {
   const diviziiItems = DIVIZII_PATHS.map(({ key, path }) => ({ label: t[key], path }))
   const companieItems = COMPANIE_PATHS.map(({ key, path }) => ({ label: t[key], path }))
   const cartAria =
-    language.code === 'en' ? 'Shopping cart' : language.code === 'zh' ? '购物车' : 'Coș'
+    language.code === 'en' ? 'Shopping cart' : 'Coș'
   const notificationsAria =
-    language.code === 'en' ? 'Notifications' : language.code === 'zh' ? '通知' : 'Notificări'
+    language.code === 'en' ? 'Notifications' : 'Notificări'
   const hideInstalatoriNav = authRole === 'client'
 
   const closeDropdowns = () => {

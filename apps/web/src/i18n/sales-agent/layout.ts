@@ -45,22 +45,8 @@ const en: SalesAgentLayoutTranslations = {
   profileEmptyValue: '—',
 }
 
-const zh: SalesAgentLayoutTranslations = {
-  salesAgentBadge: '销售代理',
-  navDashboard: '仪表板',
-  navLeads: '潜在客户',
-  navSettings: '设置',
-  agentAccount: '代理账户',
-  chooseLanguage: '选择语言',
-  logout: '退出登录',
-  openMenu: '打开菜单',
-  loading: '正在加载...',
-  profileMenuLabel: '代理档案',
-  profileNotLinked: '您的账户尚未关联代理档案。请联系管理员。',
-  profileEmptyValue: '—',
-}
 
-const translations: Record<LangCode, SalesAgentLayoutTranslations> = { ro, en, zh }
+const translations: Record<LangCode, SalesAgentLayoutTranslations> = { ro, en }
 
 export function getSalesAgentLayoutTranslations(lang: LangCode): SalesAgentLayoutTranslations {
   return translations[lang] ?? translations.ro

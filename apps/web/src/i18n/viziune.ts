@@ -103,44 +103,6 @@ const translations: Record<LangCode, ViziuneTranslations> = {
       'Our team is not built around a single individual, but around a common goal: to offer quality products and services with real impact on daily life and on the development of the industrial environment in Romania. We believe in responsibility, collaboration and measurable results.',
     discutaCuNoi: 'TALK TO US',
   },
-  zh: {
-    heroTitle: '关于我们',
-    capitolu1: '第一章',
-    capitolu2: '第二章',
-    capitolu3: '第三章',
-    capitolu4: '第四章',
-    viziune: '愿景',
-    misiune: '使命',
-    implementare: '实施',
-    echipa: '团队',
-    viziuneP1:
-      '想象一个完全能源独立的家——不依赖传统电网，而是通过太阳能板发电、储存并智能地用于日常生活。您在家为汽车充电。孩子们在线学习不受干扰。您做饭、冬季取暖，大幅减少对燃气的依赖。您可以在自己的微农场中用清洁能源种植食物。您通过替代基础设施（包括卫星）接入互联网。',
-    viziuneP2:
-      '这是我们坚信的方向：当没有集体愿景时，个人愿景必须优先。我们的角色是帮助您实现能源独立——高效、可持续且长期。',
-    misiuneP1:
-      '积极参与罗马尼亚每个家庭向能源独立的转型。提供优质、耐用、可持续的储能解决方案，使当地生产的能源得到高效利用并减少对传统电网的依赖。以公正透明的方式行事，将社区利益置于个人利益之上，提供公平且可负担的价格。',
-    misiuneP2:
-      '支持罗马尼亚企业降低能源成本，使罗马尼亚产品在国内市场更易获得、在国际市场上更具竞争力；为医疗环境提供保障，并支持我们所居住社区的基本服务独立。',
-    misiuneP3:
-      '建立本地储能系统生产能力，以减少对进口的依赖、缩短供应链、创造就业并保护终端消费者和本地生产商。',
-    misiuneP4:
-      '也许我们所做最重要的一件事：对我们所销售的产品承担长期责任。',
-    implementareP1:
-      '为了将愿景变为现实并履行使命，我们选择专注于单一领域：电能储存。我们专注于卓越，而非表面多元化。',
-    implementareP2:
-      '我们选择了一家战略制造商，成为其直接进口商，建立了稳固的长期技术合作。我们组建了一支深入了解合作伙伴技术的工程师团队，能够确保储能系统的正确、安全、高效集成。',
-    implementareP3:
-      '我们控制并监控从工厂到终端用户的整个流程，并在电池的整个生命周期内保持参与。我们建立了全国性的经销商和维护中心网络，以提供快速、本地化的支持。',
-    implementareP4:
-      '我们从制造商直接引进了诊断设备和备用部件，使干预和维修能够在罗马尼亚完成，显著缩短客户等待时间。我们的实施建立在控制、责任和长期支持之上。',
-    echipaP1:
-      '我们是一家100%罗马尼亚资本的公司，自2025年起进入罗马尼亚市场，在欧洲和国际层面快速发展。我们专注于实施改善社区生活和工业环境绩效的项目，通过选择和整合最合适的技术。',
-    echipaP2:
-      'Baterino 以活力和专业精神为特点。我们汇聚了一支多学科团队，包括物流、能源、媒体和国际关系领域的专家——对市场和当前经济背景有深刻理解的专业人士。',
-    echipaP3:
-      '我们的团队不是围绕某一个人，而是围绕一个共同目标：提供高质量的产品和服务，对日常生活和罗马尼亚工业环境的发展产生实际影响。我们相信责任、协作和可衡量的成果。',
-    discutaCuNoi: '与我们交谈',
-  },
 }
 
 export function getViziuneTranslations(lang: LangCode): ViziuneTranslations {

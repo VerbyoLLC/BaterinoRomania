@@ -21,14 +21,8 @@ const en: PartnerServiceTranslations = {
   emptyBody: 'You will manage service requests for sold products here. Coming soon.',
 }
 
-const zh: PartnerServiceTranslations = {
-  title: '维修',
-  subtitle: '管理服务与维护请求。',
-  emptyTitle: '服务与维护',
-  emptyBody: '您将在此管理已售产品的服务请求。功能即将上线。',
-}
 
-const translations: Record<LangCode, PartnerServiceTranslations> = { ro, en, zh }
+const translations: Record<LangCode, PartnerServiceTranslations> = { ro, en }
 
 export function getPartnerServiceTranslations(lang: LangCode): PartnerServiceTranslations {
   return translations[lang] ?? translations.ro

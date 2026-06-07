@@ -484,7 +484,7 @@ export default function GuestCheckout() {
     }
   }, [slug, lang])
 
-  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const locale = lang === 'en' ? 'en-GB' : 'ro-RO'
   const fmtMoney = (n: number) =>
     n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
 
@@ -499,9 +499,7 @@ export default function GuestCheckout() {
     const vatInline = hasVat
       ? lang === 'ro'
         ? `TVA ${vatPct}% inclus`
-        : lang === 'zh'
-          ? `含增值税 ${vatPct}%`
-          : `incl. ${vatPct}% VAT`
+        : `incl. ${vatPct}% VAT`
       : null
     return { lineTotal, vatInline }
   }, [product, loadError, qty, lang])

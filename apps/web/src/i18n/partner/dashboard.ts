@@ -144,32 +144,6 @@ const enPending: PartnerPendingAdvantage[] = [
   },
 ]
 
-const zhPending: PartnerPendingAdvantage[] = [
-  {
-    title: '配送与物流',
-    subtitle: '我们负责从仓库到终端客户的全链路物流。您专注客户，我们负责运输。',
-  },
-  {
-    title: '技术与商务支持',
-    subtitle: '专属团队解答产品、技术规格及定制方案相关问题。',
-  },
-  {
-    title: '面向客户的曝光',
-    subtitle: '您的资料展示在 Baterino 平台，直接对接您所在区域寻找认证安装商的用户。',
-  },
-  {
-    title: '终端客户责任',
-    subtitle: '售后由我们直接与终端客户处理——投诉、质保与安装后支持，维护您的口碑。',
-  },
-  {
-    title: 'Baterino SWAP',
-    subtitle: '出现故障时快速更换电池，流程简便，客户不会陷入无电可用。',
-  },
-  {
-    title: '合作伙伴价格与折扣',
-    subtitle: '更优价格、清晰利润空间，共同制定策略，让每个项目既有竞争力又盈利。',
-  },
-]
 
 const ro: PartnerDashboardTranslations = {
   srTitle: 'Dashboard',
@@ -343,84 +317,8 @@ const en: PartnerDashboardTranslations = {
   detailsAria: (productTitle) => `Open Details for ${productTitle}`,
 }
 
-const zh: PartnerDashboardTranslations = {
-  ...ro,
-  srTitle: '仪表板',
-  welcomePrefix: '欢迎，',
-  defaultDisplayName: '合作伙伴',
-  accountStatusActive: '活跃合作伙伴',
-  quickPanelTitle: '快捷面板',
-  quickPanelAria: '快捷面板 — 合作伙伴摘要',
-  notifications: '通知',
-  notificationsAria: '通知（即将推出）',
-  productsCatalogEyebrow: '在售产品总数',
-  dashTooltipProductsSite: '网站上合作伙伴目录中上架的产品 SKU 数量（与「产品」页一致）。',
-  dashTooltipOrders: '合作伙伴订单（不含已取消）：待付款、配送流程中（已接单 / 备货 / 配送中）、已送达。',
-  dashTooltipService: '合作伙伴服务流程：已接收、服务中、已办结。',
-  dashTooltipProfileStats: '公开的合作伙伴主页被浏览的次数，以及在可采集时的有效点击等指标。',
-  explanation: '说明',
-  dashInfoAriaProducts: '说明：在售产品',
-  dashInfoAriaOrders: '说明：订单',
-  dashInfoAriaService: '说明：维保中的产品',
-  dashInfoAriaPublic: '说明：公开主页数据',
-  productDashLabelComercial: '商业',
-  orderDashLabelDePlata: '待付款',
-  orderDashLabelInCurs: '进行中',
-  orderDashLabelLivrate: '已送达',
-  serviceDashLabelPreluate: '已接收',
-  serviceDashLabelInService: '服务中',
-  serviceDashLabelRezolvate: '已解决',
-  profitableProductsSectionTitle: '利润最高的产品',
-  profitableProductsSeeCatalogLabel: '查看产品',
-  profitableProductsCollapseAria: '收起利润最高的产品',
-  profitableProductsExpandAria: '展开利润最高的产品',
-  dashNavAriaKpiProducts: '打开合作伙伴产品目录',
-  dashNavAriaKpiOrders: '打开合作伙伴订单',
-  dashNavAriaKpiService: '打开维修',
-  dashNavAriaProfileStats: '打开公开主页设置',
-  quickPanelPublicProfileTitle: '公开主页',
-  quickPanelPublicProfileIncompleteBody: '请完善公司公开主页，以便我们为您推广服务。',
-  quickPanelPublicProfilePrivateBody: '发布公司公开主页以接收订单。',
-  quickPanelPublicProfilePublicBody: '查看公司的公开页面。',
-  profileStatsGateTitle: '创建公司公开主页',
-  profileStatsGateBody: '请完善公司的公开主页，以便我们为您推广服务。',
-  profileStatsGateCta: '完善公开主页',
-  profileStatsGateAria: '需先完善公开主页后统计数据方可生效',
-  suspendedTitle: '您的账户已暂停。',
-  suspendedBody: '抱歉，您的账户已被暂停。请联系我们解决问题。',
-  pendingAdvantagesTitle: 'Baterino 合作优势',
-  pendingAdvantages: zhPending,
-  approvalTimelineSteps: ['开通合作伙伴账户', '合作与战略洽谈', '签署合同', '账户审批通过'],
-  approvalTimelineAria: '合作伙伴账户审批步骤',
-  timelineComplete: '已完成',
-  timelineCurrent: '进行中',
-  timelineUpcoming: '待进行',
-  advantagesLoadingAria: '正在加载优势',
-  myActivity: '我的活动',
-  unavailable: '无法加载',
-  orders: '订单',
-  productsInService: '服务中的产品',
-  publicProfileStats: '公开主页数据',
-  partnershipBenefitsTitle: 'Baterino 合作优势',
-  views: '浏览次数',
-  clicks: '点击次数',
-  expandSidebar: '展开侧栏',
-  collapseSidebar: '收起侧栏',
-  showWelcomeSummary: '显示欢迎摘要',
-  showPartnerDiscount: '显示合作伙伴折扣',
-  searchInverterCompatibility: '搜索逆变器兼容性',
-  searchInverterCompatibilitySr: '打开逆变器兼容性搜索',
-  finishOrderOpenCart: '完成订单 — 打开购物车',
-  finishOrderOpenCartAria: '购物车中有待结账的商品。前往合作伙伴产品。',
-  activeCartEyebrow: '购物车',
-  finishOrderTitle: '完成您的订单',
-  finishOrderBody: '购物车中有尚未提交的商品，可随时继续结账完成订单。',
-  goToPartnerProducts: '前往合作伙伴产品页面',
-  detailsLabel: '详情',
-  detailsAria: (productTitle) => `${productTitle}：详情`,
-}
 
-const translations: Record<LangCode, PartnerDashboardTranslations> = { ro, en, zh }
+const translations: Record<LangCode, PartnerDashboardTranslations> = { ro, en }
 
 export function getPartnerDashboardTranslations(lang: LangCode): PartnerDashboardTranslations {
   return translations[lang] ?? translations.ro

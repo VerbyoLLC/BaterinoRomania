@@ -146,7 +146,7 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
   const sale = num(product.salePrice)!
   const vatPct = num((product as { vat?: string | number | null }).vat)
 
-  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const locale = lang === 'en' ? 'en-GB' : 'ro-RO'
   const fmtMoney = (n: number) =>
     n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
   const fmtPct = (n: number) =>

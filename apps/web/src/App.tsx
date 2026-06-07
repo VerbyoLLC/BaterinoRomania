@@ -210,7 +210,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
-              <Route path="service-lithtech-romania" element={<ServiceLithtech />} />
+              <Route path="service-baterii-lithtech-romania" element={<ServiceLithtech />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>
@@ -238,7 +238,7 @@ export default function App() {
               <Route path="comanda" element={<GuestCheckout />} />
               <Route path="cos" element={<CartPage />} />
               <Route path="verificare-garantie" element={<VerificareGarantie />} />
-              <Route path="service-lithtech-romania" element={<ServiceLithtech />} />
+              <Route path="service-baterii-lithtech-romania" element={<ServiceLithtech />} />
               <Route path="returnare-produse" element={<ReturnareProduse />} />
               <Route path="intrebari-frecvente" element={<IntrebariFrecvente />} />
               <Route path="client" element={<ClientOutlet />}>

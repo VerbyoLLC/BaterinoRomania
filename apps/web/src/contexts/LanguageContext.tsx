@@ -9,7 +9,7 @@ export const DEFAULT_LANG: LangCode = 'ro'
 export function getStoredLang(): LangCode {
   if (typeof window === 'undefined') return DEFAULT_LANG
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'ro' || stored === 'en' || stored === 'zh') return stored
+  if (stored === 'ro' || stored === 'en') return stored
   return DEFAULT_LANG
 }
 

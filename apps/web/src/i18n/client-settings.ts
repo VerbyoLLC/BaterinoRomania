@@ -28,13 +28,6 @@ const en: ClientSettingsExportTranslations = {
   exportDataError: 'An error occurred. Please try again.',
 }
 
-const zh: ClientSettingsExportTranslations = {
-  exportDataTitle: '个人数据导出',
-  exportData: '下载我的数据',
-  exportDataDesc: '根据GDPR第20条，下载包含我们持有的所有个人数据的JSON文件。',
-  exportDataLoading: '正在准备文件...',
-  exportDataError: '发生错误，请重试。',
-}
 
 const es: ClientSettingsExportTranslations = {
   exportDataTitle: 'Exportación de datos personales',
@@ -57,7 +50,6 @@ const id: ClientSettingsExportTranslations = {
 const translations: Record<ClientSettingsExportLang, ClientSettingsExportTranslations> = {
   ro,
   en,
-  zh,
   es,
   id,
 }

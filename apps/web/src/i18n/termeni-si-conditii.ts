@@ -40,20 +40,6 @@ const translations: Record<LangCode, TermeniSiConditiiTranslations> = {
       'To start a return, use the “Product returns” page on the website, follow the steps and submit your request. The Baterino team may confirm receipt and next steps (including a return shipping address where applicable).',
     ],
   },
-  zh: {
-    seoTitle: '条款与条件 – Baterino 罗马尼亚',
-    seoDesc: 'Baterino罗马尼亚网站及服务使用的一般条款与条件，含退货政策摘要。',
-    pageTitle: '条款与条件',
-    intro: '访问和使用Baterino罗马尼亚网站即表示您接受以下条款和条件。请在使用我们的服务前仔细阅读本文件。',
-    returnPolicyTitle: '退货政策',
-    returnPolicyParagraphs: [
-      '对于在线购买的个人消费者，远程合同的撤回权受罗马尼亚适用法律管辖（包括关于远程合同中消费者权利的政府紧急条例第34/2014号）。',
-      '自您（或您指定的第三方）实际签收商品之日起15个自然日内，您可在法律允许范围内并按网站公布的商业政策向Baterino申请退货。',
-      '退回商品须符合法律及我方对商品状态、包装与配件的要求。收到退货后，Baterino可核验是否符合条件；可通过退货表单要求您补充说明或材料（例如照片）。',
-      '在收到退货包裹并确认符合退货政策后，原则上将在确认之日起5个工作日内退款；退款方式一般为原支付路径，或按您提供的银行账户转账（如适用）。',
-      '如需发起退货，请使用网站上的「产品退货」页面，按步骤填写并提交申请。Baterino团队可确认收到申请并告知后续步骤（如适用，包括退货运送地址）。',
-    ],
-  },
 }
 
 export function getTermeniSiConditiiTranslations(lang: LangCode): TermeniSiConditiiTranslations {

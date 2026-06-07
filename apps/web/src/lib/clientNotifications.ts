@@ -92,14 +92,12 @@ export async function getClientNotificationItems(lang: LangCode): Promise<Client
     {
       id: 'welcome_account_created',
       createdAt: String(data.createdAt || ''),
-      title: lang === 'en' ? 'Welcome to Baterino!' : lang === 'zh' ? '欢迎来到 Baterino！' : 'Bine ai venit pe Baterino!',
+      title: lang === 'en' ? 'Welcome to Baterino!' : 'Bine ai venit pe Baterino!',
       message:
         lang === 'en'
           ? 'Your account was created successfully. You can now register products and manage warranties.'
-          : lang === 'zh'
-            ? '您的账户已成功创建。现在可以注册产品并管理保修。'
             : 'Contul tău îți permite să comanzi produse, să trimiți coduri de reducere prietenilor, să gestionezi garanțiile, să urmărești comenzile și să contactezi echipa noastră de suport — totul într-un singur loc.',
-      ctaLabel: lang === 'en' ? 'My account' : lang === 'zh' ? '我的账户' : 'Contul meu',
+      ctaLabel: lang === 'en' ? 'My account' : 'Contul meu',
       href: '/client',
     },
   ]
@@ -110,16 +108,12 @@ export async function getClientNotificationItems(lang: LangCode): Promise<Client
       title:
         lang === 'en'
           ? 'Complete your profile for warranty certificate'
-          : lang === 'zh'
-            ? '请完善资料以生成保修证书'
             : 'Completeaza-ti profilul Baterino!',
       message:
         lang === 'en'
           ? 'Please complete your personal details and address so we can generate your warranty certificate.'
-          : lang === 'zh'
-            ? '请完善个人资料和地址信息，以便我们生成您的保修证书。'
             : 'Te rugam sa iti completezi datele personale. Acestea te ajuta sa iti generezi garantia pentru produsele achizitionate. Poti sa iti completezi datele aici.',
-      ctaLabel: lang === 'en' ? 'Go to settings' : lang === 'zh' ? '前往设置' : 'Completează acum',
+      ctaLabel: lang === 'en' ? 'Go to settings' : 'Completează acum',
       href: '/client/setari',
     })
   }

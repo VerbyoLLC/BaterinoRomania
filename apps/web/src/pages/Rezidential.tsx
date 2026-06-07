@@ -134,14 +134,11 @@ export default function Rezidential() {
     <SEO
       title={
         language.code === 'en' ? 'Residential Energy Storage'
-        : language.code === 'zh' ? '住宅储能'
         : 'Stocare Energie Rezidențial'
       }
       description={
         language.code === 'en'
           ? 'LiFePo4 Low Voltage and High Voltage energy storage systems for individual homes and residential micro-grids. 10-year warranty, dedicated technical support and local service in Romania.'
-        : language.code === 'zh'
-          ? '面向独立住宅与住宅微电网的LiFePo4低压及高压储能系统。10年质保，专业技术支持，罗马尼亚本地服务。'
           : 'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.'
       }
       canonical="/divizii/rezidential"

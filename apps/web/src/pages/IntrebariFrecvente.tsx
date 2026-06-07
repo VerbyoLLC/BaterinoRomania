@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, Search } from 'lucide-react'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getIntrebariFrecventeTranslations } from '../i18n/intrebari-frecvente'
@@ -48,6 +49,17 @@ export default function IntrebariFrecvente() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
+      <SchemaOrg schema={{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: tr.sections.flatMap((section) =>
+          section.items.map(({ q, a }) => ({
+            '@type': 'Question',
+            name: q,
+            acceptedAnswer: { '@type': 'Answer', text: a },
+          }))
+        ),
+      }} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-16 pb-24">
         <header className="text-center mb-10 lg:mb-12 max-w-3xl mx-auto">

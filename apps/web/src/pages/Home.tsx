@@ -16,10 +16,11 @@ import {
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import CTABar from '../components/CTABar'
 import HomeHeroV2 from '../components/home/HomeHeroV2'
-import HomeMobileSlider from '../components/home/HomeMobileSlider'
+import HomeMobileSlider, { MOBILE_SLIDE_COUNT } from '../components/home/HomeMobileSlider'
 import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
@@ -267,9 +268,28 @@ export default function Home() {
         lang={language.code}
       />
 
+      <SchemaOrg schema={{
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Baterino Romania',
+        url: 'https://baterino.ro',
+        logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg',
+        description: tr.seoDesc,
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer service',
+          url: 'https://baterino.ro/contact',
+          availableLanguage: ['Romanian', 'English'],
+        },
+        areaServed: 'RO',
+        knowsLanguage: ['ro', 'en'],
+      }} />
+
+      <h1 className="sr-only">{tr.heroV2Title}</h1>
+
       {/* Mobile: full-screen portrait image slider */}
       <div className="md:hidden">
-        <HomeMobileSlider tr={tr} />
+        <HomeMobileSlider tr={tr} jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_COUNT - 1 : 0} />
       </div>
 
       {/* Desktop: card slider hero */}
@@ -280,13 +300,16 @@ export default function Home() {
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5">
-            {tr.productsSectionTitle}
-          </h2>
-
-          <div className="flex justify-center mb-6 sm:mb-8 lg:mb-10">
+          <div className="flex flex-col items-center mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5">
+            <p className="hidden md:block text-sm font-semibold text-gray-500 mb-2 tracking-wide uppercase">
+              Verifică compatibilitatea cu invertorul tău
+            </p>
             <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
           </div>
+
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] mb-6 sm:mb-8 lg:mb-10">
+            {tr.productsSectionTitle}
+          </h2>
 
           {/* Product category filters — Mobile: dropdown + filtre */}
           {isMobile ? (

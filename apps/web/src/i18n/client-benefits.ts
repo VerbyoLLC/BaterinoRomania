@@ -105,34 +105,8 @@ const en: ClientBenefitsTranslations = {
     'Hello, I am a Baterino client and would like information about the warranty terms (10 years).',
 }
 
-const zh: ClientBenefitsTranslations = {
-  pageTitle: '客户专属权益',
-  pageSubtitle: '在账户中快速查看折扣、逆变器兼容性、保修与支持。',
-  c1Title: '折扣计划',
-  c1Desc: '老年人、乡村地区、推荐等活跃计划——以各计划条款为准。',
-  c1Btn: '查看折扣',
-  c2Title: '逆变器兼容率 99%',
-  c2Desc: '在列表中搜索您的逆变器品牌；罗马尼亚常见逆变器绝大多数可与我们的产品兼容。',
-  c2Btn: '检查逆变器兼容性',
-  c3Title: '罗马尼亚本地服务与支持',
-  c3Desc: '本地团队解答技术与商务问题，可通过您偏好的渠道联系。',
-  c3Btn: '请求协助',
-  c4Title: '10 年保修',
-  c4Desc: '符合条件的家用产品可享受延长保障，以 Baterino 文件与商业条款为准。',
-  c4Btn: '查看保修条款',
-  c5Title: '换新（swap）服务',
-  c5Desc: '在 Baterino 换新计划条件下更换——请联系团队了解流程与资格。',
-  c5Btn: '帮助与支持',
-  c6Title: '15 天退货',
-  c6Desc: '客户退货政策，以下单时及法律文件中的限制与条件为准。',
-  c6Btn: '申请退货',
-  waSupportPrefill: '您好，我是已注册的 Baterino 客户，需要协助（服务/支持）。',
-  waReturnPrefill: '您好，我是已注册的 Baterino 客户，希望根据15天政策申请退货。',
-  waWarrantyPrefill: '您好，我是 Baterino 客户，想了解保修条款（10年）相关信息。',
-}
 
 export function getClientBenefitsTranslations(lang: LangCode): ClientBenefitsTranslations {
   if (lang === 'en') return en
-  if (lang === 'zh') return zh
   return ro
 }

@@ -117,43 +117,6 @@ const translations: Record<LangCode, MaritimTranslations> = {
     ctaDesc: 'We evaluate and size energy storage solutions tailored to the specifics of each vessel and maritime operation.',
     ctaButton: 'REQUEST TECHNICAL ASSESSMENT',
   },
-  zh: {
-    heroTitle: '海事领域储能',
-    heroTagline: '为船舶、商业航运及港口基础设施提供能源解决方案',
-    navStocare: '储能',
-    navProduse: '产品',
-    navAplicatii: '应用',
-    sectionStocareTitle: '海洋环境储能',
-    introP1:
-      'Baterino At Sea是我们专注于海事应用的事业部，拥有**专业团队，负责为罗马尼亚船队和港口基础设施集成储能系统。**我们是唯一专门从事海事领域的分销商。',
-    introP2:
-      '我们实施**全电动或混合动力（电池+发电机）系统，用于船舶推进、船载自主运行、降低燃油消耗以及港口基础设施集成。**',
-    examplesTitle: '示例：',
-    introExamples:
-      '拖船：100–300 kWh，用于自主运行和混合推进\n渔船：60–200 kWh，用于扩展自主性和减少排放\n渡轮/滚装客船：500 kWh – 2 MWh，用于短途电动或混合推进',
-    ctaSuport: '全面支持，从设计到维护',
-    cardGarantie: '延长\n10年质保',
-    cardProiectare: '专属技术设计',
-    cardSolutii: '定制化\n解决方案',
-    cardInstalare: 'Baterino 安装实施',
-    cardService: '罗马尼亚\n支持与服务',
-    sectionProduseTitle: '推荐产品',
-    product1Category: '海事高压系列',
-    product1Name: 'White Shark Series',
-    product1Spec: 'LFP HV MED: LWS-1-230\n17,600 Ah – 570,101,600 Wh',
-    detailsButton: '技术详情',
-    sectionAplicatiiTitle: '海事应用',
-    sectionAplicatiiDesc: '为船载更高效自主运行提供储能解决方案。',
-    aplicatiiRemorcher: '拖船',
-    aplicatiiFerry: '渡轮',
-    aplicatiiRoPax: '滚装客船',
-    aplicatiiOffshore: '海洋支持船 / PSV',
-    aplicatiiCargo: '货船',
-    aplicatiiPescuit: '渔船',
-    ctaTitle: '与我们的团队沟通',
-    ctaDesc: '我们根据每艘船舶和海事作业的具体情况，评估和设计储能解决方案。',
-    ctaButton: '申请技术评估',
-  },
 }
 
 export function getMaritimTranslations(lang: LangCode): MaritimTranslations {

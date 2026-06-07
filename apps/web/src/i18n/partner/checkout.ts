@@ -47,18 +47,8 @@ const en: PartnerCheckoutTranslations = {
   backToBilling: 'Back to billing details',
 }
 
-const zh: PartnerCheckoutTranslations = {
-  partnerBadge: '合作伙伴',
-  partnerSubline: '公司账单与收货信息，订单确认将发送至合作伙伴账户邮箱。',
-  stepTitles: ['第 1 步：联系人', '第 2 步：开票信息', '第 3 步：收货地址', '第 4 步：提交订单'],
-  invalidSession: '会话无效，请重新登录。',
-  partnerDiscountApplied: '已按商务政策应用 {pct}% 合作伙伴折扣（目录净价）。',
-  backToContact: '返回联系人信息',
-  copyFromBilling: '从账单地址复制',
-  backToBilling: '返回开票信息',
-}
 
-const translations: Record<LangCode, PartnerCheckoutTranslations> = { ro, en, zh }
+const translations: Record<LangCode, PartnerCheckoutTranslations> = { ro, en }
 
 export function getPartnerCheckoutTranslations(lang: LangCode): PartnerCheckoutTranslations {
   return translations[lang] ?? translations.ro

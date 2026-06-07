@@ -123,49 +123,11 @@ const en: PartnerProductsTranslations = {
   catalogNavAria: 'Catalog sections',
 }
 
-const zh: PartnerProductsTranslations = {
-  cartTotals: { net: '小计（不含增值税）', vat: '增值税', gross: '含税合计' },
-  cartLoading: '正在加载购物车…',
-  catalogSections: {
-    rezidential: '住宅',
-    micro_grid: '商用 · 微电网',
-    comercial_medical: '商用与医疗',
-    industrial: '工业',
-    maritim: '海事',
-  },
-  toolbar: {
-    searchProducts: '搜索产品…',
-    clearSearch: '清除搜索',
-    openSearchPanel: '打开搜索',
-    closeSearchPanel: '关闭搜索',
-    notifications: '通知',
-    notificationsEmptyTitle: '暂无新通知',
-    notificationsEmptySubtitle: '订单动态与提醒将在此处显示。',
-  },
-  productCountOne: '款产品',
-  productCountMany: '款产品',
-  pageTitle: '产品',
-  cartTitle: '购物车',
-  cartAria: '购物车',
-  cartEmpty: '购物车为空。',
-  cartDismiss: '关闭',
-  cartPerUnit: '/ 件',
-  cartAriaWithCount: '购物车（{count} 件商品）',
-  detailTabDetails: '详情',
-  detailTabManuals: '手册',
-  detailTabVideos: '视频',
-  cartCloseAria: '关闭购物车',
-  cartContinueShopping: '继续选购',
-  cartRemoveItem: '从购物车移除',
-  cartCheckout: '提交订单',
-  catalogNavAria: '产品分类',
-}
 
-const translations: Record<LangCode, PartnerProductsTranslations> = { ro, en, zh }
+const translations: Record<LangCode, PartnerProductsTranslations> = { ro, en }
 
 export function formatPartnerCatalogSectionCount(lang: LangCode, count: number): string {
   const tr = getPartnerProductsTranslations(lang)
-  if (lang === 'zh') return `${count} ${tr.productCountMany}`
   const word = count === 1 ? tr.productCountOne : tr.productCountMany
   return `${count} ${word}`
 }

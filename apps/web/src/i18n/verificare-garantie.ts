@@ -82,28 +82,6 @@ const translations: Record<LangCode, VerificareGarantieTranslations> = {
       'Certificate link verification is temporarily unavailable. Enter your serial number manually or try again later.',
     productFallbackAlt: 'Product',
   },
-  zh: {
-    pageTitle: '保修查询',
-    pageDescription: '输入电池序列号（SN）以验证保修状态。',
-    serialLabel: '序列号',
-    placeholder: '例如：LJC5131400325070043',
-    submit: '查询',
-    modalClose: '关闭',
-    modelLabel: '型号',
-    brandLabel: '品牌',
-    errorTitle: '查询',
-    warrantyActive: '保修有效',
-    notFoundTitle: '未找到该序列号。',
-    notFoundBody: '请确认序列号输入正确后重试。',
-    contactHint: '若您持有该产品并需要帮助，请联系我们。',
-    invalidSerial: '序列号格式无效。请检查后重试（例如 LJC 加 16 位数字）。',
-    loading: '正在查询…',
-    genericError: '暂时无法完成查询，请稍后重试。',
-    rateLimited: '短时间内请求过多。请等待约一分钟后重试；若仍如此，请联系我们。',
-    invalidToken: '证书上的验证链接无效或已过期。请手动输入序列号或使用更新的证书。',
-    tokenNotConfigured: '暂无法通过证书链接验证。请手动输入序列号或稍后再试。',
-    productFallbackAlt: '产品',
-  },
 }
 
 export function getVerificareGarantieTranslations(lang: LangCode): VerificareGarantieTranslations {

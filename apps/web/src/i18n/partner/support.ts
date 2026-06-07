@@ -48,23 +48,8 @@ const en: PartnerSupportTranslations = {
   loadErrorFallback: 'Failed to load.',
 }
 
-const zh: PartnerSupportTranslations = {
-  title: '支持',
-  subtitle: '需要帮助？请联系 Baterino 团队。',
-  dedicatedAgent: '您的专属客户经理',
-  agentLoadingAria: '正在加载客户经理信息',
-  noAgentBeforeEmail: '您尚未分配销售经理。请使用下方联系方式或发送邮件至 ',
-  noAgentAfterEmail: '。',
-  generalContact: '通用联系方式',
-  email: '电子邮件',
-  phone: '电话',
-  supportHours: '支持时间',
-  supportHoursWeekdays: '周一至周五：09:00 – 18:00',
-  supportHoursWeekend: '周六至周日：休息',
-  loadErrorFallback: '加载失败。',
-}
 
-const translations: Record<LangCode, PartnerSupportTranslations> = { ro, en, zh }
+const translations: Record<LangCode, PartnerSupportTranslations> = { ro, en }
 
 export function getPartnerSupportTranslations(lang: LangCode): PartnerSupportTranslations {
   return translations[lang] ?? translations.ro

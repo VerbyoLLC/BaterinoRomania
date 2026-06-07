@@ -68,6 +68,7 @@ export default function AdminProducts() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [categoryError, setCategoryError] = useState(false)
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
@@ -487,6 +488,7 @@ export default function AdminProducts() {
     setKeyAdvantages([])
     setTipProdus('rezidential')
     setCategoryId('')
+    setCategoryError(false)
     setCategorieRezidential(false)
     setCategorieIndustrial(false)
     setCategorieMedical(false)
@@ -1177,6 +1179,10 @@ export default function AdminProducts() {
   }
 
   const handleSave = async () => {
+    if (!editingProductId && !categoryId) {
+      setCategoryError(true)
+      return
+    }
     setIsSaving(true)
     setSaveError(null)
     setSaveSuccess(false)
@@ -1503,23 +1509,29 @@ export default function AdminProducts() {
 
               {/* Categorie produs */}
               <div>
-                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">Categorie produs</label>
+                <label className="block text-sm font-bold font-['Inter'] text-gray-900 mb-2">
+                  Categorie produs {!editingProductId && <span className="text-red-500">*</span>}
+                </label>
                 <select
                   value={categoryId}
                   onChange={(e) => {
                     const val = e.target.value
                     setCategoryId(val)
+                    setCategoryError(false)
                     const cat = categories.find((c) => c.id === val)
                     if (cat?.slug === 'baterii-solare') setTipProdus('rezidential')
                     else if (cat?.slug === 'sisteme-bess') setTipProdus('industrial')
                   }}
-                  className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-['Inter'] text-gray-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
+                  className={`w-full max-w-xs rounded-lg border px-3 py-2 text-sm font-['Inter'] text-gray-900 focus:outline-none focus:ring-2 focus:ring-slate-500/20 ${categoryError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-slate-500'}`}
                 >
-                  <option value="">— Fără categorie —</option>
+                  <option value="">— Selectează categoria —</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
+                {categoryError && (
+                  <p className="mt-1 text-xs text-red-500 font-['Inter']">Categoria este obligatorie pentru produse noi.</p>
+                )}
               </div>
 
               {/* Filtre */}

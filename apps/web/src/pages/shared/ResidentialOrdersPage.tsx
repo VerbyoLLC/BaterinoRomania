@@ -94,7 +94,7 @@ function OrdersListSkeleton() {
 }
 
 function formatDate(iso: string, lang: LangCode): string {
-  const loc = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const loc = lang === 'en' ? 'en-GB' : 'ro-RO'
   return new Date(iso).toLocaleString(loc, {
     day: '2-digit',
     month: '2-digit',
@@ -105,7 +105,7 @@ function formatDate(iso: string, lang: LangCode): string {
 }
 
 function moneyLocale(lang: LangCode): string {
-  return lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  return lang === 'en' ? 'en-GB' : 'ro-RO'
 }
 
 function parseMoneyField(raw: string | null | undefined): number | null {
@@ -435,8 +435,6 @@ export function ResidentialOrdersPage({
         setError(
           lang === 'en'
             ? 'Could not copy to clipboard.'
-            : lang === 'zh'
-              ? '无法复制到剪贴板。'
               : 'Nu s-a putut copia în clipboard.',
         )
       }
@@ -456,8 +454,6 @@ export function ResidentialOrdersPage({
         setError(
           lang === 'en'
             ? 'Could not copy to clipboard.'
-            : lang === 'zh'
-              ? '无法复制到剪贴板。'
               : 'Nu s-a putut copia în clipboard.',
         )
       }
@@ -549,7 +545,7 @@ export function ResidentialOrdersPage({
           onClick={() => void load()}
           className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 font-['Inter']"
         >
-          {lang === 'en' ? 'Retry' : lang === 'zh' ? '重试' : 'Reîncearcă'}
+          {lang === 'en' ? 'Retry' : 'Reîncearcă'}
         </button>
       </div>
     )
@@ -934,8 +930,6 @@ export function ResidentialOrdersPage({
                             aria-label={
                               lang === 'en'
                                 ? 'More order actions'
-                                : lang === 'zh'
-                                  ? '更多订单操作'
                                   : 'Mai multe acțiuni'
                             }
                           >
@@ -1017,7 +1011,7 @@ function formatPayAmount(raw: unknown, lang: LangCode): { display: string; copya
   const n = Number(text.replace(',', '.'))
   if (!Number.isFinite(n)) return { display: text, copyable: text }
   const display = new Intl.NumberFormat(
-    lang === 'en' ? 'en-US' : lang === 'zh' ? 'zh-CN' : 'ro-RO',
+    lang === 'en' ? 'en-US' : 'ro-RO',
     { minimumFractionDigits: 2, maximumFractionDigits: 2 },
   ).format(n)
   const copyable = n.toFixed(2)

@@ -159,76 +159,8 @@ const en: ServiceLithtechTranslations = {
   ctaButton: 'Submit LithTech service request',
 }
 
-const zh: ServiceLithtechTranslations = {
-  seoTitle: '罗马尼亚官方LithTech服务中心 – 授权电池维修',
-  seoDesc:
-    'Baterino是罗马尼亚官方LithTech服务与维修中心。我们诊断并维修EcoHome住宅电池、工业BESS系统以及LithTech一体机系统。',
-  heroTitle: '罗马尼亚官方LithTech服务',
-  heroSubtitle:
-    '您的LithTech产品需要维修或保养吗？Baterino是罗马尼亚LithTech授权合作伙伴——我们诊断、维修并维护全系列LithTech产品。',
-  heroCta: '联系支持',
-  aboutTitle: '罗马尼亚LithTech授权服务中心',
-  aboutText:
-    'Baterino Energy SRL是LithTech产品在罗马尼亚的独家进口商和分销商。这意味着我们的技术人员由LithTech直接培训，我们使用原厂备件，并对所有维修工作提供质保。请勿将您的LithTech产品交给可能使保修失效的非授权维修点。',
-  productsTitle: '我们服务的LithTech产品',
-  products: [
-    {
-      title: 'EcoHome住宅电池',
-      desc: 'EcoHome 5kWh、10kWh和16kWh系列——BMS诊断、电芯更换、固件升级、容量测试。',
-    },
-    {
-      title: '工业BESS系统',
-      desc: '100kWh–1MWh+ BESS集装箱——预防性检查与维护、EMS诊断、机柜维修、全系统测试。',
-    },
-    {
-      title: '一体机系统',
-      desc: 'HP一体机及TA/TB系列——逆变器+电池集成服务、软件升级、连接与BMS维修。',
-    },
-  ],
-  servicesTitle: '我们提供的服务类型',
-  services: [
-    {
-      title: '诊断',
-      desc: '使用LithTech原厂设备和软件精确定位问题。',
-    },
-    {
-      title: '维修',
-      desc: '使用LithTech原厂零件更换故障组件，维修工作享有质保。',
-    },
-    {
-      title: '预防性维护',
-      desc: '定期检查、清洁、容量测试和固件升级，延长系统使用寿命。',
-    },
-    {
-      title: '技术咨询',
-      desc: '不确定系统出了什么问题？免费致电，我们为您说明后续步骤。',
-    },
-  ],
-  whyTitle: '为什么选择授权服务而非普通维修店？',
-  whyPoints: [
-    {
-      title: '保修仍然有效',
-      desc: '非授权维修会使LithTech保修失效。在我们这里，您的保修保持有效。',
-    },
-    {
-      title: '原厂零件',
-      desc: '我们仅使用LithTech原厂备件，不使用副厂或替代组件。',
-    },
-    {
-      title: '受过培训的技师',
-      desc: '我们的团队由深圳LithTech工程师直接培训。',
-    },
-    {
-      title: '全国覆盖',
-      desc: '我们在罗马尼亚全境提供服务。住宅系统支持快递取件和返还。',
-    },
-  ],
-  ctaTitle: '需要LithTech服务？',
-  ctaSubtitle: '致电我们，几分钟内即可告知您的问题是否可以解决以及后续步骤。',
-  ctaButton: '提交LithTech服务申请',
-}
 
-const translations: Record<LangCode, ServiceLithtechTranslations> = { ro, en, zh }
+const translations: Record<LangCode, ServiceLithtechTranslations> = { ro, en }
 
 export function getServiceLithtechTranslations(lang: LangCode): ServiceLithtechTranslations {
   return translations[lang] ?? translations.ro

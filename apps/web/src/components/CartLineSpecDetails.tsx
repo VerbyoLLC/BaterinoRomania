@@ -32,14 +32,7 @@ function specLabels(lang: LangCode) {
       garantie: 'Warranty',
     }
   }
-  if (lang === 'zh') {
-    return {
-      energie: '标称能量',
-      capacitate: '容量',
-      cicluri: '放电循环',
-      garantie: '保修',
-    }
-  }
+
   return {
     energie: 'Energie nominală',
     capacitate: 'Capacitate',

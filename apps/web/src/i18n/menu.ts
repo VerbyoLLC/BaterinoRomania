@@ -1,9 +1,8 @@
-export type LangCode = 'ro' | 'en' | 'zh'
+export type LangCode = 'ro' | 'en'
 
 export const LANGUAGES: { code: LangCode; label: string; menuLabel: string }[] = [
   { code: 'ro', label: 'Română', menuLabel: 'Română' },
   { code: 'en', label: 'English', menuLabel: 'English' },
-  { code: 'zh', label: '中文', menuLabel: 'Chinese Mandarin' },
 ]
 
 const translations: Record<LangCode, Record<string, string>> = {
@@ -48,27 +47,6 @@ const translations: Record<LangCode, Record<string, string>> = {
     mainLangSubtitle: 'Choose site language', mainLogin: 'Log in', mainLoginSubtitle: 'Clients and Partners',
     verificareGarantie: 'Warranty check',
     mainVerificareGarantieSubtitle: 'Verify your battery serial number',
-  },
-  zh: {
-    home: '首页', produse: '产品', reduceri: '折扣', siguranta: '安全', studiiDeCaz: '案例研究', divizii: '事业部',
-    rezidential: '住宅', industrial: '工业', medical: '医疗', maritim: '船舶',
-    lithtech: 'LithTech合作', instalatori: '安装商', companie: '公司',
-    viziune: '愿景', misiune: '使命', implementare: '实施', echipa: '团队',
-    promisiune: '承诺', contact: '联系我们', login: '登录',
-    accountMenuLabel: '我的账户',
-    prodRezSubtype: 'Low Voltage & High Voltage', prodHighVoltage: 'High Voltage',
-    back: '返回',
-    divRezSubtitle: '住宅与微电网', divIndSubtitle: '工业与商业',
-    compViziuneSubtitle: '关于我们', compLithtechSubtitle: '技术合作伙伴', compContactSubtitle: '客户和合作伙伴支持',
-    loginCreateAccount: '创建账户', loginSignIn: '登录', loginSubtitle: '客户和合作伙伴',
-    mainProduse: 'LiFePO4电池', mainProduseSubtitle: '选择电池',
-    mainReduceriSubtitle: '电池折扣计划', mainSigurantaSubtitle: '为什么选择我们',
-    mainStudiiDeCazSubtitle: '真实储能项目案例',
-    mainDiviziiSubtitle: '我们的技术部门', mainInstalatori: '安装商与经销商',
-    mainInstalatoriSubtitle: '成为我们的合作伙伴', mainCompanieSubtitle: '愿景、合作与联系',
-    mainLangSubtitle: '选择网站语言', mainLogin: '登录', mainLoginSubtitle: '客户和合作伙伴',
-    verificareGarantie: '保修查询',
-    mainVerificareGarantieSubtitle: '验证电池序列号',
   },
 }
 

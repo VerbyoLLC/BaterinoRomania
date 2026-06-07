@@ -103,7 +103,7 @@ export default function PartnerCheckout() {
   const { currency } = useCatalogCurrency()
   const p = getProductPricingTranslations(lang, currency)
 
-  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const locale = lang === 'en' ? 'en-GB' : 'ro-RO'
   const fmtMoney = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
 
   const partnerBadge = trPartner.partnerBadge

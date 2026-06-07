@@ -132,24 +132,7 @@ function cartLabels(lang: LangCode) {
         'For Baterino platform users, delivery is free. The nationwide Baterino network lets us get your order to you as quickly as possible.',
     }
   }
-  if (lang === 'zh') {
-    return {
-      qty: '数量',
-      cartTotal: '最终合计',
-      loadingPrices: '加载价格中…',
-      remove: '移除',
-      productPriceExcl: '产品价格',
-      discount: '折扣',
-      vatPrefix: '增值税',
-      totalFinal: '含税合计',
-      cartProductExcl: '产品小计',
-      cartDiscountExcl: '折扣',
-      cartVatTotal: '增值税',
-      freeShippingTitle: '免运费',
-      freeShippingBody:
-        'Baterino 平台用户享受免运费。依托全国 Baterino 网络，我们尽快为您配送。',
-    }
-  }
+
   return {
     qty: 'Cantitate',
     cartTotal: 'Total final',
@@ -183,7 +166,7 @@ export default function CartPage() {
   const programLabelById = useReducereProgramLabels(lang, anyCartLineProgramDiscount)
   const cartProgramDiscountTr = getCartProgramDiscountTranslations(lang)
 
-  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const locale = lang === 'en' ? 'en-GB' : 'ro-RO'
   const fmtMoney = (n: number) =>
     n.toLocaleString(locale, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
 
@@ -238,9 +221,7 @@ export default function CartPage() {
       const errMsg =
         lang === 'en'
           ? 'Price unavailable for this product.'
-          : lang === 'zh'
-            ? '无法显示此产品价格。'
-            : 'Preț indisponibil pentru acest produs.'
+          : 'Preț indisponibil pentru acest produs.'
 
       for (const line of toFetch) {
         const lk = cartLineMergeKey(line)
@@ -607,9 +588,7 @@ export default function CartPage() {
             <p className="mt-2 text-sm text-amber-800">
               {lang === 'en'
                 ? 'Some lines have no price; check products or remove them before checkout.'
-                : lang === 'zh'
-                  ? '部分商品无法计价，请处理后再结算。'
-                  : 'Unele produse nu au preț afișat; verifică sau elimină din coș înainte de plată.'}
+                : 'Unele produse nu au preț afișat; verifică sau elimină din coș înainte de plată.'}
             </p>
           )}
         </div>

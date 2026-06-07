@@ -37,18 +37,6 @@ const translations: Record<LangCode, CookieConsentTranslations> = {
     acceptAnalytics: 'Accept analytics cookies',
     rejectAnalytics: 'Necessary cookies only',
   },
-  zh: {
-    title: 'Cookie偏好设置',
-    description:
-      '我们使用严格必要的Cookie以确保网站正常运行（身份验证、购物车）。分析Cookie帮助我们了解网站使用情况，仅在您同意时启用。',
-    necessaryTitle: '严格必要',
-    necessaryDesc: '用于身份验证、购物车和安全性，始终处于启用状态。',
-    analyticsTitle: '分析',
-    analyticsDesc: '帮助我们衡量流量并改善网站体验。',
-    privacyLink: '隐私政策',
-    acceptAnalytics: '接受分析Cookie',
-    rejectAnalytics: '仅严格必要',
-  },
 }
 
 export function getCookieConsentTranslations(lang: LangCode): CookieConsentTranslations {

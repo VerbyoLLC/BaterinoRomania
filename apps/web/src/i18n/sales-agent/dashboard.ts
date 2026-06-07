@@ -48,23 +48,8 @@ const en: SalesAgentDashboardTranslations = {
   pandaCardSubtitle: 'You’re on a roll — keep it up!',
 }
 
-const zh: SalesAgentDashboardTranslations = {
-  welcomePrefix: '欢迎，',
-  welcomeFallback: '代理',
-  subtitle: '您的潜在客户摘要与代理活动概览。',
-  loadError: '加载失败。',
-  leadsBoxTitle: '潜在客户',
-  leadsTotalLabel: '潜在客户总数',
-  leadsYourLabel: '您的潜在客户',
-  leadsContributionsLabel: '贡献',
-  leadsCreateCta: '新建潜在客户',
-  leadsStatsLoadError: '无法加载潜在客户统计。',
-  loading: '正在加载...',
-  pandaCardTitle: 'Happy Panda',
-  pandaCardSubtitle: '状态正佳 — 继续加油！',
-}
 
-const translations: Record<LangCode, SalesAgentDashboardTranslations> = { ro, en, zh }
+const translations: Record<LangCode, SalesAgentDashboardTranslations> = { ro, en }
 
 export function getSalesAgentDashboardTranslations(lang: LangCode): SalesAgentDashboardTranslations {
   return translations[lang] ?? translations.ro

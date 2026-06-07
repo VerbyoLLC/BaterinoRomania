@@ -13,7 +13,7 @@ import {
 function formatNotificationDateTime(iso: string, lang: LangCode): string {
   const date = new Date(iso)
   if (!Number.isFinite(date.getTime())) return '—'
-  const locale = lang === 'en' ? 'en-GB' : lang === 'zh' ? 'zh-CN' : 'ro-RO'
+  const locale = lang === 'en' ? 'en-GB' : 'ro-RO'
   return date.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
@@ -48,8 +48,6 @@ export default function ClientNotifications() {
               ? e.message
               : lang === 'en'
                 ? 'Could not load notifications.'
-                : lang === 'zh'
-                  ? '无法加载通知。'
                   : 'Nu am putut încărca notificările.',
           )
         }
@@ -67,13 +65,11 @@ export default function ClientNotifications() {
   return (
     <div className="font-['Inter']">
       <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900">
-        {lang === 'en' ? 'Notifications' : lang === 'zh' ? '通知' : 'Notificări'}
+        {lang === 'en' ? 'Notifications' : 'Notificări'}
       </h1>
       <p className="mb-6 text-sm text-slate-500">
         {lang === 'en'
           ? 'Updates and actions for your account.'
-          : lang === 'zh'
-            ? '您的账户更新与待处理事项。'
             : 'Actualizări și acțiuni pentru contul tău.'}
       </p>
 
@@ -102,8 +98,6 @@ export default function ClientNotifications() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
           {lang === 'en'
             ? 'No notifications right now.'
-            : lang === 'zh'
-              ? '当前没有通知。'
               : 'Nu ai notificări momentan.'}
         </div>
       ) : (
@@ -143,7 +137,7 @@ export default function ClientNotifications() {
                 </div>
                 <div className="border-t border-slate-100 pt-3 text-left sm:flex sm:h-full sm:flex-col sm:items-center sm:justify-center sm:border-t-0 sm:pt-0 sm:text-center">
                   <p className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    {lang === 'en' ? 'Date' : lang === 'zh' ? '日期' : 'Data'}
+                    {lang === 'en' ? 'Date' : 'Data'}
                   </p>
                   <p className="mt-1 m-0 text-sm font-semibold tabular-nums text-slate-700">
                     {formatNotificationDateTime(n.createdAt, lang)}

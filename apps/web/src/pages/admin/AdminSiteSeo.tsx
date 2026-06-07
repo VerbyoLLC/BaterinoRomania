@@ -13,6 +13,7 @@ type PageMeta = { key: string; label: string; path: string }
 const PAGES: PageMeta[] = [
   { key: 'home',          label: 'Pagina principală',           path: '/' },
   { key: 'produse',       label: 'Catalog Produse',             path: '/produse' },
+  { key: 'reduceri',     label: 'Reduceri',                    path: '/reduceri' },
   { key: 'rezidential',   label: 'Stocare Energie Rezidențial', path: '/divizii/rezidential' },
   { key: 'industrial',    label: 'Stocare Energie Industrial',  path: '/divizii/industrial' },
   { key: 'medical',       label: 'Stocare Energie Medical',     path: '/divizii/medical' },
@@ -20,7 +21,7 @@ const PAGES: PageMeta[] = [
   { key: 'blog',          label: 'Blog',                        path: '/blog' },
   { key: 'faq',           label: 'Întrebări Frecvente',         path: '/intrebari-frecvente' },
   { key: 'garantie',      label: 'Verificare Garanție',         path: '/verificare-garantie' },
-  { key: 'service',       label: 'Service Lithtech',            path: '/service-lithtech-romania' },
+  { key: 'service',       label: 'Service Lithtech',            path: '/service-baterii-lithtech-romania' },
   { key: 'returnare',     label: 'Returnare Produse',           path: '/returnare-produse' },
   { key: 'lithtech',      label: 'Parteneriat LithTech',        path: '/parteneriat-strategic-lithtech-baterino' },
   { key: 'instalatori',   label: 'Instalatori',                 path: '/instalatori' },
@@ -212,9 +213,9 @@ export default function AdminSiteSeo() {
                       onChange={(e) => setField(page.key, 'title', e.target.value)}
                       placeholder="Titlu pagină (implicit: valoarea din cod)"
                       className={inputCls}
-                      maxLength={120}
+                      maxLength={60}
                     />
-                    <p className="text-right text-[11px] text-gray-400 font-['Inter'] mt-0.5">{d.title.length}/120</p>
+                    <p className={`text-right text-[11px] font-['Inter'] mt-0.5 ${d.title.length >= 60 ? 'text-red-500' : 'text-gray-400'}`}>{d.title.length}/60</p>
                   </div>
 
                   {/* Description */}

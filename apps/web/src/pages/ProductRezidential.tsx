@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getProduct, type PublicProduct } from '../lib/api'
 import { getProductDetailTranslations, type ProductDetailTranslations } from '../i18n/product-detail'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import ProductPriceBlock from '../components/ProductPriceBlock'
 import ResidentialClientPriceBlock, { showResidentialClientPurchaseUI } from '../components/ResidentialClientPriceBlock'
 import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
@@ -289,9 +290,9 @@ function ResidentialFullTechDetailsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-100 bg-white p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
-          <h1 id="res-full-tech-modal-title" className="min-w-0 text-xl font-semibold leading-tight text-black font-['Inter']">
+          <h2 id="res-full-tech-modal-title" className="min-w-0 text-xl font-semibold leading-tight text-black font-['Inter']">
             {productTitle}
-          </h1>
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -449,7 +450,7 @@ function GarantieModal({ onClose, tr }: { onClose: () => void; tr: ProductDetail
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/testing-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="garantie-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.garantieModalTitle}</h1>
+          <h2 id="garantie-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.garantieModalTitle}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.garantieModalDesc}</p>
         </div>
       </div>
@@ -471,7 +472,7 @@ function SuportModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTr
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/maintance-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="suport-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.suportModalTitle}</h1>
+          <h2 id="suport-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.suportModalTitle}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.suportModalDesc}</p>
         </div>
       </div>
@@ -493,7 +494,7 @@ function SwapModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTran
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/swap-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="swap-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.swapModalTitle}</h1>
+          <h2 id="swap-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.swapModalTitle}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.swapModalDesc}</p>
         </div>
       </div>
@@ -515,7 +516,7 @@ function ReturModal({ onClose, tr }: { onClose: () => void; tr: ProductDetailTra
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/delivery-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="retur-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.returModalTitle}</h1>
+          <h2 id="retur-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.returModalTitle}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.returModalDesc}</p>
         </div>
       </div>
@@ -537,7 +538,7 @@ function ProducatoriModal({ onClose, tr }: { onClose: () => void; tr: ProductDet
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/safety-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="producatori-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.producatoriModalTitle}</h1>
+          <h2 id="producatori-modal-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.producatoriModalTitle}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.producatoriModalDesc}</p>
         </div>
       </div>
@@ -559,7 +560,7 @@ function Compatibilitate99Modal({ onClose, tr }: { onClose: () => void; tr: Prod
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
             <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-10 w-10 object-contain" />
           </div>
-          <h1 id="compatibilitate99-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.compatibilitate99Title}</h1>
+          <h2 id="compatibilitate99-title" className="m-0 text-xl font-semibold leading-tight text-black font-['Inter']">{tr.compatibilitate99Title}</h2>
           <p className="text-base leading-relaxed text-neutral-700 font-['Inter']">{tr.compatibilitate99Desc}</p>
         </div>
       </div>
@@ -618,9 +619,9 @@ function CeSePoateAlimentaModal({
             <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
               <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
             </div>
-            <h1 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
+            <h2 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
               {customContent.title}
-            </h1>
+            </h2>
             <button
               type="button"
               onClick={onClose}
@@ -678,11 +679,11 @@ function CeSePoateAlimentaModal({
           <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-neutral-100 flex items-center justify-center">
             <img src="/images/shared/battery-full-icon.svg" alt="" aria-hidden className="w-8 h-8 object-contain" />
           </div>
-          <h1 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
+          <h2 id="alimenta-modal-title" className="text-black text-xl font-semibold font-['Inter'] leading-tight min-w-0 flex-1">
             {energieDisplay
               ? tr.alimentaModalTitle.replace(/5\s*kWh/i, energieDisplay)
               : tr.alimentaModalTitle}
-          </h1>
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -840,6 +841,12 @@ export default function ProductRezidential() {
   }
   if (error || !product) return <Navigate to="/produse" replace />
 
+  // Enforce canonical URL: redirect if category slug in URL doesn't match product's actual category
+  const canonicalCategorySlug = product.category?.slug
+  if (canonicalCategorySlug && categorySlug !== canonicalCategorySlug) {
+    return <Navigate to={`/produse/${canonicalCategorySlug}/${product.slug || product.id}`} replace />
+  }
+
   if (product.tipProdus === 'industrial') {
     return (
       <ResidentialIndustrialProductPage
@@ -885,6 +892,58 @@ export default function ProductRezidential() {
         lang={language.code}
         ogImage={templateSeo.ogImage}
       />
+      <SchemaOrg schema={(() => {
+        const BASE = 'https://baterino.ro'
+        const productUrl = `${BASE}/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`
+        const images = product.images?.length
+          ? product.images.map((img) => img.startsWith('http') ? img : `${BASE}${img}`)
+          : undefined
+        const stockMap: Record<string, string> = {
+          in_stock: 'https://schema.org/InStock',
+          out_of_stock: 'https://schema.org/OutOfStock',
+          coming_soon: 'https://schema.org/PreOrder',
+          on_order: 'https://schema.org/BackOrder',
+        }
+        const availability = stockMap[product.catalogStockStatus ?? ''] ?? 'https://schema.org/InStock'
+        const salePrice = product.priceVisibility === 'public' && product.salePrice
+          ? Number(product.salePrice)
+          : undefined
+        const productSchema = {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: product.title,
+          description: templateSeo.description,
+          url: productUrl,
+          ...(images ? { image: images } : {}),
+          brand: { '@type': 'Brand', name: product.brand || 'LithTech' },
+          ...(product.garantie ? { warranty: product.garantie } : {}),
+          offers: {
+            '@type': 'Offer',
+            url: productUrl,
+            priceCurrency: 'RON',
+            ...(salePrice != null && !Number.isNaN(salePrice) ? { price: salePrice } : {}),
+            availability,
+            seller: { '@type': 'Organization', name: 'Baterino Romania', url: BASE },
+          },
+          ...(product.faq?.length ? {
+            mainEntity: product.faq.map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+          } : {}),
+        }
+        const breadcrumbSchema = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: BASE },
+            { '@type': 'ListItem', position: 2, name: 'Produse', item: `${BASE}/produse` },
+            { '@type': 'ListItem', position: 3, name: product.title, item: productUrl },
+          ],
+        }
+        return [productSchema, breadcrumbSchema]
+      })()} />
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pt-4 pb-24 overflow-visible">
         <nav className="mb-3 hidden w-full items-center justify-end gap-2 text-sm text-gray-500 font-['Inter'] lg:mb-4 lg:flex">

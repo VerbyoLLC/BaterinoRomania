@@ -44,7 +44,7 @@ export default function ServiceLithtech() {
       <SEO
         title={seo.title || tr.seoTitle}
         description={seo.description || tr.seoDesc}
-        canonical="/service-lithtech-romania"
+        canonical="/service-baterii-lithtech-romania"
         ogTitle={seo.ogTitle || undefined}
         ogDescription={seo.ogDescription || undefined}
         ogImage={seo.ogImage || undefined}

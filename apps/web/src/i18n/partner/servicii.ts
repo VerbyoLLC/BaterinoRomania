@@ -24,16 +24,6 @@ const labels: Record<LangCode, Record<(typeof PARTNER_SERVICII_OPTIONS)[number][
     service: 'Service & maintenance',
     consultanta: 'Energy consulting',
   },
-  zh: {
-    fotovoltaice: '光伏系统安装',
-    baterii: '磷酸铁锂电池安装',
-    offgrid: '离网系统',
-    ongrid: '并网系统',
-    rezidential: '住宅解决方案',
-    industrial: '工业解决方案',
-    service: '服务与维护',
-    consultanta: '能源咨询',
-  },
 }
 
 export function getPartnerServiciiOptions(lang: LangCode): PartnerServiciiOption[] {

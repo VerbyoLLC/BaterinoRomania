@@ -271,12 +271,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
   const canonical = `/produse/${product.slug || product.id}`
 
-  const productQrUrl = (() => {
-    const path = product.slug ? `/produse/${product.slug}` : `/produse/${product.id}`
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://baterino.ro'
-    const url = encodeURIComponent(`${origin}${path}`)
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
-  })()
 
   const tabLabel = (id: TabId) => {
     switch (id) {
@@ -317,6 +311,14 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           <Link to="/produse" className="hover:text-black transition-colors">
             {breadcrumbProducts}
           </Link>
+          {product.category && (
+            <>
+              <span>/</span>
+              <Link to={`/produse?sector=${product.category.slug === 'baterii-solare' ? 'rezidential' : 'industrial'}`} className="hover:text-black transition-colors">
+                {product.category.name}
+              </Link>
+            </>
+          )}
           <span>/</span>
           <span className="text-black truncate">{product.title}</span>
         </nav>
@@ -387,17 +389,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               </div>
             )}
 
-            <div className="absolute bottom-3 right-3 z-30 p-1.5 bg-white rounded-xl shadow-md border border-neutral-200/80">
-              <img
-                src={productQrUrl}
-                alt="QR Code produs"
-                width={72}
-                height={72}
-                className="block rounded-lg w-[72px] h-[72px] sm:w-20 sm:h-20"
-                loading="eager"
-                draggable={false}
-              />
-            </div>
 
             {imgs.length > 1 && (
               <>

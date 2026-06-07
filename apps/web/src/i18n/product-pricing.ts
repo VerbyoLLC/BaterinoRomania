@@ -35,17 +35,6 @@ const translations: Record<LangCode, ProductPricingTranslations> = {
     contactCta: 'Contact',
     currencySuffix: 'RON',
   },
-  zh: {
-    saleLabel: '售价',
-    landedLabel: '到岸成本',
-    vatLabel: '增值税',
-    priceWithVatLabel: '含税价',
-    partnerLoginPrompt: '本产品价格仅对授权合作伙伴显示。',
-    partnerLoginCta: '合作伙伴登录',
-    hiddenPrompt: '请联系 Baterino 获取报价。',
-    contactCta: '联系',
-    currencySuffix: 'RON',
-  },
 }
 
 export function getProductPricingTranslations(

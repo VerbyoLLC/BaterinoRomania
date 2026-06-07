@@ -208,54 +208,6 @@ const enLeads: SalesAgentLeadsTranslations = {
   sourceAltele: 'Other',
 }
 
-const zhLeads: SalesAgentLeadsTranslations = {
-  title: '潜在客户',
-  subtitle: '分配给您的潜在客户和报价请求 — 在转化为商业报价前跟进联系。',
-  createLead: '新建潜在客户',
-  loadError: '加载失败。',
-  loading: '正在加载…',
-  emptyState: '暂无潜在客户。点击「新建潜在客户」添加第一个联系人。',
-  colDate: '日期',
-  colName: '姓名',
-  colCompany: '公司',
-  colEmail: '邮箱',
-  colPhone: '电话',
-  colSource: '来源',
-  colStatus: '状态',
-  colCreatedBy: '创建者',
-  colComments: '评论',
-  commentsPanelTitle: '潜在客户评论',
-  commentPlaceholder: '写评论…',
-  commentSubmit: '添加评论',
-  commentSubmitting: '保存中…',
-  commentsLoadError: '无法加载评论。',
-  commentPostError: '无法保存评论。',
-  commentPostSuccess: '评论已添加。',
-  commentsEmpty: '暂无评论。',
-  closePanel: '关闭',
-  detailPanelTitle: '潜在客户详情',
-  detailViewComments: '评论',
-  detailUpdatedAt: '最后更新',
-  detailSectionQualification: '资质',
-  detailSectionContact: '联系方式',
-  detailSectionCompany: '公司',
-  detailSectionDetails: '详情',
-  unreadLead: '未读潜在客户',
-  statusUpdateError: '无法更新状态。',
-  emptyValue: '—',
-  statusNou: '新建',
-  statusContactat: '已联系',
-  statusDead: '无效',
-  statusOferta: '报价',
-  statusInchis: '已关闭',
-  sourceManual: '手动',
-  sourceTelefon: '电话',
-  sourceEmail: '邮件',
-  sourceEveniment: '活动',
-  sourceRecomandare: '推荐',
-  sourceSite: '网站',
-  sourceAltele: '其他',
-}
 
 const roNew: SalesAgentLeadNewTranslations = {
   backToLeads: '← Înapoi la Leads',
@@ -373,74 +325,15 @@ const enNew: SalesAgentLeadNewTranslations = {
   volumeUnknown: "Don't know",
 }
 
-const zhNew: SalesAgentLeadNewTranslations = {
-  backToLeads: '← 返回潜在客户',
-  title: '新建潜在客户',
-  subtitle: '手动添加潜在客户或报价请求。',
-  nameRequired: '姓名为必填项。',
-  saveError: '无法保存潜在客户。',
-  saveSuccess: '潜在客户已保存。',
-  sectionQualification: '资质',
-  sectionContact: '联系方式',
-  sectionCompany: '公司',
-  sectionDetails: '详情',
-  customerTypeLabel: '您是哪种类型的客户？',
-  productLineLabel: '您对哪条产品线感兴趣？',
-  monthlyVolumeLabel: '您的平均月销售额或采购金额是多少？',
-  fullNameLabel: '姓名',
-  emailLabel: '邮箱',
-  workEmailLabel: '工作邮箱',
-  phoneLabel: '电话',
-  whatsappLabel: 'WhatsApp 账号（仅用于联系）',
-  companyNameLabel: '公司名称',
-  jobTitleLabel: '职位',
-  countryLabel: '国家',
-  websiteLabel: '网站',
-  messageLabel: '留言（简要介绍项目或需求）',
-  sourceLabel: '来源（内部）',
-  selectPlaceholder: '— 请选择 —',
-  placeholderFullName: '例如：Alexandra',
-  placeholderEmail: 'email@example.com',
-  placeholderWorkEmail: 'office@company.com',
-  placeholderPhone: '+40 7xx xxx xxx',
-  placeholderCompany: '例如：ABBA\'S SOLAR',
-  placeholderJobTitle: '例如：Administrator',
-  placeholderCountry: '例如：RO',
-  placeholderWebsite: 'https://...',
-  placeholderMessage: '简要描述项目或需求…',
-  saveButton: '保存潜在客户',
-  savingButton: '正在保存…',
-  cancelButton: '取消',
-  customerInstaller: '安装商',
-  customerDistributor: '经销商',
-  customerIntegrator: '集成商',
-  customerEndClient: '终端客户',
-  customerCommercialOwner: '商业业主',
-  customerOther: '其他',
-  productResidentialEss: '住宅 ESS',
-  productCommercialEss: '商业/工业 ESS',
-  productSolarInverter: '太阳能逆变器',
-  productBatteryStorage: '电池储能',
-  productCompleteSolutions: '完整解决方案',
-  productOther: '其他',
-  volumeUnder10k: '低于 10,000 USD',
-  volume10to30k: '10,000 – 30,000 USD',
-  volume30to50k: '30,000 – 50,000 USD',
-  volume50to100k: '50,000 – 100,000 USD',
-  volumeOver100k: '超过 100,000 USD',
-  volumeUnknown: '不确定',
-}
 
 const leadsTranslations: Record<LangCode, SalesAgentLeadsTranslations> = {
   ro: roLeads,
   en: enLeads,
-  zh: zhLeads,
 }
 
 const leadNewTranslations: Record<LangCode, SalesAgentLeadNewTranslations> = {
   ro: roNew,
   en: enNew,
-  zh: zhNew,
 }
 
 export function getSalesAgentLeadsTranslations(lang: LangCode): SalesAgentLeadsTranslations {
@@ -540,8 +433,6 @@ export function dateLocaleForLang(lang: LangCode): string {
   switch (lang) {
     case 'en':
       return 'en-GB'
-    case 'zh':
-      return 'zh-CN'
     default:
       return 'ro-RO'
   }

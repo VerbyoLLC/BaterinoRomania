@@ -118,43 +118,6 @@ const translations: Record<LangCode, MedicalTranslations> = {
       'We evaluate, size and implement storage solutions that protect and sustain critical medical activities.',
     ctaButton: 'REQUEST TECHNICAL ASSESSMENT',
   },
-  zh: {
-    heroTitle: '医疗领域储能',
-    heroTagline: '专为罗马尼亚医疗基础设施提供的储能解决方案',
-    navStocare: '储能',
-    navSisteme: '系统',
-    navAplicatii: '应用',
-    sectionStocareTitle: '罗马尼亚医疗环境储能',
-    introP1:
-      'Baterino MED是我们专注于医疗领域的事业部，拥有**专业团队，负责为罗马尼亚医疗机构评估和实施储能解决方案。**我们是唯一专门从事该领域的分销商。',
-    introP2:
-      '我们为**影像诊所（CT、MRI）、牙科诊所、实验室、分析中心和医院单元**实施解决方案，确保设备符合适用规范和协议。',
-    examplesTitle: '示例：',
-    introExamples:
-      '牙科诊所：10–20 kWh，1–2 回路，约30 kl/月\nCT影像中心：15–30 kWh（逐步增长）\n影像诊所（放射/超声）：20–60 kWh，1–3回路，基础设施连续性角色',
-    ctaSuport: '全面支持，从设计到维护',
-    cardGarantie: '延长\n10年质保',
-    cardProiectare: '专属技术设计',
-    cardSolutii: '定制化\n解决方案',
-    cardInstalare: 'Baterino 安装实施',
-    cardService: '罗马尼亚\n支持与服务',
-    sectionSistemeTitle: 'LiFePo4高压医疗储能系统',
-    product1Name: '堆叠式 LiFePo4 HV', product1Spec: '20.48 kWh – 40.96 kWh',
-    product2Name: 'BESS', product2Spec: '60 kWh',
-    sectionAplicatiiTitle: 'BATERINO系统的实际应用',
-    sectionAplicatiiDesc:
-      '我们的储能系统集成于关键医疗基础设施中，可靠性与能源连续性是其核心优势。',
-    aplicatiiImagistica: 'CT影像诊所',
-    aplicatiiStomatologice: '牙科诊所',
-    aplicatiiRecoltare: '采样中心',
-    aplicatiiDentare: '口腔实验室',
-    aplicatiiSpitale: '诊所与中型医院',
-    aplicatiiDializa: '透析中心',
-    aplicatiiAmbulanta: '急救站',
-    ctaTitle: '与我们的团队沟通',
-    ctaDesc: '我们评估、设计并实施储能方案，保护和支持关键医疗活动。',
-    ctaButton: '申请技术评估',
-  },
 }
 
 export function getMedicalTranslations(lang: LangCode): MedicalTranslations {

@@ -7,4 +7,4 @@ export const INDUSTRIAL_PRODUCT_ARTICLE_CLASS =
   'max-w-content mx-auto px-5 lg:px-3 pt-6 pb-16 lg:pb-20'
 
 export const INDUSTRIAL_BREADCRUMB_NAV_CLASS =
-  "flex w-full items-center justify-end gap-2 text-sm text-gray-500 font-['Inter'] mb-10 sm:mb-12"
+  "flex w-full items-center justify-start gap-2 text-sm text-gray-500 font-['Inter'] mb-10 sm:mb-12"

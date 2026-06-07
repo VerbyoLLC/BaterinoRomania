@@ -9632,7 +9632,7 @@ app.get('/api/download-proxy', async (req, res) => {
 
 // ── Page SEO ────────────────────────────────────────────────────────────
 const PAGE_SEO_ALLOWED_KEYS = new Set([
-  'home', 'produse', 'blog', 'faq', 'garantie', 'service', 'returnare',
+  'home', 'produse', 'reduceri', 'blog', 'faq', 'garantie', 'service', 'returnare',
   'rezidential', 'industrial', 'medical', 'maritim', 'lithtech', 'instalatori',
   'viziune', 'studii-de-caz', 'contact', 'cariere',
 ])

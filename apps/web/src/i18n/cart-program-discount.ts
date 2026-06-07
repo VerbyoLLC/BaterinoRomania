@@ -22,12 +22,6 @@ const translations: Record<LangCode, CartProgramDiscountTranslations> = {
     discountDocumentsNotice:
       'When you complete your order, you may be asked to upload documents required by the programme (e.g. proof of eligibility) so your discount can be approved.',
   },
-  zh: {
-    discountProgramBadge: '{program} · {pct}%',
-    discountProgramFallbackName: '折扣计划',
-    discountDocumentsNotice:
-      '完成订单时，您可能需要按该计划要求上传证明文件，以便我们审核并确认折扣。',
-  },
 }
 
 export function getCartProgramDiscountTranslations(lang: LangCode): CartProgramDiscountTranslations {

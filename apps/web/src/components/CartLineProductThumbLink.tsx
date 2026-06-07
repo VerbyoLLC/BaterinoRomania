@@ -4,7 +4,6 @@ import type { LangCode } from '../i18n/menu'
 
 function ariaViewProduct(lang: LangCode): string {
   if (lang === 'en') return 'View product page'
-  if (lang === 'zh') return '查看商品页'
   return 'Vezi pagina produsului'
 }
 

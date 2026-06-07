@@ -426,9 +426,9 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   return (
     <section className="mb-16 lg:mb-24 w-full" aria-label="Hero" style={HERO_CARD_CSS_VARS}>
       <header className="mb-8 lg:mb-10 px-5 lg:px-0 text-center max-w-content mx-auto">
-        <h1 className="text-black text-3xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto">
+        <h2 className="text-black text-3xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto">
           {tr.heroV2Title}
-        </h1>
+        </h2>
       </header>
 
       <div

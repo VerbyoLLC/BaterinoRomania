@@ -53,23 +53,6 @@ const translations: Record<LangCode, CariereTranslations> = {
     teamFullTitle: 'The Baterino team is currently complete.',
     teamFullMessage: 'At this time, the Baterino team is complete and we have no open positions.\n\nIf you believe your profile fits our vision, you can send your CV to cariera@baterino.ro.\n\nWith energy,\nThe Baterino Team',
   },
-  zh: {
-    seoTitle: '招聘 – Baterino 罗马尼亚',
-    seoDesc: '加入我们。在Baterino平台搜索职位。',
-    heroTitle: '加入我们',
-    heroDesc: '我们强调主动性和个人责任。我们是一个小而高效的团队，希望保持敏捷和以绩效为导向。',
-    searchTitle: '在平台上搜索职位',
-    searchSubtitle: '按部门、县和城市选择',
-    departament: '部门',
-    judet: '县',
-    oras: '城市',
-    searchButton: '搜索',
-    resultsTitle: '搜索结果',
-    noResultsMessage: '抱歉，所选城市中没有职位。如果您认为可以为Baterino团队带来价值，请将简历发送至：',
-    cvEmail: 'cariera@baterino.ro',
-    teamFullTitle: 'Baterino团队目前已满员。',
-    teamFullMessage: '目前，Baterino团队已满员，暂无空缺职位。\n\n如果您认为您的资历符合我们的愿景，可将简历发送至 cariera@baterino.ro。\n\n此致\nBaterino团队',
-  },
 }
 
 export function getCariereTranslations(lang: LangCode): CariereTranslations {
