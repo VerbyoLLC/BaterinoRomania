@@ -8,15 +8,6 @@ import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 import InstalatorSignupBox from '../components/InstalatorSignupBox'
 
-function CheckIcon() {
-  return (
-    <svg className="mt-0.5 w-4 h-4 shrink-0 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
-
-
 function PriceTagIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="size-full" aria-hidden>
@@ -55,25 +46,6 @@ function BadgeCheckIcon() {
   )
 }
 
-function MegaphoneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="size-full" aria-hidden>
-      <path d="M3 11l19-9-9 19-2-8-8-2z" />
-    </svg>
-  )
-}
-
-function UsersIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="size-full" aria-hidden>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
-
 const BENEFIT_CARDS = [
   {
     Icon: PriceTagIcon,
@@ -103,13 +75,6 @@ export default function Instalatori() {
 
   if (getAuthRole() === 'sales_agent') return <Navigate to="/sales-agent" replace />
   if (getAuthRole() === 'client') return <Navigate to={INSTALATORI_ONLY ? '/client' : '/produse'} replace />
-
-  const features = [
-    { title: tr.feat1Title, intro: tr.feat1Intro, cards: tr.feat1Cards },
-    { title: tr.feat2Title, intro: tr.feat2Intro, cards: tr.feat2Cards },
-    { title: tr.feat3Title, intro: tr.feat3Intro, cards: tr.feat3Cards },
-    { title: tr.feat4Title, intro: tr.feat4Intro, cards: tr.feat4Cards },
-  ]
 
   return (
     <>
