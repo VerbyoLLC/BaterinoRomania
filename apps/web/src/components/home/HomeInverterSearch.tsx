@@ -6,9 +6,10 @@ import { CONTACT_WHATSAPP_WAME } from '../../lib/contactWhatsApp'
 
 type HomeInverterSearchProps = {
   placeholder: string
+  compact?: boolean
 }
 
-export default function HomeInverterSearch({ placeholder }: HomeInverterSearchProps) {
+export default function HomeInverterSearch({ placeholder, compact }: HomeInverterSearchProps) {
   const { language } = useLanguage()
   const productTr = getProductDetailTranslations(language.code)
   const [search, setSearch] = useState('')
@@ -78,16 +79,18 @@ export default function HomeInverterSearch({ placeholder }: HomeInverterSearchPr
       </button>
 
       {/* ── Desktop: inline dropdown ── */}
-      <div ref={rootRef} className="relative hidden w-full max-w-xl md:block">
-        <div className="flex min-h-12 items-center gap-3 rounded-full border-2 border-gray-200 bg-white px-4 py-2 transition-shadow hover:shadow-lg focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-slate-900 focus-within:ring-offset-2">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
-            <img
-              src="/images/shared/compatibility-icon.svg"
-              alt=""
-              aria-hidden
-              className="h-6 w-6 object-contain"
-            />
-          </span>
+      <div ref={rootRef} className={`relative hidden md:block ${compact ? 'w-auto' : 'w-full max-w-xl'}`}>
+        <div className={`flex items-center bg-white border border-gray-200 rounded-full transition-colors hover:border-gray-300 focus-within:border-gray-300 ${compact ? 'h-9 gap-2 px-4' : 'min-h-12 gap-3 px-4 py-2 border-2 hover:shadow-lg focus-within:ring-2 focus-within:ring-slate-900 focus-within:ring-offset-2'}`}>
+          {!compact && (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
+              <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="h-6 w-6 object-contain" />
+            </span>
+          )}
+          {compact && (
+            <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+            </svg>
+          )}
           <input
             type="search"
             value={search}
@@ -99,18 +102,13 @@ export default function HomeInverterSearch({ placeholder }: HomeInverterSearchPr
             aria-controls="home-inverter-search-results"
             autoComplete="off"
             enterKeyHint="search"
-            className="min-w-0 flex-1 bg-transparent text-base font-semibold text-gray-900 placeholder:text-gray-500 font-['Inter'] focus:outline-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+            className={`min-w-0 bg-transparent text-gray-900 placeholder:text-gray-500 font-['Inter'] focus:outline-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${compact ? 'w-44 text-sm font-semibold' : 'flex-1 text-base font-semibold'}`}
           />
-          <svg
-            className="h-5 w-5 shrink-0 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
-          </svg>
+          {!compact && (
+            <svg className="h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+            </svg>
+          )}
         </div>
 
         {focused ? (

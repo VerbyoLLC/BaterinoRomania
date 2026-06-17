@@ -2029,29 +2029,41 @@ export default function AdminProducts() {
                 </p>
                 <div className="flex flex-col gap-4">
                   <div>
-                    <label htmlFor="product-seo-title" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Titlu SEO (opțional)
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label htmlFor="product-seo-title" className="block text-sm font-semibold font-['Inter'] text-gray-700">
+                        Titlu SEO (opțional)
+                      </label>
+                      <span className={`text-xs font-['Inter'] ${seoTitle.length > 60 ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                        {seoTitle.length}/60
+                      </span>
+                    </div>
                     <input
                       id="product-seo-title"
                       type="text"
+                      maxLength={60}
                       value={seoTitle}
                       onChange={(e) => setSeoTitle(e.target.value)}
                       placeholder="Ex: Baterie rezidențială 5 kWh LiFePO4 — Baterino"
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                      className={`w-full h-11 px-4 border rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 ${seoTitle.length > 60 ? 'border-red-400' : 'border-gray-300'}`}
                     />
                   </div>
                   <div>
-                    <label htmlFor="product-seo-description" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Meta descriere (opțional)
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label htmlFor="product-seo-description" className="block text-sm font-semibold font-['Inter'] text-gray-700">
+                        Meta descriere (opțional)
+                      </label>
+                      <span className={`text-xs font-['Inter'] ${seoDescription.length > 155 ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                        {seoDescription.length}/155
+                      </span>
+                    </div>
                     <textarea
                       id="product-seo-description"
+                      maxLength={155}
                       value={seoDescription}
                       onChange={(e) => setSeoDescription(e.target.value)}
-                      placeholder="Rezumat pentru rezultatele de căutare și share-uri (recomandat ~150–170 caractere)."
+                      placeholder="Rezumat pentru rezultatele de căutare și share-uri (recomandat ~150–155 caractere)."
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y"
+                      className={`w-full px-4 py-3 border rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-y ${seoDescription.length > 155 ? 'border-red-400' : 'border-gray-300'}`}
                     />
                   </div>
                   <div>

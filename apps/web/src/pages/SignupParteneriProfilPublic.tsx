@@ -6,7 +6,8 @@ import {
   PARTNER_SIGNUP_ACTIVITY_DRAFT_KEY,
   type PartnerActivityDraft,
 } from '../lib/partnerSignupDraft'
-import { normalizePartnerWebsite, sanitizePersonName, sanitizePhoneDigitsOnly } from '../lib/formInputSanitize'
+import { normalizePartnerWebsite, sanitizePersonName, sanitizePhoneDigitsOnly, loadPhoneE164 } from '../lib/formInputSanitize'
+import PhoneInput from '../components/PhoneInput'
 
 /**
  * Former steps 2–3 of this wizard live in `ArchivedPartnerSignupPublicSteps.tsx`
@@ -129,7 +130,7 @@ export default function SignupParteneriProfilPublic() {
             setActivities(valid)
             setContactFirstName(sanitizePersonName(String(d.contactFirstName ?? '')))
             setContactLastName(sanitizePersonName(String(d.contactLastName ?? '')))
-            setLegalPhone(sanitizePhoneDigitsOnly(String(d.legalPhone ?? '')))
+            setLegalPhone(loadPhoneE164(String(d.legalPhone ?? '')))
             setWebsite(String(d.website ?? '').trim())
             usedSession = true
           }
@@ -166,7 +167,7 @@ export default function SignupParteneriProfilPublic() {
         if (valid.length) setActivities(valid)
         setContactFirstName(sanitizePersonName(String(p?.contactFirstName ?? '')))
         setContactLastName(sanitizePersonName(String(p?.contactLastName ?? '')))
-        setLegalPhone(sanitizePhoneDigitsOnly(String(p?.phone ?? '')))
+        setLegalPhone(loadPhoneE164(String(p?.phone ?? '')))
         setWebsite(String(p?.website ?? '').trim())
       } catch {
         /* ignore */
@@ -327,17 +328,17 @@ export default function SignupParteneriProfilPublic() {
             <Field label="Prenume contact" placeholder="Ion" required value={contactFirstName} onChange={(v) => setContactFirstName(sanitizePersonName(v))} disabled={loading} autoComplete="given-name" />
             <Field label="Nume contact" placeholder="Popescu" required value={contactLastName} onChange={(v) => setContactLastName(sanitizePersonName(v))} disabled={loading} autoComplete="family-name" />
           </div>
-          <Field
-            label="Telefon"
-            type="text"
-            inputMode="numeric"
-            placeholder="40712345678"
-            required
-            value={legalPhone}
-            onChange={(v) => setLegalPhone(sanitizePhoneDigitsOnly(v))}
-            disabled={loading}
-            autoComplete="tel-national"
-          />
+          <div>
+            <label className="mb-1 block text-sm font-semibold font-['Inter'] text-gray-700">
+              Telefon <span className="text-red-500">*</span>
+            </label>
+            <PhoneInput
+              value={legalPhone}
+              onChange={(v) => setLegalPhone(v)}
+              disabled={loading}
+              autoComplete="tel"
+            />
+          </div>
         </div>
 
         <button

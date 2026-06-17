@@ -8,6 +8,7 @@ import { LanguageDropdown } from '../components/LanguageDropdown'
 import OutlineButton from '../components/OutlineButton'
 import ImageCard from '../components/ImageCard'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 
 const SECTIONS = [
@@ -145,6 +146,26 @@ export default function Rezidential() {
       ogImage="/images/divizii/rezidential/stocare-energie-rezidential-og.jpg"
       lang={language.code}
     />
+    <SchemaOrg schema={[
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Stocare Energie Rezidențial',
+        description: 'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.',
+        url: 'https://baterino.ro/divizii/rezidential',
+        image: 'https://baterino.ro/images/divizii/rezidential/stocare-energie-rezidential-og.jpg',
+        inLanguage: 'ro',
+        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+          { '@type': 'ListItem', position: 2, name: 'Rezidential', item: 'https://baterino.ro/divizii/rezidential' },
+        ],
+      },
+    ]} />
     <article className="max-w-content mx-auto px-5 lg:px-3 pt-24 pb-16">
 
       {/* Hero */}

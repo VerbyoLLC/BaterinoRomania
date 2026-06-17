@@ -19,6 +19,7 @@ type FormState = {
   category: string
   title: string
   location: string
+  description: string
   images: string[]
   imageAlt: string
   specs: CaseStudySpec[]
@@ -39,6 +40,9 @@ function slugifyClient(raw: string): string {
   return raw
     .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[șş]/g, 's').replace(/[țţ]/g, 't')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
@@ -68,6 +72,7 @@ function emptyForm(): FormState {
     category: 'INDUSTRIAL',
     title: '',
     location: '',
+    description: '',
     images: [],
     imageAlt: '',
     specs: emptySpecs(),
@@ -88,6 +93,7 @@ function rowToForm(row: CaseStudyRow): FormState {
     category: row.category,
     title: row.title,
     location: row.location,
+    description: row.description || '',
     images,
     imageAlt: row.imageAlt,
     specs,
@@ -116,6 +122,7 @@ function formToPayload(form: FormState, locale: LocaleCode) {
     category: form.category.trim(),
     title: form.title.trim(),
     location: form.location.trim(),
+    description: form.description.trim(),
     images,
     image: images[0] || '',
     imageAlt: form.imageAlt.trim() || form.title.trim(),
@@ -222,9 +229,11 @@ export default function AdminStudiiDeCaz() {
   const resolveCaseSlug = useCallback(() => resolveCaseSlugFrom(formRef.current), [])
 
   const onGallerySelected = async (e: ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files
+    // Convert to Array before clearing the input — some browsers clear the FileList
+    // when input.value is reset, so we must snapshot the files first.
+    const allFiles = e.target.files ? Array.from(e.target.files) : []
     e.target.value = ''
-    if (!fileList?.length) return
+    if (!allFiles.length) return
 
     const currentForm = formRef.current
     const caseSlug = resolveCaseSlugFrom(currentForm)
@@ -240,7 +249,7 @@ export default function AdminStudiiDeCaz() {
       return
     }
 
-    const files = Array.from(fileList).slice(0, remaining)
+    const files = allFiles.slice(0, remaining)
     const invalid = files.find((f) => !isJpegFile(f))
     if (invalid) {
       setSaveError('Doar fișiere JPG/JPEG sunt acceptate.')
@@ -300,7 +309,8 @@ export default function AdminStudiiDeCaz() {
       } else {
         return
       }
-      await refreshList()
+      // Refresh list independently — don't let a list reload error mask a successful save
+      refreshList().catch(() => {})
       closePanel()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Eroare la salvare.')
@@ -438,10 +448,10 @@ export default function AdminStudiiDeCaz() {
       )}
 
       {panel ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={closePanel} role="presentation">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onMouseDown={closePanel} role="presentation">
           <div
             className="flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="case-study-panel-title"
@@ -520,6 +530,16 @@ export default function AdminStudiiDeCaz() {
                     value={form.location}
                     onChange={(e) => updateForm('location', e.target.value)}
                     placeholder="ex. Skövde, Suedia"
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Descriere</label>
+                  <textarea
+                    className={`${inputClass} min-h-[100px] h-auto py-2`}
+                    value={form.description}
+                    onChange={(e) => updateForm('description', e.target.value)}
+                    placeholder="Descriere detaliată a proiectului…"
                   />
                 </div>
 

@@ -15,6 +15,7 @@ import {
 import { getCitiesForCounty, ROMANIAN_COUNTIES, type RomanianCounty } from '../lib/romanian-counties-cities'
 import { getReturnareProduseTranslations } from '../i18n/returnare-produse'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 
 const inputClass =
@@ -951,6 +952,25 @@ export default function ReturnareProduse() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: seo.title || tr.seoTitle,
+          description: seo.description || tr.seoDesc,
+          url: 'https://baterino.ro/returnare-produse',
+          inLanguage: language.code,
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Returnare Produse', item: 'https://baterino.ro/returnare-produse' },
+          ],
+        },
+      ]} />
 
       <article className="mx-auto min-w-0 max-w-content px-5 pt-12 pb-24 lg:px-3">
         <header className="mb-10">

@@ -18,7 +18,7 @@ const PAGES: PageMeta[] = [
   { key: 'industrial',    label: 'Stocare Energie Industrial',  path: '/divizii/industrial' },
   { key: 'medical',       label: 'Stocare Energie Medical',     path: '/divizii/medical' },
   { key: 'maritim',       label: 'Maritim',                     path: '/divizii/maritim' },
-  { key: 'blog',          label: 'Blog',                        path: '/blog' },
+  { key: 'blog',          label: 'Noutăți - Perspective - Progres', path: '/blog' },
   { key: 'faq',           label: 'Întrebări Frecvente',         path: '/intrebari-frecvente' },
   { key: 'garantie',      label: 'Verificare Garanție',         path: '/verificare-garantie' },
   { key: 'service',       label: 'Service Lithtech',            path: '/service-baterii-lithtech-romania' },

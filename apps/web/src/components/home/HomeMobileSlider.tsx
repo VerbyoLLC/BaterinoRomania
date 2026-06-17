@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BadgePercent, Headphones, ShieldCheck, Truck } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
 const SLIDES = [
@@ -18,43 +18,13 @@ const textShadow = { textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0
 
 // ── Per-slide overlay components ─────────────────────────────────────────────
 
-function SlideRezidential({ tr }: { tr: HomeTranslations }) {
-  return (
-    <>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.50) 45%, rgba(0,0,0,0.12) 65%, transparent 80%)' }} aria-hidden />
-      <span className="absolute top-4 right-4 z-10 inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black font-['Inter'] pointer-events-none">
-        {tr.heroV2MedStockTag}
-      </span>
-      <div className="absolute inset-x-4 bottom-5 z-10 pointer-events-none" style={textShadow}>
-        <p className="mb-1 text-xs font-medium text-white/75 font-['Inter']">{tr.heroV2RezProductSubtitle}</p>
-        <h2 className="text-xl font-bold leading-tight text-white font-['Inter']">{tr.heroV2RezProductTitle}</h2>
-        <p className="mt-1.5 text-xs text-white/80 font-['Inter']">
-          {tr.heroV2RezSpecCicluri}
-          <span className="mx-1 text-white/40" aria-hidden>·</span>
-          {tr.heroV2RezSpecIp}
-          <span className="mx-1 text-white/40" aria-hidden>·</span>
-          {tr.heroV2RezSpecChem}
-        </p>
-        <div className="mt-2.5 rounded-lg border border-white/30 bg-white/20 px-3 py-2 backdrop-blur-md">
-          <p className="text-[10px] font-medium text-white/75 font-['Inter']">{tr.heroV2RezPriceLabel}</p>
-          <p className="text-xl font-bold leading-none text-white font-['Inter'] tabular-nums">{tr.heroV2RezHeroPrice}</p>
-          <p className="mt-0.5 text-xs text-white/85 font-['Inter']">{tr.heroV2RezPriceNote}</p>
-        </div>
-        <Link to="/produse?sector=rezidential" className="mt-3 pointer-events-auto inline-flex h-10 w-full items-center justify-center rounded-[8px] bg-white px-4 text-sm font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
-          {tr.heroCardCta}
-        </Link>
-      </div>
-    </>
-  )
-}
-
 function SlideReduceri({ tr }: { tr: HomeTranslations }) {
   return (
     <>
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.12) 70%, transparent 85%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
         <img src="/images/shared/baterino-logo-white.png" alt="Baterino" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
-        <h2 className="text-xl font-bold leading-tight uppercase text-white font-['Inter']">{tr.heroV2Card2Title}</h2>
+        <h3 className="text-xl font-bold leading-tight uppercase text-white font-['Inter']">{tr.heroV2Card2Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white font-['Inter']">{tr.heroV2Card2Subtitle}</p>
         <Link to="/reduceri" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2Card2Cta}
@@ -79,7 +49,7 @@ function SlideMedical({ tr }: { tr: HomeTranslations }) {
       </span>
       <div className="absolute inset-x-4 bottom-5 z-10 pointer-events-none" style={textShadow}>
         <p className="mb-1 text-sm font-semibold text-white/90 font-['Inter']">{tr.heroV2MedEyebrow}</p>
-        <h2 className="text-xl font-bold leading-tight text-white font-['Inter']">{tr.heroV2MedProductTitle}</h2>
+        <h3 className="text-xl font-bold leading-tight text-white font-['Inter']">{tr.heroV2MedProductTitle}</h3>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {specs.map(({ label, value }) => (
             <div key={label} className="rounded-lg border border-white/30 bg-white/20 px-2.5 py-2 backdrop-blur-md">
@@ -102,7 +72,7 @@ function SlideMaritim({ tr }: { tr: HomeTranslations }) {
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.10) 66%, transparent 82%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
         <img src="/images/lithtech/logo-baterino-pro-white.png" alt="Baterino Pro" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
-        <h2 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Title}</h2>
+        <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Subtitle}</p>
         <Link to="/studii-de-caz" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2Card3Cta}
@@ -114,27 +84,26 @@ function SlideMaritim({ tr }: { tr: HomeTranslations }) {
 
 function SlideInstalatori({ tr }: { tr: HomeTranslations }) {
   const benefits = [tr.heroV2InstBenefit1, tr.heroV2InstBenefit2, tr.heroV2InstBenefit3, tr.heroV2InstBenefit4]
-  const icons = [BadgePercent, ShieldCheck, Truck, Headphones]
   return (
     <>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.56) 50%, rgba(0,0,0,0.15) 68%, transparent 82%)' }} aria-hidden />
-      <div className="absolute inset-x-4 bottom-5 z-10 pointer-events-none" style={textShadow}>
-        <p className="mb-1 text-xs font-medium tracking-wide text-white/75 font-['Inter']">{tr.heroV2InstLead}</p>
-        <h2 className="text-xl font-bold leading-tight uppercase text-white font-['Inter']">{tr.heroV2InstTitle}</h2>
-        <div className="mt-3 rounded-lg border border-white/80 bg-white/20 px-3 py-3 backdrop-blur-md [text-shadow:none]">
-          <ul className="space-y-2">
-            {benefits.map((label, i) => {
-              const Icon = icons[i]
-              return (
-                <li key={label} className="flex items-start gap-2 text-xs leading-snug text-white/90 font-['Inter']">
-                  <Icon className="mt-0.5 size-4 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
-                  {label}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-        <Link to="/instalatori" className="mt-3 pointer-events-auto inline-flex h-10 w-full items-center justify-center rounded-[8px] bg-white px-4 text-sm font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
+      <div className="absolute inset-0 bg-slate-900/80 pointer-events-none" aria-hidden />
+      <div className="absolute inset-0 z-10 flex flex-col justify-center px-6 py-8">
+        <span className="text-white/60 text-[11px] font-semibold uppercase tracking-[0.2em] font-['Inter'] mb-2">
+          {tr.heroV2InstLead}
+        </span>
+        <h3 className="text-2xl font-extrabold leading-tight uppercase text-white font-['Inter'] mb-4">
+          {tr.heroV2InstTitle}
+        </h3>
+        <div className="w-10 h-px bg-white/30 mb-4" />
+        <ul className="space-y-3 mb-6">
+          {benefits.map((label) => (
+            <li key={label} className="flex items-start gap-2.5 text-sm text-white/80 font-['Inter'] leading-snug">
+              <CheckCircle className="mt-0.5 size-4 shrink-0 text-white/50" strokeWidth={1.75} aria-hidden />
+              {label}
+            </li>
+          ))}
+        </ul>
+        <Link to="/instalatori" className="inline-flex h-11 items-center justify-center rounded-[10px] bg-white px-4 text-sm font-bold uppercase text-black font-['Inter'] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2InstCta}
         </Link>
       </div>
@@ -170,7 +139,7 @@ export default function HomeMobileSlider({ tr, jumpTo }: Props) {
 
   const overlays = [
     <SlideReduceri tr={tr} />,
-    <SlideRezidential tr={tr} />,
+    null,
     <SlideMaritim tr={tr} />,
     <SlideMedical tr={tr} />,
     <SlideInstalatori tr={tr} />,
@@ -180,9 +149,12 @@ export default function HomeMobileSlider({ tr, jumpTo }: Props) {
     <section className="mb-10 w-full" aria-label="Hero">
       {/* Title — same as HomeHeroV2 */}
       <header className="mb-6 px-5 text-center">
-        <h1 className="text-black text-3xl font-extrabold font-['Inter'] leading-tight">
+        <h1 className="text-black text-2xl font-extrabold font-['Inter'] leading-tight uppercase mb-2 whitespace-pre-line">
           {tr.heroV2Title}
         </h1>
+        <p className="text-gray-500 text-sm font-normal font-['Inter'] leading-6">
+          {tr.heroV2Subtitle}
+        </p>
       </header>
 
       {/* Card track — overflow visible so next card peeks */}
@@ -209,6 +181,7 @@ export default function HomeMobileSlider({ tr, jumpTo }: Props) {
                 aria-hidden
                 draggable={false}
                 loading={i === 0 ? 'eager' : 'lazy'}
+                fetchPriority={i === 0 ? 'high' : undefined}
                 className="h-full w-full object-cover select-none"
               />
               {overlays[i]}

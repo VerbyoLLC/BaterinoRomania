@@ -11,6 +11,7 @@ export type HomeTranslations = {
 
   // Hero v2 – heading above card slider
   heroV2Title: string
+  heroV2Subtitle: string
   /** Hero v2 – inverter search input placeholder */
   heroV2InverterSearchPlaceholder: string
   /** Hero v2 – card 2 (discount programmes) */
@@ -257,7 +258,8 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroBoxDesc: 'Îți oferim produse validate înainte de import, marje competitive și prețuri stabile, service și suport, stocuri permanente.',
     heroBoxCta: 'Devino Partener',
 
-    heroV2Title: 'Sisteme de stocare a energiei cu baterii LiFePO4',
+    heroV2Title: 'Baterii LiFePO4 pentru stocare energie\nrezidențial și industrial',
+    heroV2Subtitle: 'Importator direct LithTech în România. Stoc local, service și garanție 10 ani.',
     heroV2InverterSearchPlaceholder: 'Ce invertor ai?',
     heroV2Card2Title: 'Programe de reduceri de până la 20%',
     heroV2Card2Subtitle:
@@ -488,7 +490,8 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroBoxDesc: 'We offer products validated before import, competitive margins and stable prices, service and support, permanent stock.',
     heroBoxCta: 'Become a Partner',
 
-    heroV2Title: 'Energy storage systems with LiFePO4 batteries',
+    heroV2Title: 'LiFePO4 batteries for energy storage\nresidential & industrial',
+    heroV2Subtitle: 'Direct LithTech importer in Romania. Local stock, service and warranty.',
     heroV2InverterSearchPlaceholder: 'See compatibility with your inverter',
     heroV2Card2Title: 'Discount programmes up to 20% off',
     heroV2Card2Subtitle:

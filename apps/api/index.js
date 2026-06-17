@@ -1,4 +1,5 @@
 require('dotenv').config()
+const sanitizeHtml = require('sanitize-html')
 const crypto = require('crypto')
 const path = require('path')
 const express = require('express')
@@ -127,7 +128,7 @@ function getReferralInviteTemplateLib() {
   return require(REFERRAL_INVITE_TEMPLATE_PATH)
 }
 
-const uploadMiddleware = multer({ storage: multer.memoryStorage() })
+const uploadMiddleware = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } })
 /** Logo / lucrări profil public partener → R2 `PublicProfiles/...`. */
 const partnerPublicProfileUploadMiddleware = multer({
   storage: multer.memoryStorage(),
@@ -686,8 +687,18 @@ if (String(process.env.TRUST_PROXY || '').trim() === '1') {
   app.set('trust proxy', 1)
 }
 
+const ALLOWED_ORIGINS = [
+  'https://baterino.ro',
+  'https://www.baterino.ro',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:4173',
+]
 app.use(cors({
-  origin: true,
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+    cb(new Error(`CORS: origin '${origin}' not allowed`))
+  },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index', 'X-Upload-Prefix'],
   exposedHeaders: ['Content-Disposition'],
@@ -884,7 +895,7 @@ app.post('/api/auth/signup', signupLimiter, async (req, res) => {
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      return res.status(409).json({ error: 'Există deja un cont cu acest email.' })
+      return res.status(409).json({ error: 'Nu s-a putut finaliza înregistrarea. Dacă ai deja un cont, încearcă să te autentifici.' })
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -2640,7 +2651,7 @@ function makeResidentialOrderProformaHandler(legacyGuestOrderSource) {
       }
 
       const residential = await prisma.residentialOrder.findFirst({
-        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+        where: { id: orderId, userId: req.userId },
         include: { lines: { orderBy: { id: 'asc' } } },
       })
 
@@ -2733,7 +2744,7 @@ function makeResidentialOrderInvoiceHandler(legacyGuestOrderSource) {
       let invoiceUrl = ''
 
       const residential = await prisma.residentialOrder.findFirst({
-        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+        where: { id: orderId, userId: req.userId },
       })
       if (residential) {
         const st = String(residential.fulfillmentStatus || 'de_platit')
@@ -2787,7 +2798,7 @@ function makeResidentialOrderCancelHandler(legacyGuestOrderSource) {
       if (!orderId) return res.status(400).json({ error: 'ID comandă lipsă.' })
 
       const residential = await prisma.residentialOrder.findFirst({
-        where: { id: orderId, OR: [{ userId: req.userId }, { email: emailNorm }] },
+        where: { id: orderId, userId: req.userId },
       })
       if (residential) {
         if (residential.fulfillmentStatus !== 'de_platit') {
@@ -6204,6 +6215,9 @@ function slugifyCaseStudy(raw) {
   return String(raw || '')
     .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[șş]/g, 's').replace(/[țţ]/g, 't')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
@@ -6269,6 +6283,7 @@ function caseStudyToApi(row) {
     category: row.category,
     title: row.title,
     location: row.location,
+    description: String(row.description || '').trim(),
     image,
     imageAlt: row.imageAlt,
     images,
@@ -6338,6 +6353,7 @@ app.post('/api/admin/case-studies', authMiddleware, adminAuthMiddleware, async (
         category: String(b.category || 'INDUSTRIAL').trim() || 'INDUSTRIAL',
         title,
         location: String(b.location || '').trim(),
+        description: String(b.description || '').trim(),
         image,
         imageAlt: String(b.imageAlt || title).trim(),
         imageCount,
@@ -6377,6 +6393,7 @@ app.patch('/api/admin/case-studies/:id', authMiddleware, adminAuthMiddleware, as
       data.title = title
     }
     if (b.location != null) data.location = String(b.location).trim()
+    if (b.description != null) data.description = String(b.description).trim()
     if (b.imageAlt != null) data.imageAlt = String(b.imageAlt).trim()
     if (b.images != null || b.image != null) {
       const normalized = normalizeCaseStudyImageFields(b, current)
@@ -6425,6 +6442,222 @@ app.delete('/api/admin/case-studies/:id', authMiddleware, adminAuthMiddleware, a
   }
 })
 
+// ── Blog ────────────────────────────────────────────────────────────────────────────
+const BLOG_SANITIZE_OPTIONS = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h2', 'h3', 'h4', 'figure', 'figcaption', 'iframe']),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    'a': ['href', 'target', 'rel'],
+    'img': ['src', 'alt', 'width', 'height', 'loading'],
+    'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'loading'],
+  },
+  allowedSchemes: ['https', 'http', 'mailto'],
+  allowedSchemesByTag: { 'a': ['https', 'http', 'mailto'], 'img': ['https'] },
+}
+function sanitizeBlogBody(raw) {
+  if (!raw) return ''
+  return sanitizeHtml(String(raw).trim(), BLOG_SANITIZE_OPTIONS)
+}
+const UPLOAD_PREFIX_ALLOWLIST = new Set(['products', 'blog', 'study-cases', 'docs', 'page-seo', 'seo'])
+const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+function isValidHttpsUrl(str) {
+  if (!str) return true
+  try { const u = new URL(str); return u.protocol === 'https:' } catch { return false }
+}
+
+function blogPostToApi(row) {
+  if (!row) return row
+  return {
+    ...row,
+    tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : []),
+    publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
+    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+  }
+}
+
+function normalizeBlogLocale(raw) {
+  const l = String(raw || '').toLowerCase().trim()
+  return l === 'en' ? 'en' : 'ro'
+}
+
+// Public: list published posts
+app.get('/api/blog', async (req, res) => {
+  try {
+    const locale = normalizeBlogLocale(req.query.locale)
+    const rows = await prisma.blogPost.findMany({
+      where: { locale, status: 'published' },
+      orderBy: { publishedAt: 'desc' },
+      select: { id: true, locale: true, slug: true, status: true, title: true, excerpt: true, coverImage: true, coverImageAlt: true, category: true, tags: true, author: true, publishedAt: true, createdAt: true, updatedAt: true },
+    })
+    res.set('Cache-Control', 'public, max-age=60')
+    return res.json(rows.map(blogPostToApi))
+  } catch (err) {
+    console.error('Public blog list error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// Public: single post (with ?preview=1 + admin Bearer for draft preview)
+app.get('/api/blog/:slug', async (req, res) => {
+  try {
+    const locale = normalizeBlogLocale(req.query.locale)
+    const slug = String(req.params.slug || '').trim()
+    const row = await prisma.blogPost.findUnique({ where: { locale_slug: { locale, slug } } })
+
+    let isAdminPreview = false
+    if (req.query.preview === '1' && row && row.status !== 'published') {
+      try {
+        const auth = req.headers.authorization
+        const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
+        if (token) {
+          const payload = jwt.verify(token, JWT_SECRET)
+          const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true, deletedAt: true } })
+          if (user && !user.deletedAt && user.role === 'admin') isAdminPreview = true
+        }
+      } catch { /* invalid token — treat as public */ }
+    }
+
+    if (!row || (row.status !== 'published' && !isAdminPreview)) return res.status(404).json({ error: 'Articol negăsit.' })
+    res.set('Cache-Control', isAdminPreview ? 'no-store' : 'public, max-age=60')
+    return res.json(blogPostToApi(row))
+  } catch (err) {
+    console.error('Public blog post error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// Admin: list all
+app.get('/api/admin/blog', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const locale = normalizeBlogLocale(req.query.locale)
+    const rows = await prisma.blogPost.findMany({
+      where: { locale },
+      orderBy: [{ status: 'asc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
+      select: { id: true, locale: true, slug: true, status: true, title: true, excerpt: true, coverImage: true, coverImageAlt: true, category: true, tags: true, author: true, seoTitle: true, seoDescription: true, publishedAt: true, createdAt: true, updatedAt: true },
+    })
+    return res.json(rows.map(blogPostToApi))
+  } catch (err) {
+    console.error('Admin blog list error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// Admin: single post by ID (includes drafts — for preview)
+app.get('/api/admin/blog/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const row = await prisma.blogPost.findUnique({ where: { id: req.params.id } })
+    if (!row) return res.status(404).json({ error: 'Articol negăsit.' })
+    res.set('Cache-Control', 'no-store')
+    return res.json(blogPostToApi(row))
+  } catch (err) {
+    console.error('Admin blog get error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+})
+
+// Admin: create
+app.post('/api/admin/blog', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const b = req.body || {}
+    const locale = normalizeBlogLocale(b.locale)
+    const title = String(b.title || '').trim()
+    if (!title) return res.status(400).json({ error: 'Titlul este obligatoriu.' })
+    const slug = (String(b.slug || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')).slice(0, 200)
+    if (!slug) return res.status(400).json({ error: 'Slug-ul este obligatoriu.' })
+    const existing = await prisma.blogPost.findUnique({ where: { locale_slug: { locale, slug } } })
+    if (existing) return res.status(409).json({ error: 'Există deja un articol cu acest slug.' })
+    const status = b.status === 'published' ? 'published' : 'draft'
+    const coverImage = String(b.coverImage || '').trim()
+    if (coverImage && !isValidHttpsUrl(coverImage)) return res.status(400).json({ error: 'coverImage trebuie să fie un URL https://.' })
+    const tags = Array.isArray(b.tags) ? b.tags.filter((t) => typeof t === 'string').map((t) => String(t).trim()).filter(Boolean) : []
+    const row = await prisma.blogPost.create({
+      data: {
+        locale, slug, status, title,
+        excerpt: String(b.excerpt || '').trim(),
+        body: sanitizeBlogBody(b.body),
+        coverImage,
+        coverImageAlt: String(b.coverImageAlt || '').trim(),
+        category: String(b.category || '').trim(),
+        tags,
+        author: String(b.author || 'Baterino Romania').trim(),
+        seoTitle: String(b.seoTitle || '').trim().slice(0, 80),
+        seoDescription: String(b.seoDescription || '').trim().slice(0, 200),
+        publishedAt: b.publishedAt ? new Date(b.publishedAt) : (status === 'published' ? new Date() : null),
+      },
+    })
+    return res.status(201).json(blogPostToApi(row))
+  } catch (err) {
+    console.error('Admin blog create error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la creare.' })
+  }
+})
+
+// Admin: update
+app.patch('/api/admin/blog/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id
+    const current = await prisma.blogPost.findUnique({ where: { id } })
+    if (!current) return res.status(404).json({ error: 'Articol negăsit.' })
+    const b = req.body || {}
+    const locale = b.locale !== undefined ? normalizeBlogLocale(b.locale) : current.locale
+    const rawSlug = b.slug !== undefined ? String(b.slug).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 200) : current.slug
+    const slug = rawSlug || current.slug
+    if (locale !== current.locale || slug !== current.slug) {
+      const clash = await prisma.blogPost.findUnique({ where: { locale_slug: { locale, slug } } })
+      if (clash && clash.id !== id) return res.status(409).json({ error: 'Slug deja folosit.' })
+    }
+    if (b.coverImage !== undefined) {
+      const ci = String(b.coverImage).trim()
+      if (ci && !isValidHttpsUrl(ci)) return res.status(400).json({ error: 'coverImage trebuie să fie un URL https://.' })
+    }
+    const newStatus = b.status !== undefined ? (b.status === 'published' ? 'published' : 'draft') : current.status
+    let publishedAt = b.publishedAt !== undefined
+      ? (b.publishedAt ? new Date(b.publishedAt) : null)
+      : current.publishedAt
+    if (!publishedAt && newStatus === 'published') publishedAt = new Date()
+    const data = {
+      locale, slug, status: newStatus,
+      ...(b.title !== undefined ? { title: String(b.title).trim() } : {}),
+      ...(b.excerpt !== undefined ? { excerpt: String(b.excerpt).trim() } : {}),
+      ...(b.body !== undefined ? { body: sanitizeBlogBody(b.body) } : {}),
+      ...(b.coverImage !== undefined ? { coverImage: String(b.coverImage).trim() } : {}),
+      ...(b.coverImageAlt !== undefined ? { coverImageAlt: String(b.coverImageAlt).trim() } : {}),
+      ...(b.category !== undefined ? { category: String(b.category).trim() } : {}),
+      ...(b.tags !== undefined ? { tags: Array.isArray(b.tags) ? b.tags.filter((t) => typeof t === 'string').map((t) => String(t).trim()).filter(Boolean) : [] } : {}),
+      ...(b.author !== undefined ? { author: String(b.author).trim() } : {}),
+      ...(b.seoTitle !== undefined ? { seoTitle: String(b.seoTitle).trim().slice(0, 80) } : {}),
+      ...(b.seoDescription !== undefined ? { seoDescription: String(b.seoDescription).trim().slice(0, 200) } : {}),
+      publishedAt,
+    }
+    const row = await prisma.blogPost.update({ where: { id }, data })
+    return res.json(blogPostToApi(row))
+  } catch (err) {
+    console.error('Admin blog update error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la salvare.' })
+  }
+})
+
+// Admin: delete
+app.delete('/api/admin/blog/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const post = await prisma.blogPost.findUnique({ where: { id: req.params.id }, select: { coverImage: true } })
+    if (!post) return res.status(404).json({ error: 'Articol negăsit.' })
+    await prisma.blogPost.delete({ where: { id: req.params.id } })
+    if (post.coverImage && isR2Configured()) {
+      const key = urlToKey(post.coverImage)
+      if (key && key.startsWith('blog/')) {
+        deleteFromR2(key).catch((e) => console.warn('[R2] blog cover delete failed:', e?.message))
+      }
+    }
+    return res.status(204).end()
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Articol negăsit.' })
+    console.error('Admin blog delete error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
+  }
+})
+
 // ── Admin: file upload (images, PDFs) → R2 ─────────────────────────────────────────
 const uploadHandler = async (req, res) => {
   try {
@@ -6434,7 +6667,11 @@ const uploadHandler = async (req, res) => {
     }
     const customPrefix = String(req.query?.prefix || req.get('X-Upload-Prefix') || '').trim()
     const isPdf = req.file.mimetype === 'application/pdf'
-    const prefix = customPrefix || (isPdf ? 'docs' : 'products')
+    const rawPrefix = customPrefix || (isPdf ? 'docs' : 'products')
+    if (!UPLOAD_PREFIX_ALLOWLIST.has(rawPrefix)) {
+      return res.status(400).json({ error: `Prefix upload invalid: '${rawPrefix}'.` })
+    }
+    const prefix = rawPrefix
     const productFolder = (req.query?.folder || req.get('X-Product-Folder') || req.body?.folder || '').trim()
     const imageIndexRaw = req.get('X-Image-Index') || req.body?.imageIndex || req.query?.imageIndex
     const imageIndex = imageIndexRaw != null ? parseInt(String(imageIndexRaw), 10) : undefined
@@ -6448,6 +6685,16 @@ const uploadHandler = async (req, res) => {
       }
       if (!productFolder) {
         return res.status(400).json({ error: 'Folder studiu de caz lipsă (slug).' })
+      }
+    }
+
+    if (prefix === 'blog') {
+      const mt = String(req.file.mimetype || '').toLowerCase()
+      if (!ALLOWED_IMAGE_MIMES.has(mt)) {
+        return res.status(400).json({ error: 'Articolele de blog acceptă doar imagini JPG, PNG sau WebP.' })
+      }
+      if (!productFolder) {
+        return res.status(400).json({ error: 'Slug articol lipsă pentru upload imagine blog.' })
       }
     }
 
@@ -8107,6 +8354,34 @@ const getPublicProductHandler = async (req, res) => {
 app.get('/api/products/:id', getPublicProductHandler)
 app.get('/products/:id', getPublicProductHandler)
 
+// ── Public: related products by category ─────────────────────────────────────
+const getRelatedProductsHandler = async (req, res) => {
+  try {
+    const { id } = req.params
+    const limit = Math.min(parseInt(req.query.limit) || 4, 8)
+    const isCuid = /^c[a-z0-9]{24}$/.test(id)
+    const source = await prisma.product.findFirst({
+      where: { status: 'published', ...(isCuid ? { id } : { slug: id }) },
+      select: { id: true, categoryId: true },
+    })
+    if (!source || !source.categoryId) return res.json([])
+    const related = await prisma.product.findMany({
+      where: { status: 'published', categoryId: source.categoryId, NOT: { id: source.id } },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { category: { select: { id: true, slug: true, name: true } } },
+    })
+    const authPayload = readOptionalAuthPayload(req)
+    res.set('Cache-Control', 'public, max-age=60')
+    return res.json(related.map((p) => applyPublicPricePolicy(normalizeCatalogBadges(productToJson(p)), authPayload)))
+  } catch (err) {
+    console.error('Get related products error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
+  }
+}
+app.get('/api/products/:id/related', getRelatedProductsHandler)
+app.get('/products/:id/related', getRelatedProductsHandler)
+
 /** Imagine card sau prima din `images` — pentru verificare garanție publică. */
 function pickProductHeroImageUrlForWarrantyVerify(product) {
   const card = product?.cardImage && String(product.cardImage).trim()
@@ -9675,6 +9950,84 @@ app.get('/page-seo', getPageSeoHandler)
 app.put('/api/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
 app.put('/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
 
+// ── Public: sitemap.xml ─────────────────────────────────────────────────
+app.get('/api/sitemap.xml', async (req, res) => {
+  try {
+    const BASE = 'https://baterino.ro'
+    const fmt = (d) => new Date(d).toISOString().split('T')[0]
+    const today = fmt(new Date())
+
+    const staticPages = [
+      { path: '/',                                         changefreq: 'weekly',  priority: '1.0' },
+      { path: '/produse',                                  changefreq: 'daily',   priority: '0.9' },
+      { path: '/blog',                                     changefreq: 'daily',   priority: '0.8' },
+      { path: '/instalatori',                              changefreq: 'weekly',  priority: '0.8' },
+      { path: '/reduceri',                                 changefreq: 'weekly',  priority: '0.7' },
+      { path: '/studii-de-caz',                            changefreq: 'weekly',  priority: '0.7' },
+      { path: '/divizii/rezidential',                      changefreq: 'monthly', priority: '0.7' },
+      { path: '/divizii/industrial',                       changefreq: 'monthly', priority: '0.7' },
+      { path: '/divizii/medical',                          changefreq: 'monthly', priority: '0.7' },
+      { path: '/divizii/maritim',                          changefreq: 'monthly', priority: '0.7' },
+      { path: '/companie/viziune',                         changefreq: 'monthly', priority: '0.6' },
+      { path: '/contact',                                  changefreq: 'monthly', priority: '0.6' },
+      { path: '/siguranta',                                changefreq: 'monthly', priority: '0.6' },
+      { path: '/service-baterii-lithtech-romania',         changefreq: 'monthly', priority: '0.6' },
+      { path: '/intrebari-frecvente',                      changefreq: 'monthly', priority: '0.6' },
+      { path: '/verificare-garantie',                      changefreq: 'monthly', priority: '0.5' },
+      { path: '/parteneriat-strategic-lithtech-baterino',  changefreq: 'monthly', priority: '0.5' },
+      { path: '/cariere',                                  changefreq: 'monthly', priority: '0.5' },
+      { path: '/returnare-produse',                        changefreq: 'monthly', priority: '0.4' },
+      { path: '/termeni-si-conditii',                      changefreq: 'yearly',  priority: '0.3' },
+      { path: '/politica-confidentialitate',               changefreq: 'yearly',  priority: '0.3' },
+    ]
+
+    const [products, blogPosts, partners] = await Promise.all([
+      prisma.product.findMany({
+        where: { status: 'published' },
+        select: { slug: true, id: true, updatedAt: true, category: { select: { slug: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.blogPost.findMany({
+        where: { status: 'published' },
+        select: { slug: true, updatedAt: true },
+        orderBy: { publishedAt: 'desc' },
+      }),
+      prisma.partner.findMany({
+        where: { publicSlug: { not: null } },
+        select: { publicSlug: true, updatedAt: true },
+      }),
+    ])
+
+    const urlTag = (loc, lastmod, changefreq, priority) =>
+      `\n  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+
+    const entries = [
+      ...staticPages.map(({ path, changefreq, priority }) =>
+        urlTag(`${BASE}${path}`, today, changefreq, priority)
+      ),
+      ...products.map((p) => {
+        const segments = [p.category?.slug, p.slug || p.id].filter(Boolean)
+        return urlTag(`${BASE}/produse/${segments.join('/')}`, fmt(p.updatedAt), 'weekly', '0.8')
+      }),
+      ...blogPosts.map((p) =>
+        urlTag(`${BASE}/blog/${p.slug}`, fmt(p.updatedAt), 'monthly', '0.7')
+      ),
+      ...partners.filter((p) => p.publicSlug).map((p) =>
+        urlTag(`${BASE}/companii-instalatori-fotovoltaice/${p.publicSlug}`, fmt(p.updatedAt), 'monthly', '0.6')
+      ),
+    ]
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join('')}\n</urlset>`
+
+    res.set('Content-Type', 'application/xml; charset=utf-8')
+    res.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+    return res.send(xml)
+  } catch (err) {
+    console.error('Sitemap error:', err)
+    res.status(500).type('xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>')
+  }
+})
+
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────
 app.use((req, res) => {
   console.log('[404]', req.method, req.url)
@@ -9686,6 +10039,8 @@ const server = app.listen(PORT, host, () => {
   console.log(`API running on http://${host}:${PORT}`)
 })
 
-// Prevent process from exiting when run under npm/concurrently
+// Graceful shutdown on SIGTERM (Railway, PM2 stop/reload).
+// On Windows, bash sessions ending propagate SIGINT (Ctrl+C) to all console-attached
+// processes. The empty SIGINT listener prevents the API from exiting in that case.
 process.on('SIGTERM', () => server.close())
-process.on('SIGINT', () => server.close())
+process.on('SIGINT', () => {})

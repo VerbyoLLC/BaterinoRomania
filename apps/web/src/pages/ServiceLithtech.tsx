@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getServiceLithtechTranslations } from '../i18n/service-lithtech'
@@ -50,6 +51,25 @@ export default function ServiceLithtech() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: seo.title || tr.seoTitle,
+          description: seo.description || tr.seoDesc,
+          url: 'https://baterino.ro/service-baterii-lithtech-romania',
+          inLanguage: language.code,
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Service Baterii LithTech', item: 'https://baterino.ro/service-baterii-lithtech-romania' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-16 pb-24">
         {/* About */}

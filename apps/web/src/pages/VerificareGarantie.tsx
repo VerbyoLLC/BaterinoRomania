@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import { getVerificareGarantieTranslations } from '../i18n/verificare-garantie'
@@ -271,6 +272,25 @@ export default function VerificareGarantie() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: seo.title || tr.pageTitle,
+          description: seo.description || tr.pageDescription,
+          url: 'https://baterino.ro/verificare-garantie',
+          inLanguage: language.code,
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Verificare Garanție', item: 'https://baterino.ro/verificare-garantie' },
+          ],
+        },
+      ]} />
 
       <section className="max-w-content mx-auto px-4 py-14 sm:py-16">
         <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

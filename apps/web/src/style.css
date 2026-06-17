@@ -1,7 +1,51 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-Regular-Trial.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-RegularItalic-Trial.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-Medium-Trial.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-Semibold-Trial.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-Bold-Trial.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Graphik';
+  src: url('/fonts/Graphik Family/Graphik-BoldItalic-Trial.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-graphik: "Graphik", ui-sans-serif, system-ui, sans-serif;
   --max-width-content: 1200px;
   --max-width-site: 1440px;
 }
@@ -111,6 +155,36 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Empty paragraphs from rich text editor (TipTap outputs <p></p> for blank lines) */
+.prose p:empty {
+  min-height: 1em;
+}
+
+/* Article inline button */
+a.article-btn {
+  display: inline-block;
+  margin: 0.25rem 0;
+  padding: 0.6rem 1.5rem;
+  background: #000;
+  color: #fff !important;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  border-radius: 0.5rem;
+  transition: background 0.15s;
+}
+a.article-btn:hover {
+  background: #333;
+}
+
+/* Article body divider lines */
+.prose hr {
+  width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  border-color: #d1d5db; /* gray-300 */
 }
 
 /* Bottom sheets: slide up below lg (matches industrial mobile tabs / cards). */

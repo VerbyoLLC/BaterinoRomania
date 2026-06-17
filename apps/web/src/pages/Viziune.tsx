@@ -6,6 +6,7 @@ import { getMenuTranslations } from '../i18n/menu'
 import { getViziuneTranslations } from '../i18n/viziune'
 import { LanguageDropdown } from '../components/LanguageDropdown'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 
 const SECTIONS = [
   { id: 'viziune', labelKey: 'viziune' as const },
@@ -125,6 +126,26 @@ export default function Viziune() {
       ogImage="/images/companie/viziune-og.jpg"
       lang={language.code}
     />
+    <SchemaOrg schema={[
+      {
+        '@context': 'https://schema.org',
+        '@type': 'AboutPage',
+        name: 'Viziune, Misiune & Echipă',
+        description: 'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
+        url: 'https://baterino.ro/companie/viziune',
+        image: 'https://baterino.ro/images/companie/viziune-og.jpg',
+        inLanguage: 'ro',
+        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+          { '@type': 'ListItem', position: 2, name: 'Viziune', item: 'https://baterino.ro/companie/viziune' },
+        ],
+      },
+    ]} />
     <article className="max-w-content mx-auto px-5 lg:px-3 py-16">
 
       {/* Sub-nav: replaces main header on scroll – fixed, with logo + section nav + login + language */}

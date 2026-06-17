@@ -6,6 +6,7 @@ import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getHomeTranslations } from '../i18n/home'
 import {
   getProducts,
+  getPublicCaseStudies,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
   formatResidentialCatalogPriceDisplay,
@@ -14,6 +15,7 @@ import {
   residentialCatalogUsesPartnerPriceCta,
   type PublicProduct,
 } from '../lib/api'
+import CaseStudyModal, { type CaseStudyModalItem } from '../components/studii/CaseStudyModal'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
@@ -25,6 +27,8 @@ import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
 import HomeInstalledCapacityCounters from '../components/home/HomeInstalledCapacityCounters'
+import HomeProiecteIndustriale from '../components/home/HomeProiecteIndustriale'
+import HomeCaseStudiesPreview from '../components/home/HomeCaseStudiesPreview'
 import {
   CatalogProductCardSkeleton,
   IndustrialCatalogProductCard,
@@ -51,6 +55,7 @@ function renderBaterinoGlobalLink(text: string) {
 /* ── Page ────────────────────────────────────────────────────── */
 const WELCOME_MODAL_STORAGE_KEY = 'baterino-welcome-modal-chosen'
 const USER_TYPE_STORAGE_KEY = 'baterino-user-type'
+const PROMO_MODAL_STORAGE_KEY = 'baterino-promo-case-seen'
 
 /* ── Welcome modal (mobile only, slides up from bottom) ───────────────── */
 function WelcomeModal({
@@ -124,7 +129,7 @@ export default function Home() {
   const tr = getHomeTranslations(language.code)
   const seo = useSeoPage('home')
 
-  const [activeTab,  setActiveTab]  = useState<string>('rezidential')
+  const [activeTab,  setActiveTab]  = useState<string>('')
   const [mobileTabOpen, setMobileTabOpen] = useState(false)
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
@@ -142,6 +147,7 @@ export default function Home() {
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [promoItem, setPromoItem] = useState<CaseStudyModalItem | null>(null)
   const [userType, setUserType] = useState<'profesionist' | 'client' | null>(() => {
     if (typeof sessionStorage === 'undefined') return null
     const stored = sessionStorage.getItem(USER_TYPE_STORAGE_KEY)
@@ -176,6 +182,30 @@ export default function Home() {
     setShowWelcomeModal(true)
   }, [])
 
+  useEffect(() => {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PROMO_MODAL_STORAGE_KEY)) return
+    let timer: ReturnType<typeof setTimeout>
+    getPublicCaseStudies(language.code)
+      .then((rows) => {
+        const second = rows[1]
+        if (!second) return
+        const item: CaseStudyModalItem = {
+          category: second.category,
+          title: second.title,
+          location: second.location,
+          description: second.description || '',
+          image: second.images?.[0] || second.image,
+          imageAlt: second.imageAlt,
+          images: second.images?.length ? second.images : [second.image],
+          specs: second.specs,
+          tags: second.tags,
+        }
+        timer = setTimeout(() => setPromoItem(item), 1000)
+      })
+      .catch(() => {})
+    return () => clearTimeout(timer)
+  }, [language.code])
+
   const closeWelcomeModal = () => {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(WELCOME_MODAL_STORAGE_KEY, '1')
@@ -205,8 +235,10 @@ export default function Home() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
+
   const featuredProducts = useMemo(() => {
     const filtered = products.filter((p) => {
+      if (!activeTab) return true
       const cat = String(p.categorie || '').toLowerCase()
       if (cat && cat.includes(activeTab)) {
         // pass sector filter
@@ -283,6 +315,7 @@ export default function Home() {
         },
         areaServed: 'RO',
         knowsLanguage: ['ro', 'en'],
+        sameAs: ['https://www.facebook.com/baterino.ro/', 'https://www.linkedin.com/company/baterino-romania', 'https://www.google.com/maps?cid=15926825830058361764'],
       }} />
 
       <h1 className="sr-only">{tr.heroV2Title}</h1>
@@ -300,18 +333,16 @@ export default function Home() {
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          <div className="flex flex-col items-center mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5">
-            <p className="hidden md:block text-sm font-semibold text-gray-500 mb-2 tracking-wide uppercase">
-              Verifică compatibilitatea cu invertorul tău
-            </p>
+          {/* Mobile: inverter search above title */}
+          <div className="flex flex-col items-center mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5 md:hidden">
             <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
           </div>
 
-          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] mb-6 sm:mb-8 lg:mb-10">
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-6 sm:mb-8 lg:mb-10 uppercase">
             {tr.productsSectionTitle}
           </h2>
 
-          {/* Product category filters — Mobile: dropdown + filtre */}
+          {/* Product category filters */}
           {isMobile ? (
             <div className="mb-8">
               <div className="flex items-center gap-2">
@@ -325,7 +356,7 @@ export default function Home() {
                       : 'bg-white text-gray-500 border-gray-200'
                   }`}
                 >
-                  <span className="truncate">{tabs.find((t) => t.id === activeTab)?.label ?? tabs[0].label}</span>
+                  <span className="truncate">{tabs.find((t) => t.id === activeTab)?.label ?? tr.productsTabAll}</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
                     <path d="M6 9l6 6 6-6" />
                   </svg>
@@ -383,28 +414,45 @@ export default function Home() {
               )}
             </div>
           ) : (
-            /* Desktop: tab row */
-            <div
-              className="flex flex-row flex-wrap justify-center gap-6 lg:gap-8 mb-8 lg:mb-10"
-              role="group"
-              aria-label={tr.productsSectionTitle}
-            >
-              {tabs.map((tab) => (
+            /* Desktop: pill filter bar */
+            <div className="flex items-center gap-3 mb-8 lg:mb-10">
+              {/* Left: sector pills + voltage + location dropdowns */}
+              <div className="flex items-center gap-2 flex-1 flex-wrap" role="group" aria-label={tr.productsSectionTitle}>
+                {/* All pill */}
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  aria-pressed={activeTab === tab.id}
-                  aria-label={tab.label}
-                  className={`px-2 py-2 text-sm font-semibold font-['Inter'] uppercase transition-colors border-b-2 ${
-                    activeTab === tab.id
-                      ? 'text-slate-900 border-slate-900'
-                      : 'text-gray-500 border-transparent hover:text-gray-700'
+                  onClick={() => setActiveTab('')}
+                  aria-pressed={activeTab === ''}
+                  className={`h-9 px-4 rounded-full text-sm font-semibold font-['Inter'] border transition-all duration-200 ${
+                    activeTab === ''
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  {tab.label}
+                  {tr.productsTabAll}
                 </button>
-              ))}
+
+                {/* Sector pills */}
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-pressed={activeTab === tab.id}
+                    className={`h-9 px-4 rounded-full text-sm font-semibold font-['Inter'] border transition-all duration-200 ${
+                      activeTab === tab.id
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+
+              </div>
+
+              {/* Right: inverter search — pill style */}
+              <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} compact />
             </div>
           )}
 
@@ -436,11 +484,11 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex flex-col gap-2 px-5 py-4">
-                  {tabs.map((tab) => {
+                  {[{ id: '', label: tr.productsTabAll }, ...tabs].map((tab) => {
                     const active = activeTab === tab.id
                     return (
                       <button
-                        key={tab.id}
+                        key={tab.id || 'all'}
                         type="button"
                         onClick={() => { setActiveTab(tab.id); setMobileTabOpen(false) }}
                         className={`flex items-center gap-3 h-12 px-4 rounded-[10px] text-sm font-semibold font-['Inter'] text-left transition-colors ${
@@ -641,12 +689,10 @@ export default function Home() {
 
       </div>
 
-      <HomeFeaturesGrid tr={tr} />
-
       {/* ── REDUCERI – Programe de reduceri ── */}
-      <section className="mb-0 max-w-content mx-auto px-5 lg:px-3">
+      <section className="mb-16 lg:mb-24 max-w-content mx-auto px-5 lg:px-3">
         <div className="my-6 flex flex-col items-center gap-4 text-center sm:my-8">
-          <h2 className="text-black text-2xl font-bold font-['Inter'] leading-9 sm:text-3xl sm:leading-10">
+          <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
             {tr.reduceriGridTitle}
           </h2>
           <p className="max-w-[846px] text-base font-normal font-['Inter'] leading-5 text-black sm:text-lg sm:leading-6">
@@ -664,6 +710,9 @@ export default function Home() {
                   className="absolute inset-0 w-full h-full object-cover rounded-[10px] transition-transform duration-300 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/40 rounded-[10px] transition-colors duration-300 group-hover:bg-black/55" />
+                <div className="absolute top-3 left-3 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-900/80 rounded-[5px] z-10">
+                  <span className="text-white text-xs font-semibold font-['Inter'] uppercase tracking-wide">Pentru Clienți</span>
+                </div>
                 <div className="absolute top-3 right-3 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/95 rounded-[5px] z-10">
                   <span className="text-slate-900 text-xs sm:text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
                 </div>
@@ -695,77 +744,16 @@ export default function Home() {
         )}
       </section>
 
+      <HomeFeaturesGrid tr={tr} />
+
       <hr className="border-gray-200 my-16 lg:my-24 w-full lg:max-w-[1100px] lg:mx-auto" />
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
 
-        {/* ── RESPONSABILITATE & COMUNITATE ── */}
-        <section className="mb-16 lg:mb-24">
-          {/* ── Mobile: Responsabilitate + map ── */}
-          <section className="lg:hidden flex flex-col items-center text-center mb-8">
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
-              {tr.divisionsSectionTitle}
-            </h2>
-            <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
-              {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
-            </p>
-            <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
-              <img src="/images/home/harta-romania.png" alt="" aria-hidden className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
-              <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
-            </div>
-            <Link
-              to="/companie/viziune"
-              className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
-            >
-              <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
-            </Link>
-          </section>
-
-          {/* ── Desktop grid ── */}
-          <div className="hidden lg:grid grid-cols-12 gap-x-4 gap-y-10">
-            <div className="col-span-6 flex flex-col pt-5 pb-4">
-              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-5 max-w-[513px]">
-                {tr.divisionsSectionTitle}
-              </h2>
-              <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[483px]">
-                {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
-              </p>
-              <Link
-                to="/companie/viziune"
-                className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors"
-              >
-                <span className="text-black text-base font-semibold font-['Inter']">
-                  {tr.divisionsSectionBtn}
-                </span>
-              </Link>
-            </div>
-
-            <div className="col-span-6 w-full max-w-[578px] h-96 relative flex items-center justify-start">
-              <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
-              <div className="relative z-10 flex items-center justify-start gap-8 w-full pl-0 pr-5">
-                <img
-                  className="size-80 shrink-0 object-contain"
-                  src="/images/home/harta-romania.png"
-                  alt=""
-                  aria-hidden
-                />
-                <div className="flex flex-col gap-4">
-                  <p className="text-black text-3xl font-bold font-['Inter'] leading-9">
-                    {tr.netTitle}
-                  </p>
-                  <p className="text-black text-base font-normal font-['Inter'] leading-5 max-w-[256px]">
-                    {tr.netBody}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ── DIVIZIILE BATERINO ── */}
         <section className="mb-16 lg:mb-24">
           <div className="flex flex-col items-center text-center">
-            <h2 className="my-4 text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10">
+            <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
               {tr.diviziileNoastreTitle}
             </h2>
             <p className="mb-6 max-w-[894px] text-base font-medium font-['Inter'] leading-6 text-gray-700 sm:mb-8 sm:text-lg sm:leading-8">
@@ -775,36 +763,36 @@ export default function Home() {
             {/* Desktop: 4 cards in grid */}
             <div className="hidden w-full lg:grid lg:grid-cols-4 lg:gap-6">
               <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-logo-white.png" alt="Baterino" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-logo-white.png" alt="Baterino" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[21px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/industrial" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/industrial-baterii-lifepo4.jpg" alt={tr.divIndTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/industrial-baterii-lifepo4.jpg" alt={tr.divIndTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-pro-industrial-logo.png" alt="Baterino Industrial" className="absolute top-5 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-pro-industrial-logo.png" alt="Baterino Industrial" loading="lazy" className="absolute top-5 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[22px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/medical" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/medical-baterii-lifepo4.jpg" alt={tr.divMedTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/medical-baterii-lifepo4.jpg" alt={tr.divMedTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-medical-logo-white.png" alt="Baterino Medical" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-medical-logo-white.png" alt="Baterino Medical" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[18px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/maritim" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 inset-x-0 px-4 text-center">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px] mx-auto">{tr.divMarDesc}</p>
@@ -834,9 +822,9 @@ export default function Home() {
                       to={d.to}
                       className="relative flex-shrink-0 w-[324px] h-[450px] rounded-[10px] overflow-hidden bg-zinc-300 group block snap-center"
                     >
-                      <img src={d.img} alt={d.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <img src={d.img} alt={d.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40" />
-                      <img src={d.logo} alt="" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
+                      <img src={d.logo} alt="" loading="lazy" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
                       <div className={`absolute bottom-5 sm:bottom-6 ${'centerText' in d && d.centerText ? 'inset-x-0 px-4 text-center' : 'left-[16px] sm:left-[21px]'}`}>
                         <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
                         <p className={`text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 ${'centerText' in d && d.centerText ? 'max-w-[256px] mx-auto' : 'max-w-[220px] sm:max-w-[240px]'}`}>{d.desc}</p>
@@ -866,7 +854,23 @@ export default function Home() {
 
         </section>
 
-        <HomeInstalledCapacityCounters tr={tr} />
+        <HomeProiecteIndustriale />
+
+        {/* ── CAPACITATE + STUDII DE CAZ – combined section ── */}
+        <section className="mb-16 lg:mb-24">
+          <div className="flex flex-col items-center text-center mb-2">
+            <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
+              {language.code === 'en' ? 'Case studies' : 'Studii de caz'}
+            </h2>
+            <p className="text-gray-600 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[580px]">
+              {language.code === 'en'
+                ? 'LithTech BESS energy storage solutions deployed in industrial energy projects across Romania and Europe.'
+                : 'Soluții de stocare a energiei BESS LithTech implementate în proiecte energetice industriale în România și Europa.'}
+            </p>
+          </div>
+          <HomeInstalledCapacityCounters tr={tr} />
+          <HomeCaseStudiesPreview />
+        </section>
 
         {/* ── LITHTECH ── */}
         <section className="mb-16 lg:mb-24">
@@ -972,6 +976,44 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── RESPONSABILITATE & COMUNITATE ── */}
+        <section className="mb-16 lg:mb-24">
+          <section className="lg:hidden flex flex-col items-center text-center mb-8">
+            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
+              {tr.divisionsSectionTitle}
+            </h2>
+            <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
+              {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
+            </p>
+            <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
+              <img src="/images/home/harta-romania.png" alt="" aria-hidden loading="lazy" className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
+              <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
+            </div>
+            <Link to="/companie/viziune" className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors">
+              <span className="text-black text-sm sm:text-base font-semibold font-['Inter'] uppercase">{tr.divisionsSectionBtn}</span>
+            </Link>
+          </section>
+          <div className="hidden lg:grid grid-cols-12 gap-x-4 gap-y-10">
+            <div className="col-span-6 flex flex-col pt-5 pb-4">
+              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-5 max-w-[513px]">{tr.divisionsSectionTitle}</h2>
+              <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[483px]">{renderBaterinoGlobalLink(tr.divisionsSectionBody)}</p>
+              <Link to="/companie/viziune" className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors">
+                <span className="text-black text-base font-semibold font-['Inter']">{tr.divisionsSectionBtn}</span>
+              </Link>
+            </div>
+            <div className="col-span-6 w-full max-w-[578px] h-96 relative flex items-center justify-start">
+              <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
+              <div className="relative z-10 flex items-center justify-start gap-8 w-full pl-0 pr-5">
+                <img className="size-80 shrink-0 object-contain" src="/images/home/harta-romania.png" alt="" aria-hidden loading="lazy" />
+                <div className="flex flex-col gap-4">
+                  <p className="text-black text-3xl font-bold font-['Inter'] leading-9">{tr.netTitle}</p>
+                  <p className="text-black text-base font-normal font-['Inter'] leading-5 max-w-[256px]">{tr.netBody}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── CTA BAR ── */}
         <CTABar
           logo="/images/shared/baterino-logo-black.svg"
@@ -993,6 +1035,16 @@ export default function Home() {
           tr={tr}
         />
       )}
+
+      <CaseStudyModal
+        item={promoItem}
+        onClose={() => {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(PROMO_MODAL_STORAGE_KEY, '1')
+          }
+          setPromoItem(null)
+        }}
+      />
     </>
   )
 }

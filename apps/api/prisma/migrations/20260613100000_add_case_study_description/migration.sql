@@ -1,0 +1,1 @@
+ALTER TABLE "CaseStudy" ADD COLUMN "description" TEXT NOT NULL DEFAULT '';

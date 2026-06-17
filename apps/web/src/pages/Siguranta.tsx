@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getSigurantaTranslations } from '../i18n/siguranta'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 
 const CARDS = [
@@ -225,6 +226,26 @@ export default function Siguranta() {
         ogImage="/images/siguranta/siguranta-og.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Siguranță & Garanție',
+          description: 'Baterino garantează siguranța produselor prin serviciul SWAP, suport și mentenanță în România, testare avansată cu LithTech și garanție extinsă de 10 ani.',
+          url: 'https://baterino.ro/siguranta',
+          image: 'https://baterino.ro/images/siguranta/siguranta-og.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Siguranță', item: 'https://baterino.ro/siguranta' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 pb-24 pt-12 lg:px-3 lg:pt-14">
         {/* ── HERO ── */}

@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PartnerPublicProfileCard from '../components/partner/PartnerPublicProfileCard'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import {
   type PublicPartnerCompanyProfile,
   getPublicPartnerCompanyProfile,
@@ -104,6 +105,31 @@ export default function PartnerCompanyPublicPage() {
       ? data.description.trim().slice(0, 160)
       : `${displayName} — instalator partener în rețeaua Baterino Romania.`
 
+  const localBusinessSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: displayName,
+    description: seoDesc,
+    url: `https://baterino.ro${canonicalPath}`,
+    ...(data.publicPhone ? { telephone: data.publicPhone } : {}),
+    ...(data.logoUrl && !String(data.logoUrl).startsWith('data:') ? { image: data.logoUrl } : {}),
+    address: {
+      '@type': 'PostalAddress',
+      addressCountry: 'RO',
+      ...(data.city ? { addressLocality: data.city } : {}),
+      ...(data.county ? { addressRegion: data.county } : {}),
+    },
+    areaServed: { '@type': 'Country', name: 'Romania' },
+    ...(Array.isArray(data.services) && data.services.length > 0
+      ? { knowsAbout: data.services }
+      : {}),
+    parentOrganization: {
+      '@type': 'Organization',
+      name: 'Baterino Romania',
+      url: 'https://baterino.ro',
+    },
+  }
+
   return (
     <article className="mx-auto max-w-lg px-4 py-12 sm:py-14">
       <SEO
@@ -116,6 +142,7 @@ export default function PartnerCompanyPublicPage() {
             : '/images/shared/baterino-logo-black.svg'
         }
       />
+      <SchemaOrg schema={localBusinessSchema} />
 
       <div className="flex w-full flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">

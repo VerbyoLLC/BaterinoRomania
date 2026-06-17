@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Images, MapPin } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 
 export type CaseStudyCardSpec = {
   label: string
@@ -20,13 +20,16 @@ export type CaseStudyCardProps = {
   imageCount?: number
   galleryLabel?: string
   to?: string
+  onClick?: MouseEventHandler<HTMLElement>
 }
 
 function CardShell({
   to,
+  onClick,
   children,
 }: {
   to?: string
+  onClick?: MouseEventHandler<HTMLElement>
   children: ReactNode
 }) {
   const className =
@@ -37,6 +40,14 @@ function CardShell({
       <Link to={to} className={className}>
         {children}
       </Link>
+    )
+  }
+
+  if (onClick) {
+    return (
+      <article className={`${className} cursor-pointer`} onClick={onClick}>
+        {children}
+      </article>
     )
   }
 
@@ -54,11 +65,12 @@ export default function CaseStudyCard({
   imageCount,
   galleryLabel,
   to,
+  onClick,
 }: CaseStudyCardProps) {
   const gridSpecs = specs.slice(0, 4)
 
   return (
-    <CardShell to={to}>
+    <CardShell to={to} onClick={onClick}>
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
         <img
           src={image}

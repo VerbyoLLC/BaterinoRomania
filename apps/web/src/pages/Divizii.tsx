@@ -1,6 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getRezidentialTranslations } from '../i18n/rezidential'
+import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 
 const DIVIZII: Record<string, string> = {
   rezidential: 'Rezidențial',
@@ -124,10 +126,38 @@ export default function Divizii() {
     )
   }
 
+  const canonicalUrl = `https://baterino.ro/divizii/${slug ?? ''}`
   return (
-    <div className="max-w-content mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-      <p className="mt-2 text-gray-600">Divizia {title}.</p>
-    </div>
+    <>
+      <SEO
+        title={`${title} – Baterino România`}
+        description={`Divizia ${title} Baterino România – soluții complete de stocare energie.`}
+        canonical={`/divizii/${slug ?? ''}`}
+        lang={language.code}
+      />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: title,
+          url: canonicalUrl,
+          inLanguage: language.code,
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Divizii', item: 'https://baterino.ro/divizii' },
+            { '@type': 'ListItem', position: 3, name: title, item: canonicalUrl },
+          ],
+        },
+      ]} />
+      <div className="max-w-content mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+        <p className="mt-2 text-gray-600">Divizia {title}.</p>
+      </div>
+    </>
   )
 }

@@ -35,21 +35,7 @@ type HomeInstalledCapacityCountersProps = {
 /** Installed capacity stats (MW) — five boxed counters. */
 export default function HomeInstalledCapacityCounters({ tr }: HomeInstalledCapacityCountersProps) {
   return (
-    <section className="my-12 w-full lg:my-16" aria-labelledby="capacity-section-title">
-      <header className="mx-auto mb-8 max-w-3xl text-center lg:mb-10">
-        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500 font-['Inter'] sm:text-xs">
-          {tr.capacitySectionEyebrow}
-        </p>
-        <h2
-          id="capacity-section-title"
-          className="m-0 mt-2 text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10"
-        >
-          {tr.capacitySectionTitle}
-        </h2>
-        <p className="m-0 mt-3 text-base font-medium font-['Inter'] leading-6 text-gray-600 sm:text-lg sm:leading-7">
-          {tr.capacitySectionSubtitle}
-        </p>
-      </header>
+    <div className="my-8 w-full lg:my-10">
 
       <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-5">
         {COUNTERS.map(({ mw, titleKey, subtitleKey }, index) => {
@@ -96,6 +82,6 @@ export default function HomeInstalledCapacityCounters({ tr }: HomeInstalledCapac
           )
         })}
       </div>
-    </section>
+    </div>
   )
 }

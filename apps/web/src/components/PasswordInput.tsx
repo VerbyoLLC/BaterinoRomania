@@ -50,7 +50,7 @@ export default function PasswordInput({
         inputMode={inputMode}
         onFocus={onFocus}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-11 pl-4 pr-11 border rounded-[10px] text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
+        className={`w-full h-11 pl-4 pr-11 border rounded-[10px] text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors [&::-ms-reveal]:hidden [&::-ms-clear]:hidden ${
           hasError
             ? 'border-red-400 focus:ring-red-400'
             : 'border-gray-300 focus:ring-slate-900'

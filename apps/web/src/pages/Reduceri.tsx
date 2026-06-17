@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
 import { getAuthToken, getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 import { ReduceriProgramCard } from '../components/reduceri/ReduceriProgramCard'
 
@@ -82,6 +83,26 @@ export default function Reduceri() {
         ogImage="/images/programe%20reduceri/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Reduceri & Oferte',
+          description: 'Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu\' și Viața la Țară. Reduceri reale pentru oameni reali.',
+          url: 'https://baterino.ro/reduceri',
+          image: 'https://baterino.ro/images/programe%20reduceri/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Reduceri', item: 'https://baterino.ro/reduceri' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
 

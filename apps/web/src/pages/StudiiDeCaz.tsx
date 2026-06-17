@@ -3,13 +3,21 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getStudiiDeCazTranslations } from '../i18n/studii-de-caz'
 import { getPublicCaseStudies } from '../lib/api'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CaseStudyCard, { CaseStudyCardSkeleton } from '../components/studii/CaseStudyCard'
+import CaseStudyModal, { type CaseStudyModalItem } from '../components/studii/CaseStudyModal'
+import { SectorCardsGrid } from '../components/home/HomeProiecteIndustriale'
+
+type CaseItem = CaseStudyModalItem & { slug: string; imageCount: number }
 
 export default function StudiiDeCaz() {
   const { language } = useLanguage()
   const tr = getStudiiDeCazTranslations(language.code)
-  const [cases, setCases] = useState(tr.cases)
+  const [cases, setCases] = useState<CaseItem[]>(
+    tr.cases.map((c) => ({ ...c, description: '', images: [c.image], imageCount: 1 })),
+  )
   const [loading, setLoading] = useState(true)
+  const [activeCase, setActiveCase] = useState<CaseStudyModalItem | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -24,19 +32,21 @@ export default function StudiiDeCaz() {
               category: row.category,
               title: row.title,
               location: row.location,
+              description: row.description || '',
               image: row.images?.[0] || row.image,
               imageAlt: row.imageAlt,
+              images: row.images?.length ? row.images : [row.image],
               imageCount: row.images?.length ?? row.imageCount,
               specs: row.specs,
               tags: row.tags,
             })),
           )
         } else {
-          setCases(tr.cases)
+          setCases(tr.cases.map((c) => ({ ...c, description: '', images: [c.image], imageCount: 1 })))
         }
       })
       .catch(() => {
-        if (!cancelled) setCases(tr.cases)
+        if (!cancelled) setCases(tr.cases.map((c) => ({ ...c, description: '', images: [c.image], imageCount: 1 })))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -48,6 +58,7 @@ export default function StudiiDeCaz() {
 
   return (
     <>
+      <CaseStudyModal item={activeCase} onClose={() => setActiveCase(null)} />
       <SEO
         title={tr.seoTitle}
         description={tr.seoDesc}
@@ -55,6 +66,26 @@ export default function StudiiDeCaz() {
         ogImage="/images/divizii/industrial/centre-de-date.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'Studii de caz – Baterino România',
+          description: 'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
+          url: 'https://baterino.ro/studii-de-caz',
+          image: 'https://baterino.ro/images/divizii/industrial/centre-de-date.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Studii de Caz', item: 'https://baterino.ro/studii-de-caz' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
         <header className="mb-10 lg:mb-14 flex flex-col items-center text-center">
@@ -65,6 +96,10 @@ export default function StudiiDeCaz() {
             {tr.heroDesc}
           </p>
         </header>
+
+        <div className="mb-10 lg:mb-14">
+          <SectorCardsGrid />
+        </div>
 
         {loading ? (
           <ul
@@ -92,6 +127,7 @@ export default function StudiiDeCaz() {
                   galleryLabel={tr.galleryPhotosAria}
                   specs={item.specs}
                   tags={item.tags}
+                  onClick={() => setActiveCase(item)}
                 />
               </li>
             ))}

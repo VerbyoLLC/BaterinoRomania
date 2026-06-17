@@ -1,6 +1,7 @@
 import { useLanguage } from '../contexts/LanguageContext'
 import { getCariereTranslations } from '../i18n/cariere'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 
 export default function Cariere() {
   const { language } = useLanguage()
@@ -15,6 +16,26 @@ export default function Cariere() {
         ogImage="/images/cariere/cariere-hero-card.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Cariere – Baterino România',
+          description: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
+          url: 'https://baterino.ro/cariere',
+          image: 'https://baterino.ro/images/cariere/cariere-hero-card.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Cariere', item: 'https://baterino.ro/cariere' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
         {/* Hero section – style matches Rezidential */}

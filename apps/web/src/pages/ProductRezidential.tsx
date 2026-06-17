@@ -27,6 +27,7 @@ import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
 import ProductCaseStudiesSection from '../components/product/ProductCaseStudiesSection'
 import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 import CompatibilitateInvertorModal from '../components/CompatibilitateInvertorModal'
+import RelatedProducts from '../components/product/RelatedProducts'
 
 export type ProductPageLocationState = {
   tipProdus?: 'rezidential' | 'industrial'
@@ -916,6 +917,7 @@ export default function ProductRezidential() {
           url: productUrl,
           ...(images ? { image: images } : {}),
           brand: { '@type': 'Brand', name: product.brand || 'LithTech' },
+          sku: product.slug || product.id,
           ...(product.garantie ? { warranty: product.garantie } : {}),
           offers: {
             '@type': 'Offer',
@@ -1288,6 +1290,8 @@ export default function ProductRezidential() {
               )}
 
               <ProductCaseStudiesSection title={tr.studiiDeCaz} items={caseStudyItems} />
+
+              <RelatedProducts product={product} />
 
               <section className="flex flex-col gap-4">
                 <div className="relative h-64 w-full max-w-[592px] overflow-hidden rounded-[10px]">

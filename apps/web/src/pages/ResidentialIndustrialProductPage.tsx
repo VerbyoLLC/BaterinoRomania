@@ -49,9 +49,10 @@ import {
   INDUSTRIAL_BREADCRUMB_NAV_CLASS,
   INDUSTRIAL_PRODUCT_ARTICLE_CLASS,
 } from '../lib/industrialProductPageLayout'
+import RelatedProducts from '../components/product/RelatedProducts'
+import SchemaOrg from '../components/SchemaOrg'
 
 const TABS = [
-  { id: 'advantages' as const },
   { id: 'spec' as const },
   { id: 'services' as const },
   { id: 'warranty' as const },
@@ -97,13 +98,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   const tr = getIndustrialBessTemplateTranslations(language.code)
   const productDetailTr = getProductDetailTranslations(language.code)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [activeTab, setActiveTab] = useState<TabId>('advantages')
+  const [activeTab, setActiveTab] = useState<TabId>('spec')
 
   const imgs = Array.isArray(product.images) && product.images.length > 0 ? product.images : []
   const slideCount = Math.max(1, imgs.length)
   const currentImg = imgs[currentSlide] || ''
 
-  const keyAdvantages = Array.isArray(product.keyAdvantages) ? product.keyAdvantages : []
   const faqItems = normalizeProductFaq(product.faq)
   const caseStudyItems = normalizeProductCaseStudyExamples(product.caseStudyExamples)
   const visibleTabs = useMemo(
@@ -163,7 +163,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
     const syncTab = () => {
-      if (!mq.matches) setActiveTab((t) => (t === 'spec' ? 'advantages' : t))
+      if (!mq.matches) setActiveTab((t) => (t === 'spec' ? 'spec' : t))
     }
     syncTab()
     mq.addEventListener('change', syncTab)
@@ -274,8 +274,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
   const tabLabel = (id: TabId) => {
     switch (id) {
-      case 'advantages':
-        return tr.tabAdvantages
       case 'spec':
         return tr.tabSpec
       case 'services':
@@ -301,6 +299,59 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
         lang={language.code}
         ogImage={templateSeo.ogImage}
       />
+      {(() => {
+        const BASE = 'https://baterino.ro'
+        const productUrl = `${BASE}${canonical}`
+        const images = Array.isArray(product.images) && product.images.length > 0
+          ? product.images.map((img) => img.startsWith('http') ? img : `${BASE}${img}`)
+          : undefined
+        const stockMap: Record<string, string> = {
+          in_stock: 'https://schema.org/InStock',
+          out_of_stock: 'https://schema.org/OutOfStock',
+          coming_soon: 'https://schema.org/PreOrder',
+          on_order: 'https://schema.org/BackOrder',
+        }
+        const availability = stockMap[product.catalogStockStatus ?? ''] ?? 'https://schema.org/InStock'
+        const salePrice = product.priceVisibility === 'public' && product.salePrice
+          ? Number(product.salePrice)
+          : undefined
+        const breadcrumbItems: { '@type': string; position: number; name: string; item?: string }[] = [
+          { '@type': 'ListItem', position: 1, name: breadcrumbHome, item: BASE },
+          { '@type': 'ListItem', position: 2, name: breadcrumbProducts, item: `${BASE}/produse` },
+        ]
+        if (product.category) {
+          breadcrumbItems.push({ '@type': 'ListItem', position: 3, name: product.category.name, item: `${BASE}/produse?sector=${product.category.slug}` })
+          breadcrumbItems.push({ '@type': 'ListItem', position: 4, name: product.title, item: productUrl })
+        } else {
+          breadcrumbItems.push({ '@type': 'ListItem', position: 3, name: product.title, item: productUrl })
+        }
+        return (
+          <SchemaOrg schema={[
+            {
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: product.title,
+              description: templateSeo.description,
+              url: productUrl,
+              ...(images ? { image: images } : {}),
+              brand: { '@type': 'Brand', name: product.brand || 'LithTech' },
+              offers: {
+                '@type': 'Offer',
+                url: productUrl,
+                priceCurrency: 'RON',
+                ...(salePrice != null && !Number.isNaN(salePrice) ? { price: salePrice } : {}),
+                availability,
+                seller: { '@type': 'Organization', name: 'Baterino Romania', url: BASE },
+              },
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: breadcrumbItems,
+            },
+          ]} />
+        )
+      })()}
 
       <article className={INDUSTRIAL_PRODUCT_ARTICLE_CLASS}>
         <nav className={INDUSTRIAL_BREADCRUMB_NAV_CLASS}>
@@ -751,35 +802,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           </div>
 
           <div role="tabpanel" className="mt-6 sm:mt-8 font-['Inter']">
-            {activeTab === 'advantages' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
-                {keyAdvantages.length > 0 ? (
-                  keyAdvantages.map((feature) => (
-                    <div
-                      key={`${feature.title}-${feature.image}`}
-                      className="flex flex-col overflow-hidden rounded-[10px] border border-neutral-200/80 bg-neutral-100"
-                    >
-                      <h3 className="m-0 px-4 pt-4 pb-3 text-center text-base font-bold leading-snug text-black font-['Inter']">
-                        {feature.title}
-                      </h3>
-                      <div className="w-full shrink-0 bg-white">
-                        {feature.image ? (
-                          <img
-                            src={feature.image}
-                            alt={feature.title}
-                            className="block h-auto w-full"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : null}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600 text-sm col-span-full">{tr.noKeyAdvantages}</p>
-                )}
-              </div>
-            )}
             {activeTab === 'spec' && (
               <div className="flex flex-col gap-6 font-['Inter']">
                 {technicalSpecs.entries.length > 0 ? (
@@ -789,24 +811,6 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                     labelForKey={specLabel}
                   />
                 ) : null}
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-6 text-gray-700">
-                  <p className="m-0 mb-4 text-base leading-relaxed">
-                    {technicalSpecs.entries.length > 0 ? tr.specBrochureWhenRows : tr.specBrochureWhenEmpty}
-                  </p>
-                  {brochureUrl ? (
-                    <a
-                      href={brochureUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 font-semibold text-slate-900 underline underline-offset-4 hover:no-underline"
-                    >
-                      <Download size={18} aria-hidden />
-                      {tr.specOpenPdf}
-                    </a>
-                  ) : (
-                    <p className="m-0 text-sm text-gray-500">{tr.specNoBrochure}</p>
-                  )}
-                </div>
               </div>
             )}
             {activeTab === 'services' && (
@@ -887,6 +891,10 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
             )}
           </div>
         </section>
+
+        <div className="pb-2">
+          <RelatedProducts product={product} layout="vertical" />
+        </div>
 
         {mobileSpecModalEntry ? (
           <div

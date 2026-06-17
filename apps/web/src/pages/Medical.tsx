@@ -8,6 +8,7 @@ import { LanguageDropdown } from '../components/LanguageDropdown'
 import OutlineButton from '../components/OutlineButton'
 import ImageCard from '../components/ImageCard'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 
 const SECTIONS = [
@@ -149,6 +150,26 @@ export default function Medical() {
         ogImage="/images/divizii/medical/baterii-stocare-sector-medical-og.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'Stocare Energie Medical',
+          description: 'Sisteme LiFePo4 de stocare a energiei dedicate exclusiv infrastructurii medicale din România. Soluții certificate pentru clinici, spitale și laboratoare, cu suport tehnic specializat.',
+          url: 'https://baterino.ro/divizii/medical',
+          image: 'https://baterino.ro/images/divizii/medical/baterii-stocare-sector-medical-og.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Medical', item: 'https://baterino.ro/divizii/medical' },
+          ],
+        },
+      ]} />
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-24 pb-16">
 
         {/* Sticky sub-nav */}

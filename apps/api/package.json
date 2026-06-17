@@ -36,7 +36,8 @@
     "prisma": "^7.4.1",
     "puppeteer": "^24.43.0",
     "qrcode": "^1.5.4",
-    "resend": "^6.9.3"
+    "resend": "^6.9.3",
+    "sanitize-html": "^2.17.4"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

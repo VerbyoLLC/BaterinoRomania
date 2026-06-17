@@ -1,5 +1,6 @@
 import type { ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
+export type { LangCode }
 import { isPartnerPublicProfileFullyComplete } from './partner-public-profile-complete'
 
 /**
@@ -590,6 +591,15 @@ export async function getProduct(idOrSlug: string): Promise<PublicProduct> {
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Produs negăsit.')
   return json
+}
+
+export async function getRelatedProducts(idOrSlug: string, limit = 4): Promise<PublicProduct[]> {
+  const res = await fetch(`${API_BASE}/products/${encodeURIComponent(idOrSlug)}/related?limit=${limit}`, {
+    headers: publicFetchHeaders(),
+  })
+  if (!res.ok) return []
+  const json = await res.json().catch(() => [])
+  return Array.isArray(json) ? json : []
 }
 
 /**
@@ -1791,6 +1801,16 @@ export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
 }
 
+export function isAuthTokenExpired(): boolean {
+  const token = getAuthToken()
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1])) as { exp?: number }
+    if (!payload.exp) return true
+    return Date.now() / 1000 > payload.exp
+  } catch { return true }
+}
+
 export function getAuthRole(): 'admin' | 'client' | 'partener' | 'sales_agent' | null {
   const token = getAuthToken()
   if (!token) return null
@@ -2421,6 +2441,7 @@ export type CaseStudyRow = {
   category: string
   title: string
   location: string
+  description: string
   image: string
   imageAlt: string
   images: string[]
@@ -2437,6 +2458,7 @@ export type CaseStudyPayload = {
   category?: string
   title?: string
   location?: string
+  description?: string
   image?: string
   images?: string[]
   imageAlt?: string
@@ -4306,4 +4328,139 @@ export async function saveAdminCompanyData(data: AdminCompanyData): Promise<Admi
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Eroare la salvare.')
   return normalizeAdminCompanyData(json)
+}
+
+// ── Blog ─────────────────────────────────────────────────────────────────────
+
+export type BlogPostRow = {
+  id: string
+  locale: string
+  slug: string
+  status: string
+  title: string
+  excerpt: string
+  body: string
+  coverImage: string
+  coverImageAlt: string
+  category: string
+  tags: string[]
+  author: string
+  seoTitle: string
+  seoDescription: string
+  publishedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type BlogPostPayload = {
+  locale?: string
+  slug?: string
+  status?: string
+  title?: string
+  excerpt?: string
+  body?: string
+  coverImage?: string
+  coverImageAlt?: string
+  category?: string
+  tags?: string[]
+  author?: string
+  seoTitle?: string
+  seoDescription?: string
+  publishedAt?: string | null
+}
+
+export async function getPublicBlogPosts(lang: LangCode = 'ro'): Promise<BlogPostRow[]> {
+  const res = await fetch(`${API_BASE}/blog?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
+  const json = await res.json().catch(() => [])
+  return Array.isArray(json) ? json : []
+}
+
+export async function getPublicBlogPost(slug: string, lang: LangCode = 'ro'): Promise<BlogPostRow | null> {
+  const res = await fetch(`${API_BASE}/blog/${encodeURIComponent(slug)}?locale=${encodeURIComponent(lang)}`, { cache: 'no-store' })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Server error ${res.status}`)
+  const json = await res.json().catch(() => null)
+  return json ?? null
+}
+
+export async function getAdminBlogPostPreview(slug: string, lang: LangCode = 'ro'): Promise<BlogPostRow | null> {
+  const res = await fetch(
+    `${API_BASE}/blog/${encodeURIComponent(slug)}?locale=${encodeURIComponent(lang)}&preview=1`,
+    { cache: 'no-store', headers: authHeaders() },
+  )
+  if (res.status === 404) return null
+  if (!res.ok) return null
+  const json = await res.json().catch(() => null)
+  return json ?? null
+}
+
+export async function getAdminBlogPostById(id: string): Promise<BlogPostRow | null> {
+  const res = await fetch(`${API_BASE}/admin/blog/${encodeURIComponent(id)}`, {
+    cache: 'no-store',
+    headers: authHeaders(),
+  })
+  if (res.status === 404) return null
+  if (!res.ok) return null
+  const json = await res.json().catch(() => null)
+  return json ?? null
+}
+
+export async function getAdminBlogPosts(locale = 'ro'): Promise<BlogPostRow[]> {
+  const res = await fetch(`${API_BASE}/admin/blog?locale=${encodeURIComponent(locale)}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => [])
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function createAdminBlogPost(body: BlogPostPayload): Promise<BlogPostRow> {
+  const res = await fetch(`${API_BASE}/admin/blog`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la creare.')
+  }
+  return json as BlogPostRow
+}
+
+export async function updateAdminBlogPost(id: string, body: BlogPostPayload): Promise<BlogPostRow> {
+  const res = await fetch(`${API_BASE}/admin/blog/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvare.')
+  }
+  return json as BlogPostRow
+}
+
+export async function deleteAdminBlogPost(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/blog/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error((json as { error?: string }).error || 'Eroare la ștergere.')
+  }
+}
+
+/** Upload JPG/WebP to R2 under blog/{slug}/ */
+export async function uploadBlogImage(file: File, postSlug: string, imageIndex: number): Promise<{ url: string }> {
+  return uploadAdminFile(file, postSlug, imageIndex, { prefix: 'blog' })
 }

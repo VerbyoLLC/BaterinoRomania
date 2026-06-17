@@ -426,19 +426,22 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   return (
     <section className="mb-16 lg:mb-24 w-full" aria-label="Hero" style={HERO_CARD_CSS_VARS}>
       <header className="mb-8 lg:mb-10 px-5 lg:px-0 text-center max-w-content mx-auto">
-        <h2 className="text-black text-3xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto">
+        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto uppercase mb-3 whitespace-pre-line">
           {tr.heroV2Title}
         </h2>
+        <p className="text-gray-500 text-base sm:text-lg font-normal font-['Inter'] leading-7">
+          {tr.heroV2Subtitle}
+        </p>
       </header>
 
       <div
         ref={sliderRef}
         onPointerDown={onPointerDown}
-        className={`flex w-full overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] h-[var(--hero-card-h)] gap-[var(--hero-card-gap)] px-[100px] ${
+        className={`flex w-full overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-4 gap-[var(--hero-card-gap)] px-[100px] ${
           isDragging ? 'cursor-grabbing select-none scroll-auto' : 'cursor-grab scroll-auto'
         }`}
       >
-        {cards.map((card) => (
+        {cards.map((card, i) => (
           <div
             key={card.id}
             role={isNoOverlayInteractive(card) ? 'button' : undefined}
@@ -458,7 +461,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   }
                 : undefined
             }
-            className={`group relative flex-shrink-0 overflow-hidden bg-zinc-300 ${
+            className={`group relative flex-shrink-0 overflow-hidden bg-zinc-300 transition-shadow duration-300 hover:shadow-[0_6px_20px_rgba(0,0,0,0.28)] ${
               showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
                 ? 'rounded-xl'
                 : 'rounded-[10px]'
@@ -478,7 +481,8 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               src={card.image}
               alt={card.title.replace(/\n/g, ' ')}
               draggable={false}
-              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-transform duration-500 ease-out group-hover:scale-110 ${
+              fetchPriority={i === 0 ? 'high' : undefined}
+              className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
                 showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
                   ? 'object-[right_center]'
                   : ''
@@ -504,9 +508,9 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   <p className="mb-2 text-xs font-medium text-white/75 font-['Inter']">
                     {tr.heroV2RezProductSubtitle}
                   </p>
-                  <h2 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
+                  <h3 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
                     {tr.heroV2RezProductTitle}
-                  </h2>
+                  </h3>
                   <p className="mt-2 text-sm text-white/80 font-['Inter']">
                     {tr.heroV2RezSpecCicluri}
                     <span className="mx-1.5 text-white/40" aria-hidden>
@@ -554,9 +558,9 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   className="absolute inset-y-0 left-0 z-[2] flex h-full w-[54%] min-w-0 flex-col justify-center px-8 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]"
                 >
                   <p className="mb-2 text-sm font-semibold text-white/90 font-['Inter']">{tr.heroV2MedEyebrow}</p>
-                  <h2 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
+                  <h3 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
                     {tr.heroV2MedProductTitle}
-                  </h2>
+                  </h3>
 
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {medSpecs.map(({ label, value }) => (
@@ -601,9 +605,9 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                       draggable={false}
                       className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
                     />
-                    <h2 className="m-0 text-[clamp(1rem,3.2vw,1.375rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                    <h3 className="m-0 text-[clamp(1rem,3.2vw,1.375rem)] font-bold leading-tight uppercase text-white font-['Inter']">
                       {tr.heroV2Card2Title}
-                    </h2>
+                    </h3>
                   </div>
                   <p className="text-[clamp(0.875rem,2.75vw,1.125rem)] font-normal leading-snug normal-case text-white max-w-[min(320px,94%)] font-['Inter'] [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
                     {tr.heroV2Card2Subtitle}
@@ -633,9 +637,9 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   <p className="mb-2 text-xs font-medium tracking-wide text-white/75 font-['Inter'] sm:text-sm">
                     {tr.heroV2InstLead}
                   </p>
-                  <h2 className="m-0 text-[clamp(1.125rem,2.2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                  <h3 className="m-0 text-[clamp(1.125rem,2.2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
                     {tr.heroV2InstTitle}
-                  </h2>
+                  </h3>
 
                   <div className="mt-3 w-full rounded-md border border-white/80 bg-white/20 px-3.5 py-3 backdrop-blur-md [text-shadow:none] sm:px-4 sm:py-3.5">
                     <ul className="space-y-2.5">
@@ -674,7 +678,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                     draggable={false}
                     className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
                   />
-                  <h2
+                  <h3
                     className={`m-0 text-white font-bold font-['Inter'] leading-tight uppercase whitespace-pre-line ${
                       card.subtitle
                         ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
@@ -682,10 +686,10 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                     }`}
                   >
                     {card.title}
-                  </h2>
+                  </h3>
                 </div>
               ) : (
-                <h2
+                <h3
                   className={`text-white font-bold font-['Inter'] leading-tight uppercase ${
                     card.subtitle
                       ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
@@ -693,7 +697,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   } ${card.multilineTitle ? 'whitespace-pre-line' : ''}`}
                 >
                   {card.title}
-                </h2>
+                </h3>
               )}
               {card.subtitle ? (
                 <p

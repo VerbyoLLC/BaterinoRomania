@@ -15,6 +15,7 @@ import {
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import {
   CatalogProductCardSkeleton,
@@ -99,7 +100,32 @@ export default function Produse() {
         return loc === locationFilter
       })
     }
-    return list
+
+    const CATEGORY_ORDER: Record<string, number> = { rezidential: 0, industrial: 1, medical: 2, maritim: 3 }
+    const getCategoryRank = (p: PublicProduct) => {
+      const cat = String(p.categorie || '').toLowerCase()
+      for (const [key, rank] of Object.entries(CATEGORY_ORDER)) {
+        if (cat.includes(key)) return rank
+      }
+      return 99
+    }
+    const hasPublicPrice = (p: PublicProduct) => {
+      const vis = (p.priceVisibility as string) ?? 'public'
+      const sale = Number(p.salePrice)
+      return vis === 'public' && !Number.isNaN(sale) && sale > 0
+    }
+    const getEnergy = (p: PublicProduct) => {
+      const n = parseFloat(String(p.energieNominala ?? '').replace(',', '.'))
+      return Number.isNaN(n) ? Infinity : n
+    }
+
+    return [...list].sort((a, b) => {
+      const catDiff = getCategoryRank(a) - getCategoryRank(b)
+      if (catDiff !== 0) return catDiff
+      const priceDiff = Number(hasPublicPrice(b)) - Number(hasPublicPrice(a))
+      if (priceDiff !== 0) return priceDiff
+      return getEnergy(a) - getEnergy(b)
+    })
   }, [products, sector, voltageFilter, locationFilter])
 
   return (
@@ -113,6 +139,33 @@ export default function Produse() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
+      {products.length > 0 && (
+        <SchemaOrg schema={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: seo.title || tr.seoTitle,
+            description: seo.description || tr.seoDesc,
+            url: 'https://baterino.ro/produse',
+            numberOfItems: products.length,
+            itemListElement: products.map((p, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: p.title,
+              url: `https://baterino.ro/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`,
+              image: p.cardImage || p.images?.[0] || undefined,
+            })),
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+              { '@type': 'ListItem', position: 2, name: 'Produse', item: 'https://baterino.ro/produse' },
+            ],
+          },
+        ]} />
+      )}
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
 

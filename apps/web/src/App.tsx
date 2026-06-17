@@ -14,14 +14,12 @@ import Siguranta from './pages/Siguranta'
 import Divizii from './pages/Divizii'
 import Rezidential from './pages/Rezidential'
 import Industrial from './pages/Industrial'
-import IndustrialProductTemplate from './pages/IndustrialProductTemplate'
 import Medical from './pages/Medical'
 import Maritim from './pages/Maritim'
 import Reduceri from './pages/Reduceri'
 import LithTech from './pages/LithTech'
 import Instalatori from './pages/Instalatori'
 import Viziune from './pages/Viziune'
-import Typography from './pages/Typography'
 import Login from './pages/Login'
 import SignupClienti from './pages/SignupClienti'
 import SignupVerifyEmail from './pages/SignupVerifyEmail'
@@ -57,11 +55,13 @@ import AdminOfferCommercialPreview from './pages/admin/AdminOfferCommercialPrevi
 import AdminService from './pages/admin/AdminService'
 import AdminClients from './pages/admin/AdminClients'
 import AdminStudiiDeCaz from './pages/admin/AdminStudiiDeCaz'
+import AdminBlog from './pages/admin/AdminBlog'
 import AdminProductModels from './pages/admin/AdminProductModels'
 import AdminStocuriAddItem from './pages/admin/AdminStocuriAddItem'
 import AdminStocuriLista from './pages/admin/AdminStocuriLista'
 import AdminWarrantyCertificatePreview from './pages/admin/AdminWarrantyCertificatePreview'
 import Blog from './pages/Blog'
+import BlogArticle from './pages/BlogArticle'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
 import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
@@ -69,7 +69,6 @@ import Cariere from './pages/Cariere'
 import StudiiDeCaz from './pages/StudiiDeCaz'
 import Contact from './pages/Contact'
 import IntrebariFrecvente from './pages/IntrebariFrecvente'
-import SliderExamples from './pages/SliderExamples'
 import PartnerLayout from './pages/partner/PartnerLayout'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
 import PartnerPublicProfile from './pages/partner/PartnerPublicProfile'
@@ -131,7 +130,7 @@ export default function App() {
           <Route path="messages"  element={<AdminMessages />} />
           <Route path="clients"   element={<AdminClients />} />
           <Route path="companies" element={<AdminCompanies />} />
-          <Route path="articles"  element={<AdminDashboard />} />
+          <Route path="articles"  element={<AdminBlog />} />
           <Route path="studii-de-caz" element={<AdminStudiiDeCaz />} />
           <Route path="stocks"    element={<AdminDashboard />} />
           <Route path="stocuri/add-item" element={<AdminStocuriAddItem />} />
@@ -257,7 +256,6 @@ export default function App() {
               <Route path="siguranta" element={<Siguranta />} />
               <Route path="divizii/rezidential" element={<Rezidential />} />
               <Route path="divizii/industrial" element={<Industrial />} />
-              <Route path="industrial-product-template" element={<IndustrialProductTemplate />} />
               <Route path="divizii/medical" element={<Medical />} />
               <Route path="divizii/maritim" element={<Maritim />} />
               <Route path="divizii/:slug" element={<Divizii />} />
@@ -271,8 +269,7 @@ export default function App() {
               <Route path="studii-de-caz" element={<StudiiDeCaz />} />
               <Route path="contact" element={<Contact />} />
               <Route path="blog" element={<Blog />} />
-              <Route path="typography" element={<Typography />} />
-              <Route path="slider-examples" element={<SliderExamples />} />
+              <Route path="blog/:slug" element={<BlogArticle />} />
             </>
           )}
         </Route>

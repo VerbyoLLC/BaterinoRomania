@@ -7,14 +7,21 @@ interface SEOProps {
   ogTitle?: string
   ogDescription?: string
   ogImage?: string
+  ogImageWidth?: number
+  ogImageHeight?: number
   ogType?: 'website' | 'article'
+  ogPublishedTime?: string
+  ogModifiedTime?: string
+  ogAuthor?: string
   lang?: string
   noIndex?: boolean
+  preloadImage?: string
 }
 
-const SITE_NAME = 'Baterino'
+const SITE_NAME = 'Baterino Romania'
 const BASE_URL = 'https://baterino.ro'
 const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.jpg`
+const TWITTER_SITE = '@baterino_ro'
 
 export default function SEO({
   title,
@@ -23,9 +30,15 @@ export default function SEO({
   ogTitle,
   ogDescription,
   ogImage,
+  ogImageWidth = 1200,
+  ogImageHeight = 630,
   ogType = 'website',
+  ogPublishedTime,
+  ogModifiedTime,
+  ogAuthor,
   lang = 'ro',
   noIndex = false,
+  preloadImage,
 }: SEOProps) {
   const fullTitle = `${title} | ${SITE_NAME}`
   const resolvedOgTitle = ogTitle ?? title
@@ -36,7 +49,7 @@ export default function SEO({
       : ogImage
     : DEFAULT_OG_IMAGE
   const resolvedCanonical = canonical ? `${BASE_URL}${canonical}` : undefined
-  const ogLocale = lang === 'ro' ? 'ro_RO' : lang === 'zh' ? 'zh_CN' : 'en_US'
+  const ogLocale = lang === 'ro' ? 'ro_RO' : 'en_US'
 
   return (
     <Helmet>
@@ -45,6 +58,12 @@ export default function SEO({
       <meta name="description" content={description} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
       {resolvedCanonical && <link rel="canonical" href={resolvedCanonical} />}
+      {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
+
+      {/* Hreflang — same URL serves both languages (client-side switcher) */}
+      {resolvedCanonical && <link rel="alternate" hrefLang="ro" href={resolvedCanonical} />}
+      {resolvedCanonical && <link rel="alternate" hrefLang="en" href={resolvedCanonical} />}
+      {resolvedCanonical && <link rel="alternate" hrefLang="x-default" href={resolvedCanonical} />}
 
       {/* Open Graph */}
       <meta property="og:type" content={ogType} />
@@ -53,10 +72,25 @@ export default function SEO({
       <meta property="og:title" content={resolvedOgTitle} />
       <meta property="og:description" content={resolvedOgDesc} />
       <meta property="og:image" content={resolvedOgImage} />
+      <meta property="og:image:width" content={String(ogImageWidth)} />
+      <meta property="og:image:height" content={String(ogImageHeight)} />
+      <meta property="og:image:alt" content={resolvedOgTitle} />
       {resolvedCanonical && <meta property="og:url" content={resolvedCanonical} />}
+
+      {/* Article meta (blog posts) */}
+      {ogType === 'article' && ogPublishedTime && (
+        <meta property="article:published_time" content={ogPublishedTime} />
+      )}
+      {ogType === 'article' && ogModifiedTime && (
+        <meta property="article:modified_time" content={ogModifiedTime} />
+      )}
+      {ogType === 'article' && ogAuthor && (
+        <meta property="article:author" content={ogAuthor} />
+      )}
 
       {/* Twitter / X */}
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={TWITTER_SITE} />
       <meta name="twitter:title" content={resolvedOgTitle} />
       <meta name="twitter:description" content={resolvedOgDesc} />
       <meta name="twitter:image" content={resolvedOgImage} />

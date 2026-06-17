@@ -245,9 +245,10 @@ model CaseStudy {
   imageAlt   String
   imageCount Int      @default(0)
   /** Up to 6 gallery URLs (R2: study-cases/{slug}/). First entry mirrors `image`. */
-  images     Json     @default("[]")
-  specs      Json     @default("[]")
-  tags       Json     @default("[]")
+  images      Json     @default("[]")
+  description String   @default("")
+  specs       Json     @default("[]")
+  tags        Json     @default("[]")
   isActive   Boolean  @default(true)
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
@@ -255,6 +256,31 @@ model CaseStudy {
 
   @@unique([locale, slug])
   @@index([locale, isActive, sortOrder])
+}
+
+model BlogPost {
+  id             String    @id @default(cuid())
+  locale         String    // "ro" | "en"
+  slug           String
+  /** "draft" | "published" */
+  status         String    @default("draft")
+  title          String
+  excerpt        String    @default("") @db.Text
+  body           String    @default("") @db.Text
+  coverImage     String    @default("")
+  coverImageAlt  String    @default("")
+  category       String    @default("")
+  tags           Json      @default("[]")
+  author         String    @default("Baterino Romania")
+  seoTitle       String    @default("")
+  seoDescription String    @default("") @db.Text
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([locale, slug])
+  @@index([locale, status, publishedAt])
+  @@index([locale, createdAt])
 }
 
 model Inquiry {

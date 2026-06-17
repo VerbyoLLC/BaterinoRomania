@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getLithTechTranslations } from '../i18n/lithtech'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import CTABar from '../components/CTABar'
 
 type FeatureItem = { icon: string; title: string; desc: string }
@@ -173,6 +174,26 @@ export default function LithTech() {
         ogImage="/images/lithtech/importator-lithtech-og.jpg"
         lang={language.code}
       />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Parteneriat Strategic LithTech',
+          description: 'Baterino, importator unic pentru tehnologie avansată de stocare LiFePo4, în parteneriat strategic cu LithTech: sisteme BMS/EMS, baterii solid-state și implementare completă în România.',
+          url: 'https://baterino.ro/parteneriat-strategic-lithtech-baterino',
+          image: 'https://baterino.ro/images/lithtech/importator-lithtech-og.jpg',
+          inLanguage: 'ro',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Parteneriat LithTech', item: 'https://baterino.ro/parteneriat-strategic-lithtech-baterino' },
+          ],
+        },
+      ]} />
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-16 pb-24">
 
         {/* ── BLOCK 1: Partnership ── */}

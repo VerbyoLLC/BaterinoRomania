@@ -4,11 +4,12 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { getContactTranslations } from '../i18n/contact'
 import { submitInquiry, type InquiryPayload } from '../lib/api'
 import SEO from '../components/SEO'
+import SchemaOrg from '../components/SchemaOrg'
 import { digitsForWaMe, formatPhoneDisplay, telHrefFromStored } from '../lib/contactWhatsApp'
 import { departmentRow, ensurePublicDepartmentPhones } from '../lib/departmentPhones'
 
 const COMPANY_LEGAL_NAME = 'Baterino Energy SRL'
-const CONTACT_EMAIL = 'suport@baterino.ro'
+const CONTACT_EMAIL = 'contact@baterino.ro'
 const CONTACT_HOURS = 'Luni - Vineri | 8AM - 8PM'
 
 function LocationIcon({ className }: { className?: string }) {
@@ -123,6 +124,35 @@ export default function Contact() {
         canonical="/contact"
         lang={language.code}
       />
+      <SchemaOrg schema={{
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        name: 'Baterino Romania',
+        legalName: COMPANY_LEGAL_NAME,
+        url: 'https://baterino.ro',
+        logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg',
+        image: 'https://baterino.ro/images/home/og-baterino-romania.jpg',
+        email: CONTACT_EMAIL,
+        ...(generalPhone ? { telephone: generalPhone } : {}),
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'Strada 23 August, 244-43A',
+          addressLocality: 'Otopeni',
+          postalCode: '077010',
+          addressCountry: 'RO',
+          addressRegion: 'Romania',
+        },
+        openingHoursSpecification: {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          opens: '08:00',
+          closes: '20:00',
+        },
+        areaServed: 'RO',
+        currenciesAccepted: 'RON',
+        priceRange: '$$',
+        sameAs: ['https://www.facebook.com/baterino.ro/', 'https://www.linkedin.com/company/baterino-romania', 'https://www.google.com/maps?cid=15926825830058361764'],
+      }} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-16 lg:pt-24 pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-[auto_1fr] gap-12 lg:gap-20 items-start">
@@ -299,6 +329,7 @@ export default function Contact() {
                   <p className="text-slate-600 text-sm font-['Inter'] leading-5">{COMPANY_LEGAL_NAME}</p>
                   <p className="text-slate-600 text-sm font-['Inter'] leading-5">Strada 23 August, 244-43A</p>
                   <p className="text-slate-600 text-sm font-['Inter'] leading-5">Otopeni, 077010</p>
+                  <p className="text-slate-600 text-sm font-['Inter'] leading-5">Romania</p>
                 </div>
               </div>
             </div>

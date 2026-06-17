@@ -26,6 +26,11 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
+    "@tiptap/extension-image": "^3.26.0",
+    "@tiptap/extension-link": "^3.26.0",
+    "@tiptap/extension-placeholder": "^3.26.0",
+    "@tiptap/react": "^3.26.0",
+    "@tiptap/starter-kit": "^3.26.0",
     "baterino-romania": "file:../..",
     "html2pdf.js": "^0.14.0",
     "jsqr": "^1.4.0",
