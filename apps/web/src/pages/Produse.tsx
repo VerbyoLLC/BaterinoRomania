@@ -78,26 +78,24 @@ export default function Produse() {
         if (cat && cat.includes(sector)) return true
         if (!p.categorie?.trim()) {
           const tip = String(p.tipProdus || '').toLowerCase()
-          // tipProdus = page template: industrial → carousel, rezidential → classic; empty categorie fallback mirrors that mapping
-          if (sector === 'rezidential' && tip === 'industrial') return true
-          if (sector === 'industrial' && tip === 'rezidential') return true
+          if (sector === 'rezidential' && tip === 'rezidential') return true
+          if (sector === 'industrial' && tip === 'industrial') return true
         }
         return false
       })
     }
     if (voltageFilter) {
       list = list.filter((p) => {
-        const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
-        if (Number.isNaN(v)) return false
-        if (voltageFilter === 'low' && v >= 100) return false
-        if (voltageFilter === 'high' && v < 100) return false
+        const cat = String(p.categorie || '').toLowerCase()
+        if (voltageFilter === 'low') return cat.includes('low_voltage')
+        if (voltageFilter === 'high') return cat.includes('high_voltage')
         return true
       })
     }
     if (locationFilter) {
       list = list.filter((p) => {
-        const loc = String(p.locatieMontaj || '').toLowerCase().trim()
-        return loc === locationFilter
+        const cat = String(p.categorie || '').toLowerCase()
+        return cat.includes(locationFilter)
       })
     }
 
