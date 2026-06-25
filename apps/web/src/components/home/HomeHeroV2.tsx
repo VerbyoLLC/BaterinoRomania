@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BadgePercent, Headphones, ShieldCheck, Truck, type LucideIcon } from 'lucide-react'
 import HomeHeroPromoOfferCard from './HomeHeroPromoOfferCard'
 import HomeHeroMedCard from './HomeHeroMedCard'
 import HomeHeroInstCard from './HomeHeroInstCard'
