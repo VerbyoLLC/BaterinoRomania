@@ -41,29 +41,6 @@ function getSlideEls(el: HTMLDivElement): HTMLElement[] {
 // ── Shared sub-components ──────────────────────────────────────────────────────
 
 
-function BenefitBox({
-  icon: Icon,
-  title,
-  subtitle,
-}: {
-  icon: LucideIcon
-  title: string
-  subtitle?: string
-}) {
-  return (
-    <div className="flex flex-col gap-1.5 rounded-xl bg-neutral-100 px-3 py-2.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white">
-        <Icon className="size-3.5 text-sky-900" aria-hidden />
-      </div>
-      <div>
-        <p className="m-0 text-sm font-bold leading-tight text-slate-900 font-['Inter']">{title}</p>
-        {subtitle ? (
-          <p className="m-0 mt-0.5 text-xs leading-snug text-neutral-500 font-['Inter']">{subtitle}</p>
-        ) : null}
-      </div>
-    </div>
-  )
-}
 
 // ── Oferta details modal (bottom sheet) ──────────────────────────────────────
 

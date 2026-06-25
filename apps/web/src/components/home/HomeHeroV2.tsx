@@ -107,7 +107,6 @@ function HeroListDot({ light = false }: { light?: boolean }) {
   )
 }
 
-const INST_BENEFIT_ICONS: LucideIcon[] = [BadgePercent, ShieldCheck, Truck, Headphones]
 
 const CARD_ORDER: HeroV2CardId[] = ['oferta', 'reduceri', 'bess', 'proiecte', 'instalatori']
 
@@ -393,39 +392,6 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
     !showInstalatoriHeroOverlay(card)
   const showDarkOverlay = (card: (typeof cards)[number]) => !card.noOverlay && !card.noDarkOverlay
 
-  const medHighlights = useMemo(
-    () => [tr.heroV2MedFeature1, tr.heroV2MedFeature2],
-    [tr.heroV2MedFeature1, tr.heroV2MedFeature2],
-  )
-
-  const instBenefits = useMemo(
-    () => [
-      tr.heroV2InstBenefit1,
-      tr.heroV2InstBenefit2,
-      tr.heroV2InstBenefit3,
-      tr.heroV2InstBenefit4,
-    ],
-    [tr.heroV2InstBenefit1, tr.heroV2InstBenefit2, tr.heroV2InstBenefit3, tr.heroV2InstBenefit4],
-  )
-
-  const medSpecs = useMemo(
-    () => [
-      { label: tr.heroV2MedSpecCapacityLabel, value: tr.heroV2MedSpecCapacityValue },
-      { label: tr.heroV2MedSpecPowerLabel, value: tr.heroV2MedSpecPowerValue },
-      { label: tr.heroV2MedSpecCyclesLabel, value: tr.heroV2MedSpecCyclesValue },
-      { label: tr.heroV2MedSpecRetentionLabel, value: tr.heroV2MedSpecRetentionValue },
-    ],
-    [
-      tr.heroV2MedSpecCapacityLabel,
-      tr.heroV2MedSpecCapacityValue,
-      tr.heroV2MedSpecPowerLabel,
-      tr.heroV2MedSpecPowerValue,
-      tr.heroV2MedSpecCyclesLabel,
-      tr.heroV2MedSpecCyclesValue,
-      tr.heroV2MedSpecRetentionLabel,
-      tr.heroV2MedSpecRetentionValue,
-    ],
-  )
 
   const rezHighlights = useMemo(
     () => [
