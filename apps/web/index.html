@@ -16,13 +16,48 @@
     </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/images/home/favi-icon.svg" />
+    <link rel="apple-touch-icon" href="/images/home/favi-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet" />
-    <title>Baterino Romania</title>
+
+    <!--
+      Static SEO fallback. These defaults are what non-JS crawlers and social
+      scrapers (Facebook, LinkedIn, WhatsApp, X) see, since they don't execute
+      the SPA. react-helmet-async overrides title/description/OG per route at
+      runtime for JS-capable crawlers (Googlebot). Canonical and og:url are
+      intentionally NOT set here so they aren't wrongly pinned to the homepage
+      on deep links — those are set per page by src/components/SEO.tsx.
+    -->
+    <title>Baterino Romania — Baterii LiFePO₄ și sisteme de stocare a energiei</title>
+    <meta
+      name="description"
+      content="Baterii LiFePO₄ și sisteme de stocare a energiei pentru rezidențial, industrial, medical și maritim. Soluții Baterino pentru independență energetică."
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Baterino Romania" />
+    <meta property="og:locale" content="ro_RO" />
+    <meta property="og:title" content="Baterino Romania — Baterii LiFePO₄ și sisteme de stocare a energiei" />
+    <meta
+      property="og:description"
+      content="Baterii LiFePO₄ și sisteme de stocare a energiei pentru rezidențial, industrial, medical și maritim."
+    />
+    <meta property="og:image" content="https://baterino.ro/images/home/og-baterino-romania.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Baterino Romania — Baterii LiFePO₄ și sisteme de stocare a energiei" />
+    <meta
+      name="twitter:description"
+      content="Baterii LiFePO₄ și sisteme de stocare a energiei pentru rezidențial, industrial, medical și maritim."
+    />
+    <meta name="twitter:image" content="https://baterino.ro/images/home/og-baterino-romania.jpg" />
   </head>
   <body>
     <div id="root"></div>

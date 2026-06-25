@@ -101,6 +101,7 @@ import VerificareGarantie from './pages/VerificareGarantie'
 import ServiceLithtech from './pages/ServiceLithtech'
 import ReturnareProduse from './pages/ReturnareProduse'
 import PartnerCompanyPublicPage from './pages/PartnerCompanyPublicPage'
+import NotFound from './pages/NotFound'
 import { publicInstallerProfileUrlPath } from './lib/public-installer-profile-path'
 
 function LegacyCompaniiInstallerRedirect() {
@@ -270,6 +271,7 @@ export default function App() {
               <Route path="contact" element={<Contact />} />
               <Route path="blog" element={<Blog />} />
               <Route path="blog/:slug" element={<BlogArticle />} />
+              <Route path="*" element={<NotFound />} />
             </>
           )}
         </Route>
