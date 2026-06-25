@@ -839,7 +839,7 @@ export default function Home() {
                     { img: '/images/home/rezidential-baterii-lifepo4.jpg', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.png' },
                     { img: '/images/home/industrial-baterii-lifepo4.jpg', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.png' },
                     { img: '/images/home/medical-baterii-lifepo4.jpg', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.png' },
-                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png', centerText: true },
+                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png' },
                   ].map((d, i) => (
                     <Link
                       key={i}
@@ -849,9 +849,9 @@ export default function Home() {
                       <img src={d.img} alt={d.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40" />
                       <img src={d.logo} alt="" loading="lazy" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
-                      <div className={`absolute bottom-5 sm:bottom-6 ${'centerText' in d && d.centerText ? 'inset-x-0 px-4 text-center' : 'left-[16px] sm:left-[21px]'}`}>
-                        <h3 className="text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-1">{d.title}</h3>
-                        <p className={`text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5 ${'centerText' in d && d.centerText ? 'max-w-[256px] mx-auto' : 'max-w-[220px] sm:max-w-[240px]'}`}>{d.desc}</p>
+                      <div className="absolute bottom-5 sm:bottom-6 inset-x-0 px-4 text-center">
+                        <h3 className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-2 uppercase">{d.title}</h3>
+                        <p className="text-white text-base font-medium font-['Inter'] leading-6 max-w-[280px] mx-auto">{d.desc}</p>
                       </div>
                     </Link>
                   ))}
