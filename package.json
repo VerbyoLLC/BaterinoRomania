@@ -13,10 +13,10 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "vercel": "^50.28.0"
+    "vercel": "^54.17.1"
   },
   "dependencies": {
-    "nodemailer": "^8.0.1"
+    "nodemailer": "^9.0.1"
   },
   "engines": {
     "node": ">=20"

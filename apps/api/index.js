@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const path = require('path')
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
 const multer = require('multer')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
@@ -88,6 +89,9 @@ const {
   googleAuthLimiter,
   recordOtpFailure,
   clearOtpAttempts,
+  isLoginLocked,
+  recordLoginFailure,
+  clearLoginFailures,
 } = require('./lib/auth-rate-limit.js')
 const { mintWarrantyVerifyToken, parseWarrantyVerifyToken } = require('./lib/warranty-verify-token.js')
 const QRCode = require('qrcode')
@@ -709,6 +713,20 @@ if (String(process.env.TRUST_PROXY || '').trim() === '1') {
   app.set('trust proxy', 1)
 }
 
+/**
+ * Security headers. CSP is intentionally disabled here because this service
+ * is a JSON/asset API (no HTML rendering) — the page-level CSP lives on the
+ * frontend (Vercel). crossOriginResourcePolicy is set to 'cross-origin' so the
+ * frontend (different origin) can embed images/PDFs served by this API.
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+)
+
 const ALLOWED_ORIGINS = [
   'https://baterino.ro',
   'https://www.baterino.ro',
@@ -1213,14 +1231,22 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email și parolă sunt obligatorii.' })
     }
 
+    const lock = isLoginLocked(email)
+    if (lock.locked) {
+      res.setHeader('Retry-After', String(lock.retryAfterSec))
+      return res.status(429).json({ code: 'rate_limited', error: 'Prea multe încercări eșuate. Încearcă din nou mai târziu.' })
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     })
     if (!user) {
+      recordLoginFailure(email)
       return res.status(401).json({ error: 'Email sau parolă incorectă.' })
     }
     if (user.deletedAt) {
-      return res.status(401).json({ error: 'Acest cont a fost șters.' })
+      recordLoginFailure(email)
+      return res.status(401).json({ error: 'Email sau parolă incorectă.' })
     }
 
     if (!user.password) {
@@ -1229,8 +1255,11 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) {
+      recordLoginFailure(email)
       return res.status(401).json({ error: 'Email sau parolă incorectă.' })
     }
+
+    clearLoginFailures(email)
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
@@ -6474,7 +6503,19 @@ const BLOG_SANITIZE_OPTIONS = {
     'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'loading'],
   },
   allowedSchemes: ['https', 'http', 'mailto'],
-  allowedSchemesByTag: { 'a': ['https', 'http', 'mailto'], 'img': ['https'] },
+  allowedSchemesByTag: { 'a': ['https', 'http', 'mailto'], 'img': ['https'], 'iframe': ['https'] },
+  // Only allow iframe embeds from trusted providers (defense-in-depth even though
+  // blog content is admin-authored). Blocks arbitrary/malicious embeds.
+  allowedIframeHostnames: [
+    'www.youtube.com',
+    'youtube.com',
+    'www.youtube-nocookie.com',
+    'youtube-nocookie.com',
+    'player.vimeo.com',
+    'www.google.com',
+    'maps.google.com',
+  ],
+  allowIframeRelativeUrls: false,
 }
 function sanitizeBlogBody(raw) {
   if (!raw) return ''

@@ -103,6 +103,58 @@ function clearOtpAttempts(email) {
   otpAttemptBuckets.delete(email)
 }
 
+// ── Per-account failed-login throttle ──────────────────────────────────────
+// Complements the IP limiter: defends a single account against distributed /
+// low-and-slow password guessing coming from many IPs.
+
+const LOGIN_MAX_FAILS = 8            // failed attempts within the window before lockout
+const LOGIN_WINDOW_MS = 15 * 60_000  // rolling window to count failures
+const LOGIN_LOCK_MS   = 15 * 60_000  // lockout duration once threshold is hit
+
+/** email -> { count, windowStart, lockedUntil } */
+const loginFailBuckets = new Map()
+
+function pruneLoginBuckets() {
+  const now = Date.now()
+  for (const [k, v] of loginFailBuckets) {
+    const expired = now - v.windowStart > LOGIN_WINDOW_MS * 2
+    const unlocked = !v.lockedUntil || now > v.lockedUntil
+    if (expired && unlocked) loginFailBuckets.delete(k)
+  }
+}
+
+/**
+ * Returns { locked, retryAfterSec } if this account is currently locked out.
+ * Call at the start of the login handler.
+ */
+function isLoginLocked(email) {
+  const b = loginFailBuckets.get(email)
+  if (!b || !b.lockedUntil) return { locked: false }
+  const now = Date.now()
+  if (now >= b.lockedUntil) return { locked: false }
+  return { locked: true, retryAfterSec: Math.max(1, Math.ceil((b.lockedUntil - now) / 1000)) }
+}
+
+/** Call after a failed login (wrong password / unknown account). */
+function recordLoginFailure(email) {
+  if (Math.random() < 0.05) pruneLoginBuckets()
+  const now = Date.now()
+  let b = loginFailBuckets.get(email)
+  if (!b || now - b.windowStart >= LOGIN_WINDOW_MS) {
+    b = { count: 0, windowStart: now, lockedUntil: 0 }
+    loginFailBuckets.set(email, b)
+  }
+  b.count++
+  if (b.count >= LOGIN_MAX_FAILS) {
+    b.lockedUntil = now + LOGIN_LOCK_MS
+  }
+}
+
+/** Call after a successful login to reset the counter. */
+function clearLoginFailures(email) {
+  loginFailBuckets.delete(email)
+}
+
 module.exports = {
   loginLimiter,
   signupLimiter,
@@ -113,4 +165,7 @@ module.exports = {
   googleAuthLimiter,
   recordOtpFailure,
   clearOtpAttempts,
+  isLoginLocked,
+  recordLoginFailure,
+  clearLoginFailures,
 }
