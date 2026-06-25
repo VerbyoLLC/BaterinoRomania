@@ -97,11 +97,27 @@ export default function MobileMenu({
 
   useEffect(() => {
     if (isOpen) {
+      const scrollY = window.scrollY
       document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
     } else {
+      const top = document.body.style.top
       document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      if (top) window.scrollTo(0, -parseInt(top, 10))
     }
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      const top = document.body.style.top
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      if (top) window.scrollTo(0, -parseInt(top, 10))
+    }
   }, [isOpen])
 
   useEffect(() => {
@@ -184,7 +200,7 @@ export default function MobileMenu({
         className={`fixed top-0 left-0 right-0 bottom-0 w-full h-[100dvh] min-h-[100vh] max-h-[100dvh] bg-white z-50 shadow-xl transition-transform duration-300 ease-out md:hidden flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
         aria-modal="true"
         aria-label="Menu"
       >
@@ -206,8 +222,8 @@ export default function MobileMenu({
 
         {/* Scrollable content – fills remaining space, scrolls on all mobile resolutions */}
         <div
-          className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-8 px-6 overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+          className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' } as React.CSSProperties}
         >
           {showLoginPage ? (
             /* ── Login sub-page ── */
