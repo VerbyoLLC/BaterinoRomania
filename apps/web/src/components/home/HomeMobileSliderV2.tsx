@@ -773,7 +773,7 @@ export default function HomeMobileSliderV2({ tr, jumpTo }: Props) {
       */}
       <div
         ref={sliderRef}
-        className="flex w-full overflow-x-auto overscroll-x-contain touch-pan-x snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 gap-3 py-2"
+        className="flex w-full overflow-x-auto overscroll-x-contain touch-pan-x touch-pan-y snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 gap-3 py-2"
         style={{ scrollPaddingLeft: `${SCROLL_PAD}px` }}
       >
         {slides.map((slide, i) => (
