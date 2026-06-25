@@ -86,11 +86,12 @@ function Footer() {
             <nav className="flex flex-col gap-2.5">
               <Link to="/companie/viziune" className={linkClass}>{t.despreNoi}</Link>
               <Link to="/parteneriat-strategic-lithtech-baterino" className={linkClass}>{t.lithtech}</Link>
-              <Link to="/suport" className={linkClass}>{t.suportClienti}</Link>
               <Link to="/cariere" className={linkClass}>{t.cariere}</Link>
+              <Link to="/blog" className={linkClass}>{t.presa}</Link>
+              <Link to="/contact" className={linkClass}>{t.contact}</Link>
             </nav>
           </div>
-          {/* Column 3: Suport & Legal */}
+          {/* Column 3: Suport */}
           <div className="flex flex-col">
             <div className={headingClass}>{t.suportLegal}</div>
             <nav className="flex flex-col gap-2.5">
@@ -99,9 +100,7 @@ function Footer() {
               <Link to="/service-baterii-lithtech-romania" className={linkClass}>{t.serviceLithtech}</Link>
               <Link to="/returnare-produse" className={linkClass}>{t.returnareProduse}</Link>
               <Link to="/intrebari-frecvente" className={linkClass}>{t.intrebariFrecvente}</Link>
-              <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
-              <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
-              <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>
+              <Link to="/suport" className={linkClass}>{t.suportClienti}</Link>
             </nav>
           </div>
           {/* Column 4: Divizii */}
@@ -112,9 +111,10 @@ function Footer() {
               <Link to="/divizii/industrial" className={linkClass}>{t.industrial}</Link>
               <Link to="/divizii/medical" className={linkClass}>{t.medical}</Link>
               <Link to="/divizii/maritim" className={linkClass}>{t.maritim}</Link>
+              <Link to="/studii-de-caz" className={linkClass}>{t.studiiDeCaz}</Link>
             </nav>
           </div>
-          {/* Column 5: Partneri */}
+          {/* Column 5: Parteneri */}
           <div className="flex flex-col">
             <div className={headingClass}>{t.partneri}</div>
             <nav className="flex flex-col gap-2.5">
@@ -128,10 +128,15 @@ function Footer() {
               <Link to="/login?tab=partener" className={linkClass}>{t.centreMedicale}</Link>
             </nav>
           </div>
-          {/* Column 6: Media */}
+          {/* Column 6: Legal & Social */}
           <div className="flex flex-col">
             <div className={headingClass}>{t.media}</div>
-            <div className="flex gap-3 mb-2">
+            <nav className="flex flex-col gap-2.5 mb-5">
+              <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
+              <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
+              <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>
+            </nav>
+            <div className="flex gap-2.5">
               <a
                 href="https://www.facebook.com/baterino.ro/"
                 target="_blank"
@@ -166,11 +171,6 @@ function Footer() {
                 </svg>
               </a>
             </div>
-            <nav className="flex flex-col gap-2.5">
-              <Link to="/studii-de-caz" className={linkClass}>{t.studiiDeCaz}</Link>
-              <Link to="/blog" className={linkClass}>{t.presa}</Link>
-              <Link to="/contact" className={linkClass}>{t.contact}</Link>
-            </nav>
           </div>
         </div>
       </div>

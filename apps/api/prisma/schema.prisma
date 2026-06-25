@@ -353,6 +353,8 @@ model Product {
   /** Prioritate în liste cont client / cont partener (admin). */
   promovarePeContClient   Boolean  @default(false)
   promovarePeContPartener Boolean  @default(false)
+  /** Catalog public: card evidențiat + primul în listă (admin). */
+  promovarePromotie       Boolean  @default(false)
 
   // Technical details
   energieNominala       String?

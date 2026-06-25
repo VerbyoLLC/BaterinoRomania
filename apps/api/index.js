@@ -278,6 +278,8 @@ function parseProductCaseStudyExamples(v) {
 
 function sortProductsResidentialFirst(products) {
   return [...products].sort((a, b) => {
+    const byPromo = Number(b.promovarePromotie === true) - Number(a.promovarePromotie === true)
+    if (byPromo !== 0) return byPromo
     const bySector = sectorSortRank(a) - sectorSortRank(b)
     if (bySector !== 0) return bySector
     const byStock =
@@ -348,7 +350,27 @@ function normalizeCatalogBadges(apiProduct) {
     normalized.catalogInstallBadge =
       parseCatalogInstallBadge(apiProduct.catalogInstallBadge) ?? 'baterino'
   }
+  normalized.promovarePromotie = apiProduct.promovarePromotie === true
   return normalized
+}
+
+/** Set of product ids flagged for catalog promo highlight (works even if Prisma client is stale). */
+async function fetchPromoCatalogProductIds() {
+  try {
+    const rows = await prisma.$queryRaw`SELECT id FROM "Product" WHERE "promovarePromotie" = true`
+    return new Set(rows.map((r) => r.id))
+  } catch (err) {
+    console.error('fetchPromoCatalogProductIds:', err?.message || err)
+    return new Set()
+  }
+}
+
+function attachPromoCatalogFlags(apiProduct, promoIdSet) {
+  if (!apiProduct || typeof apiProduct !== 'object') return apiProduct
+  return {
+    ...apiProduct,
+    promovarePromotie: apiProduct.promovarePromotie === true || promoIdSet.has(apiProduct.id),
+  }
 }
 
 /** string[] of ReducereProgram ids; invalid input → [] */
@@ -6781,6 +6803,7 @@ const createProductHandler = async (req, res) => {
         reducereProgramIds: tipProdus === 'rezidential' ? parseReducereProgramIds(body.reducereProgramIds) : [],
         promovarePeContClient: body.promovarePeContClient === true,
         promovarePeContPartener: body.promovarePeContPartener === true,
+        promovarePromotie: body.promovarePromotie === true,
         landedPrice: 0,
         salePrice,
         partnerSalePrice,
@@ -6977,6 +7000,8 @@ const updateProductHandler = async (req, res) => {
       data.promovarePeContClient = body.promovarePeContClient === true
     if (body.promovarePeContPartener !== undefined)
       data.promovarePeContPartener = body.promovarePeContPartener === true
+    if (body.promovarePromotie !== undefined)
+      data.promovarePromotie = body.promovarePromotie === true
 
     const explicitSlug = body.slug != null ? slugify(String(body.slug)) : null
     if (explicitSlug) {
@@ -8241,11 +8266,19 @@ const listPublicProductsHandler = async (req, res) => {
         include: productInclude,
       })
     }
+    const promoIdSet = await fetchPromoCatalogProductIds()
+    products = products.map((p) => ({
+      ...p,
+      promovarePromotie: p.promovarePromotie === true || promoIdSet.has(p.id),
+    }))
     products = sortProductsResidentialFirst(products)
     const authPayload = readOptionalAuthPayload(req)
     return res.json(
       products.map((p) =>
-        applyPublicPricePolicy(normalizeCatalogBadges(productToJson(p)), authPayload),
+        attachPromoCatalogFlags(
+          applyPublicPricePolicy(normalizeCatalogBadges(productToJson(p)), authPayload),
+          promoIdSet,
+        ),
       ),
     )
   } catch (err) {
@@ -9108,7 +9141,8 @@ const updateProductModelHandler = async (req, res) => {
       return res.status(400).json({ error: 'Tip invalid. Folosește industrial sau residential.' })
     }
 
-    const sku = buildModelSku(brand, productType, modelNumber)
+    const skuRaw = String(body.sku ?? '').trim()
+    const sku = skuRaw || buildModelSku(brand, productType, modelNumber)
     const updated = await prisma.productModel.update({
       where: { id },
       data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, sku, imageUrl, productImageUrl, availableForStock },
@@ -9795,7 +9829,8 @@ async function createProductModelHandler(req, res) {
       return res.status(400).json({ error: 'Tip invalid.' })
     }
 
-    const sku = buildModelSku(brand, productType, modelNumber)
+    const skuRaw = String(body.sku ?? '').trim()
+    const sku = skuRaw || buildModelSku(brand, productType, modelNumber)
     const created = await prisma.productModel.create({
       data: { name, brand, series, modelNumber, technicalDescription, usageType, productType, sku, availableForStock, sortOrder: 0 },
     })

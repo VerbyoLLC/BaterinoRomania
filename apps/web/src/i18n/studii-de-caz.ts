@@ -27,9 +27,9 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
     seoTitle: 'Studii de caz – Baterino România',
     seoDesc:
       'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
-    heroTitle: 'Studii de caz',
+    heroTitle: 'Proiecte Industriale',
     heroDesc:
-      'Proiecte reale în care sisteme de stocare a energiei Baterino și LithTech asigură autonomie, siguranță și eficiență operațională.',
+      'Importăm, furnizăm și instalăm sistemele de stocare a energiei cu baterii LiFePo4 pentru mediul industrial în România și Europa.',
     galleryPhotosAria: 'Număr de fotografii în galerie',
     cases: [
       {

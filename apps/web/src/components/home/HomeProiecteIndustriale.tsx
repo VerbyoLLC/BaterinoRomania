@@ -56,6 +56,17 @@ function ServerIcon() {
   )
 }
 
+function HomeGridIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="size-full" aria-hidden>
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+      <path d="M9 21V12h6v9" />
+      <circle cx="18" cy="8" r="2" />
+      <path d="M18 6V3M16.5 9.5L15 11M19.5 9.5L21 11" />
+    </svg>
+  )
+}
+
 function BatteryChargingIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="size-full" aria-hidden>
@@ -96,9 +107,9 @@ const TEXT = {
         Icon: FactoryIcon,
       },
       {
-        label: 'Data Centers',
-        desc: 'UPS de lungă durată și backup energetic pentru infrastructuri IT de înaltă disponibilitate.',
-        Icon: ServerIcon,
+        label: 'Micro rețele rezidențiale',
+        desc: 'Sisteme de stocare pentru comunități rezidențiale cu panouri solare, asigurând autonomie energetică și reducerea costurilor.',
+        Icon: HomeGridIcon,
       },
       {
         label: 'Parcuri de stocare a energiei',
@@ -134,9 +145,9 @@ const TEXT = {
         Icon: FactoryIcon,
       },
       {
-        label: 'Data Centers',
-        desc: 'Long-duration UPS and energy backup for high-availability IT infrastructure.',
-        Icon: ServerIcon,
+        label: 'Residential Microgrids',
+        desc: 'Storage systems for residential communities with solar panels, ensuring energy autonomy and cost reduction.',
+        Icon: HomeGridIcon,
       },
       {
         label: 'Energy Storage Parks',
@@ -155,7 +166,7 @@ export function SectorCardsGrid() {
   const t = TEXT[language.code as 'ro' | 'en'] ?? TEXT.ro
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-[10px]">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-[10px] sm:gap-3 lg:gap-4">
       {t.sectors.map(({ label, desc, Icon }) => (
         <div
           key={label}

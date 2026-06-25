@@ -413,6 +413,8 @@ export type PublicProduct = {
   reducereProgramIds?: string[]
   /** Admin: prioritate în catalog partener */
   promovarePeContPartener?: boolean
+  /** Catalog public: card evidențiat + primul în listă */
+  promovarePromotie?: boolean
   tensiuneNominala?: string | null
   locatieMontaj?: string | null
   capacitate?: string | null
@@ -423,6 +425,10 @@ export type PublicProduct = {
   energieNominala?: string | null
   garantie?: string | null
   [key: string]: unknown
+}
+
+export function isPromoCatalogProduct(product: Pick<PublicProduct, 'promovarePromotie'>): boolean {
+  return product.promovarePromotie === true
 }
 
 /** Două linii de specificații pentru cardurile din catalog (Produse / Acasă). */
@@ -469,6 +475,37 @@ export function formatResidentialCatalogPriceDisplay(
   const unit = vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
   const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
   return `${Math.round(unit).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+/** Public catalog: net (ex-VAT) sale price for display below the inclusive price on cards. */
+export function formatResidentialCatalogNetPriceDisplay(
+  product: PublicProduct,
+  langCode: string,
+  currencySuffix: string = 'RON',
+): string | null {
+  const vis = (product.priceVisibility as string) || 'public'
+  if (vis !== 'public') return null
+  const sale = catalogNum(product.salePrice)
+  if (sale == null || sale <= 0) return null
+  const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
+  return `${Math.round(sale).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+/** Catalog listing: product shows a numeric public price (not partner CTA, not stock-unavailable chip). */
+export function catalogProductShowsPublicPrice(
+  product: PublicProduct,
+  langCode: string,
+  currencySuffix: string = 'RON',
+): boolean {
+  if (residentialProductStockUnavailable(product)) return false
+  if (
+    String(product.tipProdus || '').toLowerCase() !== 'industrial' &&
+    residentialCatalogUsesPartnerPriceCta(product)
+  ) {
+    return false
+  }
+  const price = formatResidentialCatalogPriceDisplay(product, langCode, currencySuffix)
+  return price != null && String(price).trim() !== ''
 }
 
 /** Partner catalog: validated unit from partnerSalePrice (catalog/net); fallback salePrice; NaN if missing. */
@@ -2278,6 +2315,8 @@ export type CreateProductPayload = {
   /** Prioritate afișare în cont client / partener */
   promovarePeContClient?: boolean
   promovarePeContPartener?: boolean
+  /** Catalog public: card evidențiat + primul în listă */
+  promovarePromotie?: boolean
   reducereProgramIds?: string[]
   salePrice: string | number
   partnerSalePrice?: string | number
@@ -2808,6 +2847,21 @@ export type ProductModelType = 'ESS' | 'INV' | 'PV' | 'PCS' | 'BMS' | 'ACC' | 'C
 
 export const PRODUCT_MODEL_TYPES: ProductModelType[] = ['ESS', 'INV', 'PV', 'PCS', 'BMS', 'ACC', 'CHG']
 
+const PRODUCT_MODEL_BRAND_CODES: Record<string, string> = { lithtech: 'LTC' }
+
+function productModelBrandCode(brand: string): string {
+  const key = String(brand || '').trim().toLowerCase()
+  return PRODUCT_MODEL_BRAND_CODES[key] || String(brand || '').trim()
+}
+
+/** Matches API `buildModelSku`: BrandCode-Type-ModelNumber (e.g. LTC-ESS-20kWh). */
+export function buildModelSku(brand: string, productType: string, modelNumber: string): string {
+  const b = productModelBrandCode(brand)
+  const t = String(productType || 'ESS').trim()
+  const m = String(modelNumber || '').trim()
+  return [b, t, m].filter(Boolean).join('-')
+}
+
 export type AdminProductModelRow = {
   id: string
   name: string
@@ -2838,6 +2892,8 @@ export type UpdateAdminProductModelPayload = {
   technicalDescription: string
   usageType: 'industrial' | 'residential'
   productType: ProductModelType
+  /** When omitted, API auto-generates from Brand + Type + Model Number. */
+  sku?: string
   imageUrl?: string | null
   productImageUrl?: string | null
   availableForStock: boolean

@@ -6,23 +6,24 @@ import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { getHomeTranslations } from '../i18n/home'
 import {
   getProducts,
-  getPublicCaseStudies,
   getProductCardImageUrl,
   getCatalogProductSpecLines,
   formatResidentialCatalogPriceDisplay,
+  formatResidentialCatalogNetPriceDisplay,
   getResidentialCatalogStockListingCta,
-  getResidentialCatalogVatPercentLabel,
   residentialCatalogUsesPartnerPriceCta,
+  catalogProductShowsPublicPrice,
+  isPromoCatalogProduct,
   type PublicProduct,
 } from '../lib/api'
-import CaseStudyModal, { type CaseStudyModalItem } from '../components/studii/CaseStudyModal'
+import HomePromoModal from '../components/home/HomePromoModal'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import CTABar from '../components/CTABar'
 import HomeHeroV2 from '../components/home/HomeHeroV2'
-import HomeMobileSlider, { MOBILE_SLIDE_COUNT } from '../components/home/HomeMobileSlider'
+import HomeMobileSliderV2, { MOBILE_SLIDE_V2_COUNT } from '../components/home/HomeMobileSliderV2'
 import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
@@ -147,7 +148,7 @@ export default function Home() {
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
-  const [promoItem, setPromoItem] = useState<CaseStudyModalItem | null>(null)
+  const [showPromoModal, setShowPromoModal] = useState(false)
   const [userType, setUserType] = useState<'profesionist' | 'client' | null>(() => {
     if (typeof sessionStorage === 'undefined') return null
     const stored = sessionStorage.getItem(USER_TYPE_STORAGE_KEY)
@@ -184,27 +185,9 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PROMO_MODAL_STORAGE_KEY)) return
-    let timer: ReturnType<typeof setTimeout>
-    getPublicCaseStudies(language.code)
-      .then((rows) => {
-        const second = rows[1]
-        if (!second) return
-        const item: CaseStudyModalItem = {
-          category: second.category,
-          title: second.title,
-          location: second.location,
-          description: second.description || '',
-          image: second.images?.[0] || second.image,
-          imageAlt: second.imageAlt,
-          images: second.images?.length ? second.images : [second.image],
-          specs: second.specs,
-          tags: second.tags,
-        }
-        timer = setTimeout(() => setPromoItem(item), 1000)
-      })
-      .catch(() => {})
+    const timer = setTimeout(() => setShowPromoModal(true), 1000)
     return () => clearTimeout(timer)
-  }, [language.code])
+  }, [])
 
   const closeWelcomeModal = () => {
     if (typeof sessionStorage !== 'undefined') {
@@ -237,6 +220,17 @@ export default function Home() {
 
 
   const featuredProducts = useMemo(() => {
+    const getNominalVoltage = (p: PublicProduct) => {
+      const n = parseFloat(String(p.tensiuneNominala ?? '').replace(',', '.'))
+      return Number.isNaN(n) ? Infinity : n
+    }
+    const sortFeatured = (list: PublicProduct[]) =>
+      [...list].sort((a, b) => {
+        const promoDiff = Number(isPromoCatalogProduct(b)) - Number(isPromoCatalogProduct(a))
+        if (promoDiff !== 0) return promoDiff
+        return getNominalVoltage(a) - getNominalVoltage(b)
+      })
+
     const filtered = products.filter((p) => {
       if (!activeTab) return true
       const cat = String(p.categorie || '').toLowerCase()
@@ -256,22 +250,27 @@ export default function Home() {
       }
       return true
     })
+    const withPrice = filtered.filter((p) => catalogProductShowsPublicPrice(p, language.code, currency))
     if (voltageFilter) {
-      const vf = filtered.filter((p) => {
+      const vf = withPrice.filter((p) => {
         const v = parseFloat(String(p.tensiuneNominala || '').replace(',', '.'))
         if (Number.isNaN(v)) return false
         if (voltageFilter === 'low' && v >= 100) return false
         if (voltageFilter === 'high' && v < 100) return false
         return true
       })
-      if (vf.length > 0) return vf.slice(0, 3)
+      if (vf.length > 0) {
+        return sortFeatured(vf).slice(0, 6)
+      }
     }
     if (locationFilter) {
-      const lf = filtered.filter((p) => String(p.locatieMontaj || '').toLowerCase().trim() === locationFilter)
-      if (lf.length > 0) return lf.slice(0, 3)
+      const lf = withPrice.filter((p) => String(p.locatieMontaj || '').toLowerCase().trim() === locationFilter)
+      if (lf.length > 0) {
+        return sortFeatured(lf).slice(0, 6)
+      }
     }
-    return filtered.slice(0, 3)
-  }, [products, activeTab, voltageFilter, locationFilter])
+    return sortFeatured(withPrice).slice(0, 6)
+  }, [products, activeTab, voltageFilter, locationFilter, language.code, currency])
 
   const tabs = [
     { id: 'rezidential', label: tr.productsTabRez },
@@ -320,9 +319,9 @@ export default function Home() {
 
       <h1 className="sr-only">{tr.heroV2Title}</h1>
 
-      {/* Mobile: full-screen portrait image slider */}
+      {/* Mobile: card slider built from desktop cards, split in two */}
       <div className="md:hidden">
-        <HomeMobileSlider tr={tr} jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_COUNT - 1 : 0} />
+        <HomeMobileSliderV2 tr={tr} jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_V2_COUNT - 1 : 0} />
       </div>
 
       {/* Desktop: card slider hero */}
@@ -333,12 +332,7 @@ export default function Home() {
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          {/* Mobile: inverter search above title */}
-          <div className="flex flex-col items-center mt-6 sm:mt-8 lg:mt-10 mb-4 sm:mb-5 md:hidden">
-            <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
-          </div>
-
-          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-6 sm:mb-8 lg:mb-10 uppercase">
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mt-6 sm:mt-8 lg:mt-10 mb-6 sm:mb-8 lg:mb-10 uppercase">
             {tr.productsSectionTitle}
           </h2>
 
@@ -412,6 +406,10 @@ export default function Home() {
                   )}
                 </div>
               )}
+              {/* Mobile: inverter search below filters */}
+              <div className="mt-3">
+                <HomeInverterSearch placeholder={tr.heroV2InverterSearchPlaceholder} />
+              </div>
             </div>
           ) : (
             /* Desktop: pill filter bar */
@@ -609,6 +607,29 @@ export default function Home() {
                 linkState,
                 imageLoadingPlaceholder: true,
                 priceDisplay,
+                promoted: isPromoCatalogProduct(p),
+                capacityTag: (() => {
+                  // Try energieNominala first (residential + classic industrial)
+                  const raw = p.energieNominala
+                  if (raw) {
+                    const wh = parseFloat(String(raw).replace(',', '.'))
+                    if (!isNaN(wh) && wh > 0) {
+                      const kwh = wh / 1000
+                      const formatted = kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2).replace(/\.?0+$/, '')
+                      return `${formatted} kWh`
+                    }
+                  }
+                  // Fallback: scan technicalSpecsModels specs for a kWh value
+                  const models = (p as { technicalSpecsModels?: { entries?: Array<{ specs?: Record<string, string> }> } }).technicalSpecsModels
+                  if (models?.entries?.length) {
+                    const specs = models.entries[0]?.specs ?? {}
+                    for (const val of Object.values(specs)) {
+                      const m = String(val).match(/([\d.,]+)\s*kWh/i)
+                      if (m) return `${m[1]} kWh`
+                    }
+                  }
+                  return null
+                })(),
               }
               const industrialSubtitle = String(p.subtitle || '').trim() || undefined
               const showResPriceExtras =
@@ -623,10 +644,10 @@ export default function Home() {
                   subtitle={industrialSubtitle}
                   ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
                   residentialPriceHeading={showIndustrialPriceExtras ? tr.pretLabel : null}
-                  residentialPriceVatNote={tr.catalogIncludesVatWithPct.replace(
-                    '{pct}',
-                    getResidentialCatalogVatPercentLabel(p),
-                  )}
+                  residentialPriceVatNote={(() => {
+                    const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency)
+                    return net ? tr.catalogPretFaraTva.replace('{price}', net) : null
+                  })()}
                   imageOverlay={
                     <ResidentialProductCatalogBadges
                       product={p}
@@ -655,7 +676,10 @@ export default function Home() {
                   residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
                   residentialPriceVatNote={
                     showResPriceExtras
-                      ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p))
+                      ? (() => {
+                          const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency)
+                          return net ? tr.catalogPretFaraTva.replace('{price}', net) : null
+                        })()
                       : null
                   }
                   imageOverlay={
@@ -1036,14 +1060,15 @@ export default function Home() {
         />
       )}
 
-      <CaseStudyModal
-        item={promoItem}
+      <HomePromoModal
+        open={showPromoModal}
         onClose={() => {
           if (typeof sessionStorage !== 'undefined') {
             sessionStorage.setItem(PROMO_MODAL_STORAGE_KEY, '1')
           }
-          setPromoItem(null)
+          setShowPromoModal(false)
         }}
+        tr={tr}
       />
     </>
   )

@@ -121,8 +121,10 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
         </div>
         {vatPct != null ? (
           <div className="flex justify-between gap-4 text-sm">
-            <span className="text-gray-600">{tr.vatLabel}</span>
-            <span className="font-semibold tabular-nums">{fmtPct(vatPct)}%</span>
+            <span className="text-gray-600">{tr.vatLabel} ({fmtPct(vatPct)}%)</span>
+            <span className="font-semibold tabular-nums">
+              {withVat != null ? <>{fmtMoney(withVat - sale!)} {tr.currencySuffix}</> : `${fmtPct(vatPct)}%`}
+            </span>
           </div>
         ) : null}
         {withVat != null ? (
@@ -159,9 +161,14 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
         <span className="font-semibold text-gray-600 text-lg">{tr.currencySuffix}</span>
       </p>
       {vatPct != null && withVat != null ? (
-        <p className={`m-0 mt-2 text-gray-500 ${embedded ? 'text-sm' : 'text-xs'}`}>
-          {tr.priceWithVatLabel}: {fmtMoney(withVat)} {tr.currencySuffix}
-        </p>
+        <>
+          <p className={`m-0 mt-2 text-gray-500 ${embedded ? 'text-sm' : 'text-xs'}`}>
+            TVA {fmtPct(vatPct)}%: <span className="font-semibold tabular-nums text-gray-700">{fmtMoney(withVat - sale!)} {tr.currencySuffix}</span>
+          </p>
+          <p className={`m-0 mt-0.5 text-gray-500 ${embedded ? 'text-sm' : 'text-xs'}`}>
+            {tr.priceWithVatLabel}: <span className="font-semibold tabular-nums text-gray-700">{fmtMoney(withVat)} {tr.currencySuffix}</span>
+          </p>
+        </>
       ) : null}
     </div>
   )

@@ -8,9 +8,10 @@ import {
   getProductCardImageUrl,
   getCatalogProductSpecLines,
   formatResidentialCatalogPriceDisplay,
+  formatResidentialCatalogNetPriceDisplay,
   getResidentialCatalogStockListingCta,
-  getResidentialCatalogVatPercentLabel,
   residentialCatalogUsesPartnerPriceCta,
+  isPromoCatalogProduct,
   type PublicProduct,
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
@@ -118,6 +119,8 @@ export default function Produse() {
     }
 
     return [...list].sort((a, b) => {
+      const promoDiff = Number(isPromoCatalogProduct(b)) - Number(isPromoCatalogProduct(a))
+      if (promoDiff !== 0) return promoDiff
       const catDiff = getCategoryRank(a) - getCategoryRank(b)
       if (catDiff !== 0) return catDiff
       const priceDiff = Number(hasPublicPrice(b)) - Number(hasPublicPrice(a))
@@ -555,10 +558,34 @@ export default function Produse() {
                   residentialPriceHeading={showResPriceExtras || industrialHasPrice ? tr.pretLabel : null}
                   residentialPriceVatNote={
                     showResPriceExtras || industrialHasPrice
-                      ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(product))
+                      ? (() => {
+                          const net = formatResidentialCatalogNetPriceDisplay(product, language.code, currency)
+                          return net ? tr.catalogPretFaraTva.replace('{price}', net) : null
+                        })()
                       : null
                   }
                   featureBadges={featureBadges}
+                  promoted={isPromoCatalogProduct(product)}
+                  capacityTag={(() => {
+                    const raw = product.energieNominala
+                    if (raw) {
+                      const wh = parseFloat(String(raw).replace(',', '.'))
+                      if (!isNaN(wh) && wh > 0) {
+                        const kwh = wh / 1000
+                        const formatted = kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2).replace(/\.?0+$/, '')
+                        return `${formatted} kWh`
+                      }
+                    }
+                    const models = (product as { technicalSpecsModels?: { entries?: Array<{ specs?: Record<string, string> }> } }).technicalSpecsModels
+                    if (models?.entries?.length) {
+                      const specs = models.entries[0]?.specs ?? {}
+                      for (const val of Object.values(specs)) {
+                        const m = String(val).match(/([\d.,]+)\s*kWh/i)
+                        if (m) return `${m[1]} kWh`
+                      }
+                    }
+                    return null
+                  })()}
                 />
               )
             })}

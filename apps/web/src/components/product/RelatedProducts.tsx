@@ -4,8 +4,8 @@ import {
   getProductCardImageUrl,
   getCatalogProductSpecLines,
   formatResidentialCatalogPriceDisplay,
+  formatResidentialCatalogNetPriceDisplay,
   getResidentialCatalogStockListingCta,
-  getResidentialCatalogVatPercentLabel,
   residentialCatalogUsesPartnerPriceCta,
   productHasEligibleReducerePrograms,
   type PublicProduct,
@@ -228,7 +228,7 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
         subtitle={String(p.subtitle || '').trim() || undefined}
         ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
         residentialPriceHeading={industrialHasPrice ? tr.pretLabel : null}
-        residentialPriceVatNote={industrialHasPrice ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p)) : null}
+        residentialPriceVatNote={industrialHasPrice ? (() => { const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency); return net ? tr.catalogPretFaraTva.replace('{price}', net) : null })() : null}
         imageOverlay={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="stack" include={['stock', 'delivery']} />}
         priceAboveBadge={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="wrap" className="justify-center gap-1.5" include={['transport', 'install']} appearance="neutral" />}
       />
@@ -239,7 +239,7 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
         residentialPartnerPriceCta={residentialPartnerPriceCta}
         residentialStockListingCta={stockListingCta}
         residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
-        residentialPriceVatNote={showResPriceExtras ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p)) : null}
+        residentialPriceVatNote={showResPriceExtras ? (() => { const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency); return net ? tr.catalogPretFaraTva.replace('{price}', net) : null })() : null}
         imageOverlay={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="stack" include={['stock', 'delivery']} />}
         priceAboveBadge={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="wrap" className="justify-center gap-1.5" include={['transport', 'reducere']} appearance="neutral" />}
       />
@@ -304,7 +304,7 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
         residentialPriceHeading={showResPriceExtras || industrialHasPrice ? tr.pretLabel : null}
         residentialPriceVatNote={
           showResPriceExtras || industrialHasPrice
-            ? tr.catalogIncludesVatWithPct.replace('{pct}', getResidentialCatalogVatPercentLabel(p))
+            ? (() => { const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency); return net ? tr.catalogPretFaraTva.replace('{price}', net) : null })()
             : null
         }
         featureBadges={featureBadges}

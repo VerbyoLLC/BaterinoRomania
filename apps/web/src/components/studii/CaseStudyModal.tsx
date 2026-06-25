@@ -83,13 +83,13 @@ export default function CaseStudyModal({ item, onClose }: Props) {
         </button>
 
         {/* Image panel */}
-        <div className="relative w-full shrink-0 bg-neutral-900 lg:w-[52%]">
-          <div className="relative aspect-[4/3] w-full overflow-hidden lg:aspect-auto lg:h-full lg:min-h-[360px]">
+        <div className="relative flex w-full shrink-0 flex-col bg-neutral-900 lg:w-[52%] lg:min-h-0 lg:max-h-[90vh]">
+          <div className="relative flex aspect-[4/3] w-full min-h-0 flex-1 items-center justify-center overflow-hidden p-2 lg:aspect-auto lg:min-h-[240px]">
             <img
               key={currentImage}
               src={currentImage}
               alt={item.imageAlt}
-              className="h-full w-full object-cover"
+              className="max-h-full max-w-full object-contain"
             />
 
             {/* Prev / next arrows */}

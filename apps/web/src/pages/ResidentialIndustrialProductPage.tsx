@@ -743,15 +743,15 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
               {/* Price / contact */}
               <div className="min-w-0 rounded-[10px] border border-neutral-200/80 bg-neutral-100 p-5 sm:p-6">
+                <img
+                  src="/images/shared/baterino-industrial-black.png"
+                  alt="Baterino Industrial"
+                  className="mb-4 h-5 w-auto max-w-full object-contain object-left"
+                />
                 <div className="mb-4">
                   <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
                 </div>
                 <hr className="mb-4 border-0 border-t border-neutral-200" aria-hidden />
-                <img
-                  src="/images/shared/baterino-industrial-black.png"
-                  alt="Baterino Industrial"
-                  className="mb-3 h-5 w-auto max-w-full object-contain object-left"
-                />
                 {tr.contactBlurb.trim() ? (
                   <>
                     <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>

@@ -9,6 +9,7 @@ import {
   updateAdminProductModel,
   deleteAdminProductModel,
   createAdminProductModel,
+  buildModelSku,
   type AdminProductModelRow,
   type UpdateAdminProductModelPayload,
   type ProductModelType,
@@ -96,6 +97,48 @@ function getEnergyValue(technicalDescription: string, name?: string): string {
   return raw
 }
 
+const ENERGY_LABEL_KEYS = new Set(['energy', 'nominal energy', 'energie nominala'])
+
+function isEnergySpecLabel(label: string): boolean {
+  return ENERGY_LABEL_KEYS.has(normalizeSpecLabel(label))
+}
+
+function energyInputValue(technicalDescription: string, name?: string): string {
+  const display = getEnergyValue(technicalDescription, name)
+  return display === '—' ? '' : display
+}
+
+function setEnergyInTechnicalDescription(technicalDescription: string, energyValue: string): string {
+  const trimmed = energyValue.trim()
+  const fields = parseSpecs(technicalDescription)
+  const energyIdx = fields.findIndex((f) => isEnergySpecLabel(f.label))
+
+  if (!trimmed) {
+    if (energyIdx < 0) return technicalDescription
+    const next = fields.filter((_, i) => i !== energyIdx)
+    if (next.length === 0) return ''
+    if (next.length === 1 && !next[0].label.trim() && !next[0].value.trim()) return ''
+    return serializeSpecs(next)
+  }
+
+  const energyField: SpecField = {
+    id: energyIdx >= 0 ? fields[energyIdx].id : crypto.randomUUID(),
+    label: 'Energy',
+    value: trimmed,
+  }
+
+  if (fields.length === 1 && !fields[0].label.trim() && !fields[0].value.trim()) {
+    return serializeSpecs([energyField])
+  }
+
+  if (energyIdx >= 0) {
+    const next = fields.map((f, i) => (i === energyIdx ? energyField : f))
+    return serializeSpecs(next)
+  }
+
+  return serializeSpecs([energyField, ...fields])
+}
+
 export default function AdminProductModels() {
   const navigate = useNavigate()
   const toast = useToast()
@@ -177,6 +220,11 @@ export default function AdminProductModels() {
   const drawerRow = useMemo(() => rowsWithDraft.find((r) => r.id === drawerModelId) ?? null, [rowsWithDraft, drawerModelId])
   const viewRow = useMemo(() => rowsWithDraft.find((r) => r.id === viewModelId) ?? null, [rowsWithDraft, viewModelId])
 
+  const addFormSku = useMemo(
+    () => buildModelSku(addForm.brand, addForm.productType, addForm.modelNumber),
+    [addForm.brand, addForm.productType, addForm.modelNumber],
+  )
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
     return rowsWithDraft.filter((row) => {
@@ -218,6 +266,7 @@ export default function AdminProductModels() {
         brand: base.brand,
         series: base.series,
         modelNumber: base.modelNumber,
+        sku: base.sku,
         technicalDescription: base.technicalDescription,
         usageType: base.usageType,
         productType: base.productType ?? 'ESS',
@@ -284,7 +333,10 @@ export default function AdminProductModels() {
     setAddSaving(true)
     setAddError(null)
     try {
-      const created = await createAdminProductModel(addForm)
+      const created = await createAdminProductModel({
+        ...addForm,
+        sku: addForm.sku?.trim() || buildModelSku(addForm.brand, addForm.productType, addForm.modelNumber),
+      })
       setRows((prev) => [created, ...prev])
       setAddModalOpen(false)
       setAddForm({ name: '', brand: '', series: '', modelNumber: '', technicalDescription: '', usageType: 'industrial', productType: 'ESS', imageUrl: null, productImageUrl: null, availableForStock: true })
@@ -309,6 +361,7 @@ export default function AdminProductModels() {
       brand: drawerRow.brand,
       series: drawerRow.series,
       modelNumber: drawerRow.modelNumber,
+      sku: drawerRow.sku,
       technicalDescription: composed,
       usageType: drawerRow.usageType,
       productType: drawerRow.productType ?? 'ESS',
@@ -610,20 +663,31 @@ export default function AdminProductModels() {
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <span
-                        className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-xs font-mono font-medium leading-snug text-slate-700 truncate"
+                      <input
+                        value={row.sku}
+                        onChange={(e) => setDraftField(row.id, 'sku', e.target.value)}
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
+                        className={`${inputCellClass} font-mono text-[13px]`}
                         title={row.sku}
-                      >
-                        {row.sku}
-                      </span>
+                      />
                     </td>
                     <td className="px-3 py-2.5">
-                      <span
-                        className="block min-h-9 rounded-md border border-transparent bg-slate-50/90 px-2.5 py-2 text-sm font-medium tabular-nums leading-snug text-slate-800 break-words"
+                      <input
+                        value={energyInputValue(row.technicalDescription, row.name)}
+                        onChange={(e) =>
+                          setDraftField(
+                            row.id,
+                            'technicalDescription',
+                            setEnergyInTechnicalDescription(row.technicalDescription, e.target.value),
+                          )
+                        }
+                        onBlur={() => handleFieldCommit(row.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); handleFieldCommit(row.id) } }}
+                        className={`${inputCellClass} tabular-nums text-[13px]`}
+                        placeholder="16 kWh"
                         title={getEnergyValue(row.technicalDescription, row.name)}
-                      >
-                        {getEnergyValue(row.technicalDescription, row.name)}
-                      </span>
+                      />
                     </td>
                     <td className="px-3 py-2.5">
                       <select
@@ -823,6 +887,19 @@ export default function AdminProductModels() {
                     className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-mono font-['Inter'] text-slate-900 bg-white focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer">
                     {PRODUCT_MODEL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 font-['Inter'] mb-1">SKU</label>
+                  <input
+                    value={addForm.sku ?? addFormSku}
+                    onChange={(e) => setAddForm((p) => ({ ...p, sku: e.target.value }))}
+                    placeholder={addFormSku || 'LTC-ESS-ModelNumber'}
+                    className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm font-mono font-['Inter'] text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    aria-describedby="add-form-sku-hint"
+                  />
+                  <p id="add-form-sku-hint" className="mt-1 text-[11px] text-slate-400 font-['Inter']">
+                    Lasă gol pentru generare automată (Brand + Type + Model Number). Folosește același SKU la produsul din catalog.
+                  </p>
                 </div>
               </div>
 

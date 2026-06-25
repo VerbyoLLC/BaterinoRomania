@@ -5,38 +5,14 @@ import { getReduceriTranslations, type ReducereProgram } from '../i18n/reduceri'
 import { getAuthToken, getPublicReducerePrograms, type ReducereProgramRow } from '../lib/api'
 import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
-import CTABar from '../components/CTABar'
 import { ReduceriProgramCard } from '../components/reduceri/ReduceriProgramCard'
+import { CheckCircle2, ArrowRight } from 'lucide-react'
 
 function rowToProgram(p: ReducereProgramRow): ReducereProgram {
   const { id: _id, locale: _loc, sortOrder: _so, ...rest } = p
   return rest
 }
 
-/* ── How to apply panel ────────────────────────────────────────── */
-function HowToApply({ title, steps }: { title: string; steps: string[] }) {
-  return (
-    <div className="bg-neutral-100 rounded-[10px] flex flex-col items-center justify-center px-10 pt-3.5 pb-10">
-      <h3 className="text-black text-2xl font-bold font-['Inter'] leading-8 text-center w-full mb-6">
-        {title}
-      </h3>
-      <div className="flex flex-col gap-6 w-full flex-1 justify-around">
-        {steps.map((step, i) => (
-          <div key={i} className="flex flex-col items-center gap-2 text-center">
-            <div className="size-12 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-lg font-extrabold font-['Inter']">{i + 1}</span>
-            </div>
-            <p className="text-black text-lg font-semibold font-['Inter'] leading-7">
-              {step}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ── Page ─────────────────────────────────────────────────────── */
 export default function Reduceri() {
   const { language } = useLanguage()
   const tr = getReduceriTranslations(language.code)
@@ -65,14 +41,10 @@ export default function Reduceri() {
       .catch(() => {
         if (!cancelled) setApiPrograms(null)
       })
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [language.code])
 
   const programs = apiPrograms ?? tr.programs
-  const four = programs.length === 4
-  const [p1, p2, p3, p4] = programs
 
   return (
     <>
@@ -104,76 +76,95 @@ export default function Reduceri() {
         },
       ]} />
 
-      <article className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
-
-        {/* ── HERO ── */}
-        <header className="text-center mb-12 lg:mb-14">
-          <h1 className="text-black text-3xl lg:text-5xl font-extrabold font-['Inter'] leading-tight mb-4">
+      {/* ── HERO ── */}
+      <div className="bg-white pt-14 pb-16 px-5">
+        <div className="max-w-content mx-auto text-center">
+          <h1 className="text-slate-900 text-4xl lg:text-6xl font-extrabold font-['Inter'] leading-tight mb-4">
             {tr.heroTitle}
           </h1>
-          <p className="text-gray-600 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[560px] mx-auto">
+          <p className="text-slate-500 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[560px] mx-auto mb-8">
             {tr.heroSubtitle}
           </p>
-        </header>
+          {!loggedIn && (
+            <div className="flex flex-col items-center gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 h-12 px-6 rounded-[10px] bg-slate-900 text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 transition-colors shadow-lg"
+              >
+                {programs[0]?.ctaLabel ?? tr.programs[0].ctaLabel}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+              {programs[0]?.termsLabel && (
+                <span className="text-slate-400 text-sm font-medium font-['Nunito_Sans'] cursor-pointer hover:text-slate-600 transition-colors">
+                  {programs[0].termsLabel}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* ── MOBILE: single column with dividers + How to Apply at end ── */}
-        <div className="flex flex-col md:hidden mb-10">
+      <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
+
+        {/* ── ALL CARDS GRID — row 1: programs 1-3, row 2: program 4 + HowToApply + CTA ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+
+          {/* Program cards */}
           {programs.map((program, i) => (
-            <div key={`${program.programLabel}-${i}`}>
-              <ReduceriProgramCard program={program} hideCta={loggedIn} />
-              <hr className="border-gray-200 my-10" />
-            </div>
+            <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} hideCta={true} />
           ))}
-          <HowToApply title={tr.howTitle} steps={tr.howSteps} />
-          {!loggedIn ? (
-            <Link
-              to="/login"
-              className="w-full h-14 mt-6 bg-slate-900 rounded-[10px] inline-flex justify-center items-center text-white text-base font-semibold font-['Inter'] hover:bg-slate-700 transition-colors"
-            >
-              {programs[0]?.ctaLabel ?? tr.programs[0].ctaLabel}
-            </Link>
-          ) : null}
+
+          {/* How to Apply — fills one column slot */}
+          <div className="flex flex-col h-full">
+            <div className="flex flex-col flex-1 rounded-[10px] bg-[#f7f7f7] overflow-hidden px-6 py-8">
+              <h3 className="text-slate-900 text-xl font-extrabold font-['Inter'] text-center mb-8">
+                {tr.howTitle}
+              </h3>
+              <div className="flex flex-col gap-6 flex-1 justify-around">
+                {tr.howSteps.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="size-9 rounded-full bg-sky-900 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-extrabold font-['Inter']">{i + 1}</span>
+                    </div>
+                    <p className="text-slate-700 text-sm font-semibold font-['Inter'] leading-snug pt-1.5">
+                      {step}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CTA card — fills one column slot */}
+          <div className="flex flex-col h-full">
+            <div className="flex flex-col flex-1 rounded-[10px] bg-slate-900 overflow-hidden px-6 py-8">
+              <img src="/images/shared/baterino-logo-black.svg" alt="Baterino" className="h-7 w-auto object-contain self-start invert mb-6" />
+              <p className="text-white text-xl font-bold font-['Inter'] leading-snug mb-2">{tr.ctaBarTitle}</p>
+              <p className="text-white/60 text-sm font-normal font-['Inter'] mb-8">{tr.ctaBarDesc}</p>
+              <div className="mt-auto flex flex-col gap-3">
+                <Link
+                  to="/produse"
+                  className="inline-flex items-center justify-center gap-2 h-11 w-full rounded-[10px] bg-white text-slate-900 text-sm font-semibold font-['Inter'] hover:bg-neutral-100 transition-colors"
+                >
+                  {tr.ctaBarBtn}
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+                {!loggedIn && (
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center justify-center gap-2 h-11 w-full rounded-[10px] border border-white/30 text-white text-sm font-semibold font-['Inter'] hover:bg-white/10 transition-colors"
+                  >
+                    <CheckCircle2 className="size-4" aria-hidden />
+                    Aplică o reducere
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        {four ? (
-          <>
-            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-14 items-stretch">
-              {[p1, p2, p3].map((program, i) => (
-                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} hideCta={loggedIn} />
-              ))}
-            </div>
-            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16 lg:mb-20 items-start">
-              <ReduceriProgramCard program={p4} hideCta={loggedIn} />
-              <HowToApply title={tr.howTitle} steps={tr.howSteps} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="hidden md:grid md:grid-cols-3 gap-6 mb-10 items-stretch">
-              {programs.map((program, i) => (
-                <ReduceriProgramCard key={`${program.programLabel}-${i}`} program={program} hideCta={loggedIn} />
-              ))}
-            </div>
-            <div className="hidden md:max-w-xl md:mx-auto md:block mb-16 lg:mb-20">
-              <HowToApply title={tr.howTitle} steps={tr.howSteps} />
-            </div>
-          </>
-        )}
-
-        {/* ── BOTTOM CTA — desktop only ── */}
-        <div className="hidden md:block">
-          <CTABar
-            logo="/images/shared/baterino-logo-black.svg"
-            logoAlt="Baterino"
-            logoClassName="h-8 lg:h-10"
-            title={tr.ctaBarTitle}
-            desc={tr.ctaBarDesc}
-            btn1Label={tr.ctaBarBtn}
-            btn1To="/produse"
-          />
-        </div>
-
-      </article>
+      </div>
     </>
   )
 }

@@ -44,10 +44,10 @@ export type FooterTranslations = {
 const translations: Record<LangCode, FooterTranslations> = {
   ro: {
     companie: 'Companie',
-    suportLegal: 'Suport & Legal',
+    suportLegal: 'Suport',
     divizii: 'Divizii',
-    partneri: 'Partneri',
-    media: 'Media',
+    partneri: 'Parteneri',
+    media: 'Legal',
     baterinoGlobal: 'Baterino Global',
     elarionGlobal: 'Elarion Global',
     despreNoi: 'Despre noi',
@@ -77,10 +77,10 @@ const translations: Record<LangCode, FooterTranslations> = {
   },
   en: {
     companie: 'Company',
-    suportLegal: 'Support & Legal',
+    suportLegal: 'Support',
     divizii: 'Divisions',
     partneri: 'Partners',
-    media: 'Media',
+    media: 'Legal',
     baterinoGlobal: 'Baterino Global',
     elarionGlobal: 'Elarion Global',
     despreNoi: 'About us',

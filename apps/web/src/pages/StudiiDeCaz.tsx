@@ -89,7 +89,7 @@ export default function StudiiDeCaz() {
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-12 pb-24">
         <header className="mb-10 lg:mb-14 flex flex-col items-center text-center">
-          <h1 className="w-full text-black text-2xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-8 sm:leading-[48px] lg:leading-[56px]">
+          <h1 className="w-full text-black text-2xl sm:text-4xl lg:text-5xl font-extrabold font-['Inter'] leading-8 sm:leading-[48px] lg:leading-[56px] uppercase tracking-wide">
             {tr.heroTitle}
           </h1>
           <p className="max-w-[739px] text-neutral-600 text-base sm:text-lg lg:text-xl font-medium font-['Inter'] leading-6 sm:leading-7 lg:leading-8 mt-[14px]">
@@ -100,6 +100,13 @@ export default function StudiiDeCaz() {
         <div className="mb-10 lg:mb-14">
           <SectorCardsGrid />
         </div>
+
+        <h2 className="text-black text-2xl sm:text-3xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase tracking-wide">
+          Studii de Caz
+        </h2>
+        <p className="text-neutral-600 text-base font-medium font-['Inter'] leading-7 mb-8">
+          Proiecte unde tehnologia de stocare cu baterii LiFePo4 pentru mediul industrial și rezidențial a fost implementată în România și Europa.
+        </p>
 
         {loading ? (
           <ul

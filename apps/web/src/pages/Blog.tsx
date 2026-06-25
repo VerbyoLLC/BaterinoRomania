@@ -31,6 +31,14 @@ function BlogCard({ post }: { post: BlogPostRow }) {
             alt={post.coverImageAlt || post.title}
             className="h-full w-full object-cover"
           />
+          <div className="pointer-events-none absolute bottom-3 right-3 z-10">
+            <img
+              src="/images/shared/baterino-logo-white.png"
+              alt=""
+              aria-hidden
+              className="h-5 w-auto max-w-[88px] object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
+            />
+          </div>
         </div>
       )}
       <div className="flex flex-col flex-1 p-5">

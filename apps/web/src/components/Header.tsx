@@ -21,8 +21,9 @@ const DIVIZII_PATHS = [
 const COMPANIE_PATHS = [
   { key: 'viziune', path: '/companie/viziune' },
   { key: 'lithtech', path: '/parteneriat-strategic-lithtech-baterino' },
-  { key: 'contact', path: '/contact' },
+  { key: 'blog', path: '/blog' },
   { key: 'siguranta', path: '/siguranta' },
+  { key: 'contact', path: '/contact' },
 ]
 
 function clientAccountInitials(email: string): string {
@@ -168,7 +169,7 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className={`bg-white border-b border-gray-200 sticky top-0 z-30 transition-opacity duration-200 ${isViziuneReplaced ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      className={`bg-white sticky top-0 z-30 transition-opacity duration-200 ${isViziuneReplaced ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
       <div className="max-w-content mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-4">

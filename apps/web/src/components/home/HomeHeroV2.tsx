@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BadgePercent, Headphones, ShieldCheck, Truck, type LucideIcon } from 'lucide-react'
+import HomeHeroPromoOfferCard from './HomeHeroPromoOfferCard'
+import HomeHeroMedCard from './HomeHeroMedCard'
+import HomeHeroInstCard from './HomeHeroInstCard'
 import type { HomeTranslations } from '../../i18n/home'
 import { useHorizontalDragScroll } from '../../lib/useHorizontalDragScroll'
 import { smoothScrollTo } from '../../lib/smoothHorizontalScroll'
@@ -8,8 +11,8 @@ import { smoothScrollTo } from '../../lib/smoothHorizontalScroll'
 /** Fluid card sizes — scale with viewport between mobile min and desktop max. */
 const HERO_CARD_CSS_VARS = {
   '--hero-card-w': 'clamp(200px, 28vw, 400px)',
-  '--hero-card-w-wide': 'clamp(240px, 50.4vw, 720px)',
-  '--hero-card-h': '450px',
+  '--hero-card-w-wide': 'clamp(240px, 55.6vw, 800px)',
+  '--hero-card-h': '520px',
   '--hero-card-gap': 'clamp(8px, 1vw, 10px)',
 } as CSSProperties
 
@@ -88,7 +91,7 @@ function getNearestCardIndex(el: HTMLDivElement): number {
   return cards.length - 1
 }
 
-type HeroV2CardId = 'rezidential' | 'industrial' | 'medical' | 'maritim' | 'instalatori'
+type HeroV2CardId = 'oferta' | 'rezidential' | 'reduceri' | 'bess' | 'proiecte' | 'instalatori'
 
 type HomeHeroV2Props = {
   tr: HomeTranslations
@@ -106,7 +109,7 @@ function HeroListDot({ light = false }: { light?: boolean }) {
 
 const INST_BENEFIT_ICONS: LucideIcon[] = [BadgePercent, ShieldCheck, Truck, Headphones]
 
-const CARD_ORDER: HeroV2CardId[] = ['industrial', 'rezidential', 'maritim', 'medical', 'instalatori']
+const CARD_ORDER: HeroV2CardId[] = ['oferta', 'reduceri', 'bess', 'proiecte', 'instalatori']
 
 /** Homepage hero v2 — fluid card slider; sizes scale with viewport (clamp). */
 export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
@@ -137,6 +140,8 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
       noOverlay?: boolean
       /** Residential card: product title, badges, price and order CTA on the right. */
       productHeroOverlay?: boolean
+      /** July promo offer — split image/details card (same as welcome modal). */
+      promoOfferHeroOverlay?: boolean
       /** Discount card: structured overlay with eligible groups. */
       discountHeroOverlay?: boolean
       /** Medical card: BESS Cabinet product overlay. */
@@ -149,6 +154,28 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
       height?: string
     }[] = [
       {
+        id: 'oferta',
+        title: tr.promoModalTitleLine1,
+        buttonLabel: tr.promoModalCtaPrimary,
+        image: '/images/home/offer-baterino.jpg',
+        to: '/produse/baterii-solare/20kwh-2-x-10kwh-ecohome-10-10kwh',
+        promoOfferHeroOverlay: true,
+        width: '800px',
+        noDarkOverlay: true,
+      },
+      {
+        id: 'reduceri',
+        title: tr.heroV2Card2Title,
+        subtitle: tr.heroV2Card2Subtitle,
+        buttonLabel: tr.heroV2Card2Cta,
+        image: '/images/slider2/slide1.jpg',
+        to: '/reduceri',
+        discountHeroOverlay: true,
+        width: '400px',
+        height: '520px',
+        noDarkOverlay: true,
+      },
+      {
         id: 'rezidential',
         title: tr.heroMobile0Title,
         buttonLabel: tr.heroCardCta,
@@ -158,37 +185,25 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         width: '600px',
       },
       {
-        id: 'industrial',
-        title: tr.heroV2Card2Title,
-        subtitle: tr.heroV2Card2Subtitle,
-        buttonLabel: tr.heroV2Card2Cta,
-        image: '/images/slider2/slide1.jpg',
-        to: '/reduceri',
-        discountHeroOverlay: true,
-        width: '300px',
-        height: '450px',
-        noDarkOverlay: true,
-      },
-      {
-        id: 'medical',
+        id: 'bess',
         title: tr.heroV2MedProductTitle,
         buttonLabel: tr.heroV2MedCta,
         image: '/images/slider2/slide4-261kwh-bess.jpg',
         to: '/divizii/medical',
         medicalHeroOverlay: true,
-        width: '600px',
+        width: '800px',
         noDarkOverlay: true,
       },
       {
-        id: 'maritim',
+        id: 'proiecte',
         title: tr.heroV2Card3Title,
         subtitle: tr.heroV2Card3Subtitle,
         buttonLabel: tr.heroV2Card3Cta,
         image: '/images/slider2/slider3.jpg',
         to: '/studii-de-caz',
         multilineTitle: true,
-        width: '300px',
-        height: '450px',
+        width: '400px',
+        height: '520px',
         noDarkOverlay: true,
       },
       {
@@ -199,7 +214,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         to: '/instalatori',
         instalatoriHeroOverlay: true,
         noDarkOverlay: true,
-        width: '600px',
+        width: '800px',
       },
     ]
     return CARD_ORDER.map((id) => base.find((c) => c.id === id)!)
@@ -357,11 +372,14 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   const showProductHeroOverlay = (card: (typeof cards)[number]) =>
     card.id === 'rezidential' && card.productHeroOverlay === true
 
+  const showPromoOfferHeroOverlay = (card: (typeof cards)[number]) =>
+    card.id === 'oferta' && card.promoOfferHeroOverlay === true
+
   const showDiscountHeroOverlay = (card: (typeof cards)[number]) =>
-    card.id === 'industrial' && card.discountHeroOverlay === true
+    card.id === 'reduceri' && card.discountHeroOverlay === true
 
   const showMedicalHeroOverlay = (card: (typeof cards)[number]) =>
-    card.id === 'medical' && card.medicalHeroOverlay === true
+    card.id === 'bess' && card.medicalHeroOverlay === true
 
   const showInstalatoriHeroOverlay = (card: (typeof cards)[number]) =>
     card.id === 'instalatori' && card.instalatoriHeroOverlay === true
@@ -369,6 +387,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   const showCardContent = (card: (typeof cards)[number]) =>
     !card.noOverlay &&
     !showProductHeroOverlay(card) &&
+    !showPromoOfferHeroOverlay(card) &&
     !showDiscountHeroOverlay(card) &&
     !showMedicalHeroOverlay(card) &&
     !showInstalatoriHeroOverlay(card)
@@ -461,10 +480,13 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   }
                 : undefined
             }
-            className={`group relative flex-shrink-0 overflow-hidden bg-zinc-300 transition-shadow duration-300 hover:shadow-[0_6px_20px_rgba(0,0,0,0.28)] ${
-              showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
-                ? 'rounded-xl'
-                : 'rounded-[10px]'
+            className={`group relative flex-shrink-0 overflow-hidden transition-shadow duration-300 hover:shadow-[0_6px_20px_rgba(0,0,0,0.28)] ${
+              showProductHeroOverlay(card) ||
+              showMedicalHeroOverlay(card) ||
+              showInstalatoriHeroOverlay(card) ||
+              showPromoOfferHeroOverlay(card)
+                ? 'rounded-xl bg-white'
+                : 'rounded-[10px] bg-zinc-300'
             } ${
               card.height ? '' : 'h-[var(--hero-card-h)]'
             } ${
@@ -477,19 +499,27 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               ...(card.height ? { height: card.height } : {}),
             }}
           >
-            <img
-              src={card.image}
-              alt={card.title.replace(/\n/g, ' ')}
-              draggable={false}
-              fetchPriority={i === 0 ? 'high' : undefined}
-              className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
-                showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
-                  ? 'object-[right_center]'
-                  : ''
-              }`}
-            />
+            {!showPromoOfferHeroOverlay(card) ? (
+              <img
+                src={card.image}
+                alt={card.title.replace(/\n/g, ' ')}
+                draggable={false}
+                fetchPriority={i === 0 ? 'high' : undefined}
+                className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
+                  showProductHeroOverlay(card) || showMedicalHeroOverlay(card) || showInstalatoriHeroOverlay(card)
+                    ? 'object-[right_center]'
+                    : ''
+                }`}
+              />
+            ) : null}
             {!showDarkOverlay(card) ? null : <div className="absolute inset-0 bg-black/45 pointer-events-none" />}
-            {showProductHeroOverlay(card) ? (
+            {showPromoOfferHeroOverlay(card) ? (
+              <HomeHeroPromoOfferCard
+                tr={tr}
+                isDragging={isDragging}
+                productLink={card.to ?? '/produse/baterii-solare/20kwh-2-x-10kwh-ecohome-10-10kwh'}
+              />
+            ) : showProductHeroOverlay(card) ? (
               <>
                 <div
                   className="absolute inset-0 pointer-events-none rounded-xl"
@@ -542,60 +572,11 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                 </div>
               </>
             ) : showMedicalHeroOverlay(card) ? (
-              <>
-                <div
-                  className="absolute inset-0 pointer-events-none rounded-xl"
-                  style={{
-                    background:
-                      'linear-gradient(to right, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.38) 46%, rgba(0, 0, 0, 0.08) 58%, transparent 68%)',
-                  }}
-                  aria-hidden
-                />
-                <span className="absolute top-4 right-4 z-[3] inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black font-['Inter'] [text-shadow:none] pointer-events-none">
-                  {tr.heroV2MedStockTag}
-                </span>
-                <div
-                  className="absolute inset-y-0 left-0 z-[2] flex h-full w-[54%] min-w-0 flex-col justify-center px-8 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]"
-                >
-                  <p className="mb-2 text-sm font-semibold text-white/90 font-['Inter']">{tr.heroV2MedEyebrow}</p>
-                  <h3 className="m-0 text-[clamp(1.5rem,2.3vw,1.875rem)] font-bold leading-tight text-white font-['Inter']">
-                    {tr.heroV2MedProductTitle}
-                  </h3>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {medSpecs.map(({ label, value }) => (
-                      <div
-                        key={label}
-                        className="rounded-md border border-white/30 bg-white/20 px-2.5 py-2 backdrop-blur-md"
-                      >
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-white/70 font-['Inter']">
-                          {label}
-                        </p>
-                        <p className="mt-0.5 text-sm font-semibold leading-tight text-white font-['Inter'] tabular-nums">
-                          {value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <ul className="mt-4 space-y-2">
-                    {medHighlights.map((label) => (
-                      <li key={label} className="flex items-start gap-2.5 text-sm text-white/90 font-['Inter']">
-                        <HeroListDot light />
-                        {label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Link
-                  to={card.to!}
-                  className={`absolute bottom-6 right-6 z-[3] inline-flex h-9 items-center justify-center rounded-[8px] bg-white px-4 text-xs font-bold uppercase text-black font-['Inter'] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
-                    isDragging ? 'pointer-events-none' : 'pointer-events-auto'
-                  }`}
-                >
-                  {tr.heroV2MedCta}
-                </Link>
-              </>
+              <HomeHeroMedCard
+                tr={tr}
+                isDragging={isDragging}
+                productLink={card.to ?? '/divizii/medical'}
+              />
             ) : showDiscountHeroOverlay(card) ? (
                 <div className="absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] pointer-events-none">
                   <div className="flex flex-col items-center gap-1 text-center [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
@@ -624,53 +605,14 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   </div>
                 </div>
             ) : showInstalatoriHeroOverlay(card) ? (
-              <>
-                <div
-                  className="absolute inset-0 pointer-events-none rounded-xl"
-                  style={{
-                    background:
-                      'linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.42) 55%, rgba(0, 0, 0, 0.05) 75%, transparent 85%)',
-                  }}
-                  aria-hidden
-                />
-                <div className="absolute inset-y-0 left-0 z-[2] flex h-full w-[82%] min-w-0 flex-col justify-center px-7 py-8 pointer-events-none [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
-                  <p className="mb-2 text-xs font-medium tracking-wide text-white/75 font-['Inter'] sm:text-sm">
-                    {tr.heroV2InstLead}
-                  </p>
-                  <h3 className="m-0 text-[clamp(1.125rem,2.2vw,1.5rem)] font-bold leading-tight uppercase text-white font-['Inter']">
-                    {tr.heroV2InstTitle}
-                  </h3>
-
-                  <div className="mt-3 w-full rounded-md border border-white/80 bg-white/20 px-3.5 py-3 backdrop-blur-md [text-shadow:none] sm:px-4 sm:py-3.5">
-                    <ul className="space-y-2.5">
-                      {instBenefits.map((label, index) => {
-                        const Icon = INST_BENEFIT_ICONS[index]
-                        return (
-                          <li
-                            key={label}
-                            className="flex items-start gap-2 text-xs leading-snug text-white/90 font-['Inter'] sm:text-sm sm:leading-relaxed"
-                          >
-                            <Icon className="mt-0.5 size-4 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
-                            {label}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-
-                  <Link
-                    to={card.to!}
-                    className={`mt-4 inline-flex h-10 items-center justify-center self-start rounded-[8px] bg-white px-5 text-sm font-bold uppercase text-black font-['Inter'] [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors ${
-                      isDragging ? 'pointer-events-none' : 'pointer-events-auto'
-                    }`}
-                  >
-                    {tr.heroV2InstCta}
-                  </Link>
-                </div>
-              </>
+              <HomeHeroInstCard
+                tr={tr}
+                isDragging={isDragging}
+                productLink={card.to ?? '/instalatori'}
+              />
             ) : showCardContent(card) ? (
             <div className={`absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] ${isDragging ? 'pointer-events-none' : ''}`}>
-              {card.id === 'maritim' ? (
+              {card.id === 'proiecte' ? (
                 <div className="flex flex-col items-center gap-1 text-center">
                   <img
                     src="/images/lithtech/logo-baterino-pro-white.png"
@@ -702,7 +644,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               {card.subtitle ? (
                 <p
                   className={`text-white text-[clamp(0.875rem,2.75vw,1.125rem)] font-normal font-['Inter'] leading-snug normal-case max-w-[min(320px,94%)] ${
-                    card.id === 'maritim' ? 'whitespace-pre-line' : ''
+                    card.id === 'proiecte' ? 'whitespace-pre-line' : ''
                   }`}
                 >
                   {card.subtitle}

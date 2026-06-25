@@ -39,6 +39,8 @@ export type ProduseTranslations = {
   catalogDisponibilParteneriPrice: string
   /** Residential card under price; `{pct}` = VAT % */
   catalogIncludesVatWithPct: string
+  /** Residential card under price; `{price}` = net amount + currency */
+  catalogPretFaraTva: string
   /** Residential card image corner */
   catalogBadgeStocCategory: string
   catalogBadgeLivrareCategory: string
@@ -97,6 +99,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     disponibilPentruParteneri: 'VEZI DETALII',
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
     catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogPretFaraTva: 'Preț fără TVA: {price}',
     catalogBadgeStocCategory: 'Stoc',
     catalogBadgeLivrareCategory: 'Livrare',
     catalogBadgeTransportCategory: 'Transport',
@@ -171,6 +174,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     disponibilPentruParteneri: 'VIEW DETAILS',
     catalogDisponibilParteneriPrice: 'Available to partners',
     catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogPretFaraTva: 'Price excl. VAT: {price}',
     catalogBadgeStocCategory: 'Stock',
     catalogBadgeLivrareCategory: 'Delivery',
     catalogBadgeTransportCategory: 'Transport',

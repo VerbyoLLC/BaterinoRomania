@@ -49,15 +49,23 @@ export type CatalogProductCardBaseProps = {
   residentialPriceVatNote?: string | null
   /** When set, rendered over the product image (e.g. Stoc / Livrare badges). */
   imageOverlay?: ReactNode
+  /** When set, rendered top-right corner of the product image (e.g. kWh capacity tag). */
+  capacityTag?: string | null
   /** Residential: badge row directly above the price block (e.g. Transport). */
   priceAboveBadge?: ReactNode
   /** Merged onto outer shell (e.g. partner selected border). */
   shellClassName?: string
+  /** Catalog promo highlight — distinct card background (admin „Promotie”). */
+  promoted?: boolean
 }
 
 type CatalogProductCardProps = CatalogProductCardBaseProps & {
   variant: 'residential' | 'industrial'
+  capacityTag?: string | null
 }
+
+const PROMO_CARD_BG = 'bg-sky-50'
+const DEFAULT_CARD_BG = 'bg-[#f7f7f7]'
 
 function CatalogProductCard({
   variant,
@@ -80,8 +88,10 @@ function CatalogProductCard({
   residentialPriceHeading = null,
   residentialPriceVatNote = null,
   imageOverlay = null,
+  capacityTag = null,
   priceAboveBadge = null,
   shellClassName = '',
+  promoted = false,
 }: CatalogProductCardProps) {
   const isProduseDensity = density === 'produse'
   const isPartnerDensity = density === 'partner'
@@ -162,7 +172,7 @@ function CatalogProductCard({
   const imageBlock = (
     <div className="w-full">
       <div
-        className={`relative ${imageFrameH} w-full overflow-hidden ${imageTopRadius} bg-[#f7f7f7] flex items-center justify-center`}
+        className={`relative ${imageFrameH} w-full overflow-hidden ${imageTopRadius} ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} flex items-center justify-center`}
       >
         {imageLoadingPlaceholder && !imgLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -189,6 +199,13 @@ function CatalogProductCard({
         {imageOverlay ? (
           <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)]">
             {imageOverlay}
+          </div>
+        ) : null}
+        {capacityTag ? (
+          <div className={`pointer-events-none absolute z-10 ${isProduseDensity ? 'left-3 bottom-3' : 'right-3 top-3'}`}>
+            <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-sm font-bold text-white font-['Inter'] shadow-sm">
+              {capacityTag}
+            </span>
           </div>
         ) : null}
       </div>
@@ -326,7 +343,7 @@ function CatalogProductCard({
   )
 
   const defaultShell =
-    `flex flex-col overflow-hidden bg-[#f7f7f7] ${shellPb} transition-shadow duration-300 ` +
+    `flex flex-col overflow-hidden ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} ${shellPb} transition-shadow duration-300 ` +
     (isPartnerDensity
       ? 'min-h-[340px] rounded-xl border border-neutral-200 hover:border-neutral-300 hover:shadow-md'
       : 'rounded-[10px] hover:shadow-md')
@@ -360,14 +377,14 @@ export type ResidentialCatalogProductCardProps = CatalogProductCardBaseProps
 
 /** Catalog / grid card for residential products (image cover, Produse- or Home-style density). */
 export function ResidentialCatalogProductCard(props: ResidentialCatalogProductCardProps) {
-  return <CatalogProductCard {...props} variant="residential" />
+  return <CatalogProductCard {...props} variant="residential" capacityTag={props.capacityTag} />
 }
 
 export type IndustrialCatalogProductCardProps = CatalogProductCardBaseProps
 
 /** Catalog / grid card for industrial products (image contain in frame, same copy layout). */
 export function IndustrialCatalogProductCard(props: IndustrialCatalogProductCardProps) {
-  return <CatalogProductCard {...props} variant="industrial" />
+  return <CatalogProductCard {...props} variant="industrial" capacityTag={props.capacityTag} />
 }
 
 export type HorizontalFeatureBadge = {
@@ -407,6 +424,8 @@ export function HorizontalCatalogProductCard({
   ctaLabel,
   featureBadges = [],
   fallbackImageSrc,
+  capacityTag = null,
+  promoted = false,
 }: HorizontalCatalogProductCardProps) {
   const [imgLoaded, setImgLoaded] = useState(true)
   const [currentSrc, setCurrentSrc] = useState(imageSrc)
@@ -435,15 +454,15 @@ export function HorizontalCatalogProductCard({
 
   return (
     <div
-      className={`group overflow-hidden rounded-[10px] bg-[#f7f7f7] transition-shadow duration-300 hover:shadow-md ${shellClassName}`.trim()}
+      className={`group overflow-hidden rounded-[10px] ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} transition-shadow duration-300 hover:shadow-md h-full ${shellClassName}`.trim()}
     >
       <Link
         to={to!}
         state={linkState}
-        className="flex flex-col lg:flex-row lg:items-stretch w-full"
+        className="flex flex-col lg:flex-row lg:items-stretch w-full h-full"
       >
         {/* ── Image ── */}
-        <div className="relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] bg-[#f7f7f7] lg:h-auto lg:w-[38%] lg:min-h-[180px] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center">
+        <div className={`relative h-56 w-full flex-shrink-0 overflow-hidden rounded-t-[10px] ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} lg:h-auto lg:w-[38%] lg:min-h-[180px] lg:rounded-l-[10px] lg:rounded-tr-none flex items-center justify-center`}>
           <img
             src={currentSrc}
             alt={imageAlt}
@@ -462,36 +481,46 @@ export function HorizontalCatalogProductCard({
               ))}
             </div>
           )}
+          {/* kWh capacity tag — bottom-left */}
+          {capacityTag ? (
+            <div className="pointer-events-none absolute left-3 bottom-3 z-10">
+              <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-sm font-bold text-white font-['Inter'] shadow-sm">
+                {capacityTag}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* ── Content ── */}
-        <div className="flex flex-1 flex-col justify-center px-5 py-5 lg:px-5 lg:py-4">
+        <div className={`flex flex-1 flex-col justify-between px-5 py-5 lg:px-5 lg:py-4 ${promoted ? PROMO_CARD_BG : ''}`}>
+          {/* Top: title + specs + badges */}
+          <div>
+            <h3 className="text-lg font-bold font-['Inter'] leading-snug text-black lg:text-xl">
+              {title}
+            </h3>
+            {subtitleLine ? (
+              <p className="mt-1 text-sm font-medium font-['Inter'] leading-snug text-neutral-500">
+                {subtitleLine}
+              </p>
+            ) : null}
+            {!isIndustrial ? (
+              <div className="mt-1.5">
+                <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine1}</p>
+                <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine2}</p>
+              </div>
+            ) : null}
 
-          <h3 className="text-lg font-bold font-['Inter'] leading-snug text-black lg:text-xl">
-            {title}
-          </h3>
-          {subtitleLine ? (
-            <p className="mt-1 text-sm font-medium font-['Inter'] leading-snug text-neutral-500">
-              {subtitleLine}
-            </p>
-          ) : null}
-          {!isIndustrial ? (
-            <div className="mt-1.5">
-              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine1}</p>
-              <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine2}</p>
-            </div>
-          ) : null}
+            {/* Compact icon badges — transport, install, reduceri — guaranteed single row */}
+            {featureRow.length > 0 ? (
+              <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+                {featureRow.map((b, i) => (
+                  <HorizontalFeatureItem key={b.type} badge={b} showDivider={i < featureRow.length - 1} />
+                ))}
+              </div>
+            ) : null}
+          </div>
 
-          {/* Compact icon badges — transport, install, reduceri — guaranteed single row */}
-          {featureRow.length > 0 ? (
-            <div className="mt-2.5 flex items-center gap-3 flex-wrap">
-              {featureRow.map((b, i) => (
-                <HorizontalFeatureItem key={b.type} badge={b} showDivider={i < featureRow.length - 1} />
-              ))}
-            </div>
-          ) : null}
-
-          {/* Price / CTA */}
+          {/* Bottom: Price / CTA — always anchored to the bottom of the card */}
           {showDarkChip ? (
             <div className="mt-3">
               <span className="inline-flex items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white font-['Inter']">

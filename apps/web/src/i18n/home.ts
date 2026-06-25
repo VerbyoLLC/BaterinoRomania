@@ -62,14 +62,30 @@ export type HomeTranslations = {
   heroV2MedFeature1: string
   heroV2MedFeature2: string
   heroV2MedCta: string
+  heroV2MedCardTitleLine1: string
+  heroV2MedCardTitleLine2: string
+  heroV2MedCardTitleLine3: string
+  heroV2MedCardPriceNote: string
+  heroV2MedCardWarrantyTag: string
+  heroV2MedCardUseCaseNote: string
+  heroV2MedCardFeatureCooling: string
+  heroV2MedCardFeatureEfficiency: string
+  heroV2MedCardFeatureCert: string
+  heroV2MedCardFeatureWarranty: string
   /** Hero v2 – card 5 (partner / instalatori overlay) */
   heroV2InstTitle: string
   heroV2InstLead: string
   heroV2InstBenefit1: string
+  heroV2InstBenefit1Title: string
   heroV2InstBenefit2: string
+  heroV2InstBenefit2Title: string
   heroV2InstBenefit3: string
+  heroV2InstBenefit3Title: string
   heroV2InstBenefit4: string
+  heroV2InstBenefit4Title: string
   heroV2InstCta: string
+  heroV2InstIntro: string
+  heroV2InstNetworkTag: string
 
   // Hero – slider tabs
   heroSliderRez: string
@@ -134,6 +150,8 @@ export type HomeTranslations = {
   /** Residential catalog: label above public price */
   pretLabel: string
   catalogIncludesVatWithPct: string
+  /** Residential card under price; `{price}` = net amount + currency */
+  catalogPretFaraTva: string
   catalogBadgeStocCategory: string
   catalogBadgeLivrareCategory: string
   catalogBadgeTransportCategory: string
@@ -157,6 +175,41 @@ export type HomeTranslations = {
   welcomeModalSubtitle: string
   welcomeModalProfesionist: string
   welcomeModalClientFinal: string
+
+  // Home promo modal
+  promoModalStatus: string
+  promoModalImageTitle: string
+  heroPromoBadgeDiscount: string
+  heroPromoBadgeStock: string
+  heroPromoSpecsTitle: string
+  heroPromoBenefit1Subtitle: string
+  heroPromoBenefit2Subtitle: string
+  heroPromoBenefitCareTitle: string
+  heroPromoBenefitCareSubtitle: string
+  heroPromoPackageDescription: string
+  promoModalTitleLine1: string
+  promoModalTitleLine2: string
+  promoModalVatNote: string
+  promoModalDescription: string
+  promoModalSpecCapacityLabel: string
+  promoModalSpecCapacityValue: string
+  promoModalSpecConfigLabel: string
+  promoModalSpecConfigValue: string
+  promoModalSpecLifecycleLabel: string
+  promoModalSpecLifecycleValue: string
+  promoModalSpecConnectivityLabel: string
+  promoModalSpecConnectivityValue: string
+  promoModalBenefit1Title: string
+  promoModalBenefit1Subtitle: string
+  promoModalBenefit2Title: string
+  promoModalBenefit2Subtitle: string
+  promoModalBenefit3Title: string
+  promoModalBenefit3Subtitle: string
+  promoModalDeliveryTitle: string
+  promoModalDeliverySubtitle: string
+  promoModalCtaPrimary: string
+  promoModalCtaSpecs: string
+  promoModalFooter: string
 
   // Installed capacity counters
   capacitySectionEyebrow: string
@@ -307,14 +360,30 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroV2MedFeature1: 'Răcire cu lichid · Eficiență ≥99%',
     heroV2MedFeature2: 'Certificat IEC 61000 · Garanție 5/10 ani',
     heroV2MedCta: 'Detalii tehnice',
+    heroV2MedCardTitleLine1: 'BESS Industrial',
+    heroV2MedCardTitleLine2: 'Cabinet 261 kWh',
+    heroV2MedCardTitleLine3: 'la 260.453 RON',
+    heroV2MedCardPriceNote: 'Preț fără TVA',
+    heroV2MedCardWarrantyTag: '20 ani funcționare',
+    heroV2MedCardUseCaseNote: 'Peak shaving industrial, arbitraj de energie, backup la întreruperi de rețea, susținerea stațiilor de încărcare EV sau stocare pentru ferme solare și parcuri eoliene.',
+    heroV2MedCardFeatureCooling: 'Răcire cu lichid',
+    heroV2MedCardFeatureEfficiency: 'Eficiență ≥99%',
+    heroV2MedCardFeatureCert: 'Certificat IEC 61000',
+    heroV2MedCardFeatureWarranty: 'Garanție 10 ani',
 
     heroV2InstTitle: 'Devino Partener Baterino',
     heroV2InstLead: 'Mai mult profit. Zero complicații.',
-    heroV2InstBenefit1: 'Structură de preț orientată către parteneri',
+    heroV2InstBenefit1: 'Preț orientat către parteneri',
+    heroV2InstBenefit1Title: 'Marjă garantată',
     heroV2InstBenefit2: 'Preluăm responsabilitatea clientului final.',
-    heroV2InstBenefit3: 'Stocuri permanente cu livrare în maxim 48 de ore',
-    heroV2InstBenefit4: 'Service și suport tehnic în România, prin platforma Baterino.',
+    heroV2InstBenefit2Title: 'Zero risc',
+    heroV2InstBenefit3: 'Livrare în maximum 48 de ore',
+    heroV2InstBenefit3Title: 'Stoc permanent',
+    heroV2InstBenefit4: 'Service tehnic prin platforma Baterino.',
+    heroV2InstBenefit4Title: 'Suport dedicat',
     heroV2InstCta: 'Devino Partener',
+    heroV2InstIntro: 'Ne extindem rețeaua de parteneri la nivel național. Dacă vrei să devii partener Baterino în orașul tău, te ajutăm să crești fără riscuri și fără bătăi de cap.',
+    heroV2InstNetworkTag: 'Rețeaua România',
 
     heroSliderRez: 'REZIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
@@ -373,6 +442,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
     pretLabel: 'Preț',
     catalogIncludesVatWithPct: 'Include TVA {pct}%',
+    catalogPretFaraTva: 'Preț fără TVA: {price}',
     catalogBadgeStocCategory: 'Stoc',
     catalogBadgeLivrareCategory: 'Livrare',
     catalogBadgeTransportCategory: 'Transport',
@@ -396,6 +466,40 @@ const translations: Record<LangCode, HomeTranslations> = {
     welcomeModalSubtitle: 'În funcție de alegerea ta, îți vom oferi o experiență adaptată nevoilor tale profesionale.',
     welcomeModalProfesionist: 'DA, SUNT PROFESIONIST',
     welcomeModalClientFinal: 'NU, SUNT CLIENT FINAL',
+
+    promoModalStatus: 'OFERTĂ ACTIVĂ · STOC LIMITAT',
+    promoModalImageTitle: '24% REDUCERE',
+    heroPromoBadgeDiscount: '24% reducere',
+    heroPromoBadgeStock: 'Stoc limitat',
+    heroPromoSpecsTitle: 'Specificații complete pachet',
+    heroPromoBenefit1Subtitle: 'producător',
+    heroPromoBenefit2Subtitle: 'echipă în România',
+    heroPromoBenefitCareTitle: 'Baterino Care+',
+    heroPromoBenefitCareSubtitle: 'monitorizare inclusă',
+    heroPromoPackageDescription: 'Un pachet de 2 baterii de 10kWh LithTech fiecare, pentru o stocare dublă și o gestionare mai bună a energiei stocate.',
+    promoModalTitleLine1: '20 kWh de stocare,',
+    promoModalTitleLine2: 'la 14.300 RON',
+    promoModalVatNote: 'TVA inclus (21%)',
+    promoModalDescription: '2 baterii LithTech de 10 kWh fiecare.',
+    promoModalSpecCapacityLabel: 'CAPACITATE TOTALĂ',
+    promoModalSpecCapacityValue: '20.0 kWh',
+    promoModalSpecConfigLabel: 'CONFIGURAȚIE',
+    promoModalSpecConfigValue: '2 × 10.0 kWh',
+    promoModalSpecLifecycleLabel: 'DURATĂ DE VIAȚĂ',
+    promoModalSpecLifecycleValue: '6.000 cicluri',
+    promoModalSpecConnectivityLabel: 'CONECTIVITATE',
+    promoModalSpecConnectivityValue: 'Wi-Fi · Bluetooth',
+    promoModalBenefit1Title: '10 ani garanție',
+    promoModalBenefit1Subtitle: 'cea mai extinsă din România',
+    promoModalBenefit2Title: 'Suport local',
+    promoModalBenefit2Subtitle: 'echipă after-sales în România',
+    promoModalBenefit3Title: 'Baterino SWAP',
+    promoModalBenefit3Subtitle: 'baterie la schimb în service',
+    promoModalDeliveryTitle: 'Livrare gratuită',
+    promoModalDeliverySubtitle: 'oriunde în România',
+    promoModalCtaPrimary: 'Profită de ofertă',
+    promoModalCtaSpecs: 'Vezi specificații',
+    promoModalFooter: 'Stoc **limitat** · preț valabil până la epuizarea stocului',
 
     capacitySectionEyebrow: 'Experiență dovedită',
     capacitySectionTitle: 'Capacitate instalată în România',
@@ -539,14 +643,30 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroV2MedFeature1: 'Liquid cooling · Efficiency ≥99%',
     heroV2MedFeature2: 'IEC 61000 certified · 5/10 year warranty',
     heroV2MedCta: 'Technical details',
+    heroV2MedCardTitleLine1: 'BESS Industrial',
+    heroV2MedCardTitleLine2: 'Cabinet 261 kWh',
+    heroV2MedCardTitleLine3: 'at 260,453 RON',
+    heroV2MedCardPriceNote: 'excl. VAT',
+    heroV2MedCardWarrantyTag: '20 years operation',
+    heroV2MedCardUseCaseNote: 'Peak shaving, energy arbitrage, grid outage backup, EV charging station support, or storage for solar farms and wind parks.',
+    heroV2MedCardFeatureCooling: 'Liquid cooling',
+    heroV2MedCardFeatureEfficiency: 'Efficiency ≥99%',
+    heroV2MedCardFeatureCert: 'IEC 61000 certified',
+    heroV2MedCardFeatureWarranty: '10-year warranty',
 
     heroV2InstTitle: 'Become a Baterino Partner',
     heroV2InstLead: 'More profit. Zero hassle.',
-    heroV2InstBenefit1: 'Partner-oriented pricing structure',
+    heroV2InstBenefit1: 'Partner-oriented pricing',
+    heroV2InstBenefit1Title: 'Guaranteed margin',
     heroV2InstBenefit2: 'We take responsibility for the end customer.',
-    heroV2InstBenefit3: 'Permanent stock with delivery in up to 48 hours',
-    heroV2InstBenefit4: 'Service and technical support in Romania through the Baterino platform.',
+    heroV2InstBenefit2Title: 'Zero risk',
+    heroV2InstBenefit3: 'Delivery in up to 48 hours',
+    heroV2InstBenefit3Title: 'Permanent stock',
+    heroV2InstBenefit4: 'Technical support via Baterino platform.',
+    heroV2InstBenefit4Title: 'Dedicated support',
     heroV2InstCta: 'Become a Partner',
+    heroV2InstIntro: 'We are expanding our partner network nationwide. If you want to become a Baterino partner in your city, we help you grow with zero risk and zero hassle.',
+    heroV2InstNetworkTag: 'Romania Network',
 
     heroSliderRez: 'RESIDENTIAL',
     heroSliderInd: 'INDUSTRIAL',
@@ -605,6 +725,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogDisponibilParteneriPrice: 'Available to partners',
     pretLabel: 'Price',
     catalogIncludesVatWithPct: 'Includes VAT {pct}%',
+    catalogPretFaraTva: 'Price excl. VAT: {price}',
     catalogBadgeStocCategory: 'Stock',
     catalogBadgeLivrareCategory: 'Delivery',
     catalogBadgeTransportCategory: 'Transport',
@@ -628,6 +749,40 @@ const translations: Record<LangCode, HomeTranslations> = {
     welcomeModalSubtitle: 'Depending on your choice, we will offer you an experience tailored to your professional needs.',
     welcomeModalProfesionist: 'YES, I AM A PROFESSIONAL',
     welcomeModalClientFinal: 'NO, I AM AN END CUSTOMER',
+
+    promoModalStatus: 'ACTIVE OFFER · LIMITED STOCK',
+    promoModalImageTitle: '24% OFF',
+    heroPromoBadgeDiscount: '24% off',
+    heroPromoBadgeStock: 'Limited stock',
+    heroPromoSpecsTitle: 'Full package specifications',
+    heroPromoBenefit1Subtitle: 'manufacturer',
+    heroPromoBenefit2Subtitle: 'team in Romania',
+    heroPromoBenefitCareTitle: 'Baterino Care+',
+    heroPromoBenefitCareSubtitle: 'monitoring included',
+    heroPromoPackageDescription: 'A package of 2 LithTech 10kWh batteries each, for double storage and better management of stored energy.',
+    promoModalTitleLine1: '20 kWh storage,',
+    promoModalTitleLine2: 'at 14,300 RON',
+    promoModalVatNote: 'VAT included (21%)',
+    promoModalDescription: '2 LithTech 10 kWh batteries each.',
+    promoModalSpecCapacityLabel: 'TOTAL CAPACITY',
+    promoModalSpecCapacityValue: '20.0 kWh',
+    promoModalSpecConfigLabel: 'CONFIGURATION',
+    promoModalSpecConfigValue: '2 × 10.0 kWh',
+    promoModalSpecLifecycleLabel: 'LIFESPAN',
+    promoModalSpecLifecycleValue: '6,000 cycles',
+    promoModalSpecConnectivityLabel: 'CONNECTIVITY',
+    promoModalSpecConnectivityValue: 'Wi-Fi · Bluetooth',
+    promoModalBenefit1Title: '10-year warranty',
+    promoModalBenefit1Subtitle: 'the most extensive in Romania',
+    promoModalBenefit2Title: 'Local support',
+    promoModalBenefit2Subtitle: 'after-sales team in Romania',
+    promoModalBenefit3Title: 'Baterino SWAP',
+    promoModalBenefit3Subtitle: 'replacement battery during service',
+    promoModalDeliveryTitle: 'Free delivery',
+    promoModalDeliverySubtitle: 'anywhere in Romania',
+    promoModalCtaPrimary: 'Get the offer',
+    promoModalCtaSpecs: 'View specifications',
+    promoModalFooter: 'Limited **stock** · price valid until stock runs out',
 
     capacitySectionEyebrow: 'Proven track record',
     capacitySectionTitle: 'Installed capacity in Romania',

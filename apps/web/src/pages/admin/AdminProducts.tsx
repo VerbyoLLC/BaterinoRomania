@@ -140,6 +140,7 @@ export default function AdminProducts() {
   const [catalogInstallBadge, setCatalogInstallBadge] = useState<'baterino' | 'partner'>('baterino')
   const [promovarePeContClient, setPromovarePeContClient] = useState(false)
   const [promovarePeContPartener, setPromovarePeContPartener] = useState(false)
+  const [promovarePromotie, setPromovarePromotie] = useState(false)
   const [adminReducerPrograms, setAdminReducerPrograms] = useState<ReducereProgramRow[]>([])
   const [reducereProgramsLoadError, setReducereProgramsLoadError] = useState<string | null>(null)
   const [reducereProgramIds, setReducereProgramIds] = useState<string[]>([])
@@ -425,6 +426,7 @@ export default function AdminProducts() {
     setCatalogInstallBadge(ci === 'partner' ? 'partner' : 'baterino')
     setPromovarePeContClient((row as { promovarePeContClient?: boolean }).promovarePeContClient === true)
     setPromovarePeContPartener((row as { promovarePeContPartener?: boolean }).promovarePeContPartener === true)
+    setPromovarePromotie((row as { promovarePromotie?: boolean }).promovarePromotie === true)
     setReducereProgramIds(normalizeProductReducereProgramIds(row))
     setSeoTitle(String((row as { seoTitle?: string }).seoTitle || ''))
     setSeoDescription(String((row as { seoDescription?: string }).seoDescription || ''))
@@ -536,6 +538,7 @@ export default function AdminProducts() {
     setCatalogInstallBadge('baterino')
     setPromovarePeContClient(false)
     setPromovarePeContPartener(false)
+    setPromovarePromotie(false)
     setReducereProgramIds([])
     setSelectedProductModelId('')
     setSelectedSeries('')
@@ -1125,6 +1128,7 @@ export default function AdminProducts() {
       catalogInstallBadge: tipProdus === 'industrial' ? catalogInstallBadge : null,
       promovarePeContClient,
       promovarePeContPartener,
+      promovarePromotie,
       reducereProgramIds: tipProdus === 'rezidential' ? [...new Set(reducereProgramIds)] : [],
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
@@ -1591,7 +1595,7 @@ export default function AdminProducts() {
                   <h3 className="text-sm font-bold font-['Inter'] text-gray-900 m-0">Promovare pe cont</h3>
                   <AdminInfoTooltip
                     label="Informații promovare pe cont"
-                    text="Acest produs va fi afișat cu prioritate în contul selectat (client sau partener)."
+                    text="Client / Partener: prioritate în contul selectat. Promotie: card evidențiat în catalog (Acasă, Produse) și afișat primul în listă."
                   />
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
@@ -1612,6 +1616,15 @@ export default function AdminProducts() {
                       className="h-4 w-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900"
                     />
                     Partener
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 font-['Inter'] text-sm text-gray-800">
+                    <input
+                      type="checkbox"
+                      checked={promovarePromotie}
+                      onChange={(e) => setPromovarePromotie(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-slate-900 focus:ring-slate-900"
+                    />
+                    Promotie
                   </label>
                 </div>
               </div>
