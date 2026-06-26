@@ -1345,18 +1345,15 @@ app.post('/api/auth/google', googleAuthLimiter, async (req, res) => {
       user = await prisma.user.findUnique({ where: { email } })
     }
 
+    // A previously deleted account (orders already archived, never reinstated) must not block the
+    // user from using their email again. Because the Google identity is verified and the old
+    // account is unrecoverable, any Google sign-in — login OR signup — fully erases the leftover
+    // account and provisions a fresh one below.
+    let reRegisterAfterDelete = false
     if (user && user.deletedAt) {
-      if (intentSignup) {
-        // Account was deleted (orders already archived). Free the email/googleSub by fully erasing
-        // the leftover account, then fall through to create a fresh account below.
-        await eraseUserAccount(prisma, user.id)
-        user = null
-      } else {
-        return res.status(401).json({
-          error: 'Acest cont a fost șters.',
-          code: 'ACCOUNT_DELETED',
-        })
-      }
+      await eraseUserAccount(prisma, user.id)
+      user = null
+      reRegisterAfterDelete = true
     }
 
     if (user) {
@@ -1420,8 +1417,9 @@ app.post('/api/auth/google', googleAuthLimiter, async (req, res) => {
       return res.json(out)
     }
 
-    /** Pagina `/login`: fără creare cont nou — doar conturi existente (googleSub sau email legat). */
-    if (intentLogin) {
+    /** Pagina `/login`: fără creare cont nou — doar conturi existente (googleSub sau email legat).
+     *  Excepție: revenirea după ștergerea contului (identitate Google verificată) re-creează contul. */
+    if (intentLogin && !reRegisterAfterDelete) {
       return res.status(404).json({
         error:
           'Nu există un cont Baterino asociat cu acest cont Google. Înregistrează-te mai întâi sau folosește email și parola.',
@@ -1429,8 +1427,10 @@ app.post('/api/auth/google', googleAuthLimiter, async (req, res) => {
       })
     }
 
+    // Terms are collected on the signup screen. A delete-triggered re-registration can arrive from
+    // the login screen (no checkbox); the prior account had already accepted, so don't block it.
     const acceptedTerms = body.acceptedTerms === true
-    if (!acceptedTerms) {
+    if (!acceptedTerms && !reRegisterAfterDelete) {
       return res.status(400).json({
         error:
           'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a crea contul cu Google.',
