@@ -1016,7 +1016,7 @@ export default function ReturnareProduse() {
               {renderInlineBold(tr.introBody)}{' '}
               {tr.introTermsLead}
               <Link
-                to="/termeni-si-conditii#politica-retur"
+                to="/politica-de-retur"
                 className="font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-700"
               >
                 {tr.introTermsLinkLabel}
@@ -2108,7 +2108,7 @@ export default function ReturnareProduse() {
                       {sp.chkPolicyPrefix}
                     </label>
                     <Link
-                      to="/termeni-si-conditii#politica-retur"
+                      to="/politica-de-retur"
                       className="font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-700"
                     >
                       {sp.chkPolicyLinkLabel}

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getTermeniSiConditiiTranslations } from '../i18n/termeni-si-conditii'
 import SEO from '../components/SEO'
@@ -29,11 +30,16 @@ export default function TermeniSiConditii() {
 
           <section id="politica-retur" className="scroll-mt-24">
             <h2 className="text-xl font-bold text-slate-900 font-['Inter'] sm:text-2xl">{tr.returnPolicyTitle}</h2>
-            <div className="mt-4 space-y-4 text-neutral-600 text-base font-['Inter'] leading-relaxed lg:text-lg lg:leading-8">
-              {tr.returnPolicyParagraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
-            </div>
+            <p className="mt-4 text-neutral-600 text-base font-['Inter'] leading-relaxed lg:text-lg lg:leading-8">
+              {tr.returnPolicyLinkLead}{' '}
+              <Link
+                to="/politica-de-retur"
+                className="font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-700"
+              >
+                {tr.returnPolicyLinkLabel}
+              </Link>
+              {tr.returnPolicyLinkSuffix}
+            </p>
           </section>
         </div>
       </article>

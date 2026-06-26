@@ -7,7 +7,9 @@ export type TermeniSiConditiiTranslations = {
   intro: string
   /** Ancoră pagină: #politica-retur */
   returnPolicyTitle: string
-  returnPolicyParagraphs: string[]
+  returnPolicyLinkLead: string
+  returnPolicyLinkLabel: string
+  returnPolicyLinkSuffix: string
 }
 
 const translations: Record<LangCode, TermeniSiConditiiTranslations> = {
@@ -18,13 +20,9 @@ const translations: Record<LangCode, TermeniSiConditiiTranslations> = {
     pageTitle: 'Termeni și Condiții',
     intro: 'Prin accesarea și utilizarea site-ului Baterino România, acceptați următorii termeni și condiții. Vă rugăm să citiți cu atenție acest document înainte de a utiliza serviciile noastre.',
     returnPolicyTitle: 'Politica de retur',
-    returnPolicyParagraphs: [
-      'Pentru consumatorii persoane fizice care achiziționează online, dreptul de retragere din contractul la distanță este reglementat de legislația aplicabilă în România (inclusiv OUG nr. 34/2014 privind drepturile consumatorilor în contractele la distanță).',
-      'Baterino permite solicitarea returului produsului în termen de 15 zile calendaristice de la data primirii produsului de către dumneavoastră (sau de o terță parte desemnată de dumneavoastră), în limitele prevăzute de lege și în conformitate cu politica comercială afișată pe site.',
-      'Produsele returnate trebuie să respecte condițiile legale și comerciale privind starea produsului, ambalajului și accesoriilor. La primire, Baterino poate verifica conformitatea cu aceste condiții. Detalii și documentație (ex. fotografii) pot fi solicitate prin formularul de retur.',
-      'După recepționarea coletului de retur și confirmarea conformității cu politica de retur, rambursarea contravalorii produsului se realizează, de regulă, în maximum 5 zile lucrătoare de la această confirmare, prin aceeași metodă de plată folosită la comandă sau prin transfer bancar către un cont indicat de dumneavoastră, după caz.',
-      'Pentru a iniția un retur, utilizați pagina „Returnare produse” din site, completați pașii indicați și transmiteți cererea. Echipa Baterino vă poate confirma primirea cererii și pașii următori (inclusiv adresa de expediere pentru retur, dacă este cazul).',
-    ],
+    returnPolicyLinkLead: 'Condițiile complete privind returnarea produselor sunt publicate separat:',
+    returnPolicyLinkLabel: 'Politica de Retur',
+    returnPolicyLinkSuffix: '.',
   },
   en: {
     seoTitle: 'Terms and Conditions – Baterino Romania',
@@ -32,13 +30,9 @@ const translations: Record<LangCode, TermeniSiConditiiTranslations> = {
     pageTitle: 'Terms and Conditions',
     intro: 'By accessing and using the Baterino Romania website, you accept the following terms and conditions. Please read this document carefully before using our services.',
     returnPolicyTitle: 'Return policy',
-    returnPolicyParagraphs: [
-      'For individual consumers who purchase online, the right of withdrawal from distance contracts is governed by applicable Romanian law (including Government Emergency Ordinance no. 34/2014 on consumer rights in distance contracts).',
-      'Baterino allows you to request a return within 15 calendar days from the date you (or a third party designated by you) physically receive the product, within the limits set by law and in line with the commercial policy published on the website.',
-      'Returned products must meet the legal and commercial requirements regarding product condition, packaging and accessories. On receipt, Baterino may verify compliance. Details and documentation (e.g. photos) may be requested via the return form.',
-      'After we receive the return parcel and confirm compliance with the return policy, we will refund the product value, as a rule within 5 business days from that confirmation, using the same payment method as the original order or by bank transfer to an account you provide, as applicable.',
-      'To start a return, use the “Product returns” page on the website, follow the steps and submit your request. The Baterino team may confirm receipt and next steps (including a return shipping address where applicable).',
-    ],
+    returnPolicyLinkLead: 'The full product return conditions are published separately:',
+    returnPolicyLinkLabel: 'Return Policy',
+    returnPolicyLinkSuffix: '.',
   },
 }
 

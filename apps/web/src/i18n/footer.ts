@@ -25,6 +25,7 @@ export type FooterTranslations = {
   termeniConditii: string
   termeniReduceri: string
   politicaConfidentialitate: string
+  politicaRetur: string
   // Divizii
   rezidential: string
   industrial: string
@@ -62,7 +63,8 @@ const translations: Record<LangCode, FooterTranslations> = {
     suportClienti: 'Suport Clienti',
     termeniConditii: 'Termeni si Conditii',
     termeniReduceri: 'Termeni Reduceri',
-    politicaConfidentialitate: 'Politica de confidentialitate',
+    politicaConfidentialitate: 'Politica Confidentialitate',
+    politicaRetur: 'Politica de Retur',
     rezidential: 'Rezidential',
     industrial: 'Industrial',
     medical: 'Medical',
@@ -71,8 +73,8 @@ const translations: Record<LangCode, FooterTranslations> = {
     instalatori: 'Instalatori',
     distribuitori: 'Distribuitori',
     centreMedicale: 'Centre Medicale',
-    presa: 'Noutăți - Perspective - Progres',
-    studiiDeCaz: 'Studii de caz',
+    presa: 'Blog',
+    studiiDeCaz: 'Proiecte Industriale',
     contact: 'Contact',
   },
   en: {
@@ -96,6 +98,7 @@ const translations: Record<LangCode, FooterTranslations> = {
     termeniConditii: 'Terms and Conditions',
     termeniReduceri: 'Discount Terms',
     politicaConfidentialitate: 'Privacy Policy',
+    politicaRetur: 'Return Policy',
     rezidential: 'Residential',
     industrial: 'Industrial',
     medical: 'Medical',
@@ -104,8 +107,8 @@ const translations: Record<LangCode, FooterTranslations> = {
     instalatori: 'Installers',
     distribuitori: 'Distributors',
     centreMedicale: 'Medical Centers',
-    presa: 'News - Perspectives - Progress',
-    studiiDeCaz: 'Case studies',
+    presa: 'Blog',
+    studiiDeCaz: 'Industrial Projects',
     contact: 'Contact',
   },
 }

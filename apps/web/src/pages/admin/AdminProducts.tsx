@@ -11,6 +11,7 @@ import {
   getProductCategories,
   updateProductStatus,
   deleteProduct,
+  duplicateProduct,
   normalizeProductReducereProgramIds,
   type AdminProductModelRow,
   type AdminProduct,
@@ -66,6 +67,7 @@ export default function AdminProducts() {
   const [panelOpen, setPanelOpen] = useState(false)
   const [isLive, setIsLive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [categoryError, setCategoryError] = useState(false)
@@ -1222,6 +1224,21 @@ export default function AdminProducts() {
     }
   }
 
+  const handleDuplicate = async (id: string) => {
+    if (duplicatingId) return
+    setSaveError(null)
+    setDuplicatingId(id)
+    try {
+      await duplicateProduct(id)
+      setSaveSuccess(true)
+      await fetchProducts()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Eroare la duplicare.')
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Sigur ștergi acest produs?')) return
     setSaveError(null)
@@ -1383,6 +1400,14 @@ export default function AdminProducts() {
                           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold font-['Inter'] hover:bg-neutral-50"
                         >
                           Editează
+                        </button>
+                        <button
+                          type="button"
+                          disabled={duplicatingId === p.id}
+                          onClick={() => void handleDuplicate(p.id)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold font-['Inter'] hover:bg-neutral-50 disabled:opacity-50"
+                        >
+                          {duplicatingId === p.id ? 'Se duplică…' : 'Duplică'}
                         </button>
                         {p.status === 'draft' ? (
                           <button

@@ -1,10 +1,10 @@
 import { Fragment, useMemo } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import {
-  getPoliticaConfidentialitateTranslations,
-  type PoliticaConfidentialitateBlock,
-  type PoliticaConfidentialitateSection,
-} from '../i18n/politica-confidentialitate'
+  getPoliticaDeReturTranslations,
+  type PoliticaDeReturBlock,
+  type PoliticaDeReturSection,
+} from '../i18n/politica-de-retur'
 import SEO from '../components/SEO'
 
 type TocItem = {
@@ -17,7 +17,7 @@ function sectionAnchorId(title: string): string {
   return match ? `section-${match[1]}` : 'section-intro'
 }
 
-function buildToc(sections: PoliticaConfidentialitateSection[]): TocItem[] {
+function buildToc(sections: PoliticaDeReturSection[]): TocItem[] {
   return sections.map((section) => ({
     id: sectionAnchorId(section.title),
     label: section.title,
@@ -25,7 +25,7 @@ function buildToc(sections: PoliticaConfidentialitateSection[]): TocItem[] {
 }
 
 function RichText({ text }: { text: string }) {
-  const segments = text.split(/(\*\*[^*]+\*\*|https?:\/\/[^\s]+)/g)
+  const segments = text.split(/(\*\*[^*]+\*\*)/g)
   return (
     <>
       {segments.map((part, i) => {
@@ -36,26 +36,13 @@ function RichText({ text }: { text: string }) {
             </strong>
           )
         }
-        if (/^https?:\/\//.test(part)) {
-          return (
-            <a
-              key={i}
-              href={part}
-              className="text-slate-900 underline underline-offset-2 hover:text-slate-700"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {part.replace(/^https?:\/\//, '')}
-            </a>
-          )
-        }
         return <Fragment key={i}>{part}</Fragment>
       })}
     </>
   )
 }
 
-function BlockContent({ block }: { block: PoliticaConfidentialitateBlock }) {
+function BlockContent({ block }: { block: PoliticaDeReturBlock }) {
   if (block.kind === 'ul') {
     return (
       <ul className="mt-4 list-disc space-y-2 pl-5 text-neutral-600 text-base font-['Inter'] leading-relaxed lg:text-lg lg:leading-8">
@@ -97,9 +84,9 @@ function TableOfContents({ title, items }: { title: string; items: TocItem[] }) 
   )
 }
 
-export default function PoliticaConfidentialitate() {
+export default function PoliticaDeRetur() {
   const { language } = useLanguage()
-  const tr = getPoliticaConfidentialitateTranslations(language.code)
+  const tr = getPoliticaDeReturTranslations(language.code)
   const tocItems = useMemo(() => buildToc(tr.sections), [tr.sections])
 
   return (
@@ -107,7 +94,7 @@ export default function PoliticaConfidentialitate() {
       <SEO
         title={tr.seoTitle}
         description={tr.seoDesc}
-        canonical="/politica-confidentialitate"
+        canonical="/politica-de-retur"
         lang={language.code}
       />
 

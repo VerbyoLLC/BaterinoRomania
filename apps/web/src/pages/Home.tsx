@@ -38,6 +38,7 @@ import {
 } from '../components/product/CatalogProductCard'
 import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
 import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
+import { sortCatalogProducts } from '../lib/catalogProductSort'
 
 function renderBaterinoGlobalLink(text: string) {
   return text.split('Baterino Global').map((part, i, arr) =>
@@ -187,10 +188,19 @@ export default function Home() {
 
   useEffect(() => {
     if (!cookiePreference.decided) return
+    if (window.innerWidth < 768) return
     if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PROMO_MODAL_STORAGE_KEY)) return
     const timer = setTimeout(() => setShowPromoModal(true), 1000)
     return () => clearTimeout(timer)
   }, [cookiePreference.decided])
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < 768) setShowPromoModal(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const closeWelcomeModal = () => {
     if (typeof sessionStorage !== 'undefined') {
@@ -223,17 +233,6 @@ export default function Home() {
 
 
   const featuredProducts = useMemo(() => {
-    const getNominalVoltage = (p: PublicProduct) => {
-      const n = parseFloat(String(p.tensiuneNominala ?? '').replace(',', '.'))
-      return Number.isNaN(n) ? Infinity : n
-    }
-    const sortFeatured = (list: PublicProduct[]) =>
-      [...list].sort((a, b) => {
-        const promoDiff = Number(isPromoCatalogProduct(b)) - Number(isPromoCatalogProduct(a))
-        if (promoDiff !== 0) return promoDiff
-        return getNominalVoltage(a) - getNominalVoltage(b)
-      })
-
     const filtered = products.filter((p) => {
       if (!activeTab) return true
       const cat = String(p.categorie || '').toLowerCase()
@@ -263,16 +262,16 @@ export default function Home() {
         return true
       })
       if (vf.length > 0) {
-        return sortFeatured(vf).slice(0, 6)
+        return sortCatalogProducts(vf).slice(0, 6)
       }
     }
     if (locationFilter) {
       const lf = withPrice.filter((p) => String(p.locatieMontaj || '').toLowerCase().trim() === locationFilter)
       if (lf.length > 0) {
-        return sortFeatured(lf).slice(0, 6)
+        return sortCatalogProducts(lf).slice(0, 6)
       }
     }
-    return sortFeatured(withPrice).slice(0, 6)
+    return sortCatalogProducts(withPrice).slice(0, 6)
   }, [products, activeTab, voltageFilter, locationFilter, language.code, currency])
 
   const tabs = [

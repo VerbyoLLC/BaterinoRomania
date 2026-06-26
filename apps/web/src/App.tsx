@@ -65,6 +65,7 @@ import BlogArticle from './pages/BlogArticle'
 import TermeniSiConditii from './pages/TermeniSiConditii'
 import TermeniSiConditiiProgrameReducere from './pages/TermeniSiConditiiProgrameReducere'
 import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
+import PoliticaDeRetur from './pages/PoliticaDeRetur'
 import Cariere from './pages/Cariere'
 import StudiiDeCaz from './pages/StudiiDeCaz'
 import Contact from './pages/Contact'
@@ -254,6 +255,7 @@ export default function App() {
               <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
               <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
               <Route path="politica-confidentialitate" element={<PoliticaConfidentialitate />} />
+              <Route path="politica-de-retur" element={<PoliticaDeRetur />} />
               <Route path="siguranta" element={<Siguranta />} />
               <Route path="divizii/rezidential" element={<Rezidential />} />
               <Route path="divizii/industrial" element={<Industrial />} />

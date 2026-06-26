@@ -419,7 +419,7 @@ function BessDetailsModal({
         {/* Sticky CTA */}
         <div className="px-5 pt-3 border-t border-neutral-100">
           <Link
-            to="/divizii/medical"
+            to="/produse/sisteme-bess/bess-cabinet-lifepo4-261kwh-racire-lichida"
             className="inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-slate-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-700 active:bg-slate-800"
           >
             {tr.heroV2MedCta}
@@ -489,36 +489,34 @@ function SlideBessImage({
 
 function SlideProiecte({ tr }: { tr: HomeTranslations }) {
   return (
-    <div className="absolute inset-0">
-      <img src="/images/slider2/slider3.jpg" alt="" className="h-full w-full object-cover" />
+    <Link
+      to="/studii-de-caz"
+      className="absolute inset-0 block cursor-pointer"
+      aria-label={tr.heroV2Card3Cta}
+    >
+      <img src="/images/slider2/slider3.jpg" alt="" className="h-full w-full object-cover pointer-events-none" />
       <div className="absolute inset-0 bg-black/45 pointer-events-none" aria-hidden />
       <div
-        className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3"
+        className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none"
         style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.5)' }}
       >
         <img
           src="/images/lithtech/logo-baterino-pro-white.png"
           alt="Baterino Pro"
           draggable={false}
-          className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))] pointer-events-none"
+          className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
         />
-        <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter'] pointer-events-none">
+        <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">
           {tr.heroV2Card3Title}
         </h3>
-        <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter'] pointer-events-none">
+        <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter']">
           {tr.heroV2Card3Subtitle}
         </p>
-        <button
-          type="button"
-          onClick={() =>
-            document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
-          }
-          className="w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
-        >
+        <span className="w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none]">
           {tr.heroV2Card3Cta}
-        </button>
+        </span>
       </div>
-    </div>
+    </Link>
   )
 }
 

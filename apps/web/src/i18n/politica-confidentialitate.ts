@@ -13,7 +13,6 @@ export type PoliticaConfidentialitateTranslations = {
   seoTitle: string
   seoDesc: string
   pageTitle: string
-  intro: string
   tocTitle: string
   lastUpdated: string
   sections: PoliticaConfidentialitateSection[]
@@ -24,11 +23,9 @@ const translations: Record<LangCode, PoliticaConfidentialitateTranslations> = {
     seoTitle: 'Politica de Confidențialitate – Baterino România',
     seoDesc:
       'Politica de confidențialitate baterino.ro — cum colectăm, utilizăm și protejăm datele personale conform GDPR.',
-    pageTitle: 'Politica de Confidențialitate — baterino.ro',
-    intro:
-      'Baterino Energy SRL respectă confidențialitatea vizitatorilor și clienților săi și prelucrează datele cu caracter personal în conformitate cu Regulamentul (UE) 2016/679 (**GDPR**) și legislația națională aplicabilă. Vă rugăm să citiți această politică pentru a înțelege ce date colectăm, de ce și care sunt drepturile dumneavoastră.',
+    pageTitle: 'Politica de Confidențialitate',
     tocTitle: 'Cuprins',
-    lastUpdated: 'Ultima actualizare: iunie 2026',
+    lastUpdated: 'Ultima actualizare: 25 Mai 2026',
     sections: [
       {
         title: '1. Cine suntem (Operatorul)',
@@ -207,11 +204,9 @@ const translations: Record<LangCode, PoliticaConfidentialitateTranslations> = {
     seoTitle: 'Privacy Policy – Baterino Romania',
     seoDesc:
       'baterino.ro privacy policy — how we collect, use and protect personal data in accordance with GDPR.',
-    pageTitle: 'Privacy Policy — baterino.ro',
-    intro:
-      'Baterino Energy SRL respects the privacy of its visitors and customers and processes personal data in accordance with Regulation (EU) 2016/679 (**GDPR**) and applicable national law. Please read this policy to understand what data we collect, why, and what your rights are.',
+    pageTitle: 'Privacy Policy',
     tocTitle: 'Table of contents',
-    lastUpdated: 'Last updated: June 2026',
+    lastUpdated: 'Last updated: 25 May 2026',
     sections: [
       {
         title: '1. Who we are (Controller)',

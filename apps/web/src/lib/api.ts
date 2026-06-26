@@ -3215,6 +3215,22 @@ export async function createAdminProductModel(
   return { ...row, availableForStock: row.availableForStock !== false }
 }
 
+export async function duplicateAdminProductModel(id: string): Promise<AdminProductModelRow> {
+  const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}/duplicate`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<AdminProductModelRow>
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 404) throw new Error('Modelul nu a fost găsit.')
+    if (res.status === 409) throw new Error('Model number există deja.')
+    throw new Error(json.error || 'Eroare la duplicarea modelului.')
+  }
+  const row = json as AdminProductModelRow
+  return { ...row, availableForStock: row.availableForStock !== false }
+}
+
 export async function deleteAdminProductModel(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/product-models/${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -3249,6 +3265,22 @@ export async function updateProductStatus(id: string, status: 'draft' | 'publish
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
   return json
+}
+
+export async function duplicateProduct(id: string): Promise<AdminProduct> {
+  const res = await fetch(`${API_BASE}/admin/products/${encodeURIComponent(id)}/duplicate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat. Doar administratorii pot duplica produse.')
+    if (res.status === 404) throw new Error('Produs negăsit.')
+    throw new Error(json.error || 'Eroare la duplicarea produsului.')
+  }
+  return json as AdminProduct
 }
 
 export async function deleteProduct(id: string) {

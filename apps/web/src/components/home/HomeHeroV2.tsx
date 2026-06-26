@@ -133,7 +133,6 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
       image: string
       to?: string
       scrollToProducts?: boolean
-      scrollToProiecteIndustriale?: boolean
       multilineTitle?: boolean
       wide?: boolean
       noOverlay?: boolean
@@ -188,7 +187,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         title: tr.heroV2MedProductTitle,
         buttonLabel: tr.heroV2MedCta,
         image: '/images/slider2/slide4-261kwh-bess.jpg',
-        to: '/divizii/medical',
+        to: '/produse/sisteme-bess/bess-cabinet-lifepo4-261kwh-racire-lichida',
         medicalHeroOverlay: true,
         width: '800px',
         noDarkOverlay: true,
@@ -199,7 +198,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         subtitle: tr.heroV2Card3Subtitle,
         buttonLabel: tr.heroV2Card3Cta,
         image: '/images/slider2/slider3.jpg',
-        scrollToProiecteIndustriale: true,
+        to: '/studii-de-caz',
         multilineTitle: true,
         width: '400px',
         height: '520px',
@@ -354,12 +353,10 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
     setActiveIndex(index)
   }
 
-  const handleNoOverlayCardActivate = useCallback(
+  const handleCardActivate = useCallback(
     (card: (typeof cards)[number]) => {
       if (card.scrollToProducts) {
         document.getElementById('produse-section')?.scrollIntoView({ behavior: 'smooth' })
-      } else if (card.scrollToProiecteIndustriale) {
-        document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
       } else if (card.to) {
         navigate(card.to)
       }
@@ -368,7 +365,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   )
 
   const isNoOverlayInteractive = (card: (typeof cards)[number]) =>
-    card.noOverlay && (card.scrollToProducts || card.scrollToProiecteIndustriale || card.to)
+    card.noOverlay && (card.scrollToProducts || card.to)
 
   const showProductHeroOverlay = (card: (typeof cards)[number]) =>
     card.id === 'rezidential' && card.productHeroOverlay === true
@@ -393,6 +390,11 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
     !showMedicalHeroOverlay(card) &&
     !showInstalatoriHeroOverlay(card)
   const showDarkOverlay = (card: (typeof cards)[number]) => !card.noOverlay && !card.noDarkOverlay
+
+  const isFullCardClickable = (card: (typeof cards)[number]) => showCardContent(card) && Boolean(card.to)
+
+  const isCardInteractive = (card: (typeof cards)[number]) =>
+    isNoOverlayInteractive(card) || isFullCardClickable(card)
 
 
   const rezHighlights = useMemo(
@@ -431,19 +433,19 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         {cards.map((card, i) => (
           <div
             key={card.id}
-            role={isNoOverlayInteractive(card) ? 'button' : undefined}
-            tabIndex={isNoOverlayInteractive(card) ? 0 : undefined}
+            role={isCardInteractive(card) ? 'button' : undefined}
+            tabIndex={isCardInteractive(card) ? 0 : undefined}
             onClick={
-              isNoOverlayInteractive(card) && !isDraggingRef.current
-                ? () => handleNoOverlayCardActivate(card)
+              isCardInteractive(card) && !isDraggingRef.current
+                ? () => handleCardActivate(card)
                 : undefined
             }
             onKeyDown={
-              isNoOverlayInteractive(card)
+              isCardInteractive(card)
                 ? (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      handleNoOverlayCardActivate(card)
+                      handleCardActivate(card)
                     }
                   }
                 : undefined
@@ -460,7 +462,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
             } ${
               card.width ? '' : card.wide ? 'w-[var(--hero-card-w-wide)]' : 'w-[var(--hero-card-w)]'
             } ${
-              isNoOverlayInteractive(card) ? 'cursor-pointer' : ''
+              isCardInteractive(card) ? 'cursor-pointer' : ''
             }`}
             style={{
               ...(card.width ? { width: card.width } : {}),
@@ -543,7 +545,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               <HomeHeroMedCard
                 tr={tr}
                 isDragging={isDragging}
-                productLink={card.to ?? '/divizii/medical'}
+                productLink={card.to ?? '/produse/sisteme-bess/bess-cabinet-lifepo4-261kwh-racire-lichida'}
               />
             ) : showDiscountHeroOverlay(card) ? (
                 <div className="absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] pointer-events-none">
@@ -628,17 +630,11 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                 >
                   {card.buttonLabel}
                 </button>
-              ) : card.scrollToProiecteIndustriale ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
-                  }
-                  className="w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
-                >
+              ) : card.to && isFullCardClickable(card) ? (
+                <div className="pointer-events-none w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase">
                   {card.buttonLabel}
-                </button>
-              ) : (
+                </div>
+              ) : card.to ? (
                 <div className="flex w-full justify-center">
                   <Link
                     to={card.to!}
@@ -647,7 +643,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                     {card.buttonLabel}
                   </Link>
                 </div>
-              )}
+              ) : null}
             </div>
             ) : null}
           </div>

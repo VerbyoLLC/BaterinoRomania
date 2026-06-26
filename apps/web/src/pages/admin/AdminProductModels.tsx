@@ -8,6 +8,7 @@ import {
   uploadAdminFile,
   updateAdminProductModel,
   deleteAdminProductModel,
+  duplicateAdminProductModel,
   createAdminProductModel,
   buildModelSku,
   type AdminProductModelRow,
@@ -153,6 +154,7 @@ export default function AdminProductModels() {
   const menuRef = useRef<HTMLDivElement>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [addForm, setAddForm] = useState<ProductModelDraft>({
     name: '', brand: '', series: '', modelNumber: '', technicalDescription: '',
@@ -309,6 +311,22 @@ export default function AdminProductModels() {
       setError(e instanceof Error ? e.message : 'Eroare la salvare.')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  async function handleDuplicate(rowId: string) {
+    if (duplicatingId) return
+    setDuplicatingId(rowId)
+    setMenuOpenId(null)
+    setMenuPos(null)
+    try {
+      const created = await duplicateAdminProductModel(rowId)
+      setRows((prev) => [created, ...prev])
+      toast.success(`Model duplicat: ${created.modelNumber}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Eroare la duplicare.')
+    } finally {
+      setDuplicatingId(null)
     }
   }
 
@@ -947,6 +965,14 @@ export default function AdminProductModels() {
             style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 60 }}
             className="min-w-[130px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
           >
+            <button
+              type="button"
+              disabled={duplicatingId === row.id}
+              onClick={() => { void handleDuplicate(row.id) }}
+              className="flex w-full items-center px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 font-['Inter'] disabled:opacity-50"
+            >
+              {duplicatingId === row.id ? 'Se duplică…' : 'Duplică'}
+            </button>
             <button
               type="button"
               onClick={() => { setMenuOpenId(null); setMenuPos(null); setConfirmDeleteId(row.id) }}

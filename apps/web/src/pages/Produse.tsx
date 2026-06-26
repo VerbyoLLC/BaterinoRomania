@@ -31,6 +31,7 @@ import {
   getCatalogInstallBadgeLabel,
   productHasEligibleReducerePrograms,
 } from '../lib/catalogProductBadges'
+import { sortCatalogProducts } from '../lib/catalogProductSort'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
@@ -100,33 +101,7 @@ export default function Produse() {
       })
     }
 
-    const CATEGORY_ORDER: Record<string, number> = { rezidential: 0, industrial: 1, medical: 2, maritim: 3 }
-    const getCategoryRank = (p: PublicProduct) => {
-      const cat = String(p.categorie || '').toLowerCase()
-      for (const [key, rank] of Object.entries(CATEGORY_ORDER)) {
-        if (cat.includes(key)) return rank
-      }
-      return 99
-    }
-    const hasPublicPrice = (p: PublicProduct) => {
-      const vis = (p.priceVisibility as string) ?? 'public'
-      const sale = Number(p.salePrice)
-      return vis === 'public' && !Number.isNaN(sale) && sale > 0
-    }
-    const getEnergy = (p: PublicProduct) => {
-      const n = parseFloat(String(p.energieNominala ?? '').replace(',', '.'))
-      return Number.isNaN(n) ? Infinity : n
-    }
-
-    return [...list].sort((a, b) => {
-      const promoDiff = Number(isPromoCatalogProduct(b)) - Number(isPromoCatalogProduct(a))
-      if (promoDiff !== 0) return promoDiff
-      const catDiff = getCategoryRank(a) - getCategoryRank(b)
-      if (catDiff !== 0) return catDiff
-      const priceDiff = Number(hasPublicPrice(b)) - Number(hasPublicPrice(a))
-      if (priceDiff !== 0) return priceDiff
-      return getEnergy(a) - getEnergy(b)
-    })
+    return sortCatalogProducts(list)
   }, [products, sector, voltageFilter, locationFilter])
 
   return (

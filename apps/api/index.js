@@ -6909,6 +6909,124 @@ const createProductHandler = async (req, res) => {
 app.post('/api/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
 app.post('/admin/products', authMiddleware, adminAuthMiddleware, createProductHandler)
 
+async function nextUniqueProductSlug(baseSlug) {
+  const base = String(baseSlug || 'produs').trim() || 'produs'
+  const candidates = [`${base}-copy`, `${base}-2`]
+  for (const slug of candidates) {
+    const existing = await prisma.product.findFirst({ where: { slug } })
+    if (!existing) return slug
+  }
+  for (let i = 2; i < 1000; i++) {
+    const slug = `${base}-${i}`
+    const existing = await prisma.product.findFirst({ where: { slug } })
+    if (!existing) return slug
+  }
+  throw new Error('Nu s-a găsit un slug disponibil pentru duplicat.')
+}
+
+async function nextUniqueProductSku(baseSku) {
+  const base = String(baseSku || '').trim() || `SKU-${Date.now()}`
+  const candidates = [`${base}-COPY`, `${base}-copy`, `${base}-2`]
+  for (const sku of candidates) {
+    const existing = await prisma.product.findUnique({ where: { sku } })
+    if (!existing) return sku
+  }
+  for (let i = 2; i < 1000; i++) {
+    const sku = `${base}-${i}`
+    const existing = await prisma.product.findUnique({ where: { sku } })
+    if (!existing) return sku
+  }
+  throw new Error('Nu s-a găsit un SKU disponibil pentru duplicat.')
+}
+
+const duplicateProductHandler = async (req, res) => {
+  try {
+    if (!prisma.product) {
+      return res.status(500).json({ error: 'Server misconfiguration. Contact administrator.' })
+    }
+    const { id } = req.params
+    const source = await prisma.product.findUnique({ where: { id } })
+    if (!source) return res.status(404).json({ error: 'Produs negăsit.' })
+
+    const baseSlug = source.slug || slugify(source.title)
+    const slug = await nextUniqueProductSlug(baseSlug)
+    const sku = await nextUniqueProductSku(source.sku)
+    const title = source.title.includes('(copy)') ? source.title : `${source.title} (copy)`
+
+    const product = await prisma.product.create({
+      data: {
+        status: 'draft',
+        brand: source.brand,
+        title,
+        slug,
+        sku,
+        description: source.description,
+        subtitle: source.subtitle,
+        overview: source.overview,
+        seoTitle: source.seoTitle,
+        seoDescription: source.seoDescription,
+        seoOgImage: source.seoOgImage,
+        tipProdus: source.tipProdus,
+        categorie: source.categorie,
+        categoryId: source.categoryId,
+        priceVisibility: source.priceVisibility,
+        pricePresentation: source.pricePresentation,
+        catalogStockStatus: source.catalogStockStatus,
+        catalogDeliveryBadge: source.catalogDeliveryBadge,
+        catalogTransportBadge: source.catalogTransportBadge,
+        catalogInstallBadge: source.catalogInstallBadge,
+        reducereProgramIds: source.reducereProgramIds ?? [],
+        promovarePeContClient: source.promovarePeContClient === true,
+        promovarePeContPartener: source.promovarePeContPartener === true,
+        promovarePromotie: false,
+        landedPrice: source.landedPrice,
+        salePrice: source.salePrice,
+        partnerSalePrice: source.partnerSalePrice,
+        vat: source.vat,
+        energieNominala: source.energieNominala,
+        capacitate: source.capacitate,
+        curentMaxDescarcare: source.curentMaxDescarcare,
+        curentMaxIncarcare: source.curentMaxIncarcare,
+        cicluriDescarcare: source.cicluriDescarcare,
+        adancimeDescarcare: source.adancimeDescarcare,
+        greutate: source.greutate,
+        compozitie: source.compozitie,
+        dimensiuni: source.dimensiuni,
+        protectie: source.protectie,
+        conectivitateWifi: source.conectivitateWifi === true,
+        conectivitateBluetooth: source.conectivitateBluetooth === true,
+        protectieFoc: source.protectieFoc,
+        certificari: source.certificari,
+        garantie: source.garantie,
+        tensiuneNominala: source.tensiuneNominala,
+        locatieMontaj: source.locatieMontaj,
+        eficientaCiclu: source.eficientaCiclu,
+        temperaturaFunctionare: source.temperaturaFunctionare,
+        temperaturaStocare: source.temperaturaStocare,
+        umiditate: source.umiditate,
+        cardImage: source.cardImage,
+        images: source.images ?? [],
+        keyAdvantages: source.keyAdvantages ?? [],
+        documenteTehnice: source.documenteTehnice ?? [],
+        faq: source.faq ?? [],
+        caseStudyExamples: source.caseStudyExamples ?? [],
+        alimentaModalContent: source.alimentaModalContent ?? null,
+        technicalSpecsModels: source.technicalSpecsModels ?? null,
+      },
+    })
+    return res.status(201).json(productToJson(product))
+  } catch (err) {
+    console.error('Duplicate product error:', err)
+    let errorMsg = 'Eroare la duplicarea produsului.'
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') errorMsg = 'Există deja un produs cu acest SKU sau slug.'
+    } else if (err?.message) errorMsg = err.message
+    return res.status(500).json({ error: errorMsg })
+  }
+}
+app.post('/api/admin/products/:id/duplicate', authMiddleware, adminAuthMiddleware, duplicateProductHandler)
+app.post('/admin/products/:id/duplicate', authMiddleware, adminAuthMiddleware, duplicateProductHandler)
+
 // ── Admin: update product ───────────────────────────────────────────────
 const updateProductHandler = async (req, res) => {
   try {
@@ -9913,6 +10031,77 @@ async function createProductModelHandler(req, res) {
 
 app.post('/api/admin/product-models', authMiddleware, adminAuthMiddleware, createProductModelHandler)
 app.post('/admin/product-models', authMiddleware, adminAuthMiddleware, createProductModelHandler)
+
+async function nextDuplicateModelNumber(baseModelNumber) {
+  const candidates = [`${baseModelNumber}-COPY`, `${baseModelNumber}-copy`, `${baseModelNumber}-2`]
+  for (const modelNumber of candidates) {
+    const exists = await prisma.productModel.findUnique({ where: { modelNumber }, select: { id: true } })
+    if (!exists) return modelNumber
+  }
+  for (let i = 2; i < 1000; i++) {
+    const modelNumber = `${baseModelNumber}-${i}`
+    const exists = await prisma.productModel.findUnique({ where: { modelNumber }, select: { id: true } })
+    if (!exists) return modelNumber
+  }
+  throw new Error('Nu s-a găsit un model number disponibil pentru duplicat.')
+}
+
+async function duplicateProductModelHandler(req, res) {
+  try {
+    const { id } = req.params
+    const source = await prisma.productModel.findUnique({ where: { id } })
+    if (!source) return res.status(404).json({ error: 'Modelul nu a fost găsit.' })
+
+    const modelNumber = await nextDuplicateModelNumber(source.modelNumber)
+    const agg = await prisma.productModel.aggregate({ _max: { sortOrder: true } })
+    const sortOrder = (agg._max.sortOrder ?? 0) + 1
+    const productType = source.productType || 'ESS'
+    const sku = buildModelSku(source.brand, productType, modelNumber)
+    const name = source.name.includes('(copy)') ? source.name : `${source.name} (copy)`
+
+    const created = await prisma.productModel.create({
+      data: {
+        name,
+        brand: source.brand,
+        series: source.series || '',
+        modelNumber,
+        technicalDescription: source.technicalDescription,
+        usageType: source.usageType,
+        productType,
+        sku,
+        imageUrl: source.imageUrl,
+        productImageUrl: source.productImageUrl,
+        availableForStock: source.availableForStock !== false,
+        sortOrder,
+      },
+    })
+
+    return res.status(201).json({
+      id: created.id,
+      name: created.name,
+      brand: created.brand,
+      series: created.series || '',
+      modelNumber: created.modelNumber,
+      technicalDescription: created.technicalDescription,
+      usageType: created.usageType === 'residential' ? 'residential' : 'industrial',
+      productType: created.productType || 'ESS',
+      sku: created.sku || buildModelSku(created.brand, created.productType, created.modelNumber),
+      imageUrl: created.imageUrl,
+      productImageUrl: created.productImageUrl,
+      availableForStock: created.availableForStock !== false,
+      sortOrder: created.sortOrder,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    })
+  } catch (err) {
+    if (err?.code === 'P2002') return res.status(409).json({ error: 'Model number există deja.' })
+    console.error('Duplicate product model error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la duplicarea modelului.' })
+  }
+}
+
+app.post('/api/admin/product-models/:id/duplicate', authMiddleware, adminAuthMiddleware, duplicateProductModelHandler)
+app.post('/admin/product-models/:id/duplicate', authMiddleware, adminAuthMiddleware, duplicateProductModelHandler)
 app.patch(
   '/api/admin/product-models/:id/available-for-stock',
   authMiddleware,
