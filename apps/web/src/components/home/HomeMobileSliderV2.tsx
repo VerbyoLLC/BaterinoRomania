@@ -508,12 +508,15 @@ function SlideProiecte({ tr }: { tr: HomeTranslations }) {
         <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter'] pointer-events-none">
           {tr.heroV2Card3Subtitle}
         </p>
-        <Link
-          to="/studii-de-caz"
+        <button
+          type="button"
+          onClick={() =>
+            document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
+          }
           className="w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
         >
           {tr.heroV2Card3Cta}
-        </Link>
+        </button>
       </div>
     </div>
   )

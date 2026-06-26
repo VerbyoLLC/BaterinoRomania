@@ -133,6 +133,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
       image: string
       to?: string
       scrollToProducts?: boolean
+      scrollToProiecteIndustriale?: boolean
       multilineTitle?: boolean
       wide?: boolean
       noOverlay?: boolean
@@ -198,7 +199,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         subtitle: tr.heroV2Card3Subtitle,
         buttonLabel: tr.heroV2Card3Cta,
         image: '/images/slider2/slider3.jpg',
-        to: '/studii-de-caz',
+        scrollToProiecteIndustriale: true,
         multilineTitle: true,
         width: '400px',
         height: '520px',
@@ -357,6 +358,8 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
     (card: (typeof cards)[number]) => {
       if (card.scrollToProducts) {
         document.getElementById('produse-section')?.scrollIntoView({ behavior: 'smooth' })
+      } else if (card.scrollToProiecteIndustriale) {
+        document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
       } else if (card.to) {
         navigate(card.to)
       }
@@ -365,7 +368,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
   )
 
   const isNoOverlayInteractive = (card: (typeof cards)[number]) =>
-    card.noOverlay && (card.scrollToProducts || card.to)
+    card.noOverlay && (card.scrollToProducts || card.scrollToProiecteIndustriale || card.to)
 
   const showProductHeroOverlay = (card: (typeof cards)[number]) =>
     card.id === 'rezidential' && card.productHeroOverlay === true
@@ -620,6 +623,16 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                   type="button"
                   onClick={() =>
                     document.getElementById('produse-section')?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                  className="w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
+                >
+                  {card.buttonLabel}
+                </button>
+              ) : card.scrollToProiecteIndustriale ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
                   }
                   className="w-full max-w-[min(200px,70%)] h-[clamp(2rem,4vh,2.5rem)] px-3 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-[clamp(0.625rem,1.75vw,0.75rem)] font-bold font-['Inter'] uppercase hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
                 >

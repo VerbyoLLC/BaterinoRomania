@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCookieConsent } from '../contexts/CookieConsentContext'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 
 import { getHomeTranslations } from '../i18n/home'
@@ -127,6 +128,7 @@ function WelcomeModal({
 export default function Home() {
   const { language } = useLanguage()
   const { currency } = useCatalogCurrency()
+  const { preference: cookiePreference } = useCookieConsent()
   const tr = getHomeTranslations(language.code)
   const seo = useSeoPage('home')
 
@@ -184,10 +186,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
+    if (!cookiePreference.decided) return
     if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PROMO_MODAL_STORAGE_KEY)) return
     const timer = setTimeout(() => setShowPromoModal(true), 1000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [cookiePreference.decided])
 
   const closeWelcomeModal = () => {
     if (typeof sessionStorage !== 'undefined') {

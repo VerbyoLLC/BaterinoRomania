@@ -182,7 +182,7 @@ export default function HomeProiecteIndustriale() {
   const t = TEXT[language.code as 'ro' | 'en'] ?? TEXT.ro
 
   return (
-    <section className="mb-16 lg:mb-24">
+    <section id="proiecte-industriale" className="mb-16 lg:mb-24 scroll-mt-24">
 
       {/* ── Header ── */}
       <div className="flex flex-col items-center text-center mb-10 lg:mb-12">
