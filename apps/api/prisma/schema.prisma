@@ -151,6 +151,75 @@ model ResidentialOrderLine {
   @@index([orderId])
 }
 
+/// Arhivă pentru comenzile conturilor șterse. Comanda este MUTATĂ aici (cu datele complete,
+/// pentru păstrarea fiscală) și ștearsă din `ResidentialOrder`, astfel încât să nu poată fi
+/// re-asociată unui cont nou creat ulterior cu același email.
+model DeletedOrder {
+  id                String   @id @default(cuid())
+  /// ID-ul comenzii originale din ResidentialOrder (referință, fără cheie externă).
+  originalOrderId   String
+  orderNumber       String   @unique
+  orderSource       String   @default("guest")
+  /// userId-ul original la momentul ștergerii — contul nu mai există (referință internă).
+  originalUserId    String?
+  email             String
+  phone             String
+  lastName          String
+  firstName         String
+  billAddress       String
+  billCounty        String
+  billCity          String
+  billPostal        String
+  deliveryDifferent Boolean  @default(false)
+  delAddress        String?
+  delCounty         String?
+  delCity           String?
+  delPostal         String?
+  buyerType         String   @default("person")
+  companyName       String?
+  companyCui        String?
+  companyAddress    String?
+  companyCounty     String?
+  companyCity       String?
+  companyPostal     String?
+  currency          String   @default("RON")
+  fulfillmentStatus String   @default("de_platit")
+  clientInvoiceUrl  String?
+  proformaUrl       String?
+  /// Data plasării comenzii originale (păstrată).
+  orderCreatedAt    DateTime
+  /// 'account_deleted' | 'orphaned_cleanup'
+  deletionReason    String   @default("account_deleted")
+  /// Momentul mutării în arhivă.
+  archivedAt        DateTime @default(now())
+
+  lines             DeletedOrderLine[]
+
+  @@index([originalUserId])
+  @@index([email])
+  @@index([orderSource])
+  @@index([archivedAt])
+}
+
+model DeletedOrderLine {
+  id                   String       @id @default(cuid())
+  deletedOrderId       String
+  deletedOrder         DeletedOrder @relation(fields: [deletedOrderId], references: [id], onDelete: Cascade)
+  /// ID-ul liniei originale (referință).
+  originalLineId       String
+  productId            String
+  productSlug          String?
+  productTitle         String
+  quantity             Int
+  unitPriceInclVat     Decimal? @db.Decimal(14, 2)
+  lineTotalInclVat     Decimal? @db.Decimal(14, 2)
+  listUnitPriceInclVat Decimal? @db.Decimal(14, 2)
+  listLineTotalInclVat Decimal? @db.Decimal(14, 2)
+  vatPercent           Decimal? @db.Decimal(5, 2)
+
+  @@index([deletedOrderId])
+}
+
 model Partner {
   id                    String   @id @default(cuid())
   userId                String   @unique

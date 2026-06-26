@@ -72,6 +72,11 @@ export function sanitizeRoPostalCode(value: string): string {
   return value.replace(/\D/g, '').slice(0, 6)
 }
 
+/** Cod poștal RO complet: exact 6 cifre. */
+export function isRoPostalCodeValid(value: string): boolean {
+  return /^\d{6}$/.test(String(value ?? '').trim())
+}
+
 /** Postal / ZIP style: letters, digits, space, hyphen. */
 export function sanitizePostalField(value: string): string {
   return value

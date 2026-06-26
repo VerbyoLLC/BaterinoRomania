@@ -3543,6 +3543,35 @@ export async function getAdminGuestResidentialOrders(): Promise<AdminGuestReside
   return Array.isArray(json) ? json : []
 }
 
+export type AdminDeletedOrderRow = AdminGuestResidentialOrderRow & {
+  /** 'account_deleted' | 'orphaned_cleanup' */
+  deletionReason: string
+  /** ISO timestamp when the order was moved to the archive. */
+  archivedAt: string | null
+  /** Original owning account id at deletion time (account no longer exists). */
+  originalUserId: string | null
+}
+
+export async function getAdminDeletedOrders(): Promise<AdminDeletedOrderRow[]> {
+  const res = await fetch(`${API_BASE}/admin/deleted-orders`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    const body = json as { error?: string; path?: string }
+    if (res.status === 404 && body.path) {
+      throw new Error(
+        `${body.error || 'Rută negăsită pe API'} — path: ${body.path}. Redeploy backend (Railway) sau setează VITE_API_URL la URL-ul API cu /api la final.`,
+      )
+    }
+    throw new Error(body.error || 'Eroare la încărcarea comenzilor șterse.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
 export async function patchAdminOrderFulfillmentStatus(
   orderId: string,
   fulfillmentStatus: OrderFulfillmentStatus | string,

@@ -71,6 +71,7 @@ export type GuestCheckoutTranslations = {
   fieldErrorEmpty: string
   fieldErrorEmail: string
   fieldErrorPhone: string
+  fieldErrorPostal: string
   finalizeStep1: string
   finalizeStep2: string
   finalizeStep3: string
@@ -226,6 +227,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     fieldErrorEmpty: 'Acest câmp este obligatoriu.',
     fieldErrorEmail: 'Introdu o adresă de email validă.',
     fieldErrorPhone: 'Numărul de telefon trebuie să aibă exact 9 cifre (după +40).',
+    fieldErrorPostal: 'Codul poștal trebuie să conțină exact 6 cifre.',
     finalizeStep1: 'Vei primi o factură proformă pe e-mailul pe care ni l-ai comunicat mai sus.',
     finalizeStep2: 'Te vom contacta pentru a confirma comanda.',
     finalizeStep3: 'Achită factura proformă și nu uita să menționezi numărul comenzii în detaliile transferului.',
@@ -362,6 +364,7 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     fieldErrorEmpty: 'This field is required.',
     fieldErrorEmail: 'Enter a valid email address.',
     fieldErrorPhone: 'The mobile number must be exactly 9 digits (after +40).',
+    fieldErrorPostal: 'The postal code must be exactly 6 digits.',
     finalizeStep1: 'You will receive a proforma invoice by email at the address you provided above.',
     finalizeStep2: 'We will contact you to confirm your order.',
     finalizeStep3: 'Pay the proforma invoice — remember to include your order number in the transfer details.',

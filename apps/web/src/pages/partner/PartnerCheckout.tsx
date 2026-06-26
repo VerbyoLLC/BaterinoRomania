@@ -36,10 +36,11 @@ import {
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 import {
   sanitizeAddressField,
-  sanitizePostalField,
+  sanitizeRoPostalCode,
   sanitizePersonName,
   loadPhoneE164,
   isPhoneE164Valid,
+  isRoPostalCodeValid,
 } from '../../lib/formInputSanitize'
 import PhoneInput from '../../components/PhoneInput'
 
@@ -247,12 +248,18 @@ export default function PartnerCheckout() {
     if (!companyName.trim() || !cuiClean || !fiscalAddress.trim() || !fiscalCounty || !fiscalCity.trim() || !fiscalPostal.trim()) {
       return tr.fieldErrorRequired
     }
+    if (!isRoPostalCodeValid(fiscalPostal)) {
+      return tr.fieldErrorPostal
+    }
     return null
   }
 
   function validateDeliveryFields(): string | null {
     if (!delAddress.trim() || !delCounty || !delCity.trim() || !delPostal.trim()) {
       return tr.fieldErrorRequired
+    }
+    if (!isRoPostalCodeValid(delPostal)) {
+      return tr.fieldErrorPostal
     }
     return null
   }
@@ -278,8 +285,16 @@ export default function PartnerCheckout() {
       setSubmitError(tr.fieldErrorRequired)
       return
     }
+    if (!isRoPostalCodeValid(fiscalPostal)) {
+      setSubmitError(tr.fieldErrorPostal)
+      return
+    }
     if (!delAddress.trim() || !delCounty || !delCity.trim() || !delPostal.trim()) {
       setSubmitError(tr.fieldErrorRequired)
+      return
+    }
+    if (!isRoPostalCodeValid(delPostal)) {
+      setSubmitError(tr.fieldErrorPostal)
       return
     }
 
@@ -552,8 +567,11 @@ export default function PartnerCheckout() {
               <input
                 className={inputClass}
                 value={fiscalPostal}
-                onChange={(e) => setFiscalPostal(sanitizePostalField(e.target.value))}
+                onChange={(e) => setFiscalPostal(sanitizeRoPostalCode(e.target.value))}
                 placeholder={tr.placeholderPostal}
+                inputMode="numeric"
+                maxLength={6}
+                pattern="[0-9]{6}"
                 required
               />
             </label>
@@ -666,8 +684,11 @@ export default function PartnerCheckout() {
               <input
                 className={inputClass}
                 value={delPostal}
-                onChange={(e) => setDelPostal(sanitizePostalField(e.target.value))}
+                onChange={(e) => setDelPostal(sanitizeRoPostalCode(e.target.value))}
                 placeholder={tr.placeholderPostal}
+                inputMode="numeric"
+                maxLength={6}
+                pattern="[0-9]{6}"
                 required
               />
             </label>

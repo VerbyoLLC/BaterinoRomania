@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  getAdminDeletedOrders,
   getAdminGuestResidentialOrders,
   patchAdminOrderFulfillmentStatus,
+  type AdminDeletedOrderRow,
   type AdminGuestResidentialOrderRow,
 } from '../../lib/api'
 
@@ -45,6 +47,13 @@ function orderSourceLabel(source: string): { label: string; className: string } 
   return { label: 'Invitat', className: 'bg-slate-200 text-slate-800' }
 }
 
+function deletionReasonLabel(reason: string): string {
+  const r = String(reason || '').toLowerCase()
+  if (r === 'account_deleted') return 'Cont șters'
+  if (r === 'orphaned_cleanup') return 'Curățare comenzi orfane'
+  return reason || '—'
+}
+
 function hasInvoiceUrl(o: AdminGuestResidentialOrderRow): boolean {
   return Boolean(o.clientInvoiceUrl && String(o.clientInvoiceUrl).trim())
 }
@@ -69,6 +78,13 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [patchingId, setPatchingId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'active' | 'deleted'>('active')
+  const [deletedOrders, setDeletedOrders] = useState<AdminDeletedOrderRow[]>([])
+  const [deletedLoaded, setDeletedLoaded] = useState(false)
+  const [deletedLoading, setDeletedLoading] = useState(false)
+  const [deletedError, setDeletedError] = useState<string | null>(null)
+  const [deletedSearch, setDeletedSearch] = useState('')
+  const [detailKind, setDetailKind] = useState<'active' | 'deleted'>('active')
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null)
   const [invoiceModal, setInvoiceModal] = useState<{
     order: AdminGuestResidentialOrderRow
@@ -78,7 +94,46 @@ export default function AdminOrders() {
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false)
   const [docUploading, setDocUploading] = useState<'proforma' | 'invoice' | null>(null)
 
-  const detailOrder = detailOrderId ? orders.find((r) => r.id === detailOrderId) ?? null : null
+  const detailIsDeleted = detailKind === 'deleted'
+  const detailOrder: AdminGuestResidentialOrderRow | null = detailOrderId
+    ? (detailIsDeleted
+        ? deletedOrders.find((r) => r.id === detailOrderId)
+        : orders.find((r) => r.id === detailOrderId)) ?? null
+    : null
+
+  const loadDeletedOrders = useCallback(() => {
+    setDeletedLoading(true)
+    setDeletedError(null)
+    getAdminDeletedOrders()
+      .then((data) => {
+        setDeletedOrders(data)
+        setDeletedLoaded(true)
+      })
+      .catch((err) => setDeletedError(err instanceof Error ? err.message : 'Eroare la încărcare.'))
+      .finally(() => setDeletedLoading(false))
+  }, [])
+
+  const openDeletedTab = useCallback(() => {
+    setActiveTab('deleted')
+    if (!deletedLoaded && !deletedLoading) loadDeletedOrders()
+  }, [deletedLoaded, deletedLoading, loadDeletedOrders])
+
+  const filteredDeletedOrders = useMemo(() => {
+    const q = deletedSearch.trim().toLowerCase()
+    if (!q) return deletedOrders
+    return deletedOrders.filter((o) =>
+      [o.orderNumber, `${o.lastName} ${o.firstName}`, o.email, o.productTitle, o.originalUserId]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [deletedOrders, deletedSearch])
+
+  const closeDetail = useCallback(() => {
+    setDetailOrderId(null)
+    setDetailKind('active')
+  }, [])
 
   const handleFulfillmentChange = useCallback(
     async (o: AdminGuestResidentialOrderRow, next: string) => {
@@ -197,7 +252,7 @@ export default function AdminOrders() {
         <div
           className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
           role="presentation"
-          onClick={() => setDetailOrderId(null)}
+          onClick={closeDetail}
         >
           <div
             className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
@@ -210,31 +265,37 @@ export default function AdminOrders() {
                 Detalii comandă
               </h2>
               <div className="flex flex-wrap items-center justify-end gap-3 min-w-0 sm:ml-auto">
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="detail-fulfillment"
-                    className="text-xs font-semibold text-slate-600 font-['Inter'] whitespace-nowrap"
-                  >
-                    Status comandă
-                  </label>
-                  <select
-                    id="detail-fulfillment"
-                    className="min-w-[11rem] max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
-                    value={normalizeStatus(detailOrder)}
-                    disabled={patchingId === detailOrder.id}
-                    onChange={(e) => void handleFulfillmentChange(detailOrder, e.target.value)}
-                  >
-                    {FULFILLMENT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {fulfillmentOptionLabel(detailOrder, opt.value)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {detailIsDeleted ? (
+                  <span className="inline-flex items-center rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-900">
+                    Comandă arhivată
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="detail-fulfillment"
+                      className="text-xs font-semibold text-slate-600 font-['Inter'] whitespace-nowrap"
+                    >
+                      Status comandă
+                    </label>
+                    <select
+                      id="detail-fulfillment"
+                      className="min-w-[11rem] max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
+                      value={normalizeStatus(detailOrder)}
+                      disabled={patchingId === detailOrder.id}
+                      onChange={(e) => void handleFulfillmentChange(detailOrder, e.target.value)}
+                    >
+                      {FULFILLMENT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {fulfillmentOptionLabel(detailOrder, opt.value)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 font-['Inter'] shrink-0"
-                  onClick={() => setDetailOrderId(null)}
+                  onClick={closeDetail}
                 >
                   Închide
                 </button>
@@ -333,6 +394,7 @@ export default function AdminOrders() {
                         Deschide PDF
                       </a>
                     ) : null}
+                    {detailIsDeleted ? null : (
                     <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
                       {docUploading === 'proforma' ? 'Se încarcă…' : 'Încarcă PDF'}
                       <input
@@ -373,6 +435,7 @@ export default function AdminOrders() {
                         }}
                       />
                     </label>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -393,7 +456,7 @@ export default function AdminOrders() {
                         Deschide PDF
                       </a>
                     ) : null}
-                    {!hasInvoiceUrl(detailOrder) && normalizeStatus(detailOrder) === 'in_pregatire' ? (
+                    {!detailIsDeleted && !hasInvoiceUrl(detailOrder) && normalizeStatus(detailOrder) === 'in_pregatire' ? (
                       <button
                         type="button"
                         className="text-sm font-semibold text-amber-800 underline-offset-2 hover:underline"
@@ -407,6 +470,7 @@ export default function AdminOrders() {
                         Încarcă (pas obligatoriu)
                       </button>
                     ) : null}
+                    {detailIsDeleted ? null : (
                     <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
                       {docUploading === 'invoice' ? 'Se încarcă…' : 'Încarcă / înlocuiește PDF'}
                       <input
@@ -446,9 +510,36 @@ export default function AdminOrders() {
                         }}
                       />
                     </label>
+                    )}
                   </div>
                 </div>
               </section>
+
+              {detailIsDeleted ? (
+                <section className="rounded-xl bg-rose-50 border border-rose-100 p-4 space-y-3" aria-label="Date arhivare">
+                  <p className="text-sm font-semibold text-rose-900">Arhivare (cont șters)</p>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Motiv</p>
+                    <p className="mt-0.5 text-rose-900">
+                      {deletionReasonLabel((detailOrder as AdminDeletedOrderRow).deletionReason)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Arhivată la</p>
+                    <p className="mt-0.5 text-rose-900">
+                      {(detailOrder as AdminDeletedOrderRow).archivedAt
+                        ? formatDateTime((detailOrder as AdminDeletedOrderRow).archivedAt as string)
+                        : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">ID cont original</p>
+                    <p className="mt-0.5 font-mono text-xs text-rose-900 break-all">
+                      {(detailOrder as AdminDeletedOrderRow).originalUserId || '—'}
+                    </p>
+                  </div>
+                </section>
+              ) : null}
 
               {/* 3. Detalii comandă (linii, total) */}
               <section
@@ -572,11 +663,136 @@ export default function AdminOrders() {
       <div className="flex-shrink-0 mb-4">
         <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900">Comenzi</h1>
         <p className="text-gray-500 text-sm font-['Inter'] mt-0.5">
-          Comenzi rezidențiale din /comanda — {orders.length} în listă (max. 500). La „În pregătire” este obligatoriu
-          PDF-ul facturii (R2 configurat pe API).
+          {activeTab === 'active'
+            ? `Comenzi rezidențiale din /comanda — ${orders.length} în listă (max. 500). La „În pregătire” este obligatoriu PDF-ul facturii (R2 configurat pe API).`
+            : 'Comenzi mutate în arhivă la ștergerea contului. Datele sunt păstrate (fiscal), dar comenzile nu mai apar în „comenzile mele” și nu pot fi re-asociate unui cont nou.'}
         </p>
       </div>
 
+      <div className="flex-shrink-0 mb-4 flex flex-wrap items-center gap-2 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold font-['Inter'] transition-colors ${
+            activeTab === 'active'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Comenzi active
+        </button>
+        <button
+          type="button"
+          onClick={openDeletedTab}
+          className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold font-['Inter'] transition-colors ${
+            activeTab === 'deleted'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Comenzi șterse{deletedLoaded ? ` (${deletedOrders.length})` : ''}
+        </button>
+      </div>
+
+      {activeTab === 'deleted' ? (
+        <div className="flex-shrink-0 mb-3">
+          <input
+            type="search"
+            value={deletedSearch}
+            onChange={(e) => setDeletedSearch(e.target.value)}
+            placeholder="Caută după nr. comandă, nume, email, produs…"
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none font-['Inter']"
+          />
+        </div>
+      ) : null}
+
+      {activeTab === 'deleted' ? (
+        <div className="flex-1 min-h-0 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col">
+          {deletedLoading ? (
+            <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">Se încarcă…</div>
+          ) : deletedError ? (
+            <div className="p-8 text-center text-red-600 text-sm font-['Inter']">{deletedError}</div>
+          ) : filteredDeletedOrders.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">
+              {deletedSearch.trim() ? 'Niciun rezultat pentru căutare.' : 'Nu există comenzi șterse.'}
+            </div>
+          ) : (
+            <div className="overflow-auto flex-1">
+              <table className="min-w-[1040px] w-full text-left text-sm font-['Inter']">
+                <thead className="sticky top-0 z-10 bg-slate-100 border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Data comandă</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Arhivată la</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Nr. comandă</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Sursă</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Client</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Email</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 min-w-[180px]">Produs</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 text-right whitespace-nowrap">Total cu TVA</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Motiv</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap text-center">Detalii</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredDeletedOrders.map((o) => {
+                    const src = orderSourceLabel(o.orderSource)
+                    const name = `${o.lastName} ${o.firstName}`.trim() || '—'
+                    const totalIncl = o.orderTotalInclVat ?? o.lineTotalInclVat
+                    return (
+                      <tr key={o.id} className="hover:bg-slate-50/80 align-top">
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{formatDateTime(o.createdAt)}</td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
+                          {o.archivedAt ? formatDateTime(o.archivedAt) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-slate-900 whitespace-nowrap">{o.orderNumber}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${src.className}`}>
+                            {src.label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-900 max-w-[160px]">
+                          <span className="line-clamp-2" title={name}>
+                            {name}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-700 max-w-[200px] break-all">{o.email}</td>
+                        <td className="px-3 py-2.5 text-slate-800">
+                          <span className="line-clamp-2" title={o.productTitle}>
+                            {o.productTitle}
+                          </span>
+                          {o.productSlug ? (
+                            <span className="block text-xs text-slate-500 mt-0.5 font-mono">{o.productSlug}</span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-900 whitespace-nowrap">
+                          {formatMoney(totalIncl, o.currency)}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-rose-100 text-rose-900">
+                            {deletionReasonLabel(o.deletionReason)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setDetailKind('deleted')
+                              setDetailOrderId(o.id)
+                            }}
+                          >
+                            Vezi
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="flex-1 min-h-0 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col">
         {orders.length === 0 ? (
           <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">Nu există comenzi încă.</div>
@@ -652,7 +868,10 @@ export default function AdminOrders() {
                         <button
                           type="button"
                           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-                          onClick={() => setDetailOrderId(o.id)}
+                          onClick={() => {
+                            setDetailKind('active')
+                            setDetailOrderId(o.id)
+                          }}
                         >
                           Vezi
                         </button>
@@ -665,6 +884,7 @@ export default function AdminOrders() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

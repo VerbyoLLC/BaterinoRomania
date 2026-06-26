@@ -8,6 +8,9 @@ const ANONYMIZED_EMAIL_DOMAIN = 'accounts.erased.baterino.local'
 const DELETED_USER_LABEL = '[deleted user]'
 const SOFT_DELETE_RETENTION_DAYS = 30
 
+/** Order archiving copies rows + lines one-by-one; allow headroom over remote DB latency. */
+const ORDER_ARCHIVE_TX_OPTIONS = { timeout: 60000, maxWait: 20000 }
+
 function anonymizedEmailForUserId(userId) {
   const safe = String(userId || '')
     .replace(/[^a-zA-Z0-9]/g, '')
@@ -59,22 +62,32 @@ async function purgeWarrantyCertificateR2(savedItem) {
 }
 
 /**
- * Marks account for deletion; blocks login via deletedAt. Data kept until cron hard-erases.
+ * Marks account for deletion; blocks login via deletedAt. Remaining account data is kept until the
+ * cron hard-erases, but orders are archived + removed from the active table immediately so they
+ * leave "comenzile mele" right away and can never be re-associated with a future account that
+ * reuses the same email.
  * @param {import('../generated/prisma').PrismaClient} prisma
  * @param {string} userId
  */
 async function softDeleteUserAccount(prisma, userId) {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      deletedAt: new Date(),
-      verificationCode: null,
-      verificationCodeExpiresAt: null,
-      passwordResetToken: null,
-      passwordResetExpiresAt: null,
-      clientCart: null,
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+  await prisma.$transaction(
+    async (tx) => {
+      await archiveAndRemoveOrdersInTx(tx, { userId, email: user?.email, reason: 'account_deleted' })
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          verificationCode: null,
+          verificationCodeExpiresAt: null,
+          passwordResetToken: null,
+          passwordResetExpiresAt: null,
+          clientCart: null,
+        },
+      })
     },
-  })
+    ORDER_ARCHIVE_TX_OPTIONS,
+  )
 }
 
 /**
@@ -89,36 +102,134 @@ async function findUsersReadyForHardErasure(prisma, retentionDays = SOFT_DELETE_
   })
 }
 
-async function anonymizeUserOrders(tx, userId, userEmail) {
-  const orClauses = [{ userId }]
-  const emailNorm = String(userEmail || '').trim().toLowerCase()
-  if (emailNorm) orClauses.push({ email: emailNorm })
-
-  await tx.residentialOrder.updateMany({
-    where: { OR: orClauses },
-    data: {
-      userId: null,
-      email: DELETED_USER_LABEL,
-      phone: '',
-      firstName: DELETED_USER_LABEL,
-      lastName: '',
-      billAddress: '',
-      billCounty: '',
-      billCity: '',
-      billPostal: '',
-      deliveryDifferent: false,
-      delAddress: null,
-      delCounty: null,
-      delCity: null,
-      delPostal: null,
-      companyName: null,
-      companyCui: null,
-      companyAddress: null,
-      companyCounty: null,
-      companyCity: null,
-      companyPostal: null,
+/** Build the DeletedOrder create payload (incl. nested lines) from a ResidentialOrder row. */
+function buildDeletedOrderData(order, reason) {
+  return {
+    originalOrderId: order.id,
+    orderNumber: order.orderNumber,
+    orderSource: order.orderSource,
+    originalUserId: order.userId,
+    email: order.email,
+    phone: order.phone,
+    lastName: order.lastName,
+    firstName: order.firstName,
+    billAddress: order.billAddress,
+    billCounty: order.billCounty,
+    billCity: order.billCity,
+    billPostal: order.billPostal,
+    deliveryDifferent: order.deliveryDifferent,
+    delAddress: order.delAddress,
+    delCounty: order.delCounty,
+    delCity: order.delCity,
+    delPostal: order.delPostal,
+    buyerType: order.buyerType,
+    companyName: order.companyName,
+    companyCui: order.companyCui,
+    companyAddress: order.companyAddress,
+    companyCounty: order.companyCounty,
+    companyCity: order.companyCity,
+    companyPostal: order.companyPostal,
+    currency: order.currency,
+    fulfillmentStatus: order.fulfillmentStatus,
+    clientInvoiceUrl: order.clientInvoiceUrl,
+    proformaUrl: order.proformaUrl,
+    orderCreatedAt: order.createdAt,
+    deletionReason: reason,
+    lines: {
+      create: (order.lines || []).map((L) => ({
+        originalLineId: L.id,
+        productId: L.productId,
+        productSlug: L.productSlug,
+        productTitle: L.productTitle,
+        quantity: L.quantity,
+        unitPriceInclVat: L.unitPriceInclVat,
+        lineTotalInclVat: L.lineTotalInclVat,
+        listUnitPriceInclVat: L.listUnitPriceInclVat,
+        listLineTotalInclVat: L.listLineTotalInclVat,
+        vatPercent: L.vatPercent,
+      })),
     },
+  }
+}
+
+/**
+ * Within an existing transaction: copy the matching ResidentialOrders (+ lines) into the
+ * DeletedOrder archive (full data kept for fiscal retention), then delete them from the active
+ * table. Returns the number of orders archived. Orders matching DELETED_USER_LABEL are skipped.
+ */
+async function archiveAndRemoveOrdersInTx(tx, { userId = null, email = null, reason = 'account_deleted' }) {
+  const orClauses = []
+  if (userId) orClauses.push({ userId })
+  const emailNorm = String(email || '').trim().toLowerCase()
+  if (emailNorm && emailNorm !== DELETED_USER_LABEL.toLowerCase()) {
+    orClauses.push({ email: emailNorm })
+  }
+  if (orClauses.length === 0) return 0
+
+  const orders = await tx.residentialOrder.findMany({
+    where: { OR: orClauses },
+    include: { lines: true },
   })
+  if (orders.length === 0) return 0
+
+  for (const order of orders) {
+    await tx.deletedOrder.create({ data: buildDeletedOrderData(order, reason) })
+  }
+  await tx.residentialOrder.deleteMany({ where: { id: { in: orders.map((o) => o.id) } } })
+  return orders.length
+}
+
+/**
+ * Maintenance cleanup for orders left orphaned by an older raw account delete (userId nulled via
+ * onDelete: SetNull) that still carry real PII. Account-owned orders (orderSource client/partner)
+ * with no owner can never belong to a live account, so they are moved to the DeletedOrder archive
+ * and removed from the active table. Returns the number of orders archived.
+ * @param {import('../generated/prisma').PrismaClient} prisma
+ */
+async function archiveOrphanedAccountOrders(prisma) {
+  const orders = await prisma.residentialOrder.findMany({
+    where: { userId: null, orderSource: { in: ['client', 'partner'] } },
+    include: { lines: true },
+  })
+  if (orders.length === 0) return 0
+
+  // Safety: never archive a legacy un-linked order whose email still belongs to an existing
+  // account (it may legitimately be that account's order). Truly orphaned = no user with that email.
+  const users = await prisma.user.findMany({ select: { email: true } })
+  const existingEmails = new Set(users.map((u) => String(u.email || '').trim().toLowerCase()))
+  const target = orders.filter(
+    (o) => !existingEmails.has(String(o.email || '').trim().toLowerCase()),
+  )
+  if (target.length === 0) return 0
+
+  await prisma.$transaction(async (tx) => {
+    for (const order of target) {
+      await tx.deletedOrder.create({ data: buildDeletedOrderData(order, 'orphaned_cleanup') })
+    }
+    await tx.residentialOrder.deleteMany({ where: { id: { in: target.map((o) => o.id) } } })
+  }, ORDER_ARCHIVE_TX_OPTIONS)
+  return target.length
+}
+
+/**
+ * Backfill: archive + remove orders belonging to accounts that were already soft-deleted before
+ * order archiving moved into the deletion flow. Matches by userId and by the account email.
+ * Returns the number of orders archived.
+ * @param {import('../generated/prisma').PrismaClient} prisma
+ */
+async function archiveSoftDeletedUsersOrders(prisma) {
+  const users = await prisma.user.findMany({
+    where: { deletedAt: { not: null } },
+    select: { id: true, email: true },
+  })
+  let total = 0
+  for (const u of users) {
+    total += await prisma.$transaction(
+      (tx) => archiveAndRemoveOrdersInTx(tx, { userId: u.id, email: u.email, reason: 'account_deleted' }),
+      ORDER_ARCHIVE_TX_OPTIONS,
+    )
+  }
+  return total
 }
 
 /**
@@ -151,7 +262,7 @@ async function eraseUserAccount(prisma, userId) {
   const anonEmail = anonymizedEmailForUserId(userId)
 
   await prisma.$transaction(async (tx) => {
-    await anonymizeUserOrders(tx, userId, user.email)
+    await archiveAndRemoveOrdersInTx(tx, { userId, email: user.email, reason: 'account_deleted' })
 
     if (savedItems.length > 0) {
       await tx.warehouseSavedItem.updateMany({
@@ -202,7 +313,7 @@ async function eraseUserAccount(prisma, userId) {
     }
 
     await tx.user.delete({ where: { id: userId } })
-  })
+  }, ORDER_ARCHIVE_TX_OPTIONS)
 }
 
 module.exports = {
@@ -211,6 +322,8 @@ module.exports = {
   softDeleteUserAccount,
   findUsersReadyForHardErasure,
   eraseUserAccount,
+  archiveOrphanedAccountOrders,
+  archiveSoftDeletedUsersOrders,
   anonymizedEmailForUserId,
   purgePartnerPublicProfileR2,
 }

@@ -53,10 +53,11 @@ import { showResidentialClientPurchaseUI } from '../lib/residentialPublicPurchas
 import {
   loadPhoneE164,
   isPhoneE164Valid,
+  isRoPostalCodeValid,
   sanitizeAddressField,
   sanitizeEmailTyping,
   sanitizePersonName,
-  sanitizePostalField,
+  sanitizeRoPostalCode,
 } from '../lib/formInputSanitize'
 import PhoneInput from '../components/PhoneInput'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../lib/romanian-counties-cities'
@@ -1082,6 +1083,7 @@ export default function GuestCheckout() {
               if (!coCounty.trim()) coErr.companyCounty = tr.fieldErrorEmpty
               if (!coCity.trim()) coErr.companyCity = tr.fieldErrorEmpty
               if (!coPostal.trim()) coErr.companyPostal = tr.fieldErrorEmpty
+              else if (!isRoPostalCodeValid(coPostal)) coErr.companyPostal = tr.fieldErrorPostal
             }
             if (Object.keys(err).length > 0 || Object.keys(coErr).length > 0) {
               setStep2FieldErrors(err)
@@ -1397,10 +1399,13 @@ export default function GuestCheckout() {
                       delete n.companyPostal
                       return n
                     })
-                    setCoPostal(sanitizePostalField(e.target.value))
+                    setCoPostal(sanitizeRoPostalCode(e.target.value))
                   }}
                   className={inputClassWithError(Boolean(step2CompanyErrors.companyPostal))}
                   autoComplete="postal-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
                   placeholder={tr.placeholderPostal}
                   aria-invalid={Boolean(step2CompanyErrors.companyPostal)}
                   aria-describedby={
@@ -1467,6 +1472,7 @@ export default function GuestCheckout() {
             if (!billCounty.trim()) err.billCounty = tr.fieldErrorEmpty
             if (!billCity.trim()) err.billCity = tr.fieldErrorEmpty
             if (!billPostal.trim()) err.billPostal = tr.fieldErrorEmpty
+            else if (!isRoPostalCodeValid(billPostal)) err.billPostal = tr.fieldErrorPostal
             if (Object.keys(err).length > 0) {
               setStep3FieldErrors(err)
               return
@@ -1616,10 +1622,13 @@ export default function GuestCheckout() {
                       delete n.billPostal
                       return n
                     })
-                    setBillPostal(sanitizePostalField(e.target.value))
+                    setBillPostal(sanitizeRoPostalCode(e.target.value))
                   }}
                   className={`${inputClassWithError(Boolean(step3FieldErrors.billPostal))} max-w-xs`}
                   autoComplete="billing postal-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
                   placeholder={tr.placeholderPostal}
                   required
                   aria-invalid={Boolean(step3FieldErrors.billPostal)}

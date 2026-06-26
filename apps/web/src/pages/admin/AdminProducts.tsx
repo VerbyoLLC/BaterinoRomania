@@ -1226,6 +1226,7 @@ export default function AdminProducts() {
 
   const handleDuplicate = async (id: string) => {
     if (duplicatingId) return
+    if (!confirm('Are you sure you want to duplicate this product?')) return
     setSaveError(null)
     setDuplicatingId(id)
     try {

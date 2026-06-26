@@ -947,7 +947,13 @@ app.post('/api/auth/signup', signupLimiter, async (req, res) => {
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      return res.status(409).json({ error: 'Nu s-a putut finaliza înregistrarea. Dacă ai deja un cont, încearcă să te autentifici.' })
+      if (existing.deletedAt) {
+        // Account was deleted (orders already archived). Free the email by fully erasing the
+        // leftover account so the user can register again with the same email.
+        await eraseUserAccount(prisma, existing.id)
+      } else {
+        return res.status(409).json({ error: 'Nu s-a putut finaliza înregistrarea. Dacă ai deja un cont, încearcă să te autentifici.' })
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -1339,13 +1345,21 @@ app.post('/api/auth/google', googleAuthLimiter, async (req, res) => {
       user = await prisma.user.findUnique({ where: { email } })
     }
 
-    if (user) {
-      if (user.deletedAt) {
+    if (user && user.deletedAt) {
+      if (intentSignup) {
+        // Account was deleted (orders already archived). Free the email/googleSub by fully erasing
+        // the leftover account, then fall through to create a fresh account below.
+        await eraseUserAccount(prisma, user.id)
+        user = null
+      } else {
         return res.status(401).json({
           error: 'Acest cont a fost șters.',
           code: 'ACCOUNT_DELETED',
         })
       }
+    }
+
+    if (user) {
       /** Înregistrare pe `/signup/clienti`: nu autentifica cont existent și nu împinge în onboarding parteneri. */
       if (intentSignup) {
         return res.status(409).json({
@@ -2590,7 +2604,14 @@ async function listAccountResidentialOrdersHandler(req, res, legacyGuestOrderSou
 
     const [modern, legacy] = await Promise.all([
       prisma.residentialOrder.findMany({
-        where: { OR: [{ userId: req.userId }, { email }] },
+        // Match orders owned by this account (userId), plus anonymous guest orders
+        // placed with the same email BEFORE the account existed. Email match is scoped
+        // to orderSource 'guest' so that orders owned by another account (e.g. a deleted
+        // partner whose userId was SetNull on delete) never leak into a new account that
+        // happens to reuse the same email.
+        where: {
+          OR: [{ userId: req.userId }, { email, orderSource: 'guest' }],
+        },
         include: { lines: { orderBy: { id: 'asc' } } },
         orderBy: { createdAt: 'desc' },
         take: 100,
@@ -4697,7 +4718,9 @@ async function adminDeleteClientHandler(req, res) {
     if (!user || user.role !== 'client') {
       return res.status(404).json({ error: 'Client negăsit sau utilizatorul nu este cont client.' })
     }
-    await prisma.user.delete({ where: { id: userId } })
+    // Anonymize orders (fiscal retention) + cleanup, then delete the user. Leaving the raw
+    // email on orders would let a new account reusing the same email re-inherit them.
+    await eraseUserAccount(prisma, userId)
     return res.json({ ok: true, message: 'Cont șters.' })
   } catch (err) {
     console.error('Admin delete client error:', err)
@@ -6088,7 +6111,9 @@ async function adminDeleteApprovedPartnerHandler(req, res) {
     if (!user || user.role !== 'partener') {
       return res.status(400).json({ error: 'Utilizator invalid pentru acest partener.' })
     }
-    await prisma.user.delete({ where: { id: partner.userId } })
+    // Anonymize orders (fiscal retention) + cleanup, then delete the user. Leaving the raw
+    // email on orders would let a new account reusing the same email re-inherit them.
+    await eraseUserAccount(prisma, partner.userId)
     return res.json({ ok: true })
   } catch (err) {
     console.error('Admin delete approved partner error:', err)
@@ -7972,6 +7997,43 @@ function mapResidentialRowAdmin(o) {
   }
 }
 
+/** Comenzi arhivate (conturi șterse) → aceeași formă ca rândurile admin + metadate de arhivă. */
+function mapDeletedOrderRowAdmin(o) {
+  // mapResidentialOrderToClientJson citește `createdAt`; pentru arhivă folosim data comenzii originale.
+  const base = mapResidentialOrderToClientJson({ ...o, createdAt: o.orderCreatedAt })
+  const first = base.lines[0]
+  return {
+    ...base,
+    clientInvoiceUrl: o.clientInvoiceUrl ? String(o.clientInvoiceUrl) : null,
+    proformaUrl: o.proformaUrl ? String(o.proformaUrl) : null,
+    productId: first?.productId,
+    productSlug: first?.productSlug,
+    productTitle:
+      base.lines.length > 1 ? `${first?.productTitle || '—'} (+${base.lines.length - 1})` : first?.productTitle,
+    quantity: base.lines.reduce((s, L) => s + (L.quantity || 0), 0),
+    unitPriceInclVat: first?.unitPriceInclVat,
+    lineTotalInclVat: base.orderTotalInclVat,
+    vatPercent: first?.vatPercent,
+    deletionReason: String(o.deletionReason || 'account_deleted'),
+    archivedAt: o.archivedAt ? new Date(o.archivedAt).toISOString() : null,
+    originalUserId: o.originalUserId || null,
+  }
+}
+
+const adminDeletedOrdersHandler = async (_req, res) => {
+  try {
+    const rows = await prisma.deletedOrder.findMany({
+      include: { lines: { orderBy: { id: 'asc' } } },
+      orderBy: { archivedAt: 'desc' },
+      take: 500,
+    })
+    return res.json(rows.map(mapDeletedOrderRowAdmin))
+  } catch (err) {
+    console.error('Admin deleted orders error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comenzilor șterse.' })
+  }
+}
+
 /** Agregate comenzi rezidențiale pentru dashboard admin (fără listă completă). */
 const adminOrdersDashboardSummaryHandler = async (req, res) => {
   try {
@@ -8087,6 +8149,8 @@ app.get('/api/admin/guest-residential-orders', authMiddleware, adminAuthMiddlewa
 app.get('/admin/guest-residential-orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/api/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
+app.get('/api/admin/deleted-orders', authMiddleware, adminAuthMiddleware, adminDeletedOrdersHandler)
+app.get('/admin/deleted-orders', authMiddleware, adminAuthMiddleware, adminDeletedOrdersHandler)
 app.get(
   '/api/admin/orders-dashboard-summary',
   authMiddleware,
