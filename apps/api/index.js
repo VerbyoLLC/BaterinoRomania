@@ -734,10 +734,22 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
 ]
+
+/** Vercel preview/production (*.vercel.app) + optional FRONTEND_URL from Railway env. */
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true
+  if (ALLOWED_ORIGINS.includes(origin)) return true
+  const frontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '')
+  if (frontendUrl && origin === frontendUrl) return true
+  if (/^https:\/\/[\w.-]+\.vercel\.app$/i.test(origin)) return true
+  return false
+}
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
-    cb(new Error(`CORS: origin '${origin}' not allowed`))
+    if (isAllowedCorsOrigin(origin)) return cb(null, true)
+    // Do not pass Error — that becomes HTTP 500. Deny cross-origin without crashing the request.
+    return cb(null, false)
   },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Product-Folder', 'X-Image-Index', 'X-Upload-Prefix'],
