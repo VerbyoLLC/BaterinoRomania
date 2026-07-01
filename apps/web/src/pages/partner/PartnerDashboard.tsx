@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Percent,
   Package,
   ClipboardList,
   Wrench,
