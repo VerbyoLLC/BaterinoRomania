@@ -22,6 +22,7 @@ const {
   defaultPartnerContractUrl,
   defaultPartnerProductsUrl,
 } = require('../templates/partner-discount-approved-email.js')
+const { getAdminPasswordResetNotificationTemplate } = require('../templates/admin-password-reset-email.js')
 
 function getPartnerAssignedToAgentTemplateRender() {
   const resolved = require.resolve('../templates/partner-assigned-to-agent-email.js')
@@ -64,9 +65,11 @@ function envTrim(name, fallback = '') {
 }
 
 const MAIL_FROM = envTrim('MAIL_FROM') || 'Baterino <noreply@baterino.ro>'
-/** From address for signup email confirmation (link). Resend: domain must be verified. */
-const VERIFICATION_MAIL_FROM =
-  envTrim('VERIFICATION_MAIL_FROM') || envTrim('RESEND_FROM') || 'Baterino <no-reply@baterino.ro>'
+/** Account lifecycle: signup verify, codes, password reset, referral, account deleted */
+const ACCOUNTS_MAIL_FROM =
+  envTrim('ACCOUNTS_MAIL_FROM') || envTrim('VERIFICATION_MAIL_FROM') || 'Baterino <conturi@baterino.ro>'
+/** Residential order confirmations and admin order alerts */
+const ORDERS_MAIL_FROM = envTrim('ORDERS_MAIL_FROM') || 'Baterino Comenzi <comenzi@baterino.ro>'
 const SITE_NAME = envTrim('SITE_NAME') || 'Baterino Romania'
 
 const RESEND_API_KEY = envTrim('RESEND_API_KEY')
@@ -188,7 +191,7 @@ async function sendSignupVerificationLink(email, verifyUrl, role) {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: VERIFICATION_MAIL_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to: email,
       subject,
       html,
@@ -201,7 +204,7 @@ async function sendSignupVerificationLink(email, verifyUrl, role) {
   }
 
   await transporter.sendMail({
-    from: VERIFICATION_MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to: email,
     subject,
     html,
@@ -224,7 +227,7 @@ async function sendVerificationCode(email, code, role) {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: RESEND_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to: email,
       subject,
       html,
@@ -237,7 +240,7 @@ async function sendVerificationCode(email, code, role) {
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to: email,
     subject,
     html,
@@ -259,7 +262,7 @@ async function sendEmailChangeVerificationCode(currentEmail, code, newEmail) {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: RESEND_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to: currentEmail,
       subject,
       html,
@@ -272,7 +275,7 @@ async function sendEmailChangeVerificationCode(currentEmail, code, newEmail) {
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to: currentEmail,
     subject,
     html,
@@ -290,7 +293,7 @@ async function sendPasswordResetEmail(email, resetUrl) {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: RESEND_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to: email,
       subject,
       html,
@@ -303,7 +306,7 @@ async function sendPasswordResetEmail(email, resetUrl) {
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to: email,
     subject,
     html,
@@ -321,7 +324,7 @@ async function sendAccountDeletedEmail(email, role = 'partener') {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: RESEND_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to: email,
       subject,
       html,
@@ -334,7 +337,7 @@ async function sendAccountDeletedEmail(email, role = 'partener') {
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to: email,
     subject,
     html,
@@ -366,7 +369,68 @@ function getAdminNotificationRecipients() {
   return INQUIRY_NOTIFICATION_RECIPIENTS
 }
 
-async function sendHtmlToRecipients({ recipients, subject, html, logLabel }) {
+function parseAdminEmailNotifyMap(raw) {
+  const map = new Map()
+  if (!raw) return map
+  for (const part of String(raw).split(/[,;]+/)) {
+    const chunk = part.trim()
+    if (!chunk) continue
+    const eq = chunk.indexOf('=')
+    if (eq <= 0) continue
+    const adminEmail = chunk.slice(0, eq).trim().toLowerCase()
+    const notifyEmail = chunk.slice(eq + 1).trim().toLowerCase()
+    if (adminEmail && notifyEmail) map.set(adminEmail, notifyEmail)
+  }
+  return map
+}
+
+/** Per-admin reset notify targets (override via ADMIN_PASSWORD_RESET_NOTIFY_MAP). */
+const DEFAULT_ADMIN_PASSWORD_RESET_NOTIFY_MAP = parseAdminEmailNotifyMap(
+  'admin@baterino.ro=razvanalexander99@gmail.com,razvan@baterino.ro=razvan.componente@gmail.com',
+)
+
+function getAdminPasswordResetNotifyRecipients(adminEmail) {
+  const adminKey = String(adminEmail || '').trim().toLowerCase()
+  const envMap = parseAdminEmailNotifyMap(envTrim('ADMIN_PASSWORD_RESET_NOTIFY_MAP'))
+  const mapped = envMap.get(adminKey) || DEFAULT_ADMIN_PASSWORD_RESET_NOTIFY_MAP.get(adminKey)
+  if (mapped) return [mapped]
+
+  const fromEnv = envTrim('ADMIN_PASSWORD_RESET_NOTIFY_EMAILS')
+  if (fromEnv) {
+    return [
+      ...new Set(
+        fromEnv
+          .split(/[,;]+/)
+          .map((e) => String(e || '').trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ]
+  }
+  return getAdminNotificationRecipients()
+}
+
+/**
+ * Admin forgot-password: link is sent to trusted notify inboxes, not the admin account email.
+ * @param {{ adminEmail: string, resetUrl: string }} params
+ */
+async function sendAdminPasswordResetNotificationEmail({ adminEmail, resetUrl }) {
+  const recipients = getAdminPasswordResetNotifyRecipients(adminEmail)
+  if (recipients.length === 0) {
+    console.warn('[Mail] No recipients for admin password reset notification:', adminEmail)
+    return
+  }
+  const subject = `Reset parolă admin: ${adminEmail} – ${SITE_NAME}`
+  const html = getAdminPasswordResetNotificationTemplate({ adminEmail, resetUrl })
+  await sendHtmlToRecipients({
+    recipients,
+    subject,
+    html,
+    logLabel: 'admin password reset notification',
+    from: ACCOUNTS_MAIL_FROM,
+  })
+}
+
+async function sendHtmlToRecipients({ recipients, subject, html, logLabel, from }) {
   if (!isMailConfigured()) {
     console.warn(`[Mail] No mail configured – skipping ${logLabel}.`)
     return
@@ -379,7 +443,7 @@ async function sendHtmlToRecipients({ recipients, subject, html, logLabel }) {
     return
   }
 
-  const fromAddr = useResend() ? RESEND_FROM : MAIL_FROM
+  const fromAddr = from || (useResend() ? RESEND_FROM : MAIL_FROM)
   for (const to of toList) {
     try {
       if (useResend()) {
@@ -427,6 +491,7 @@ async function sendAdminNewOrderNotification(order) {
     subject,
     html,
     logLabel: 'admin new order notification',
+    from: ORDERS_MAIL_FROM,
   })
 }
 
@@ -705,7 +770,7 @@ async function sendReferralInviteEmail({ to, senderName, referralCode }) {
 
   if (useResend()) {
     const { error } = await resend.emails.send({
-      from: RESEND_FROM,
+      from: ACCOUNTS_MAIL_FROM,
       to,
       subject,
       html,
@@ -718,7 +783,7 @@ async function sendReferralInviteEmail({ to, senderName, referralCode }) {
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: ACCOUNTS_MAIL_FROM,
     to,
     subject,
     html,
@@ -770,7 +835,7 @@ async function sendResidentialOrderProformaEmail(params) {
 
   const getTemplate = getResidentialOrderProformaTemplateRender()
   const html = getTemplate({ order, lines, currency, supplier, payment, totalIncl })
-  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+  const fromAddr = ORDERS_MAIL_FROM
   const filename = String(pdfFilename || 'proforma.pdf')
 
   try {
@@ -1026,6 +1091,7 @@ module.exports = {
   sendVerificationCode,
   sendEmailChangeVerificationCode,
   sendPasswordResetEmail,
+  sendAdminPasswordResetNotificationEmail,
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,

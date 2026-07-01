@@ -13,6 +13,7 @@ const { PrismaClient, Prisma } = require(path.join(__dirname, 'generated', 'pris
 const {
   sendVerificationCode,
   sendPasswordResetEmail,
+  sendAdminPasswordResetNotificationEmail,
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,
@@ -1192,6 +1193,50 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
     return res.json({ message: 'Dacă există un cont cu acest email, vei primi un link de resetare.' })
   } catch (err) {
     console.error('Forgot password error:', err)
+    res.status(500).json({ error: 'Eroare la trimiterea link-ului de resetare.' })
+  }
+})
+
+// ── Auth: Admin forgot password (notify emails receive the reset link) ──
+app.post('/api/auth/admin/forgot-password', forgotPasswordLimiter, async (req, res) => {
+  try {
+    const body = req.body || {}
+    const email = String(body.email || '').trim().toLowerCase()
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email este obligatoriu.' })
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } })
+    const genericMessage =
+      'Dacă există un cont de administrator cu acest email, link-ul de resetare a fost trimis către administratorii desemnați.'
+
+    if (!user || user.role !== 'admin' || user.deletedAt) {
+      return res.json({ message: genericMessage })
+    }
+
+    const token = crypto.randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: token, passwordResetExpiresAt: expiresAt },
+    })
+
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
+    const resetUrl = `${frontendUrl}/admin/reset-password?token=${token}`
+
+    await sendAdminPasswordResetNotificationEmail({ adminEmail: user.email, resetUrl })
+
+    console.log(
+      '[Admin forgot password] Reset requested for:',
+      user.email,
+      isMailConfigured() ? `(notify via ${getMailProvider()})` : '(mail not configured)',
+    )
+
+    return res.json({ message: genericMessage })
+  } catch (err) {
+    console.error('Admin forgot password error:', err)
     res.status(500).json({ error: 'Eroare la trimiterea link-ului de resetare.' })
   }
 })
