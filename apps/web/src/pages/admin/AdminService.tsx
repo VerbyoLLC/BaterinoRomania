@@ -608,6 +608,18 @@ export default function AdminService() {
                   {detail.problemDescription}
                 </p>
               </div>
+              {detail.endClientName ? (
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Client final</p>
+                  <p className="mt-0.5 text-sm text-slate-900">{detail.endClientName}</p>
+                </div>
+              ) : null}
+              {detail.productLocation ? (
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Locație produs</p>
+                  <p className="mt-0.5 text-sm text-slate-900">{detail.productLocation}</p>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">

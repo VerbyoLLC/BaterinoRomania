@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Building2, MapPin, KeyRound, Mail, Shield, Trash2, Bell } from 'lucide-react'
+import { User, Building2, MapPin, KeyRound, Mail, Shield, Trash2, Bell, FileText, Download } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import {
   getPartnerSettingsTranslations,
-  getPartnerSettingsActivityLabel,
-  type PartnerSettingsActivityId,
+  getPartnerChannelProfileLabel,
 } from '../../i18n/partner/settings'
 import type { LangCode } from '../../i18n/menu'
 import {
@@ -14,6 +13,7 @@ import {
   getAuthEmail,
   getPartnerProfile,
   savePartnerProfile,
+  downloadPartnerContract,
 } from '../../lib/api'
 import {
   loadPhoneE164,
@@ -26,20 +26,40 @@ import PhoneInput from '../../components/PhoneInput'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 import EmailNotificationsSettings from '../../components/settings/EmailNotificationsSettings'
 
-type SettingsSectionKey = 'personal' | 'company' | 'delivery' | 'password' | 'email' | 'notifications' | 'twoFactor' | 'delete'
-
-type ActivityType = PartnerSettingsActivityId
-const ACTIVITY_IDS: ActivityType[] = ['instalator', 'distribuitor', 'integrator', 'altul']
+type SettingsSectionKey = 'personal' | 'company' | 'delivery' | 'documents' | 'password' | 'email' | 'notifications' | 'twoFactor' | 'delete'
 
 const SECTION_IDS: Record<SettingsSectionKey, string> = {
   personal: 'partner-settings-personal',
   company: 'partner-settings-company',
   delivery: 'partner-settings-delivery',
+  documents: 'partner-settings-documents',
   password: 'partner-settings-password',
   email: 'partner-settings-email',
   notifications: 'partner-settings-notifications',
   twoFactor: 'partner-settings-2fa',
   delete: 'partner-settings-delete',
+}
+
+const PARTNER_SETTINGS_SCROLL_MARGIN_PX = 96 // matches scroll-mt-24 on sections
+
+function getPartnerLayoutScrollRoot(): HTMLElement | null {
+  return document.getElementById('partner-layout-scroll')
+}
+
+function scrollPartnerSettingsSection(sectionId: string, behavior: ScrollBehavior = 'smooth') {
+  const root = getPartnerLayoutScrollRoot()
+  const el = document.getElementById(sectionId)
+  if (!el) return
+  if (!root) {
+    el.scrollIntoView({ behavior, block: 'start' })
+    return
+  }
+  const rootRect = root.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+  root.scrollTo({
+    top: root.scrollTop + elRect.top - rootRect.top - PARTNER_SETTINGS_SCROLL_MARGIN_PX,
+    behavior,
+  })
 }
 
 function SettingsPanel({
@@ -192,14 +212,6 @@ function DetaliiFirmaFormSkeleton({ ariaLabel }: { ariaLabel: string }) {
       </div>
       <FieldSkeleton />
       <FieldSkeleton />
-      <div className="my-4 border-y border-gray-200 py-6 sm:my-6 sm:py-8">
-        <div className="mb-3 h-4 w-36 animate-pulse rounded bg-gray-200" aria-hidden />
-        <div className="grid grid-cols-2 gap-2">
-          {[0, 1, 2, 3].map((k) => (
-            <div key={k} className="h-9 animate-pulse rounded-lg bg-gray-200" aria-hidden />
-          ))}
-        </div>
-      </div>
       <div className="h-11 w-48 animate-pulse rounded-xl bg-gray-200" aria-hidden />
     </div>
   )
@@ -210,24 +222,29 @@ export default function PartnerSettings() {
   const { language } = useLanguage()
   const tr = getPartnerSettingsTranslations(language.code as LangCode)
 
+  const [accountHasPassword, setAccountHasPassword] = useState<boolean | null>(null)
+
   const navItems: { key: SettingsSectionKey; label: string; icon: typeof User }[] = useMemo(
-    () => [
-      { key: 'personal', label: tr.navPersonal, icon: User },
-      { key: 'company', label: tr.navCompany, icon: Building2 },
-      { key: 'delivery', label: tr.navDelivery, icon: MapPin },
-      { key: 'password', label: tr.navPassword, icon: KeyRound },
-      { key: 'email', label: tr.navEmail, icon: Mail },
-      { key: 'notifications', label: tr.navNotifications, icon: Bell },
-      { key: 'twoFactor', label: tr.navTwoFactor, icon: Shield },
-      { key: 'delete', label: tr.navDelete, icon: Trash2 },
-    ],
-    [tr],
+    () =>
+      [
+        { key: 'personal' as const, label: tr.navPersonal, icon: User },
+        { key: 'company' as const, label: tr.navCompany, icon: Building2 },
+        { key: 'delivery' as const, label: tr.navDelivery, icon: MapPin },
+        { key: 'documents' as const, label: tr.navDocuments, icon: FileText },
+        ...(accountHasPassword === true
+          ? [{ key: 'password' as const, label: tr.navPassword, icon: KeyRound }]
+          : []),
+        { key: 'email' as const, label: tr.navEmail, icon: Mail },
+        { key: 'notifications' as const, label: tr.navNotifications, icon: Bell },
+        { key: 'twoFactor' as const, label: tr.navTwoFactor, icon: Shield },
+        { key: 'delete' as const, label: tr.navDelete, icon: Trash2 },
+      ],
+    [tr, accountHasPassword],
   )
 
   const [activeSection, setActiveSection] = useState<SettingsSectionKey>('personal')
 
   const [isSuspended, setIsSuspended] = useState(false)
-  const [partnerApproved, setPartnerApproved] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -245,7 +262,8 @@ export default function PartnerSettings() {
   const [companyCounty, setCompanyCounty] = useState('')
   const [companyPostalCode, setCompanyPostalCode] = useState('')
   const [tradeRegisterNumber, setTradeRegisterNumber] = useState('')
-  const [activities, setActivities] = useState<ActivityType[]>([])
+  const [partnerChannelType, setPartnerChannelType] = useState<string | null>(null)
+  const [activityTypesRaw, setActivityTypesRaw] = useState<string | null>(null)
   const [contactFirstName, setContactFirstName] = useState('')
   const [contactLastName, setContactLastName] = useState('')
   const [phone, setPhone] = useState('')
@@ -266,12 +284,25 @@ export default function PartnerSettings() {
   const [saveDeliveryOk, setSaveDeliveryOk] = useState(false)
   const [deliveryError, setDeliveryError] = useState('')
 
+  const [partnerContractAvailable, setPartnerContractAvailable] = useState(false)
+  const [partnerContractSignedAt, setPartnerContractSignedAt] = useState<string | null>(null)
+  const [downloadingContract, setDownloadingContract] = useState(false)
+  const [contractDownloadError, setContractDownloadError] = useState('')
+
   const [passwordCurrent, setPasswordCurrent] = useState('')
   const [passwordNew, setPasswordNew] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
 
   const citiesForCompanyCounty = useMemo(() => getCitiesForCounty(companyCounty), [companyCounty])
   const citiesForDeliveryCounty = useMemo(() => getCitiesForCounty(deliveryCounty), [deliveryCounty])
+  const partnerChannelDisplay = useMemo(
+    () =>
+      getPartnerChannelProfileLabel(language.code as LangCode, {
+        partnerChannelType,
+        activityTypes: activityTypesRaw,
+      }),
+    [language.code, partnerChannelType, activityTypesRaw],
+  )
 
   function handleCompanyCountyChange(newCounty: string) {
     setCompanyCounty(newCounty)
@@ -293,10 +324,6 @@ export default function PartnerSettings() {
     if (deliveryCity && !cities.includes(deliveryCity)) setDeliveryCity('')
   }
 
-  function toggleActivity(id: ActivityType) {
-    setActivities((prev) => (prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]))
-  }
-
   useEffect(() => {
     setAccountEmail(getAuthEmail())
     let cancelled = false
@@ -306,7 +333,7 @@ export default function PartnerSettings() {
       .then((p) => {
         if (cancelled) return
         setIsSuspended(p?.isSuspended === true)
-        setPartnerApproved(p?.isApproved !== false)
+        setAccountHasPassword(p?.hasPassword === true)
         setCompanyName(String(p?.companyName ?? '').trim())
         setCui(String(p?.cui ?? '').trim())
         setCompanyStreet(String(p?.companyStreet ?? '').trim())
@@ -314,14 +341,11 @@ export default function PartnerSettings() {
         setCompanyCounty(String(p?.companyCounty ?? '').trim())
         setCompanyPostalCode(String(p?.companyPostalCode ?? '').trim())
         setTradeRegisterNumber(String(p?.tradeRegisterNumber ?? '').trim())
-        const actIds: ActivityType[] = [...ACTIVITY_IDS]
-        const fromApi = p?.activityTypes
-          ? String(p.activityTypes)
-              .split(',')
-              .map((s) => s.trim())
-              .filter((s): s is ActivityType => actIds.includes(s as ActivityType))
-          : []
-        setActivities(fromApi)
+        setPartnerChannelType(String(p?.partnerChannelType ?? '').trim() || null)
+        const actRaw = Array.isArray(p?.activityTypes)
+          ? p.activityTypes.join(',')
+          : String(p?.activityTypes ?? '').trim()
+        setActivityTypesRaw(actRaw || null)
         setContactFirstName(String(p?.contactFirstName ?? '').trim())
         setContactLastName(String(p?.contactLastName ?? '').trim())
         setPhone(loadPhoneE164(p?.phone))
@@ -329,6 +353,12 @@ export default function PartnerSettings() {
         setDeliveryCounty(String(p?.deliveryCounty ?? '').trim())
         setDeliveryCity(String(p?.deliveryCity ?? '').trim())
         setDeliveryPostalCode(String(p?.deliveryPostalCode ?? '').trim())
+        setPartnerContractAvailable(p?.partnerContractAvailable === true)
+        setPartnerContractSignedAt(
+          typeof p?.partnerContractSignedAt === 'string' && p.partnerContractSignedAt.trim()
+            ? p.partnerContractSignedAt
+            : null,
+        )
       })
       .catch((err) => {
         if (!cancelled) setProfileError(err instanceof Error ? err.message : tr.profileLoadError)
@@ -341,12 +371,11 @@ export default function PartnerSettings() {
     }
   }, [])
 
-  const settingsLockedPending = !isSuspended && !partnerApproved
-  const formsLocked = settingsLockedPending || isSuspended
+  const formsLocked = isSuspended
 
   async function handleSavePersonal(e: React.FormEvent) {
     e.preventDefault()
-    if (settingsLockedPending) return
+    if (formsLocked) return
     setSavePersonalOk(false)
     setPersonalError('')
     const fn = sanitizePersonName(contactFirstName).trim()
@@ -376,10 +405,10 @@ export default function PartnerSettings() {
 
   async function handleSaveCompany(e: React.FormEvent) {
     e.preventDefault()
-    if (settingsLockedPending) return
+    if (formsLocked) return
     setSaveCompanyOk(false)
     setCompanyError('')
-    if (!companyName.trim() || !cui.trim() || activities.length === 0) {
+    if (!companyName.trim() || !cui.trim()) {
       setCompanyError(tr.companyErrorRequired)
       return
     }
@@ -404,7 +433,6 @@ export default function PartnerSettings() {
         companyCounty: ccounty || undefined,
         companyPostalCode: cp || undefined,
         tradeRegisterNumber: tradeRegisterNumber.trim() || undefined,
-        activityTypes: activities,
       })
       setSaveCompanyOk(true)
     } catch (err) {
@@ -416,7 +444,7 @@ export default function PartnerSettings() {
 
   async function handleSaveDelivery(e: React.FormEvent) {
     e.preventDefault()
-    if (settingsLockedPending) return
+    if (formsLocked) return
     setSaveDeliveryOk(false)
     setDeliveryError('')
     const ds = deliveryStreet.trim()
@@ -469,7 +497,45 @@ export default function PartnerSettings() {
     }
   }
 
+  async function handleDownloadPartnerContract() {
+    setContractDownloadError('')
+    setDownloadingContract(true)
+    try {
+      const { pdfBlob, filename } = await downloadPartnerContract()
+      const url = URL.createObjectURL(pdfBlob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      anchor.rel = 'noopener'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      setContractDownloadError(err instanceof Error ? err.message : tr.partnerContractDownloadError)
+    } finally {
+      setDownloadingContract(false)
+    }
+  }
+
+  function formatContractSignedDate(iso: string): string {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString(language.code === 'en' ? 'en-GB' : 'ro-RO', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
   useEffect(() => {
+    if (accountHasPassword === false && activeSection === 'password') {
+      setActiveSection('personal')
+    }
+  }, [accountHasPassword, activeSection])
+
+  useEffect(() => {
+    const scrollRoot = getPartnerLayoutScrollRoot()
     const sections = navItems.map(({ key }) => document.getElementById(SECTION_IDS[key])).filter(
       (el): el is HTMLElement => el != null,
     )
@@ -483,20 +549,24 @@ export default function PartnerSettings() {
         const match = (Object.keys(SECTION_IDS) as SettingsSectionKey[]).find((k) => SECTION_IDS[k] === id)
         if (match) setActiveSection(match)
       },
-      { root: null, rootMargin: '-10% 0px -42% 0px', threshold: [0, 0.1, 0.22, 0.38, 0.52] },
+      {
+        root: scrollRoot,
+        rootMargin: '-10% 0px -42% 0px',
+        threshold: [0, 0.1, 0.22, 0.38, 0.52],
+      },
     )
     sections.forEach((el) => observer.observe(el))
     return () => observer.disconnect()
   }, [navItems])
 
   function scrollToSection(key: SettingsSectionKey) {
-    document.getElementById(SECTION_IDS[key])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    scrollPartnerSettingsSection(SECTION_IDS[key])
     setActiveSection(key)
   }
 
   function navDisabled(key: SettingsSectionKey): boolean {
     if (key === 'delete') return false
-    return settingsLockedPending
+    return isSuspended
   }
 
   const primaryBtn =
@@ -629,32 +699,13 @@ export default function PartnerSettings() {
                 value={tradeRegisterNumber}
                 onChange={setTradeRegisterNumber}
               />
-              <div className="my-4 border-y border-gray-200 py-6 sm:my-6 sm:py-8">
-                <label className="mb-2 block text-sm font-semibold font-['Inter'] text-gray-700">
-                  {tr.activityType} <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {ACTIVITY_IDS.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => toggleActivity(id)}
-                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors font-['Inter'] ${
-                        activities.includes(id)
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-gray-300 text-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      {activities.includes(id) && (
-                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                      {getPartnerSettingsActivityLabel(language.code as LangCode, id)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <Field
+                label={tr.companyProfile}
+                placeholder="—"
+                value={partnerChannelDisplay}
+                readOnly
+                hint={tr.companyProfileHint}
+              />
               {companyError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 font-['Inter']">
                   {companyError}
@@ -752,6 +803,53 @@ export default function PartnerSettings() {
           )}
         </SettingsPanel>
 
+      <SettingsPanel
+        sectionId={SECTION_IDS.documents}
+        title={tr.documentsTitle}
+        icon={<FileText className="h-5 w-5" strokeWidth={1.75} />}
+      >
+        <p className="mb-5 text-sm leading-relaxed text-gray-600 font-['Inter']">{tr.documentsIntro}</p>
+        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <FileText className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3 className="m-0 text-sm font-bold text-slate-900 font-['Inter']">{tr.partnerContractTitle}</h3>
+                <p className="mt-1 mb-0 text-sm leading-relaxed text-gray-600 font-['Inter']">
+                  {tr.partnerContractDescription}
+                </p>
+                {partnerContractAvailable && partnerContractSignedAt ? (
+                  <p className="mt-2 mb-0 text-xs text-gray-500 font-['Inter']">
+                    {tr.partnerContractSignedOn.replace('{date}', formatContractSignedDate(partnerContractSignedAt))}
+                  </p>
+                ) : (
+                  <p className="mt-2 mb-0 text-xs text-amber-800 font-['Inter']">{tr.partnerContractPending}</p>
+                )}
+              </div>
+            </div>
+            {partnerContractAvailable ? (
+              <button
+                type="button"
+                onClick={() => void handleDownloadPartnerContract()}
+                disabled={downloadingContract}
+                className={`${primaryBtn} w-full shrink-0 sm:w-auto`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                  {downloadingContract ? tr.partnerContractDownloading : tr.partnerContractDownload}
+                </span>
+              </button>
+            ) : null}
+          </div>
+          {contractDownloadError ? (
+            <p className="mt-3 mb-0 text-sm text-red-600 font-['Inter']">{contractDownloadError}</p>
+          ) : null}
+        </div>
+      </SettingsPanel>
+
+      {accountHasPassword === true ? (
       <SettingsPanel sectionId={SECTION_IDS.password} title={tr.passwordTitle} icon={<KeyRound className="h-5 w-5" strokeWidth={1.75} />}>
           <div className={`flex flex-col gap-4 ${formsLocked ? 'pointer-events-none opacity-50' : ''}`}>
             <Field
@@ -775,6 +873,7 @@ export default function PartnerSettings() {
           </div>
           <p className="mt-4 text-xs text-amber-800 font-['Inter']">{tr.passwordComingSoon}</p>
         </SettingsPanel>
+      ) : null}
 
       <SettingsPanel sectionId={SECTION_IDS.email} title={tr.emailTitle} icon={<Mail className="h-5 w-5" strokeWidth={1.75} />}>
           <p className="text-sm leading-relaxed text-gray-600 font-['Inter']">{tr.emailBody}</p>
@@ -852,21 +951,14 @@ export default function PartnerSettings() {
   )
 
   return (
-    <div className="min-h-full px-4 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+    <div className="relative box-border block !min-h-min min-w-0 w-full shrink-0 px-4 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
       <div className="w-full max-w-6xl">
-        <h1 className="mb-2 text-2xl font-extrabold text-slate-900 font-['Inter']">{tr.pageTitle}</h1>
         <p className="mb-8 max-w-2xl text-sm text-gray-500 font-['Inter']">{tr.pageSubtitle}</p>
-
-        {settingsLockedPending && (
-          <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 font-['Inter']">
-            {tr.pendingBanner}
-          </div>
-        )}
 
         <div className="flex flex-col gap-8 lg:flex-row-reverse lg:items-start lg:justify-start">
           {/* Sidebar — sticky right on desktop; first in DOM stays top on mobile */}
           <nav
-            className="shrink-0 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:top-6 lg:w-[min(100%,280px)]"
+            className="shrink-0 self-start rounded-2xl border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:top-6 lg:w-[min(100%,280px)]"
             aria-label={tr.navSectionsAria}
           >
             <ul className="m-0 flex list-none flex-row gap-1 overflow-x-auto p-0 lg:flex-col lg:overflow-visible">

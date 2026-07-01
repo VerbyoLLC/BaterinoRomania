@@ -394,6 +394,20 @@ function commercialOfferPdfKey(offerId, filename = 'oferta-comerciala.pdf') {
   return `${COMMERCIAL_OFFERS_PREFIX}/${id}/${safe}`
 }
 
+const PARTNER_CONTRACTS_PREFIX = 'partner-contracts'
+
+/**
+ * PDF contract partener: `partner-contracts/<partnerId>/contract.pdf`
+ * @param {string} partnerId
+ */
+function partnerContractPdfKey(partnerId) {
+  const id = String(partnerId || '').trim()
+  if (!/^[A-Za-z0-9_-]+$/.test(id) || id.length < 8) {
+    throw new Error('Invalid partnerId for contract PDF key')
+  }
+  return `${PARTNER_CONTRACTS_PREFIX}/${id}/contract.pdf`
+}
+
 module.exports = {
   uploadToR2,
   downloadFromR2,
@@ -413,4 +427,5 @@ module.exports = {
   productTechnicalBrochurePdfKey,
   resolveProductModelTechnicalBrochureUrl,
   commercialOfferPdfKey,
+  partnerContractPdfKey,
 }

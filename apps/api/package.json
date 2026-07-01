@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "prisma generate && node index.js",
+    "dev": "prisma generate && node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "prisma generate && prisma migrate deploy",
     "migrate:deploy": "prisma migrate deploy",

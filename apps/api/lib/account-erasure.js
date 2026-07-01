@@ -246,7 +246,7 @@ async function eraseUserAccount(prisma, userId) {
 
   const partner = await prisma.partner.findUnique({
     where: { userId },
-    select: { logoUrl: true, workPhotos: true },
+    select: { logoUrl: true, workPhotos: true, partnerContractPdfUrl: true },
   })
 
   const savedItems = await prisma.warehouseSavedItem.findMany({
@@ -254,7 +254,12 @@ async function eraseUserAccount(prisma, userId) {
     select: { id: true, warrantyCertificateUrl: true },
   })
 
-  if (partner) await purgePartnerPublicProfileR2(partner)
+  if (partner) {
+    await purgePartnerPublicProfileR2(partner)
+    if (partner.partnerContractPdfUrl) {
+      await deleteR2UrlWithPrefix(String(partner.partnerContractPdfUrl), 'partner-contracts/')
+    }
+  }
   for (const item of savedItems) {
     await purgeWarrantyCertificateR2(item)
   }
@@ -285,6 +290,8 @@ async function eraseUserAccount(prisma, userId) {
         lastName: '',
         email: anonEmail,
         phone: '',
+        endClientName: '',
+        productLocation: '',
       },
     })
 

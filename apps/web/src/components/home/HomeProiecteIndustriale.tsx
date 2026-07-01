@@ -1,4 +1,7 @@
 import { useLanguage } from '../../contexts/LanguageContext'
+import { getHomeTranslations } from '../../i18n/home'
+import HomeInstalledCapacityCounters from './HomeInstalledCapacityCounters'
+import HomeCaseStudiesPreview from './HomeCaseStudiesPreview'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -198,6 +201,9 @@ export default function HomeProiecteIndustriale() {
       <div className="mb-10 lg:mb-12">
         <SectorCardsGrid />
       </div>
+
+      <HomeInstalledCapacityCounters tr={getHomeTranslations(language.code)} />
+      <HomeCaseStudiesPreview />
 
     </section>
   )

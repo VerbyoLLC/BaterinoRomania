@@ -6,9 +6,16 @@ type Props = {
   modelLabel?: string
   /** If set, overrides INDUSTRIAL_SPEC_FIELDS labels (e.g. i18n by field key). */
   labelForKey?: (key: string) => string
+  /** Omit rows where every model has an empty value (compact partner panel). */
+  hideEmptyRows?: boolean
 }
 
-export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model', labelForKey }: Props) {
+export default function IndustrialTechnicalSpecTable({
+  data,
+  modelLabel = 'Model',
+  labelForKey,
+  hideEmptyRows = false,
+}: Props) {
   const { entries } = data
   const n = entries.length
   const [hoverRow, setHoverRow] = useState<number | null>(null)
@@ -61,6 +68,7 @@ export default function IndustrialTechnicalSpecTable({ data, modelLabel = 'Model
           {INDUSTRIAL_SPEC_FIELDS.map((field, i) => {
             const rowIdx = i + 1
             const values = entries.map((e) => e.specs[field.key] ?? '')
+            if (hideEmptyRows && values.every((v) => !String(v).trim())) return null
             const strip = (i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/80') as string
             return (
               <tr

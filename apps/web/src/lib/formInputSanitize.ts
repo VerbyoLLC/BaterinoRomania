@@ -174,7 +174,7 @@ export function formatPriceInputDisplay(raw: string | number): string {
   return n.toLocaleString(PRICE_INPUT_LOCALE, PRICE_INPUT_FRACTION_DIGITS)
 }
 
-/** Website URL: trim; dacă lipsește schema, adaugă https:// pentru domenii simple. Gol rămâne gol. */
+/** Website URL: trim; dacă lipsește schema, adaugă https:// la salvare. Gol rămâne gol. */
 export function normalizePartnerWebsite(raw: string): string {
   let s = String(raw ?? '').trim()
   if (!s) return ''
@@ -183,7 +183,15 @@ export function normalizePartnerWebsite(raw: string): string {
   return `https://${s.replace(/^\/+/, '')}`
 }
 
-/** Validare sintaxă website (după normalizare cu https://). */
+/** Afișare în câmpuri care cer doar domeniul (fără https://). */
+export function partnerWebsiteForInput(raw: string): string {
+  let s = String(raw ?? '').trim()
+  if (!s) return ''
+  if (s.length > 512) s = s.slice(0, 512)
+  return s.replace(/^https?:\/\//i, '').replace(/^\/+/, '')
+}
+
+/** Validare domeniu website (acceptă domeniu simplu sau URL complet). */
 export function isPartnerWebsiteSyntaxValid(raw: string): boolean {
   const normalized = normalizePartnerWebsite(raw)
   if (!normalized) return false

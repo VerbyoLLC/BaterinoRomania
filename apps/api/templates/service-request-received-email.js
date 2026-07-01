@@ -32,6 +32,9 @@ function getServiceRequestReceivedTemplate({
   serialNumber,
   modelNumber,
   problemDescription,
+  endClientName,
+  productLocation,
+  accountType,
 }) {
   const greetingName = String(firstName || '').trim()
   const greeting = greetingName ? `Bună, ${escapeHtml(greetingName)}!` : 'Bună ziua,'
@@ -39,6 +42,10 @@ function getServiceRequestReceivedTemplate({
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+  const isPartner = String(accountType || '').trim() === 'partener'
+  const intro = isPartner
+    ? 'Am primit cererea ta de service pentru produsul de mai jos. Echipa Divizia de Service a luat în lucru problema semnalată și revenim cu un răspuns în cel mai scurt timp.'
+    : 'Am primit cererea ta pentru produsul de mai jos, împreună cu detaliile transmise. Echipa Divizia de Service a luat în lucru problema semnalată și revenim cu un răspuns în cel mai scurt timp.'
 
   return `
 <!DOCTYPE html>
@@ -54,7 +61,7 @@ function getServiceRequestReceivedTemplate({
       ${greeting}
     </h1>
     <p style="margin: 0 0 20px; color: #334155;">
-      Am primit cererea ta pentru produsul de mai jos, împreună cu detaliile transmise. Echipa Divizia de Service a luat în lucru problema semnalată și revenim cu un răspuns în cel mai scurt timp.
+      ${intro}
     </p>
 
     <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0;">
@@ -69,6 +76,8 @@ function getServiceRequestReceivedTemplate({
       ${row('Produs', productTitle)}
       ${row('SN', serialNumber)}
       ${row('Model', modelNumber)}
+      ${endClientName ? row('Client final', endClientName) : ''}
+      ${productLocation ? row('Locație produs', productLocation) : ''}
     </table>
 
     <div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:8px;border-left:4px solid #0f172a;">

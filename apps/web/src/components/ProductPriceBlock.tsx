@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { PublicProduct } from '../lib/api'
 import {
   getAuthRole,
-  getPartnerCatalogSaleUnitNumeric,
+  getPartnerProfile,
+  getPartnerCatalogNetUnitForDisplay,
   getResidentialCatalogStockListingCta,
 } from '../lib/api'
 import { getProduseTranslations } from '../i18n/produse'
@@ -33,6 +35,29 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
     (product.pricePresentation as 'simple' | 'detailed' | undefined) || 'simple'
   const role = getAuthRole()
   const isPartner = role === 'partener'
+  const [partnerDiscountPct, setPartnerDiscountPct] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isPartner) {
+      setPartnerDiscountPct(null)
+      return
+    }
+    let cancelled = false
+    getPartnerProfile()
+      .then((p) => {
+        if (cancelled) return
+        const raw = p?.partnerDiscountPercent
+        setPartnerDiscountPct(
+          raw != null && Number.isFinite(Number(raw)) ? Number(raw) : null,
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setPartnerDiscountPct(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isPartner])
 
   const produseTr = getProduseTranslations(lang)
   const stockListingLabel = getResidentialCatalogStockListingCta(product, {
@@ -56,7 +81,7 @@ export default function ProductPriceBlock({ product, lang, className = '', embed
 
   const sale = isPartner
     ? (() => {
-        const nu = getPartnerCatalogSaleUnitNumeric(product)
+        const nu = getPartnerCatalogNetUnitForDisplay(product, partnerDiscountPct)
         return Number.isNaN(nu) ? null : nu
       })()
     : num(product.salePrice)

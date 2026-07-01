@@ -130,7 +130,7 @@ export default function AdminProducts() {
   const [umiditateMin, setUmiditateMin] = useState('')
   const [umiditateMax, setUmiditateMax] = useState('')
   const [salePrice, setSalePrice] = useState('')
-  const [partnerSalePrice, setPartnerSalePrice] = useState('')
+  const [mapPrice, setMapPrice] = useState('')
   const [vat, setVat] = useState('')
   const [priceVisibility, setPriceVisibility] = useState<'hidden' | 'public' | 'partner_only'>('public')
   const [pricePresentation, setPricePresentation] = useState<'simple' | 'detailed'>('simple')
@@ -399,8 +399,8 @@ export default function AdminProducts() {
     const sale = row.salePrice
     const v = (row as { vat?: string | number }).vat
     setSalePrice(sale != null && String(sale).trim() ? formatPriceInputDisplay(String(sale)) : '')
-    const psp = (row as { partnerSalePrice?: string | number }).partnerSalePrice
-    setPartnerSalePrice(psp != null && String(psp).trim() ? formatPriceInputDisplay(String(psp)) : '')
+    const map = (row as { mapPrice?: string | number }).mapPrice
+    setMapPrice(map != null && String(map).trim() && Number(map) > 0 ? formatPriceInputDisplay(String(map)) : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
     const pv = String((row as { priceVisibility?: string }).priceVisibility || 'public')
     setPriceVisibility(
@@ -530,7 +530,7 @@ export default function AdminProducts() {
     setUmiditateMin('')
     setUmiditateMax('')
     setSalePrice('')
-    setPartnerSalePrice('')
+    setMapPrice('')
     setVat('')
     setPriceVisibility('public')
     setPricePresentation('simple')
@@ -1136,7 +1136,7 @@ export default function AdminProducts() {
       seoDescription: seoDescription.trim() || null,
       seoOgImage: seoOgImageOut,
       salePrice: String(parsePriceInput(salePrice) || 0),
-      partnerSalePrice: String(parsePriceInput(partnerSalePrice) || 0),
+      mapPrice: String(parsePriceInput(mapPrice) || 0),
       vat: parseFormattedNumber(vat) || '19',
       energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
       capacitate: carouselTemplate ? undefined : capacitate ? `${parseFormattedNumber(capacitate)} Ah` : undefined,
@@ -1621,7 +1621,7 @@ export default function AdminProducts() {
                   <h3 className="text-sm font-bold font-['Inter'] text-gray-900 m-0">Promovare pe cont</h3>
                   <AdminInfoTooltip
                     label="Informații promovare pe cont"
-                    text="Client / Partener: prioritate în contul selectat. Promotie: card evidențiat în catalog (Acasă, Produse) și afișat primul în listă."
+                    text="Partener: prioritate în catalogul partener (dashboard + Produse partener). Promotie: card evidențiat în catalogul public (Acasă, Produse) și afișat primul în listă; nu apare în panoul partener."
                   />
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
@@ -2199,9 +2199,15 @@ export default function AdminProducts() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                   <div>
-                    <label htmlFor="product-sale-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Preț vânzare client (RON)
-                    </label>
+                    <div className="mb-2 flex items-center gap-2">
+                      <label htmlFor="product-sale-price" className="text-sm font-semibold font-['Inter'] text-gray-700 m-0">
+                        Pret Vanzare (PRP) RON
+                      </label>
+                      <AdminInfoTooltip
+                        label="Informații PRP"
+                        text="PRP (pretul recomandat de producator pentru vanzare)"
+                      />
+                    </div>
                     <input
                       id="product-sale-price"
                       type="text"
@@ -2214,21 +2220,27 @@ export default function AdminProducts() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="product-partner-sale-price" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      Preț vânzare partener (RON)
-                    </label>
+                    <div className="mb-2 flex items-center gap-2">
+                      <label htmlFor="product-map-price" className="text-sm font-semibold font-['Inter'] text-gray-700 m-0">
+                        MAP (Minimum Advertised Price)
+                      </label>
+                      <AdminInfoTooltip
+                        label="Informații MAP"
+                        text="MAP (pret minim de publicitate)"
+                      />
+                    </div>
                     <input
-                      id="product-partner-sale-price"
+                      id="product-map-price"
                       type="text"
                       inputMode="decimal"
-                      value={partnerSalePrice}
-                      onChange={(e) => handlePriceInput(e.target.value, setPartnerSalePrice)}
-                      onBlur={() => handlePriceBlur(partnerSalePrice, setPartnerSalePrice)}
-                      placeholder="20,000.00"
+                      value={mapPrice}
+                      onChange={(e) => handlePriceInput(e.target.value, setMapPrice)}
+                      onBlur={() => handlePriceBlur(mapPrice, setMapPrice)}
+                      placeholder="18,000.00"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2 sm:max-w-[calc(50%-0.5rem)]">
                     <label htmlFor="product-vat" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
                       TVA (%)
                     </label>

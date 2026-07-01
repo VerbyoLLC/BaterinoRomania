@@ -89,6 +89,7 @@ import { CatalogCurrencyProvider } from './contexts/CatalogCurrencyContext'
 import { CartProvider } from './contexts/CartContext'
 import { SeoConfigProvider } from './contexts/SeoConfigContext'
 import AdminSiteSeo from './pages/admin/AdminSiteSeo'
+import AdminPriceCalculator from './pages/admin/AdminPriceCalculator'
 import ClientOutlet from './pages/client/ClientOutlet'
 import ClientDashboard from './pages/client/ClientDashboard'
 import ClientOrders from './pages/client/ClientOrders'
@@ -149,6 +150,7 @@ export default function App() {
           <Route path="oferte/sabloane-beneficii" element={<AdminOffersBenefitsTemplates />} />
           <Route path="setari/sabloane" element={<AdminTemplatesHub />} />
           <Route path="setari/sabloane-proforma" element={<AdminOffersProformaTemplate />} />
+          <Route path="setari/price-calculator" element={<AdminPriceCalculator />} />
           <Route path="service"   element={<AdminService />} />
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="change-password" element={<AdminChangePassword />} />

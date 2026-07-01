@@ -25,6 +25,7 @@ import { cacheProductTip, readCachedProductTip } from '../lib/productTipCache'
 import { normalizeProductFaq } from '../lib/productFaq'
 import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
 import ProductCaseStudiesSection from '../components/product/ProductCaseStudiesSection'
+import ProductDetailCtaBoxes from '../components/product/ProductDetailCtaBoxes'
 import ResidentialIndustrialProductPage from './ResidentialIndustrialProductPage'
 import CompatibilitateInvertorModal from '../components/CompatibilitateInvertorModal'
 import RelatedProducts from '../components/product/RelatedProducts'
@@ -1194,35 +1195,6 @@ export default function ProductRezidential() {
                 </button>
               </div>
             </section>
-
-              {faqItems.length > 0 ? (
-                <section className="mt-6 lg:mt-8" aria-labelledby="res-product-faq-heading">
-                  <h2
-                    id="res-product-faq-heading"
-                    className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6"
-                  >
-                    {tr.intrebariFrecvente}
-                  </h2>
-                  <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
-                    {faqItems.map((item, i) => (
-                      <details key={`faq-${i}-${item.q}`} className="group bg-white open:bg-neutral-50/50">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
-                          <span className="min-w-0 flex-1 text-sm leading-snug sm:text-base">{item.q}</span>
-                          <ChevronDown
-                            size={22}
-                            strokeWidth={2}
-                            className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
-                            aria-hidden
-                          />
-                        </summary>
-                        <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
-                          <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{item.a}</p>
-                        </div>
-                      </details>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
           </div>
 
             <div className="order-6 hidden w-full flex-col gap-8 lg:order-none lg:flex lg:min-w-0">
@@ -1244,9 +1216,22 @@ export default function ProductRezidential() {
                 />
               </section>
             </div>
-          </div>
 
-            <div className="order-7 flex flex-col gap-8 lg:col-span-6 lg:col-start-7 lg:min-w-0">
+            <div className="order-4 w-full lg:order-none">
+              <ProductDetailCtaBoxes tr={tr} variant="swap" className="w-full" />
+            </div>
+
+            <div className="order-7 flex flex-col gap-8 lg:min-w-0">
+              {techData.length > 0 && (
+                <section className="hidden lg:block">
+                  <h2 className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6">{tr.dateTehnice}</h2>
+                  <ResidentialTechSpecTable
+                    ariaLabel={tr.dateTehnice}
+                    rows={techData.map(([label, value]) => ({ label, value }))}
+                  />
+                </section>
+              )}
+
               {docs.length > 0 && (
                 <div>
                   <h3 className="text-black text-lg font-bold font-['Inter'] mb-3">{tr.documenteTehnice}</h3>
@@ -1279,66 +1264,40 @@ export default function ProductRezidential() {
                 </div>
               )}
 
-              {techData.length > 0 && (
-                <section className="hidden lg:block">
-                  <h2 className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6">{tr.dateTehnice}</h2>
-                  <ResidentialTechSpecTable
-                    ariaLabel={tr.dateTehnice}
-                    rows={techData.map(([label, value]) => ({ label, value }))}
-                  />
-                </section>
-              )}
+              <ProductDetailCtaBoxes tr={tr} variant="reduceri" className="w-full" />
 
-              <ProductCaseStudiesSection title={tr.studiiDeCaz} items={caseStudyItems} />
+              {faqItems.length > 0 ? (
+                <section aria-labelledby="res-product-faq-heading">
+                  <h2
+                    id="res-product-faq-heading"
+                    className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6"
+                  >
+                    {tr.intrebariFrecvente}
+                  </h2>
+                  <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
+                    {faqItems.map((item, i) => (
+                      <details key={`faq-${i}-${item.q}`} className="group bg-white open:bg-neutral-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+                          <span className="min-w-0 flex-1 text-sm leading-snug sm:text-base">{item.q}</span>
+                          <ChevronDown
+                            size={22}
+                            strokeWidth={2}
+                            className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+                          <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{item.a}</p>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               <RelatedProducts product={product} />
 
-              <section className="flex flex-col gap-4">
-                <div className="relative h-64 w-full max-w-[592px] overflow-hidden rounded-[10px]">
-                  <img className="absolute inset-0 h-full w-full rounded-[10px] object-cover" src="/images/product/baterino-swap.jpg" alt="" />
-                  <div className="absolute inset-0 rounded-[10px] bg-black/50" />
-                  <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
-                    <p className="m-0 w-full shrink-0 text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
-                      {tr.stiaiCa}
-                    </p>
-                    <p className="m-0 w-full text-pretty text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
-                      {tr.swapDesc}
-                    </p>
-                    <div className="shrink-0 pt-0.5">
-                      <Link
-                        to="/siguranta"
-                        className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
-                      >
-                        <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
-                          {tr.swapBannerCta}
-                        </span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                <div className="relative h-64 w-full max-w-[589px] overflow-hidden rounded-[10px]">
-                  <img className="absolute inset-0 h-full w-full rounded-[10px] object-cover" src="/images/product/reduceri-banner.jpg" alt="" />
-                  <div className="absolute inset-0 rounded-[10px] bg-black/50" />
-                  <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
-                    <p className="m-0 max-w-[calc(100%-0.5rem)] text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
-                      {tr.reduceriTitle}
-                    </p>
-                    <p className="m-0 max-w-lg shrink-0 text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
-                      {tr.reduceriDesc}
-                    </p>
-                    <div className="shrink-0 pt-0.5">
-                      <Link
-                        to="/reduceri"
-                        className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
-                      >
-                        <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
-                          {tr.intraInCont}
-                        </span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <ProductCaseStudiesSection title={tr.studiiDeCaz} items={caseStudyItems} />
 
               <section>
                 <div className="bg-neutral-100 rounded-[10px] flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7">
@@ -1352,6 +1311,7 @@ export default function ProductRezidential() {
                 </div>
               </section>
             </div>
+          </div>
         </div>
       </div>
 

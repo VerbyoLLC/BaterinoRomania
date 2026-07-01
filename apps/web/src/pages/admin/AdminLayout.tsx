@@ -246,6 +246,14 @@ function IconCurrency() {
     </svg>
   )
 }
+function IconPriceCalculator() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <rect x="4" y="3" width="16" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0" />
+    </svg>
+  )
+}
 function IconCompanyData() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -331,6 +339,7 @@ const SETARI_PATHS = [
   '/admin/warranty-certificate-preview',
   '/admin/setari/sabloane',
   '/admin/setari/sabloane-proforma',
+  '/admin/setari/price-calculator',
   '/admin/oferte/sabloane',
   '/admin/oferte/sabloane-beneficii',
 ] as const
@@ -340,6 +349,7 @@ const ADMIN_SETARI_LINKS: { to: string; label: string; icon: ReactNode }[] = [
   { to: '/admin/change-password', label: 'Schimbă parola', icon: <IconLockPassword /> },
   { to: '/admin/account', label: 'Detalii cont', icon: <IconAccountDetails /> },
   { to: '/admin/currency', label: 'Currency', icon: <IconCurrency /> },
+  { to: '/admin/setari/price-calculator', label: 'Price calculator', icon: <IconPriceCalculator /> },
   { to: '/admin/company-data', label: 'Date companie', icon: <IconCompanyData /> },
   { to: '/admin/phone-numbers', label: 'Numere de telefon', icon: <IconPhone /> },
   { to: '/admin/agents', label: 'Agenți', icon: <IconAgents /> },

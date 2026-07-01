@@ -124,7 +124,7 @@ const translations: Record<LangCode, IntrebariFrecventeTranslations> = {
         items: [
           {
             q: 'Cum devin partener Baterino?',
-            a: 'Accesează pagina Instalatori și completează formularul de înscriere. După verificarea profilului, contul este activat de echipa noastră și primești acces la panoul de partener.',
+            a: 'Accesează pagina Instalatori și completează formularul de înscriere. După finalizare, intri direct în panoul de partener pentru alocarea prețului și semnarea contractului.',
           },
           {
             q: 'Ce beneficii au partenerii?',
@@ -260,7 +260,7 @@ const translations: Record<LangCode, IntrebariFrecventeTranslations> = {
         items: [
           {
             q: 'How do I become a Baterino partner?',
-            a: 'Visit the Installers page and complete the registration form. After profile review, our team activates your account and you get access to the partner panel.',
+            a: 'Visit the Installers page and complete the registration form. When finished, you go straight to the partner panel for price allocation and contract signing.',
           },
           {
             q: 'What benefits do partners get?',

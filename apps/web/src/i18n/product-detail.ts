@@ -109,19 +109,31 @@ export type ProductDetailTranslations = {
   techTableColValue: string
   /** Partner tab / compact heading — short label for technical specs */
   techSpecsTab: string
+  /** Partner panel — no flat or industrial specs on product */
+  techSpecsEmpty: string
   /** Mobile accordion label for main specs grid */
   detaliiTehnice: string
   /** Opens full technical details bottom sheet (mobile accordion) */
   toateDetaliileBtn: string
   intrebariFrecvente: string
   studiiDeCaz: string
+  /** Partner / tab panel — no FAQ entries on product */
+  faqEmpty: string
   // Swap banner (CTA → /siguranta)
   stiaiCa: string
   swapDesc: string
+  swapCtaEyebrow: string
+  swapCtaTitle: string
+  swapCtaDesc: string
   swapBannerCta: string
   // Reduceri banner
   reduceriTitle: string
   reduceriDesc: string
+  reduceriCtaEyebrow: string
+  reduceriCtaTitleBefore: string
+  reduceriCtaTitleHighlight: string
+  reduceriCtaTitleAfter: string
+  reduceriCtaDesc: string
   /** Reduceri banner CTA (links to /reduceri) */
   intraInCont: string
   // Contact CTA
@@ -249,17 +261,29 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     techTableColSpec: 'Specificație',
     techTableColValue: 'Valoare',
     techSpecsTab: 'Date Tehnice',
+    techSpecsEmpty: 'Nu există date tehnice disponibile pentru acest produs.',
     detaliiTehnice: 'Detalii tehnice',
     toateDetaliileBtn: 'Toate detaliile',
     intrebariFrecvente: 'Întrebări frecvente',
     studiiDeCaz: 'Studii de caz',
+    faqEmpty: 'Încă nu există întrebări frecvente pentru acest produs.',
     stiaiCa: 'ȘTIAI CĂ?',
     swapDesc:
       'Prin serviciul Baterino SWAP îți oferim o baterie la schimb pe toată durata perioadei în care bateria ta se află la noi în service?',
+    swapCtaEyebrow: 'Serviciul Baterino SWAP',
+    swapCtaTitle: 'Nu rămâi niciodată fără energie.',
+    swapCtaDesc:
+      'Cât timp bateria ta e la noi în service, îți dăm una la schimb pentru toată perioada. Sistemul tău funcționează în continuare, fără pauze.',
     swapBannerCta: 'VEZI TOATE SERVICIILE',
     reduceriTitle: 'REDUCERI ÎNTRE 5% ȘI 20%',
     reduceriDesc:
       'La Baterino, bateriile LiFePO4 au prețuri reduse prin programele noastre de reduceri dedicate. Vezi care ți se potrivește.',
+    reduceriCtaEyebrow: 'Programe de reduceri',
+    reduceriCtaTitleBefore: 'Reduceri ',
+    reduceriCtaTitleHighlight: 'între 5% și 20%',
+    reduceriCtaTitleAfter: ' la bateriile LiFePO₄.',
+    reduceriCtaDesc:
+      'Avem programe de reduceri dedicate, pentru situații diferite. Vezi în 30 de secunde care ți se potrivește și cât economisești.',
     intraInCont: 'VEZI PROGRAME REDUCERI',
     contactTitle: 'Nu ești sigur ce ți se potrivește?',
     contactDesc: 'Discută cu echipa noastră și află care este cea mai bună soluție pentru tine.',
@@ -376,17 +400,29 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     techTableColSpec: 'Specification',
     techTableColValue: 'Value',
     techSpecsTab: 'Technical specs',
+    techSpecsEmpty: 'No technical specifications available for this product.',
     detaliiTehnice: 'Technical details',
     toateDetaliileBtn: 'All details',
     intrebariFrecvente: 'Frequently asked questions',
     studiiDeCaz: 'Case studies',
+    faqEmpty: 'No FAQs for this product yet.',
     stiaiCa: 'DID YOU KNOW?',
     swapDesc:
       'With Baterino SWAP, we offer you a replacement battery for the entire period your battery is with us in service.',
+    swapCtaEyebrow: 'Baterino SWAP service',
+    swapCtaTitle: 'Never run out of power.',
+    swapCtaDesc:
+      'While your battery is with us for service, we provide a replacement for the entire period. Your system keeps running without downtime.',
     swapBannerCta: 'VIEW ALL SERVICES',
     reduceriTitle: 'DISCOUNTS FROM 5% TO 20%',
     reduceriDesc:
       'At Baterino, LiFePO4 batteries are available at reduced prices through our dedicated discount programmes. See which one suits you.',
+    reduceriCtaEyebrow: 'Discount programmes',
+    reduceriCtaTitleBefore: 'Discounts ',
+    reduceriCtaTitleHighlight: 'from 5% to 20%',
+    reduceriCtaTitleAfter: ' on LiFePO₄ batteries.',
+    reduceriCtaDesc:
+      'We have dedicated discount programmes for different situations. See in 30 seconds which one fits you and how much you save.',
     intraInCont: 'VIEW DISCOUNT PROGRAMMES',
     contactTitle: 'Not sure what suits you?',
     contactDesc: 'Talk to our team and find out which is the best solution for you.',

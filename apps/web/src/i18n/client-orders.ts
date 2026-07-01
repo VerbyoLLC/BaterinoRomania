@@ -66,6 +66,8 @@ export type ClientOrdersTranslations = {
   stInCursLivrare: string
   stLivrata: string
   stAnulata: string
+  stCerereOferta: string
+  rfqPricePending: string
   totalWithVat: string
   /** Total linie cu TVA inclus — afișat ca o singură sumă, fără sub-etichete. */
   priceItemInclVat: string
@@ -135,6 +137,8 @@ const ro: ClientOrdersTranslations = {
   stInCursLivrare: 'În curs de livrare',
   stLivrata: 'Livrată',
   stAnulata: 'Anulată',
+  stCerereOferta: 'Cerere de ofertă',
+  rfqPricePending: 'Preț în evaluare',
   totalWithVat: 'Total cu TVA',
   priceItemInclVat: 'Total cu TVA',
   orderTotalsHeading: 'Total comandă',
@@ -201,6 +205,8 @@ const en: ClientOrdersTranslations = {
   stInCursLivrare: 'Out for delivery',
   stLivrata: 'Delivered',
   stAnulata: 'Cancelled',
+  stCerereOferta: 'Quote request',
+  rfqPricePending: 'Price under review',
   totalWithVat: 'Total incl. VAT',
   priceItemInclVat: 'Total price (incl. VAT)',
   orderTotalsHeading: 'Order total',
@@ -240,6 +246,8 @@ export function fulfillmentStatusLabel(
       return tr.stLivrata
     case 'anulata':
       return tr.stAnulata
+    case 'cerere_oferta':
+      return tr.stCerereOferta
     case 'de_platit':
     default:
       return tr.stDePlatit
@@ -258,6 +266,8 @@ export function fulfillmentStatusBadgeClass(status: string): string {
       return 'bg-amber-100 text-amber-950 border-amber-200/80'
     case 'preluata':
       return 'bg-violet-100 text-violet-900 border-violet-200/80'
+    case 'cerere_oferta':
+      return 'bg-indigo-100 text-indigo-900 border-indigo-200/80'
     case 'de_platit':
     default:
       return 'bg-orange-50 text-orange-900 border-orange-200/80'
@@ -277,6 +287,8 @@ export function fulfillmentStatusAccentClass(status: string): string {
       return 'bg-amber-500'
     case 'preluata':
       return 'bg-violet-500'
+    case 'cerere_oferta':
+      return 'bg-indigo-500'
     case 'de_platit':
     default:
       return 'bg-amber-400'
@@ -296,6 +308,8 @@ export function fulfillmentStatusBorderLeftClass(status: string): string {
       return 'border-l-amber-500'
     case 'preluata':
       return 'border-l-violet-400'
+    case 'cerere_oferta':
+      return 'border-l-indigo-400'
     case 'de_platit':
     default:
       return 'border-l-amber-300'

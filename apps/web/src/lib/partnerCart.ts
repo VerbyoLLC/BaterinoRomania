@@ -1,6 +1,7 @@
 import {
   getPartnerCatalogSaleUnitNumeric,
   residentialProductStockUnavailable,
+  isPromoCatalogProduct,
   type PublicProduct,
 } from './api'
 
@@ -21,6 +22,14 @@ export function partnerProductHasListPrice(product: PublicProduct): boolean {
   return !Number.isNaN(getPartnerCatalogSaleUnitNumeric(product))
 }
 
+/** Partner with discount + signed contract can add to cart only when catalog RRP (PRP) exists. */
+export function partnerProductCanAddToCart(
+  discountPricesVisible: boolean,
+  product: PublicProduct,
+): boolean {
+  return discountPricesVisible && partnerProductHasListPrice(product)
+}
+
 /** Restore cart lines from storage against the current catalog snapshot. */
 export function hydratePartnerCartFromProducts(
   products: PublicProduct[],
@@ -34,7 +43,7 @@ export function hydratePartnerCartFromProducts(
     const quantity = Number(row.quantity)
     if (!productId || !Number.isFinite(quantity)) continue
     const p = map.get(productId)
-    if (!p || !partnerProductHasListPrice(p)) continue
+    if (!p || isPromoCatalogProduct(p) || !partnerProductHasListPrice(p)) continue
     if (residentialProductStockUnavailable(p)) continue
     const qty = Math.max(1, Math.min(99, Math.floor(quantity)))
     restored.push({ product: p, quantity: qty })
@@ -63,10 +72,27 @@ export function readPartnerCartFromStorage(): PartnerCartStoredLine[] {
   }
 }
 
+export const PARTNER_CART_UPDATED_EVENT = 'baterino:partner-cart-updated'
+export const PARTNER_OPEN_CART_EVENT = 'baterino:partner-open-cart'
+
+export function partnerCartStoredTotalQuantity(lines?: PartnerCartStoredLine[]): number {
+  const rows = lines ?? readPartnerCartFromStorage()
+  return rows.reduce((sum, row) => {
+    const q = Number(row.quantity)
+    return sum + (Number.isFinite(q) ? Math.max(0, Math.floor(q)) : 0)
+  }, 0)
+}
+
+export function notifyPartnerCartUpdated(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(PARTNER_CART_UPDATED_EVENT))
+}
+
 export function writePartnerCartToStorage(lines: PartnerCartStoredLine[]): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(PARTNER_CART_STORAGE_KEY, JSON.stringify(lines))
+    notifyPartnerCartUpdated()
   } catch {
     /* quota / private mode */
   }
@@ -76,6 +102,7 @@ export function clearPartnerCartStorage(): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.removeItem(PARTNER_CART_STORAGE_KEY)
+    notifyPartnerCartUpdated()
   } catch {
     /* ignore */
   }

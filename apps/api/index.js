@@ -17,13 +17,14 @@ const {
   sendInquiryNotification,
   sendInquiryConfirmation,
   sendReferralInviteEmail,
-  sendPartnerApplicationReceivedEmail,
-  sendPartnerAccountApprovedEmail,
-  sendSalesAgentPartnerAssignedEmail,
+  sendPartnerWelcomeEmail,
+  sendPartnerDiscountApprovedEmail,
+  sendSalesAgentPartnerRfqReceivedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,
   sendSalesLeadCreatedNotification,
+  sendAdminNewOrderNotification,
   isMailConfigured,
   getMailProvider,
   getMailFrom,
@@ -59,6 +60,7 @@ const {
   productTechnicalBrochurePdfKey,
   resolveProductModelTechnicalBrochureUrl,
   commercialOfferPdfKey,
+  partnerContractPdfKey,
 } = require('./lib/r2.js')
 const {
   slugifyCompanyHandle,
@@ -68,8 +70,20 @@ const {
   allocateUniquePartnerSlug,
   MAX_SLUG_LEN,
 } = require('./lib/partner-public-slug.js')
-const { isPartnerPublicProfileFullyComplete } = require('./lib/partner-public-profile-complete.js')
+const { isPartnerPublicProfileFullyComplete, resolvePartnerPublicVisibility } = require('./lib/partner-public-profile-complete.js')
+const {
+  parsePartnerChannelType,
+  activityTypesFromPartnerChannel,
+  derivePartnerChannelTypeFromActivities,
+  partnerDiscountLimitsForChannel,
+} = require('./lib/partner-channel.js')
+const {
+  renderPartnerContractPdf,
+  renderPartnerContractPreviewPdf,
+  computeDocumentFingerprint,
+} = require('./lib/partner-contract-pdf.js')
 const { renderWarrantyPdf } = require('./lib/warranty-pdf.js')
+const { computePartnerIsApproved } = require('./lib/partner-verification.js')
 const { renderCommercialOfferPdfFromHtml } = require('./lib/commercial-offer-pdf.js')
 const {
   parseSerialFromQrPayload,
@@ -410,21 +424,22 @@ function applyPublicPricePolicy(apiProduct, authPayload) {
       ...apiProduct,
       landedPrice: null,
       salePrice: null,
-      partnerSalePrice: null,
+      mapPrice: null,
       vat: null,
     }
   }
-  if (vis === 'public') {
-    return { ...apiProduct, partnerSalePrice: null }
-  }
-  if (role === 'partener') {
-    return { ...apiProduct, salePrice: null, landedPrice: null }
+  if (vis === 'public' || role === 'partener') {
+    return {
+      ...apiProduct,
+      landedPrice: null,
+      ...(role === 'partener' ? {} : { mapPrice: null }),
+    }
   }
   return {
     ...apiProduct,
     landedPrice: null,
     salePrice: null,
-    partnerSalePrice: null,
+    mapPrice: null,
     vat: null,
   }
 }
@@ -446,21 +461,12 @@ function guestResidentialProductEligible(apiProduct) {
 
 /** Parteneri: catalog larg (industrial, medical…); prețuri vizibile doar cu JWT — verifică după applyPublicPricePolicy. */
 function partnerCatalogCheckoutProductEligible(apiProduct) {
-  const partnerRaw = apiProduct.partnerSalePrice
-  const partner =
-    partnerRaw == null || partnerRaw === ''
+  const saleRaw = apiProduct.salePrice
+  const sale =
+    saleRaw == null || saleRaw === ''
       ? NaN
-      : parseFloat(String(partnerRaw).replace(/\s/g, '').replace(',', '.'))
-  if (Number.isFinite(partner) && partner > 0) {
-    // ok
-  } else {
-    const saleRaw = apiProduct.salePrice
-    const sale =
-      saleRaw == null || saleRaw === ''
-        ? NaN
-        : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
-    if (!Number.isFinite(sale) || sale <= 0) return false
-  }
+      : parseFloat(String(saleRaw).replace(/\s/g, '').replace(',', '.'))
+  if (!Number.isFinite(sale) || sale <= 0) return false
   const tip = String(apiProduct.tipProdus || '').toLowerCase()
   const stock = apiProduct.catalogStockStatus
   if (tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')) return false
@@ -470,16 +476,11 @@ function partnerCatalogCheckoutProductEligible(apiProduct) {
 }
 
 /**
- * Catalog line: salePrice / partnerSalePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
+ * Catalog line: salePrice = unit fără TVA; TVA se aplică pe prețul după reducere (program).
  * @returns {{ quantity: number, unitExclCatalog: number, vatPercent: number | null }}
  */
-function computeGuestResidentialLineTotals(apiProduct, qty, opts = {}) {
-  const usePartner = Boolean(opts.usePartnerPrice)
-  const primaryField = usePartner ? 'partnerSalePrice' : 'salePrice'
-  let sale = parseFloat(String(apiProduct[primaryField] ?? '').replace(/\s/g, '').replace(',', '.'))
-  if (usePartner && (!Number.isFinite(sale) || sale <= 0)) {
-    sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
-  }
+function computeGuestResidentialLineTotals(apiProduct, qty) {
+  const sale = parseFloat(String(apiProduct.salePrice ?? '').replace(/\s/g, '').replace(',', '.'))
   const vatRaw = apiProduct.vat
   const vat =
     vatRaw == null || vatRaw === '' ? 0 : parseFloat(String(vatRaw).replace(/\s/g, '').replace(',', '.'))
@@ -887,6 +888,7 @@ async function buildGoogleAuthPayload(userId) {
       select: {
         companyName: true,
         cui: true,
+        partnerChannelType: true,
         activityTypes: true,
         contactFirstName: true,
         phone: true,
@@ -899,9 +901,10 @@ async function buildGoogleAuthPayload(userId) {
       needsPartnerProfile = true
       partnerSignupPath = '/signup/parteneri/profil'
     } else if (
-      !String(p.activityTypes || '').trim() ||
       !String(p.contactFirstName || '').trim() ||
-      !String(p.phone || '').trim()
+      !String(p.phone || '').trim() ||
+      (!String(p.activityTypes || '').toLowerCase().includes('instalator') &&
+        !String(p.activityTypes || '').toLowerCase().includes('distribuitor'))
     ) {
       needsPartnerProfile = true
       partnerSignupPath = '/signup/parteneri/profil-public'
@@ -2451,6 +2454,227 @@ function mapLegacyGuestOrderToClientJson(r) {
   }
 }
 
+async function generatePartnerRfqReferenceNumber() {
+  const year = new Date().getFullYear()
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const seq = String(Math.floor(Math.random() * 9000) + 1000)
+    const referenceNumber = `RFQ-${year}-${seq}`
+    const exists = await prisma.partnerRfqRequest.findUnique({
+      where: { referenceNumber },
+      select: { id: true },
+    })
+    if (!exists) return referenceNumber
+  }
+  throw new Error('Nu s-a putut genera referința cererii de ofertă.')
+}
+
+function normalizePartnerRfqSubmitLines(raw) {
+  if (!Array.isArray(raw)) return []
+  const out = []
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue
+    const productId = String(row.productId || '').trim()
+    const quantity = Math.floor(Number(row.quantity))
+    if (!productId || !Number.isFinite(quantity)) continue
+    out.push({ productId, quantity: Math.max(1, Math.min(99, quantity)) })
+  }
+  return out
+}
+
+function mapPartnerRfqToClientJson(rfq, partner, userEmail) {
+  const lines = (rfq.lines || []).map((L) => ({
+    id: L.id,
+    productId: L.productId,
+    productSlug: L.productSlug,
+    productTitle: L.productTitle,
+    quantity: L.quantity,
+    unitPriceInclVat: null,
+    lineTotalInclVat: null,
+    listUnitPriceInclVat: null,
+    listLineTotalInclVat: null,
+    vatPercent: null,
+  }))
+  return {
+    orderKind: 'rfq',
+    id: rfq.id,
+    orderNumber: rfq.referenceNumber,
+    orderSource: 'partner',
+    email: userEmail || '',
+    phone: partner?.phone || '',
+    lastName: partner?.contactLastName || '',
+    firstName: partner?.contactFirstName || '',
+    billAddress: partner?.address || partner?.companyStreet || '',
+    billCounty: partner?.companyCounty || '',
+    billCity: partner?.companyCity || '',
+    billPostal: partner?.companyPostalCode || '',
+    deliveryDifferent: false,
+    delAddress: null,
+    delCounty: null,
+    delCity: null,
+    delPostal: null,
+    currency: rfq.currency || 'RON',
+    fulfillmentStatus: 'cerere_oferta',
+    clientHasInvoice: false,
+    proformaUrl: null,
+    createdAt: rfq.createdAt.toISOString(),
+    lines,
+    lineCount: lines.length,
+    orderTotalInclVat: null,
+  }
+}
+
+async function dispatchSalesAgentPartnerRfqNotification(partner, rfq, partnerUserEmail) {
+  const agent = partner?.assignedSalesAgent
+  const agentEmail = String(agent?.email || '').trim()
+  if (!agentEmail) return
+
+  const contactName = [partner.contactFirstName, partner.contactLastName]
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  try {
+    await sendSalesAgentPartnerRfqReceivedEmail(agentEmail, {
+      agentFirstName: agent.firstName,
+      referenceNumber: rfq.referenceNumber,
+      companyName: partner.companyName,
+      contactName,
+      contactPhone: partner.phone,
+      contactEmail: partnerUserEmail,
+      lines: (rfq.lines || []).map((L) => ({
+        productTitle: L.productTitle,
+        quantity: L.quantity,
+      })),
+      createdAt: rfq.createdAt,
+    })
+  } catch (err) {
+    console.error('[Partner RFQ] Sales agent notification error:', err?.message || err)
+  }
+}
+
+async function dispatchPartnerWelcomeEmail(partnerId) {
+  const partner = await prisma.partner.findUnique({
+    where: { id: partnerId },
+    include: {
+      user: { select: { email: true } },
+      assignedSalesAgent: true,
+    },
+  })
+  if (!partner || partner.applicationReceivedEmailSentAt) return
+
+  const email = String(partner.user?.email || '').trim()
+  if (!email) return
+
+  const partnerName = [partner.contactFirstName, partner.contactLastName]
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  const sent = await sendPartnerWelcomeEmail(email, {
+    partnerName: partnerName || undefined,
+    companyName: partner.companyName,
+    assignedSalesAgent: partner.assignedSalesAgent,
+  })
+
+  if (sent) {
+    await prisma.partner.update({
+      where: { id: partnerId },
+      data: { applicationReceivedEmailSentAt: new Date() },
+    })
+  }
+}
+
+async function dispatchPartnerDiscountApprovedEmail(partnerId) {
+  const partner = await prisma.partner.findUnique({
+    where: { id: partnerId },
+    include: {
+      user: { select: { email: true } },
+      assignedSalesAgent: true,
+    },
+  })
+  if (!partner || partner.discountApprovedEmailSentAt) return
+
+  const discountPercent =
+    partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : 0
+  if (!(discountPercent > 0)) return
+  if (!partner.assignedSalesAgentId) return
+  if (!computePartnerIsApproved(partner.partnerDiscountPercent, partner.assignedSalesAgentId)) return
+
+  const agent = partner.assignedSalesAgent
+  if (!agent || agent.deletedAt || agent.isSuspended) return
+
+  const email = String(partner.user?.email || '').trim()
+  if (!email) return
+
+  const partnerName = [partner.contactFirstName, partner.contactLastName]
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  const sent = await sendPartnerDiscountApprovedEmail(email, {
+    partnerName: partnerName || undefined,
+    companyName: partner.companyName,
+    discountPercent,
+    partnerChannelType: partner.partnerChannelType,
+    assignedSalesAgent: agent,
+  })
+
+  if (sent) {
+    await prisma.partner.update({
+      where: { id: partnerId },
+      data: { discountApprovedEmailSentAt: new Date() },
+    })
+  }
+}
+
+function mapPartnerRfqToAdminJson(rfq) {
+  const partner = rfq.partner || {}
+  const user = partner.user || {}
+  const lines = (rfq.lines || []).map((L) => ({
+    id: L.id,
+    productId: L.productId,
+    productSlug: L.productSlug,
+    productTitle: L.productTitle,
+    quantity: L.quantity,
+  }))
+  const firstLine = lines[0]
+  return {
+    orderKind: 'rfq',
+    id: rfq.id,
+    orderNumber: rfq.referenceNumber,
+    orderSource: 'partner_rfq',
+    fulfillmentStatus: rfq.status || 'pending',
+    email: String(user.email || '').trim(),
+    phone: String(partner.phone || '').trim(),
+    lastName: String(partner.contactLastName || '').trim(),
+    firstName: String(partner.contactFirstName || '').trim(),
+    companyName: String(partner.companyName || '').trim(),
+    partnerChannelType: partner.partnerChannelType || null,
+    activityTypes: partner.activityTypes || null,
+    billAddress: '',
+    billCounty: '',
+    billCity: '',
+    billPostal: '',
+    deliveryDifferent: false,
+    delAddress: null,
+    delCounty: null,
+    delCity: null,
+    delPostal: null,
+    productId: firstLine?.productId || '',
+    productSlug: firstLine?.productSlug || null,
+    productTitle: firstLine?.productTitle || (lines.length > 1 ? `${lines.length} produse` : '—'),
+    quantity: lines.reduce((sum, L) => sum + (Number(L.quantity) || 0), 0),
+    currency: rfq.currency || 'RON',
+    unitPriceInclVat: null,
+    lineTotalInclVat: null,
+    vatPercent: null,
+    createdAt: rfq.createdAt.toISOString(),
+    lines,
+    lineCount: lines.length,
+    orderTotalInclVat: null,
+  }
+}
+
 const FULFILLMENT_STATUSES = [
   'de_platit',
   'preluata',
@@ -2623,9 +2847,24 @@ async function listAccountResidentialOrdersHandler(req, res, legacyGuestOrderSou
       }),
     ])
 
-    const merged = [...modern.map(mapResidentialOrderToClientJson), ...legacy.map(mapLegacyGuestOrderToClientJson)].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
+    const merged = [...modern.map(mapResidentialOrderToClientJson), ...legacy.map(mapLegacyGuestOrderToClientJson)]
+
+    if (legacyGuestOrderSource === 'partner') {
+      const partner = await prisma.partner.findUnique({
+        where: { userId: req.userId },
+      })
+      if (partner) {
+        const rfqs = await prisma.partnerRfqRequest.findMany({
+          where: { partnerId: partner.id },
+          include: { lines: { orderBy: { id: 'asc' } } },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        })
+        merged.push(...rfqs.map((rfq) => mapPartnerRfqToClientJson(rfq, partner, email)))
+      }
+    }
+
+    merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     const out = await enrichClientOrderListWithProductImages(merged)
     return res.json(out)
@@ -2922,6 +3161,71 @@ app.get('/api/partner/orders', authMiddleware, partnerAuthMiddleware, (req, res)
   listAccountResidentialOrdersHandler(req, res, 'partner'),
 )
 
+app.post('/api/partner/rfq-requests', authMiddleware, partnerAuthMiddleware, async (req, res) => {
+  try {
+    const partner = await prisma.partner.findUnique({
+      where: { userId: req.userId },
+      include: {
+        assignedSalesAgent: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+      },
+    })
+    if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+
+    const submitLines = normalizePartnerRfqSubmitLines(req.body?.lines)
+    if (submitLines.length === 0) {
+      return res.status(400).json({ error: 'Adaugă cel puțin un produs în cerere.' })
+    }
+    if (submitLines.length > 40) {
+      return res.status(400).json({ error: 'Prea multe linii în cerere.' })
+    }
+
+    const productIds = [...new Set(submitLines.map((L) => L.productId))]
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, slug: true, title: true },
+    })
+    const productById = new Map(products.map((p) => [p.id, p]))
+    const resolvedLines = []
+    for (const row of submitLines) {
+      const p = productById.get(row.productId)
+      if (!p) return res.status(400).json({ error: 'Un produs din cerere nu mai este disponibil.' })
+      resolvedLines.push({
+        productId: p.id,
+        productSlug: p.slug || null,
+        productTitle: String(p.title || '').trim() || p.id,
+        quantity: row.quantity,
+      })
+    }
+
+    const referenceNumber = await generatePartnerRfqReferenceNumber()
+    const created = await prisma.partnerRfqRequest.create({
+      data: {
+        referenceNumber,
+        partnerId: partner.id,
+        status: 'pending',
+        currency: 'RON',
+        lines: {
+          create: resolvedLines,
+        },
+      },
+      include: { lines: { orderBy: { id: 'asc' } } },
+    })
+
+    const email = String(req.userEmail || '')
+      .trim()
+      .toLowerCase()
+    dispatchSalesAgentPartnerRfqNotification(partner, created, email).catch((e) =>
+      console.error('[Partner RFQ] Sales agent notification (async):', e?.message || e),
+    )
+    return res.status(201).json(mapPartnerRfqToClientJson(created, partner, email))
+  } catch (err) {
+    console.error('Partner RFQ submit error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la trimiterea cererii.' })
+  }
+})
+
 app.get('/api/client/payment-bank-details', authMiddleware, clientAuthMiddleware, residentialPaymentBankDetailsHandler)
 app.get('/api/partner/payment-bank-details', authMiddleware, partnerAuthMiddleware, residentialPaymentBankDetailsHandler)
 
@@ -3110,6 +3414,8 @@ function mapServiceRequestRow(row) {
     productTitle: row.productTitle,
     savedItemId: row.savedItemId,
     problemDescription: row.problemDescription,
+    endClientName: row.endClientName ?? '',
+    productLocation: row.productLocation ?? '',
     status: row.status,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
@@ -3238,6 +3544,203 @@ app.post('/api/client/service-requests', authMiddleware, clientAuthMiddleware, a
       return res.status(409).json({ error: 'Conflict la generarea numărului cererii. Reîncearcă.' })
     }
     console.error('Client service request create error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la trimiterea cererii.' })
+  }
+})
+
+/** Partener: căutare produs după SN (pasul 1 cerere service). */
+app.get('/api/partner/service-requests/lookup', authMiddleware, partnerAuthMiddleware, async (req, res) => {
+  try {
+    let sn = String(req.query.sn ?? req.query.serial ?? '').trim()
+    const qrRaw = req.query.qr != null ? String(req.query.qr) : ''
+    if (!sn && qrRaw) sn = parseSerialFromQrPayload(qrRaw)
+    sn = normalizeWarehouseSerialNumber(sn)
+    if (!isValidWarehouseSerialNumber(sn)) {
+      return res.status(400).json({ error: SN_INVALID_MESSAGE, code: 'invalid_serial' })
+    }
+
+    const unit = await prisma.warehouseStockUnit.findUnique({
+      where: { serialNumber: sn },
+      select: {
+        id: true,
+        serialNumber: true,
+        product: {
+          select: {
+            id: true,
+            title: true,
+            sku: true,
+            cardImage: true,
+            images: true,
+          },
+        },
+        savedItem: {
+          select: {
+            id: true,
+            modelNumber: true,
+            location: true,
+          },
+        },
+      },
+    })
+    if (!unit) {
+      return res.status(404).json({ error: 'Numărul de serie nu a fost găsit în sistem.', code: 'serial_not_found' })
+    }
+
+    const p = unit.product
+    const modelNumber =
+      (unit.savedItem && String(unit.savedItem.modelNumber || '').trim()) || String(p?.sku || '').trim()
+    const productTitle = String(p?.title || modelNumber || '').trim()
+    const imageUrl = pickProductHeroImageUrlForWarrantyVerify(p) || null
+
+    res.set('Cache-Control', 'no-store')
+    return res.json({
+      serialNumber: unit.serialNumber,
+      modelNumber,
+      productTitle,
+      savedItemId: unit.savedItem?.id ?? null,
+      productId: p?.id ?? null,
+      imageUrl,
+      location: unit.savedItem?.location ?? null,
+    })
+  } catch (err) {
+    console.error('Partner service SN lookup error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la căutarea produsului.' })
+  }
+})
+
+/** Listă cereri service ale partenerului curent. */
+app.get('/api/partner/service-requests', authMiddleware, partnerAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId
+    const rows = await prisma.serviceRequest.findMany({
+      where: { userId, accountType: 'partener' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json(rows.map(mapServiceRequestRow))
+  } catch (err) {
+    console.error('Partner service requests list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la încărcarea cererilor.' })
+  }
+})
+
+/**
+ * Creare cerere service de partener.
+ * Body: { serialNumber, problemDescription, endClientName?, productLocation }
+ */
+app.post('/api/partner/service-requests', authMiddleware, partnerAuthMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {}
+    let serialNumber = normalizeWarehouseSerialNumber(String(body.serialNumber || ''))
+    const problemDescription = String(body.problemDescription || '').trim()
+    const endClientName = String(body.endClientName || '').trim().slice(0, 200)
+    const productLocation = String(body.productLocation || '').trim().slice(0, 500)
+
+    if (!isValidWarehouseSerialNumber(serialNumber)) {
+      return res.status(400).json({ error: SN_INVALID_MESSAGE, code: 'invalid_serial' })
+    }
+    if (problemDescription.length < 3) {
+      return res.status(400).json({ error: 'Te rugăm să descrii pe scurt problema.' })
+    }
+    if (problemDescription.length > 2000) {
+      return res.status(400).json({ error: 'Descrierea este prea lungă (max. 2000 caractere).' })
+    }
+    if (!productLocation) {
+      return res.status(400).json({ error: 'Indică locația produsului.' })
+    }
+
+    const unit = await prisma.warehouseStockUnit.findUnique({
+      where: { serialNumber },
+      include: {
+        savedItem: true,
+        product: { select: { id: true, title: true, sku: true } },
+      },
+    })
+    if (!unit) {
+      return res.status(404).json({ error: 'Numărul de serie nu a fost găsit în sistem.', code: 'serial_not_found' })
+    }
+
+    const existingActive = await prisma.serviceRequest.findFirst({
+      where: {
+        serialNumber,
+        status: { in: SERVICE_REQUEST_ACTIVE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (existingActive) {
+      return res.status(409).json({
+        error: 'Există deja o cerere de service activă pentru acest număr de serie.',
+        code: 'service_request_already_active',
+        serviceRequest: mapServiceRequestRow(existingActive),
+      })
+    }
+
+    const userId = req.userId
+    const [user, partner] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true, phone: true },
+      }),
+      prisma.partner.findUnique({
+        where: { userId },
+        select: { companyName: true, contactFirstName: true, contactLastName: true, phone: true },
+      }),
+    ])
+
+    const firstName = String(partner?.contactFirstName || user?.firstName || '').trim()
+    const lastName = String(partner?.contactLastName || user?.lastName || '').trim()
+    const email = String(user?.email || req.userEmail || '').trim().toLowerCase()
+    const phone = String(partner?.phone || user?.phone || '').trim()
+    const productTitle = String(unit.product?.title || unit.savedItem?.modelNumber || unit.product?.sku || '').trim()
+    const modelNumber = String(unit.savedItem?.modelNumber || unit.product?.sku || '').trim()
+
+    if (!email) {
+      return res.status(400).json({ error: 'Contul tău nu are un email valid pentru notificări.' })
+    }
+
+    const requestNumber = await generateServiceRequestNumber()
+
+    const created = await prisma.serviceRequest.create({
+      data: {
+        requestNumber,
+        accountType: 'partener',
+        userId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        serialNumber,
+        modelNumber,
+        productTitle,
+        savedItemId: unit.savedItem?.id ?? null,
+        problemDescription,
+        endClientName,
+        productLocation,
+        status: 'open',
+      },
+    })
+
+    sendServiceRequestReceivedEmail({
+      email,
+      requestNumber: created.requestNumber,
+      firstName,
+      productTitle,
+      serialNumber: created.serialNumber,
+      modelNumber: created.modelNumber,
+      problemDescription: created.problemDescription,
+      endClientName: created.endClientName,
+      productLocation: created.productLocation,
+      accountType: 'partener',
+    }).catch((e) => console.error('[PartnerServiceRequest] Email error:', e?.message || e))
+
+    res.set('Cache-Control', 'no-store')
+    return res.status(201).json(mapServiceRequestRow(created))
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Conflict la generarea numărului cererii. Reîncearcă.' })
+    }
+    console.error('Partner service request create error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la trimiterea cererii.' })
   }
 })
@@ -3910,43 +4413,6 @@ app.get(
   },
 )
 
-/** Înscriere partener completă: activități + nume contact + telefon (pasul „profil public”). */
-function isPartnerSignupApplicationComplete(partner) {
-  if (!partner) return false
-  if (!String(partner.activityTypes || '').trim()) return false
-  if (!String(partner.contactFirstName || '').trim()) return false
-  if (!String(partner.contactLastName || '').trim()) return false
-  if (!String(partner.phone || '').trim()) return false
-  return true
-}
-
-async function maybeSendPartnerApplicationReceivedEmail(userId, partner) {
-  try {
-    if (!isPartnerSignupApplicationComplete(partner)) return
-    if (partner.isApproved) return
-    if (partner.applicationReceivedEmailSentAt) return
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true },
-    })
-    if (!user?.email) return
-
-    const ok = await sendPartnerApplicationReceivedEmail(user.email, {
-      contactFirstName: partner.contactFirstName,
-      companyName: partner.companyName,
-    })
-    if (!ok) return
-
-    await prisma.partner.update({
-      where: { id: partner.id },
-      data: { applicationReceivedEmailSentAt: new Date() },
-    })
-  } catch (err) {
-    console.error('[Partner] Application received email:', err?.message || err)
-  }
-}
-
 async function mergePartnerSlugOnPut(prismaCli, existing, body, data) {
   const mergedCompanyName =
     data.companyName !== undefined && data.companyName !== null && String(data.companyName).trim() !== ''
@@ -4044,6 +4510,9 @@ app.get('/api/public/companii/:slugSegment', async (req, res) => {
       },
     })
     if (!partner) return res.status(404).json({ error: 'Profil negăsit.' })
+    if (!isPartnerPublicProfileFullyComplete(partner)) {
+      return res.status(404).json({ error: 'Profil negăsit.' })
+    }
     let workPhotosArr = []
     if (partner.workPhotos) {
       try {
@@ -4229,10 +4698,19 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       companyCounty: body.companyCounty,
       companyPostalCode: body.companyPostalCode,
       tradeRegisterNumber: body.tradeRegisterNumber,
-      activityTypes: Array.isArray(body.activityTypes) ? body.activityTypes.join(',') : String(body.activityTypes || ''),
       contactFirstName: body.contactFirstName,
       contactLastName: body.contactLastName,
       phone: body.phone,
+    }
+    if (body.partnerChannelType !== undefined && body.partnerChannelType !== null && body.partnerChannelType !== '') {
+      const channel = parsePartnerChannelType(body.partnerChannelType)
+      legal.partnerChannelType = channel
+      legal.activityTypes = activityTypesFromPartnerChannel(channel)
+    } else {
+      legal.activityTypes = Array.isArray(body.activityTypes)
+        ? body.activityTypes.join(',')
+        : String(body.activityTypes || '')
+      legal.partnerChannelType = derivePartnerChannelTypeFromActivities(body.activityTypes)
     }
 
     const publicFields = {
@@ -4265,6 +4743,11 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       for (const [k, v] of Object.entries(all)) {
         if (v !== undefined && v !== null) data[k] = v
         else if ((k === 'logoUrl' || k === 'workPhotos') && (v === null || v === '')) data[k] = null
+      }
+      if (body.partnerChannelType !== undefined) {
+        data.partnerChannelType = parsePartnerChannelType(body.partnerChannelType)
+      } else if (body.activityTypes !== undefined) {
+        data.partnerChannelType = derivePartnerChannelTypeFromActivities(body.activityTypes)
       }
       applyPartnerDeliveryPatch(data)
       try {
@@ -4309,16 +4792,14 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
         }
       }
 
-      if (body.isPublic === true) {
-        const mergedForPublic = { ...existing, ...data }
-        if (!isPartnerPublicProfileFullyComplete(mergedForPublic)) {
-          return res.status(400).json({
-            error:
-              'Completează profilul public la 100% înainte de a-l face vizibil. Verifică lista „Completare profil”.',
-            code: 'PUBLIC_PROFILE_INCOMPLETE',
-          })
-        }
+      const visibility = resolvePartnerPublicVisibility(existing, data, body)
+      if (!visibility.ok) {
+        return res.status(400).json({
+          error: visibility.error,
+          code: visibility.code,
+        })
       }
+      data.isPublic = visibility.isPublic
 
       const partner = await prisma.partner.update({
         where: { userId },
@@ -4327,9 +4808,6 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       for (const u of urlsToDeleteAfterUpdate) {
         void deletePartnerPublicProfileR2Object(u)
       }
-      maybeSendPartnerApplicationReceivedEmail(userId, partner).catch((e) =>
-        console.error('[Partner] Application received email (async):', e?.message),
-      )
       return res.json(partner)
     }
 
@@ -4361,6 +4839,7 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
           ? String(legal.tradeRegisterNumber).trim()
           : null,
       activityTypes: legal.activityTypes || '',
+      partnerChannelType: legal.partnerChannelType || 'installer',
       contactFirstName:
         legal.contactFirstName != null && legal.contactFirstName !== undefined
           ? String(legal.contactFirstName).trim()
@@ -4373,8 +4852,10 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       isApproved: false,
     }
     for (const [k, v] of Object.entries(publicFields)) {
+      if (k === 'isPublic') continue
       if (v !== undefined && v !== null && v !== '') createData[k] = v
     }
+    createData.isPublic = false
     createData.publicSlug = await allocateUniquePartnerSlug(
       prisma,
       null,
@@ -4383,8 +4864,8 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
     const partner = await prisma.partner.create({
       data: createData,
     })
-    maybeSendPartnerApplicationReceivedEmail(userId, partner).catch((e) =>
-      console.error('[Partner] Application received email (async):', e?.message),
+    dispatchPartnerWelcomeEmail(partner.id).catch((e) =>
+      console.error('[Partner welcome email]', e?.message || e),
     )
     return res.status(201).json(partner)
   } catch (err) {
@@ -4431,6 +4912,10 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
       },
     })
     if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+    const accountUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { password: true },
+    })
     let withSlug = partner
     if (!withSlug.publicSlug) {
       try {
@@ -4459,6 +4944,27 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
         console.error('[Partner profile GET] Backfill publicSlug:', backfillErr?.message || backfillErr)
       }
     }
+    if (withSlug.isPublic && !isPartnerPublicProfileFullyComplete(withSlug)) {
+      withSlug = await prisma.partner.update({
+        where: { id: withSlug.id },
+        data: { isPublic: false },
+        include: {
+          assignedSalesAgent: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              whatsapp: true,
+              agentKind: true,
+              isSuspended: true,
+              deletedAt: true,
+            },
+          },
+        },
+      })
+    }
     // Ensure partnerDiscountPercent is always present (plain number) for frontend
     let workPhotosArr = []
     if (withSlug.workPhotos) {
@@ -4470,12 +4976,166 @@ app.get('/api/partner/profile', authMiddleware, async (req, res) => {
       assignedSalesAgent: visibleAgent,
       assignedSalesAgentId: visibleAgent ? withSlug.assignedSalesAgentId : null,
       partnerDiscountPercent: withSlug.partnerDiscountPercent != null ? Number(withSlug.partnerDiscountPercent) : null,
+      partnerContractSignedAt:
+        withSlug.partnerContractSignedAt instanceof Date
+          ? withSlug.partnerContractSignedAt.toISOString()
+          : withSlug.partnerContractSignedAt || null,
+      partnerContractAvailable: Boolean(withSlug.partnerContractSignedAt),
+      hasPassword: Boolean(accountUser?.password),
       workPhotos: Array.isArray(workPhotosArr) ? workPhotosArr : [],
     }
+    delete result.partnerContractPdfUrl
     return res.json(result)
   } catch (err) {
     console.error('Partner get error:', err)
     res.status(500).json({ error: 'Eroare la citirea profilului.' })
+  }
+})
+
+async function loadPartnerContractPdfBuffer(partner) {
+  if (!partner?.partnerContractSignedAt) return null
+  if (partner.partnerContractPdfUrl) {
+    const key = urlToKey(partner.partnerContractPdfUrl)
+    if (key) {
+      try {
+        return await downloadFromR2(key)
+      } catch (e) {
+        console.warn('[Partner contract] R2 download failed, regenerating:', e?.message || e)
+      }
+    }
+  }
+  return renderPartnerContractPdf(partner, partner.partnerContractSignedAt)
+}
+
+app.get('/api/partner/contract/download', authMiddleware, async (req, res) => {
+  try {
+    if (req.userRole !== 'partener') {
+      return res.status(403).json({ error: 'Doar partenerii pot accesa acest endpoint.' })
+    }
+    const partner = await prisma.partner.findUnique({ where: { userId: req.userId } })
+    if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+    if (!partner.partnerContractSignedAt) {
+      return res.status(404).json({
+        code: 'not_signed',
+        error: 'Contractul nu este încă semnat. După semnarea digitală vei putea descărca PDF-ul aici.',
+      })
+    }
+    const buffer = await loadPartnerContractPdfBuffer(partner)
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+      return res.status(500).json({ error: 'Nu am putut genera contractul.' })
+    }
+    const safeCo = String(partner.companyName || 'partener')
+      .trim()
+      .replace(/[^\w.-]+/g, '_')
+      .slice(0, 80) || 'partener'
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="contract-partener-baterino-${safeCo}.pdf"`)
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Length', String(buffer.length))
+    return res.send(buffer)
+  } catch (err) {
+    console.error('Partner contract download error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la descărcarea contractului.' })
+  }
+})
+
+app.get('/api/partner/contract/preview', authMiddleware, async (req, res) => {
+  try {
+    if (req.userRole !== 'partener') {
+      return res.status(403).json({ error: 'Doar partenerii pot accesa acest endpoint.' })
+    }
+    const partner = await prisma.partner.findUnique({ where: { userId: req.userId } })
+    if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+    if (partner.partnerContractSignedAt) {
+      return res.status(409).json({
+        code: 'already_signed',
+        error: 'Contractul este deja semnat. Descarcă PDF-ul semnat din Setări.',
+      })
+    }
+    const buffer = await renderPartnerContractPreviewPdf(partner)
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+      return res.status(500).json({ error: 'Nu am putut genera contractul.' })
+    }
+    const safeCo = String(partner.companyName || 'partener')
+      .trim()
+      .replace(/[^\w.-]+/g, '_')
+      .slice(0, 80) || 'partener'
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `inline; filename="contract-partener-baterino-${safeCo}-preview.pdf"`)
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Length', String(buffer.length))
+    return res.send(buffer)
+  } catch (err) {
+    console.error('Partner contract preview error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la previzualizarea contractului.' })
+  }
+})
+
+/** Semnare digitală contract partener — generează PDF-ul și îl arhivează. */
+app.post('/api/partner/contract/sign', authMiddleware, async (req, res) => {
+  try {
+    if (req.userRole !== 'partener') {
+      return res.status(403).json({ error: 'Doar partenerii pot accesa acest endpoint.' })
+    }
+    const partner = await prisma.partner.findUnique({ where: { userId: req.userId } })
+    if (!partner) return res.status(404).json({ error: 'Profil partener negăsit.' })
+    if (partner.partnerContractSignedAt) {
+      return res.status(409).json({
+        code: 'already_signed',
+        error: 'Contractul a fost deja semnat.',
+        partnerContractSignedAt: partner.partnerContractSignedAt.toISOString(),
+      })
+    }
+    const contactFirstName = String(req.body?.contactFirstName ?? partner.contactFirstName ?? '').trim()
+    const contactLastName = String(req.body?.contactLastName ?? partner.contactLastName ?? '').trim()
+    const signerRole = String(req.body?.signerRole ?? '').trim()
+    if (!contactFirstName || !contactLastName || !signerRole) {
+      return res.status(400).json({ error: 'Completează prenumele, numele și funcția în companie.' })
+    }
+    const signedAt = new Date()
+    const signerIp = String(
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        req.headers['x-real-ip'] ||
+        req.ip ||
+        req.socket?.remoteAddress ||
+        '',
+    ).trim()
+    const partnerForPdf = { ...partner, contactFirstName, contactLastName }
+    const documentFingerprint = computeDocumentFingerprint(partnerForPdf, signedAt, {
+      signerRole,
+      signerIp,
+    })
+    const pdfBuffer = await renderPartnerContractPdf(partnerForPdf, signedAt, {
+      signerRole,
+      signerIp,
+      documentFingerprint,
+    })
+    let pdfUrl = null
+    if (isR2Configured()) {
+      const key = partnerContractPdfKey(partner.id)
+      pdfUrl = await uploadToR2(pdfBuffer, key, 'application/pdf', {
+        contentDisposition: `attachment; filename="contract-partener-baterino.pdf"`,
+      })
+    }
+    const updated = await prisma.partner.update({
+      where: { id: partner.id },
+      data: {
+        contactFirstName,
+        contactLastName,
+        partnerContractSignedAt: signedAt,
+        partnerContractPdfUrl: pdfUrl,
+      },
+    })
+    return res.json({
+      ok: true,
+      partnerContractSignedAt: updated.partnerContractSignedAt.toISOString(),
+      partnerContractAvailable: true,
+    })
+  } catch (err) {
+    console.error('Partner contract sign error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la semnarea contractului.' })
   }
 })
 
@@ -4602,18 +5262,28 @@ app.patch('/api/admin/inquiries/:id/read', authMiddleware, adminAuthMiddleware, 
 })
 
 // ── Admin: list companies (partners) ───────────────────────────────────
+function serializeAdminCompany(partner) {
+  if (!partner) return null
+  const signedAt = partner.partnerContractSignedAt
+  const result = {
+    ...partner,
+    partnerDiscountPercent:
+      partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
+    partnerContractSignedAt:
+      signedAt instanceof Date ? signedAt.toISOString() : signedAt || null,
+    partnerContractAvailable: Boolean(signedAt),
+  }
+  delete result.partnerContractPdfUrl
+  return result
+}
+
 const adminCompaniesHandler = async (req, res) => {
   try {
     const partners = await prisma.partner.findMany({
       include: { user: { select: { email: true } } },
       orderBy: { createdAt: 'desc' },
     })
-    // Ensure partnerDiscountPercent is always present (plain number) for frontend
-    const result = partners.map((p) => ({
-      ...p,
-      partnerDiscountPercent: p.partnerDiscountPercent != null ? Number(p.partnerDiscountPercent) : null,
-    }))
-    return res.json(result)
+    return res.json(partners.map(serializeAdminCompany))
   } catch (err) {
     console.error('Admin companies error:', err)
     const msg = err?.message || 'Eroare la încărcarea companiilor.'
@@ -4630,19 +5300,53 @@ const getAdminCompanyByIdHandler = async (req, res) => {
       include: { user: { select: { email: true } } },
     })
     if (!partner) return res.status(404).json({ error: 'Companie negăsită.' })
-    const result = {
-      ...partner,
-      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
-    }
-    return res.json(result)
+    return res.json(serializeAdminCompany(partner))
   } catch (err) {
     console.error('Admin company by id:', err)
     res.status(500).json({ error: err?.message || 'Eroare la încărcare.' })
   }
 }
 
+const getAdminPartnerContractHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    const partner = await prisma.partner.findUnique({ where: { id } })
+    if (!partner) return res.status(404).json({ error: 'Companie negăsită.' })
+    if (!partner.partnerContractSignedAt) {
+      return res.status(404).json({
+        code: 'not_signed',
+        error: 'Partenerul nu a semnat încă acordul de parteneriat.',
+      })
+    }
+    const buffer = await loadPartnerContractPdfBuffer(partner)
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+      return res.status(500).json({ error: 'Nu am putut genera contractul.' })
+    }
+    const safeCo = String(partner.companyName || 'partener')
+      .trim()
+      .replace(/[^\w.-]+/g, '_')
+      .slice(0, 80) || 'partener'
+    const inline = String(req.query?.inline || '').trim() === '1'
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader(
+      'Content-Disposition',
+      `${inline ? 'inline' : 'attachment'}; filename="contract-partener-baterino-${safeCo}.pdf"`,
+    )
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Length', String(buffer.length))
+    return res.send(buffer)
+  } catch (err) {
+    console.error('Admin partner contract download error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la descărcarea contractului.' })
+  }
+}
+
 app.get('/api/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
 app.get('/admin/companies', authMiddleware, adminAuthMiddleware, adminCompaniesHandler)
+app.get('/api/admin/companies/:id/contract', authMiddleware, adminAuthMiddleware, getAdminPartnerContractHandler)
+app.get('/admin/companies/:id/contract', authMiddleware, adminAuthMiddleware, getAdminPartnerContractHandler)
 app.get('/api/admin/companies/:id', authMiddleware, adminAuthMiddleware, getAdminCompanyByIdHandler)
 app.get('/admin/companies/:id', authMiddleware, adminAuthMiddleware, getAdminCompanyByIdHandler)
 
@@ -5968,23 +6672,67 @@ app.put('/admin/company-data', authMiddleware, adminAuthMiddleware, putAdminComp
 app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
     const { id } = req.params
-    const { discountPercent } = req.body
-    if (discountPercent !== null && discountPercent !== undefined) {
+    const { discountPercent, assignedSalesAgentId } = req.body
+    const existing = await prisma.partner.findUnique({
+      where: { id },
+      select: { partnerChannelType: true, assignedSalesAgentId: true },
+    })
+    if (!existing) return res.status(404).json({ error: 'Companie negăsită.' })
+    const { min, max } = partnerDiscountLimitsForChannel(existing.partnerChannelType)
+
+    const clearingDiscount =
+      discountPercent === '' || discountPercent === null || discountPercent === undefined
+    let discountValue = null
+    if (!clearingDiscount) {
       const num = Number(discountPercent)
-      if (Number.isNaN(num) || num < 0.5 || num > 60) {
-        return res.status(400).json({ error: 'Reducerea trebuie să fie între 0.5 și 60.' })
+      if (Number.isNaN(num) || num < min || num > max) {
+        return res.status(400).json({
+          error: `Reducerea trebuie să fie între ${min} și ${max}%.`,
+        })
+      }
+      discountValue = num
+    }
+
+    const agentIdRaw =
+      assignedSalesAgentId !== undefined && assignedSalesAgentId !== null
+        ? String(assignedSalesAgentId).trim()
+        : String(existing.assignedSalesAgentId || '').trim()
+    const agentId = agentIdRaw || null
+
+    if (discountValue != null && discountValue > 0 && !agentId) {
+      return res.status(400).json({
+        error: 'Selectează persoana de suport atribuită partenerului.',
+      })
+    }
+
+    if (agentId) {
+      const agent = await prisma.salesAgent.findUnique({
+        where: { id: agentId },
+        select: { id: true, isSuspended: true, deletedAt: true },
+      })
+      if (!agent || agent.deletedAt) {
+        return res.status(400).json({ error: 'Persoana de suport selectată nu există.' })
+      }
+      if (agent.isSuspended) {
+        return res.status(400).json({ error: 'Persoana de suport selectată este suspendată.' })
       }
     }
+
+    const isApproved = computePartnerIsApproved(discountValue, agentId)
+
     const partner = await prisma.partner.update({
       where: { id },
-      data: { partnerDiscountPercent: discountPercent === '' || discountPercent === null || discountPercent === undefined ? null : Number(discountPercent) },
+      data: {
+        partnerDiscountPercent: discountValue,
+        assignedSalesAgentId: agentId,
+        isApproved,
+      },
       include: { user: { select: { email: true } } },
     })
-    const result = {
-      ...partner,
-      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
-    }
-    return res.json(result)
+    dispatchPartnerDiscountApprovedEmail(partner.id).catch((e) =>
+      console.error('[Partner discount approved email]', e?.message || e),
+    )
+    return res.json(serializeAdminCompany(partner))
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
     console.error('Admin discount error:', err)
@@ -5992,118 +6740,79 @@ app.patch('/api/admin/companies/:id/discount', authMiddleware, adminAuthMiddlewa
   }
 })
 
-// ── Admin: approve company ───────────────────────────────────────────────
-app.patch('/api/admin/companies/:id/approve', authMiddleware, adminAuthMiddleware, async (req, res) => {
+app.patch('/api/admin/companies/:id/support-agent', authMiddleware, adminAuthMiddleware, async (req, res) => {
   try {
     const { id } = req.params
-    const body = req.body || {}
-    const data = { isApproved: true }
+    const agentIdRaw =
+      req.body?.assignedSalesAgentId === null || req.body?.assignedSalesAgentId === undefined
+        ? ''
+        : String(req.body.assignedSalesAgentId).trim()
+    const agentId = agentIdRaw || null
 
-    const rawDiscount = body.partnerDiscountPercent ?? body.discountPercent
-    if (rawDiscount !== undefined && rawDiscount !== null && rawDiscount !== '') {
-      const num = Number(rawDiscount)
-      if (Number.isNaN(num) || num < 0.5 || num > 60) {
-        return res.status(400).json({ error: 'Reducerea trebuie să fie între 0.5 și 60 sau goală.' })
-      }
-      data.partnerDiscountPercent = num
-    } else if (rawDiscount === null || rawDiscount === '') {
-      data.partnerDiscountPercent = null
-    }
-
-    const rawAgent = body.assignedSalesAgentId
-    if (rawAgent !== undefined) {
-      const sid = String(rawAgent ?? '').trim()
-      if (!sid) {
-        data.assignedSalesAgentId = null
-      } else {
-        const agent = await prisma.salesAgent.findFirst({
-          where: { id: sid, deletedAt: null, isSuspended: false },
-          select: { id: true },
-        })
-        if (!agent) {
-          return res.status(400).json({ error: 'Agent de vânzări inexistent, suspendat sau șters.' })
-        }
-        data.assignedSalesAgentId = sid
-      }
-    }
-
-    const before = await prisma.partner.findUnique({
+    const existing = await prisma.partner.findUnique({
       where: { id },
-      select: { isApproved: true, user: { select: { email: true } } },
+      select: { partnerDiscountPercent: true },
     })
-    if (!before) return res.status(404).json({ error: 'Companie negăsită.' })
+    if (!existing) return res.status(404).json({ error: 'Companie negăsită.' })
+
+    if (agentId) {
+      const agent = await prisma.salesAgent.findUnique({
+        where: { id: agentId },
+        select: { id: true, isSuspended: true, deletedAt: true },
+      })
+      if (!agent || agent.deletedAt) {
+        return res.status(400).json({ error: 'Persoana de suport selectată nu există.' })
+      }
+      if (agent.isSuspended) {
+        return res.status(400).json({ error: 'Persoana de suport selectată este suspendată.' })
+      }
+    }
+
+    const isApproved = computePartnerIsApproved(existing.partnerDiscountPercent, agentId)
 
     const partner = await prisma.partner.update({
       where: { id },
-      data,
-      include: {
-        user: { select: { email: true } },
-        assignedSalesAgent: {
-          select: { id: true, email: true, firstName: true, lastName: true },
-        },
-      },
+      data: { assignedSalesAgentId: agentId, isApproved },
+      include: { user: { select: { email: true } } },
     })
-    const isFirstApproval = !before.isApproved
-    if (isFirstApproval && before.user?.email) {
-      try {
-        await sendPartnerAccountApprovedEmail(before.user.email)
-      } catch (err) {
-        console.error('[Partner] Account approved email:', err?.message || err)
-      }
-    }
-    if (isFirstApproval && partner.assignedSalesAgentId && partner.assignedSalesAgent?.email) {
-      try {
-        const contactName = [partner.contactFirstName, partner.contactLastName]
-          .map((s) => String(s || '').trim())
-          .filter(Boolean)
-          .join(' ')
-        await sendSalesAgentPartnerAssignedEmail(partner.assignedSalesAgent.email, {
-          agentFirstName: partner.assignedSalesAgent.firstName,
-          companyName: partner.companyName,
-          cui: partner.cui,
-          tradeRegisterNumber: partner.tradeRegisterNumber,
-          companyStreet: partner.companyStreet,
-          companyCity: partner.companyCity,
-          companyCounty: partner.companyCounty,
-          companyPostalCode: partner.companyPostalCode,
-          address: partner.address,
-          activityTypes: partner.activityTypes,
-          contactName,
-          contactPhone: partner.phone,
-          contactEmail: partner.user?.email || '',
-          website: partner.website,
-          partnerDiscountPercent:
-            partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
-        })
-      } catch (err) {
-        console.error('[SalesAgent] Partner assigned email:', err?.message || err)
-      }
-    }
-    const result = {
-      ...partner,
-      partnerDiscountPercent: partner.partnerDiscountPercent != null ? Number(partner.partnerDiscountPercent) : null,
-    }
-    return res.json(result)
+    dispatchPartnerDiscountApprovedEmail(partner.id).catch((e) =>
+      console.error('[Partner discount approved email]', e?.message || e),
+    )
+    return res.json(serializeAdminCompany(partner))
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
-    console.error('Admin approve error:', err)
-    res.status(500).json({ error: err?.message || 'Eroare la aprobare.' })
+    console.error('Admin support agent error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la atribuirea agentului.' })
   }
 })
 
-/** Șterge definitiv un partener aprobat: cont utilizator + înregistrare partener (CASCADE). */
+app.patch('/api/admin/companies/:id/partner-channel', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const channel = parsePartnerChannelType(req.body?.partnerChannelType)
+    const partner = await prisma.partner.update({
+      where: { id },
+      data: { partnerChannelType: channel },
+      include: { user: { select: { email: true } } },
+    })
+    return res.json(serializeAdminCompany(partner))
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
+    console.error('Admin partner channel error:', err)
+    res.status(500).json({ error: err?.message || 'Eroare la actualizare.' })
+  }
+})
+
+/** Șterge definitiv un partener: cont utilizator + înregistrare partener (CASCADE). */
 async function adminDeleteApprovedPartnerHandler(req, res) {
   try {
     const id = String(req.params.id || '').trim()
     if (!id) return res.status(400).json({ error: 'ID lipsă.' })
     const partner = await prisma.partner.findUnique({
       where: { id },
-      select: { id: true, userId: true, isApproved: true },
+      select: { id: true, userId: true },
     })
     if (!partner) return res.status(404).json({ error: 'Companie negăsită.' })
-    if (!partner.isApproved) {
-      return res.status(400).json({ error: 'Ștergerea este disponibilă doar pentru parteneri deja aprobați.' })
-    }
     const user = await prisma.user.findUnique({
       where: { id: partner.userId },
       select: { id: true, role: true },
@@ -6825,7 +7534,7 @@ const createProductHandler = async (req, res) => {
     const tipProdus = ['rezidential', 'industrial'].includes(body.tipProdus) ? body.tipProdus : 'rezidential'
 
     const salePrice = parseDecimal(body.salePrice, 0)
-    const partnerSalePrice = parseDecimal(body.partnerSalePrice, 0)
+    const mapPrice = parseDecimal(body.mapPrice, 0)
     const vat = parseDecimal(body.vat, 19)
 
     const images = Array.isArray(body.images) ? body.images : []
@@ -6884,7 +7593,7 @@ const createProductHandler = async (req, res) => {
         promovarePromotie: body.promovarePromotie === true,
         landedPrice: 0,
         salePrice,
-        partnerSalePrice,
+        mapPrice,
         vat,
         energieNominala: body.energieNominala?.trim() || null,
         capacitate: body.capacitate?.trim() || null,
@@ -7006,7 +7715,7 @@ const duplicateProductHandler = async (req, res) => {
         promovarePromotie: false,
         landedPrice: source.landedPrice,
         salePrice: source.salePrice,
-        partnerSalePrice: source.partnerSalePrice,
+        mapPrice: source.mapPrice,
         vat: source.vat,
         energieNominala: source.energieNominala,
         capacitate: source.capacitate,
@@ -7085,7 +7794,7 @@ const updateProductHandler = async (req, res) => {
     if (body.pricePresentation !== undefined) data.pricePresentation = parsePricePresentation(body.pricePresentation)
     if (body.landedPrice !== undefined) data.landedPrice = parseDecimal(body.landedPrice, 0)
     if (body.salePrice !== undefined) data.salePrice = parseDecimal(body.salePrice, 0)
-    if (body.partnerSalePrice !== undefined) data.partnerSalePrice = parseDecimal(body.partnerSalePrice, 0)
+    if (body.mapPrice !== undefined) data.mapPrice = parseDecimal(body.mapPrice, 0)
     if (body.vat !== undefined) data.vat = parseDecimal(body.vat, 19)
     if (body.energieNominala !== undefined) data.energieNominala = body.energieNominala?.trim() || null
     if (body.capacitate !== undefined) data.capacitate = body.capacitate?.trim() || null
@@ -7703,6 +8412,25 @@ async function dispatchOrderProformaEmail(order) {
   }
 }
 
+/**
+ * Notifică adminii despre o comandă nouă (fire-and-forget).
+ *
+ * @param {{ orderNumber: string, lines?: Array<any> } & Record<string, any>} order
+ */
+async function dispatchAdminNewOrderNotification(order) {
+  if (!order?.orderNumber) return
+  try {
+    const linesArr = Array.isArray(order.lines) ? order.lines : []
+    const totalInclVat = linesArr.reduce(
+      (s, L) => s + (Number(L.lineTotalInclVat) || Number(L.unitPriceInclVat) * Number(L.quantity) || 0),
+      0,
+    )
+    await sendAdminNewOrderNotification({ ...order, totalInclVat })
+  } catch (err) {
+    console.error('[GuestOrder] dispatchAdminNewOrderNotification error:', err?.message || err)
+  }
+}
+
 // `proformaIssueAndPaymentDueStrings` nu este exportat de modulul template; folosim un fallback local.
 // (helperul de mai sus încearcă întâi metoda exportată dacă apare în viitor.)
 
@@ -7816,10 +8544,15 @@ app.post('/api/guest-residential-orders', async (req, res) => {
       try {
         const part = await prisma.partner.findUnique({
           where: { userId: userIdForOrder },
-          select: { partnerDiscountPercent: true },
+          select: { partnerDiscountPercent: true, partnerContractSignedAt: true },
         })
         const pct = part?.partnerDiscountPercent
-        if (pct != null && Number.isFinite(Number(pct)) && Number(pct) > 0) {
+        if (
+          part?.partnerContractSignedAt &&
+          pct != null &&
+          Number.isFinite(Number(pct)) &&
+          Number(pct) > 0
+        ) {
           partnerCatalogDiscountFactor = Math.min(1, Math.max(0, Number(pct) / 100))
         }
       } catch (_) {
@@ -7861,9 +8594,7 @@ app.post('/api/guest-residential-orders', async (req, res) => {
             'Cu program de reducere se poate comanda maximum 1 bucată per produs. Actualizează coșul și încearcă din nou.',
         })
       }
-      const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity, {
-        usePartnerPrice: isPartener,
-      })
+      const baseTotals = computeGuestResidentialLineTotals(apiProduct, it.quantity)
       const totals = applyDiscountFactorToGuestLineTotals(baseTotals, discountFactor)
       const listTotals =
         discountFactor > 0 ? applyDiscountFactorToGuestLineTotals(baseTotals, 0) : null
@@ -7945,6 +8676,9 @@ app.post('/api/guest-residential-orders', async (req, res) => {
     dispatchOrderProformaEmail(createdOrder).catch((e) =>
       console.error('[GuestOrder] Proforma email dispatch error:', e?.message || e),
     )
+    dispatchAdminNewOrderNotification(createdOrder).catch((e) =>
+      console.error('[GuestOrder] Admin new order notification error:', e?.message || e),
+    )
 
     return res.status(201).json({
       orderNumber,
@@ -7982,8 +8716,15 @@ function mapLegacyGuestRowAdmin(r) {
 function mapResidentialRowAdmin(o) {
   const base = mapResidentialOrderToClientJson(o)
   const first = base.lines[0]
+  const partner = o.user?.partner
   return {
     ...base,
+    ...(partner
+      ? {
+          partnerChannelType: partner.partnerChannelType || null,
+          activityTypes: partner.activityTypes || null,
+        }
+      : {}),
     clientInvoiceUrl: o.clientInvoiceUrl ? String(o.clientInvoiceUrl) : null,
     proformaUrl: o.proformaUrl ? String(o.proformaUrl) : null,
     productId: first?.productId,
@@ -7998,12 +8739,19 @@ function mapResidentialRowAdmin(o) {
 }
 
 /** Comenzi arhivate (conturi șterse) → aceeași formă ca rândurile admin + metadate de arhivă. */
-function mapDeletedOrderRowAdmin(o) {
+function mapDeletedOrderRowAdmin(o, partnerByUserId) {
   // mapResidentialOrderToClientJson citește `createdAt`; pentru arhivă folosim data comenzii originale.
   const base = mapResidentialOrderToClientJson({ ...o, createdAt: o.orderCreatedAt })
   const first = base.lines[0]
+  const pt = o.originalUserId && partnerByUserId ? partnerByUserId.get(o.originalUserId) : null
   return {
     ...base,
+    ...(pt
+      ? {
+          partnerChannelType: pt.partnerChannelType || null,
+          activityTypes: pt.activityTypes || null,
+        }
+      : {}),
     clientInvoiceUrl: o.clientInvoiceUrl ? String(o.clientInvoiceUrl) : null,
     proformaUrl: o.proformaUrl ? String(o.proformaUrl) : null,
     productId: first?.productId,
@@ -8027,7 +8775,24 @@ const adminDeletedOrdersHandler = async (_req, res) => {
       orderBy: { archivedAt: 'desc' },
       take: 500,
     })
-    return res.json(rows.map(mapDeletedOrderRowAdmin))
+    const partnerUserIds = [
+      ...new Set(
+        rows
+          .filter((r) => String(r.orderSource || '').toLowerCase() === 'partner' && r.originalUserId)
+          .map((r) => r.originalUserId),
+      ),
+    ]
+    const partnerByUserId = new Map()
+    if (partnerUserIds.length > 0) {
+      const partners = await prisma.partner.findMany({
+        where: { userId: { in: partnerUserIds } },
+        select: { userId: true, partnerChannelType: true, activityTypes: true },
+      })
+      for (const p of partners) {
+        partnerByUserId.set(p.userId, p)
+      }
+    }
+    return res.json(rows.map((r) => mapDeletedOrderRowAdmin(r, partnerByUserId)))
   } catch (err) {
     console.error('Admin deleted orders error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la încărcarea comenzilor șterse.' })
@@ -8130,14 +8895,60 @@ const adminGuestResidentialOrdersHandler = async (req, res) => {
         take: 400,
       }),
       prisma.residentialOrder.findMany({
-        include: { lines: { orderBy: { id: 'asc' } } },
+        include: {
+          lines: { orderBy: { id: 'asc' } },
+          user: {
+            select: {
+              partner: {
+                select: { partnerChannelType: true, activityTypes: true },
+              },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         take: 400,
       }),
     ])
+
+    const legacyPartnerEmails = [
+      ...new Set(
+        legacyRows
+          .filter((r) => String(r.orderSource || '').toLowerCase() === 'partner')
+          .map((r) => String(r.email || '').trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ]
+    const partnersByEmail = new Map()
+    if (legacyPartnerEmails.length > 0) {
+      const partners = await prisma.partner.findMany({
+        where: { user: { email: { in: legacyPartnerEmails, mode: 'insensitive' } } },
+        select: {
+          partnerChannelType: true,
+          activityTypes: true,
+          user: { select: { email: true } },
+        },
+      })
+      for (const p of partners) {
+        const em = String(p.user?.email || '')
+          .trim()
+          .toLowerCase()
+        if (em) partnersByEmail.set(em, p)
+      }
+    }
+
     const out = [
       ...modernRows.map(mapResidentialRowAdmin),
-      ...legacyRows.map(mapLegacyGuestRowAdmin),
+      ...legacyRows.map((r) => {
+        const row = mapLegacyGuestRowAdmin(r)
+        if (String(r.orderSource || '').toLowerCase() === 'partner') {
+          const pt = partnersByEmail.get(String(r.email || '').trim().toLowerCase())
+          if (pt) {
+            row.partnerChannelType = pt.partnerChannelType || null
+            row.activityTypes = pt.activityTypes || null
+          }
+        }
+        return row
+      }),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     return res.json(out.slice(0, 500))
   } catch (err) {
@@ -8151,6 +8962,27 @@ app.get('/api/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResi
 app.get('/admin/orders', authMiddleware, adminAuthMiddleware, adminGuestResidentialOrdersHandler)
 app.get('/api/admin/deleted-orders', authMiddleware, adminAuthMiddleware, adminDeletedOrdersHandler)
 app.get('/admin/deleted-orders', authMiddleware, adminAuthMiddleware, adminDeletedOrdersHandler)
+
+const adminPartnerRfqRequestsHandler = async (req, res) => {
+  try {
+    const rows = await prisma.partnerRfqRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: {
+        lines: { orderBy: { id: 'asc' } },
+        partner: { include: { user: { select: { email: true } } } },
+      },
+    })
+    return res.json(rows.map(mapPartnerRfqToAdminJson))
+  } catch (err) {
+    console.error('Admin partner RFQ list error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare.' })
+  }
+}
+
+app.get('/api/admin/partner-rfq-requests', authMiddleware, adminAuthMiddleware, adminPartnerRfqRequestsHandler)
+app.get('/admin/partner-rfq-requests', authMiddleware, adminAuthMiddleware, adminPartnerRfqRequestsHandler)
+
 app.get(
   '/api/admin/orders-dashboard-summary',
   authMiddleware,
@@ -8611,8 +9443,12 @@ const getPublicProductHandler = async (req, res) => {
     }
     if (!product) return res.status(404).json({ error: 'Produs negăsit.' })
     const authPayload = readOptionalAuthPayload(req)
+    const promoIdSet = await fetchPromoCatalogProductIds()
     return res.json(
-      applyPublicPricePolicy(normalizeCatalogBadges(productToJson(product)), authPayload),
+      attachPromoCatalogFlags(
+        applyPublicPricePolicy(normalizeCatalogBadges(productToJson(product)), authPayload),
+        promoIdSet,
+      ),
     )
   } catch (err) {
     console.error('Get public product error:', err)
@@ -10198,7 +11034,7 @@ app.patch('/api/admin/companies/:id/suspend', authMiddleware, adminAuthMiddlewar
       data: { isSuspended: suspended },
       include: { user: { select: { email: true } } },
     })
-    return res.json(partner)
+    return res.json(serializeAdminCompany(partner))
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Companie negăsită.' })
     console.error('Admin suspend error:', err)

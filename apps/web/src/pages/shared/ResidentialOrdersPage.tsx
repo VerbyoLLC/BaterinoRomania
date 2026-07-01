@@ -342,12 +342,21 @@ export function ResidentialOrdersPage({
   ordersApi,
   productsHref = '/produse',
   showDiscount = true,
+  hidePageTitle = false,
+  ordersFilter,
+  compactEmptyState = false,
 }: {
   ordersApi: ResidentialOrdersPortalApi
   /** Catalog rezidențial: client `/produse`, partener `/partner/produse`. */
   productsHref?: string
   /** Afișează prețul de listă barat + reducere pe fiecare linie. Default true. */
   showDiscount?: boolean
+  /** When true, omit the in-page h1 (e.g. partner shell shows title in top bar). */
+  hidePageTitle?: boolean
+  /** Optional filter applied after orders are loaded. */
+  ordersFilter?: (row: ClientOrderRow) => boolean
+  /** Smaller empty state for embedded partner orders layout. */
+  compactEmptyState?: boolean
 }) {
   const { language } = useLanguage()
   const lang = language.code as LangCode
@@ -466,10 +475,10 @@ export function ResidentialOrdersPage({
     setError(null)
     return ordersApi
       .getOrders()
-      .then((rows) => setOrders(rows))
+      .then((rows) => setOrders(ordersFilter ? rows.filter(ordersFilter) : rows))
       .catch((e) => setError(e instanceof Error ? e.message : tr.errorGeneric))
       .finally(() => setLoading(false))
-  }, [tr.errorGeneric, ordersApi])
+  }, [tr.errorGeneric, ordersApi, ordersFilter])
 
   useEffect(() => {
     void load()
@@ -528,7 +537,9 @@ export function ResidentialOrdersPage({
   if (loading) {
     return (
       <div className="font-['Inter']">
-        <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+        {hidePageTitle ? null : (
+          <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+        )}
         <p className="text-slate-500 text-sm font-['Inter'] mb-6">{tr.loading}</p>
         <OrdersListSkeleton />
       </div>
@@ -538,7 +549,9 @@ export function ResidentialOrdersPage({
   if (error) {
     return (
       <div className="font-['Inter']">
-        <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+        {hidePageTitle ? null : (
+          <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+        )}
         <p className="text-red-600 text-sm font-['Inter'] mb-4">{error}</p>
         <button
           type="button"
@@ -553,9 +566,13 @@ export function ResidentialOrdersPage({
 
   return (
     <div className="font-['Inter']">
-      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+      {hidePageTitle ? null : (
+        <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
+      )}
       {orders.length === 0 ? (
-        <p className="text-gray-500 text-sm font-['Inter'] mb-8">{tr.pageSubtitle}</p>
+        hidePageTitle ? null : (
+          <p className="text-gray-500 text-sm font-['Inter'] mb-8">{tr.pageSubtitle}</p>
+        )
       ) : (
         <p className="text-slate-500 text-sm mb-6">
           {tr.orderCount.replace('{n}', String(orders.length))}
@@ -565,18 +582,28 @@ export function ResidentialOrdersPage({
       {orders.length === 0 ? (
         <>
           <p className="sr-only">{tr.empty}</p>
-          <div className="mx-auto w-full max-w-md bg-white rounded-2xl border border-gray-200 p-10 sm:p-12 text-center shadow-sm">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Package className="w-8 h-8 text-gray-400" strokeWidth={1.5} aria-hidden />
+          <div
+            className={`bg-white rounded-2xl border border-gray-200 text-center shadow-sm font-['Inter'] ${
+              compactEmptyState
+                ? 'p-6 sm:p-8'
+                : hidePageTitle
+                  ? 'p-12'
+                  : 'mx-auto w-full max-w-md p-10 sm:p-12'
+            }`}
+          >
+            <div className={`rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4 ${compactEmptyState ? 'w-12 h-12' : 'w-16 h-16'}`}>
+              <Package className={`text-gray-400 ${compactEmptyState ? 'w-6 h-6' : 'w-8 h-8'}`} strokeWidth={1.5} aria-hidden />
             </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-2">{tr.emptyStateCardTitle}</h2>
-            <p className="text-gray-500 text-sm mx-auto leading-relaxed">
+            <h2 className={`font-bold text-slate-900 mb-2 ${compactEmptyState ? 'text-base' : 'text-lg'}`}>{tr.emptyStateCardTitle}</h2>
+            <p className={`text-gray-500 mx-auto leading-relaxed ${compactEmptyState ? 'text-xs max-w-md' : hidePageTitle ? 'text-sm max-w-md' : 'text-sm'}`}>
               <span className="block">{tr.emptyStateLine1}</span>
-              <span className="block mt-2">{tr.emptyStateLine2}</span>
+              {!compactEmptyState ? <span className="block mt-2">{tr.emptyStateLine2}</span> : null}
             </p>
             <Link
               to={productsHref}
-              className="mt-8 inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              className={`inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 ${
+                compactEmptyState ? 'mt-5' : 'mt-8'
+              }`}
             >
               {tr.seeProducts}
             </Link>
@@ -586,12 +613,14 @@ export function ResidentialOrdersPage({
         <ul className="m-0 list-none space-y-5 p-0">
           {orders.map((o) => {
             const status = String(o.fulfillmentStatus || 'de_platit')
+            const isRfq = o.orderKind === 'rfq' || status === 'cerere_oferta'
             const hasProforma = Boolean(o.proformaUrl && String(o.proformaUrl).trim())
             const busy = actionId === o.id
-            const showCancel = status === 'de_platit'
-            const showProforma = status === 'de_platit' || status === 'preluata'
+            const showCancel = !isRfq && status === 'de_platit'
+            const showProforma = !isRfq && (status === 'de_platit' || status === 'preluata')
             const invoicePhase =
-              status === 'in_pregatire' || status === 'in_curs_livrare' || status === 'livrata'
+              !isRfq &&
+              (status === 'in_pregatire' || status === 'in_curs_livrare' || status === 'livrata')
             const showInvoiceDownload = invoicePhase && Boolean(o.clientHasInvoice)
             const showInvoicePending = invoicePhase && !o.clientHasInvoice
             const statusText = fulfillmentStatusLabel(tr, status, {
@@ -713,14 +742,18 @@ export function ResidentialOrdersPage({
                                       </div>
                                     ) : null}
                                     <div className="mt-2 lg:hidden">
-                                      <OrderLinePriceWithVat
-                                        line={L}
-                                        currency={o.currency}
-                                        lang={lang}
-                                        tr={tr}
-                                        align="start"
-                                        showDiscount={showDiscount}
-                                      />
+                                      {isRfq ? (
+                                        <p className="m-0 text-xs font-medium text-slate-500">{tr.rfqPricePending}</p>
+                                      ) : (
+                                        <OrderLinePriceWithVat
+                                          line={L}
+                                          currency={o.currency}
+                                          lang={lang}
+                                          tr={tr}
+                                          align="start"
+                                          showDiscount={showDiscount}
+                                        />
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -750,37 +783,45 @@ export function ResidentialOrdersPage({
                         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                           {tr.colPrice}
                         </p>
-                        <ul className="m-0 mt-2.5 list-none space-y-3 p-0">
-                          {lines.map((L) => (
-                            <li
-                              key={`${L.id}-price`}
-                              className="flex min-h-14 min-w-0 items-center justify-end"
-                            >
-                              <OrderLinePriceWithVat
-                                line={L}
-                                currency={o.currency}
-                                lang={lang}
-                                tr={tr}
-                                align="end"
-                                showDiscount={showDiscount}
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mt-4 border-t border-slate-100 pt-3">
-                          <p className="m-0 mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                            {tr.orderTotalsHeading}
-                          </p>
-                          <OrderTotalsBreakdown lines={lines} currency={o.currency} lang={lang} tr={tr} />
-                        </div>
+                        {isRfq ? (
+                          <p className="mt-2.5 m-0 text-sm font-medium text-slate-500">{tr.rfqPricePending}</p>
+                        ) : (
+                          <>
+                            <ul className="m-0 mt-2.5 list-none space-y-3 p-0">
+                              {lines.map((L) => (
+                                <li
+                                  key={`${L.id}-price`}
+                                  className="flex min-h-14 min-w-0 items-center justify-end"
+                                >
+                                  <OrderLinePriceWithVat
+                                    line={L}
+                                    currency={o.currency}
+                                    lang={lang}
+                                    tr={tr}
+                                    align="end"
+                                    showDiscount={showDiscount}
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="mt-4 border-t border-slate-100 pt-3">
+                              <p className="m-0 mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                {tr.orderTotalsHeading}
+                              </p>
+                              <OrderTotalsBreakdown lines={lines} currency={o.currency} lang={lang} tr={tr} />
+                            </div>
+                          </>
+                        )}
                       </div>
 
+                      {!isRfq ? (
                       <div className="border-t border-slate-100 pt-4 lg:hidden">
                         <p className="m-0 mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                           {tr.orderTotalsHeading}
                         </p>
                         <OrderTotalsBreakdown lines={lines} currency={o.currency} lang={lang} tr={tr} />
                       </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -814,7 +855,7 @@ export function ResidentialOrdersPage({
                     </div>
 
                     <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
-                      {showCancel ? (
+                      {!isRfq && showCancel ? (
                         <button
                           type="button"
                           onClick={() => onPayOnline(o)}
@@ -884,6 +925,7 @@ export function ResidentialOrdersPage({
                         </button>
                       ) : null}
 
+                      {!isRfq ? (
                       <a
                         href={orderHelpWhatsappHref}
                         target="_blank"
@@ -893,6 +935,7 @@ export function ResidentialOrdersPage({
                         <WhatsappGlyph className="h-4 w-4 shrink-0 text-slate-600" />
                         <span>{tr.orderHelpWhatsapp}</span>
                       </a>
+                      ) : null}
 
                       {showCancel ? (
                         <button

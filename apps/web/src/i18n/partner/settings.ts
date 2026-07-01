@@ -1,11 +1,10 @@
 import type { LangCode } from '../menu'
 
-export type PartnerSettingsActivityId = 'instalator' | 'distribuitor' | 'integrator' | 'altul'
-
 export type PartnerSettingsSectionKey =
   | 'personal'
   | 'company'
   | 'delivery'
+  | 'documents'
   | 'password'
   | 'email'
   | 'notifications'
@@ -20,15 +19,12 @@ export type PartnerSettingsTranslations = {
   navPersonal: string
   navCompany: string
   navDelivery: string
+  navDocuments: string
   navPassword: string
   navEmail: string
   navNotifications: string
   navTwoFactor: string
   navDelete: string
-  activityInstalator: string
-  activityDistribuitor: string
-  activityIntegrator: string
-  activityAltul: string
   personalTitle: string
   personalLoadingAria: string
   currentEmail: string
@@ -64,7 +60,11 @@ export type PartnerSettingsTranslations = {
   postalPlaceholder: string
   tradeRegister: string
   tradeRegisterPlaceholder: string
-  activityType: string
+  companyProfile: string
+  companyProfileHint: string
+  channelInstaller: string
+  channelDistributor: string
+  channelHybrid: string
   companyErrorRequired: string
   companyErrorPostal: string
   companySaved: string
@@ -77,6 +77,15 @@ export type PartnerSettingsTranslations = {
   deliveryErrorPostal: string
   deliverySaved: string
   saveDeliveryAddress: string
+  documentsTitle: string
+  documentsIntro: string
+  partnerContractTitle: string
+  partnerContractDescription: string
+  partnerContractSignedOn: string
+  partnerContractPending: string
+  partnerContractDownload: string
+  partnerContractDownloading: string
+  partnerContractDownloadError: string
   passwordTitle: string
   currentPassword: string
   newPassword: string
@@ -119,20 +128,17 @@ const ro: PartnerSettingsTranslations = {
   pageTitle: 'Setări',
   pageSubtitle: 'Gestionează datele contului, adresa de livrare și securitatea autentificării.',
   pendingBanner:
-    'Contul tău este în curs de verificare. Poți folosi Suport din meniu și poți șterge contul mai jos dacă renunți. Celelalte secțiuni vor fi disponibile după aprobare.',
+    'Contul tău nu este încă aprobat. Poți accesa Produse pentru alocarea prețului, Suport din meniu și poți șterge contul mai jos dacă renunți. Celelalte secțiuni vor fi disponibile după aprobarea finală.',
   navSectionsAria: 'Secțiuni setări',
   navPersonal: 'Date personale',
   navCompany: 'Date companie',
   navDelivery: 'Adresa de livrare',
+  navDocuments: 'Documente',
   navPassword: 'Schimbă parola',
   navEmail: 'Schimbă email',
   navNotifications: 'Notificări',
   navTwoFactor: 'Autentificare în doi pași',
   navDelete: 'Șterge contul',
-  activityInstalator: 'Instalator',
-  activityDistribuitor: 'Distribuitor',
-  activityIntegrator: 'Integrator sisteme',
-  activityAltul: 'Altul',
   personalTitle: 'Date personale',
   personalLoadingAria: 'Se încarcă',
   currentEmail: 'Email curent',
@@ -169,8 +175,13 @@ const ro: PartnerSettingsTranslations = {
   postalPlaceholder: '010001',
   tradeRegister: 'Nr. Registrul Comerțului',
   tradeRegisterPlaceholder: 'J00/000/2020',
-  activityType: 'Tip activitate',
-  companyErrorRequired: 'Completează denumirea, CUI și cel puțin un tip de activitate.',
+  companyProfile: 'Profil Companie',
+  companyProfileHint:
+    'Canalul comercial (Instalator sau Distribuitor) este setat la înregistrare. Pentru modificări, contactează echipa Baterino.',
+  channelInstaller: 'Instalator',
+  channelDistributor: 'Distribuitor',
+  channelHybrid: 'Instalator + Distribuitor',
+  companyErrorRequired: 'Completează denumirea și CUI.',
   companyErrorPostal: 'Codul poștal (sediu) trebuie să aibă exact 6 cifre.',
   companySaved: 'Datele firmei au fost salvate.',
   deliveryTitle: 'Adresa de livrare',
@@ -184,6 +195,17 @@ const ro: PartnerSettingsTranslations = {
   deliveryErrorPostal: 'Codul poștal trebuie să aibă exact 6 cifre.',
   deliverySaved: 'Adresa de livrare a fost salvată.',
   saveDeliveryAddress: 'Salvează adresa de livrare',
+  documentsTitle: 'Documente',
+  documentsIntro: 'Contractele semnate digital cu Baterino sunt disponibile aici pentru descărcare.',
+  partnerContractTitle: 'Contract partener Baterino',
+  partnerContractDescription:
+    'PDF generat automat când semnezi digital contractul de parteneriat din panoul partener.',
+  partnerContractSignedOn: 'Semnat digital la {date}',
+  partnerContractPending:
+    'Disponibil după semnarea digitală a contractului de partener (pasul „Semnare contract” din dashboard).',
+  partnerContractDownload: 'Descarcă PDF',
+  partnerContractDownloading: 'Se descarcă…',
+  partnerContractDownloadError: 'Nu am putut descărca contractul. Încearcă din nou.',
   passwordTitle: 'Schimbă parola',
   currentPassword: 'Parola actuală',
   newPassword: 'Parola nouă',
@@ -232,20 +254,17 @@ const en: PartnerSettingsTranslations = {
   pageTitle: 'Settings',
   pageSubtitle: 'Manage account details, delivery address and sign-in security.',
   pendingBanner:
-    'Your account is under review. You can use Support from the menu and delete your account below if you withdraw. Other sections will be available after approval.',
+    'Your account is not approved yet. You can open Products for price allocation, use Support from the menu, and delete your account below if you withdraw. Other sections will be available after final approval.',
   navSectionsAria: 'Settings sections',
   navPersonal: 'Personal details',
   navCompany: 'Company details',
   navDelivery: 'Delivery address',
+  navDocuments: 'Documents',
   navPassword: 'Change password',
   navEmail: 'Change email',
   navNotifications: 'Notifications',
   navTwoFactor: 'Two-factor authentication',
   navDelete: 'Delete account',
-  activityInstalator: 'Installer',
-  activityDistribuitor: 'Distributor',
-  activityIntegrator: 'Systems integrator',
-  activityAltul: 'Other',
   personalTitle: 'Personal details',
   personalLoadingAria: 'Loading',
   currentEmail: 'Current email',
@@ -281,8 +300,13 @@ const en: PartnerSettingsTranslations = {
   postalPlaceholder: '010001',
   tradeRegister: 'Trade register no.',
   tradeRegisterPlaceholder: 'J00/000/2020',
-  activityType: 'Activity type',
-  companyErrorRequired: 'Enter company name, tax ID and at least one activity type.',
+  companyProfile: 'Company profile',
+  companyProfileHint:
+    'Your commercial channel (Installer or Distributor) was set at registration. Contact the Baterino team to change it.',
+  channelInstaller: 'Installer',
+  channelDistributor: 'Distributor',
+  channelHybrid: 'Installer + Distributor',
+  companyErrorRequired: 'Enter company name and tax ID.',
   companyErrorPostal: 'Registered office postal code must be exactly 6 digits.',
   companySaved: 'Company details saved.',
   deliveryTitle: 'Delivery address',
@@ -295,6 +319,17 @@ const en: PartnerSettingsTranslations = {
   deliveryErrorPostal: 'Postal code must be exactly 6 digits.',
   deliverySaved: 'Delivery address saved.',
   saveDeliveryAddress: 'Save delivery address',
+  documentsTitle: 'Documents',
+  documentsIntro: 'Contracts digitally signed with Baterino are available here for download.',
+  partnerContractTitle: 'Baterino partner contract',
+  partnerContractDescription:
+    'PDF automatically generated when you digitally sign the partnership contract from the partner dashboard.',
+  partnerContractSignedOn: 'Digitally signed on {date}',
+  partnerContractPending:
+    'Available after you digitally sign the partner contract (the “Contract signing” step on the dashboard).',
+  partnerContractDownload: 'Download PDF',
+  partnerContractDownloading: 'Downloading…',
+  partnerContractDownloadError: 'Could not download the contract. Please try again.',
   passwordTitle: 'Change password',
   currentPassword: 'Current password',
   newPassword: 'New password',
@@ -344,16 +379,23 @@ export function getPartnerSettingsTranslations(lang: LangCode): PartnerSettingsT
   return translations[lang] ?? translations.ro
 }
 
-export function getPartnerSettingsActivityLabel(
+export function getPartnerChannelProfileLabel(
   lang: LangCode,
-  id: PartnerSettingsActivityId,
+  profile: { partnerChannelType?: string | null; activityTypes?: string | string[] | null },
 ): string {
   const tr = getPartnerSettingsTranslations(lang)
-  const map: Record<PartnerSettingsActivityId, string> = {
-    instalator: tr.activityInstalator,
-    distribuitor: tr.activityDistribuitor,
-    integrator: tr.activityIntegrator,
-    altul: tr.activityAltul,
-  }
-  return map[id]
+  const ch = String(profile.partnerChannelType ?? '').trim().toLowerCase()
+  if (ch === 'distributor') return tr.channelDistributor
+  if (ch === 'hybrid') return tr.channelHybrid
+  if (ch === 'installer') return tr.channelInstaller
+  const parts = (Array.isArray(profile.activityTypes)
+    ? profile.activityTypes
+    : String(profile.activityTypes ?? '').split(',')
+  )
+    .map((s) => String(s).trim().toLowerCase())
+    .filter(Boolean)
+  if (parts.includes('distribuitor') && parts.includes('instalator')) return tr.channelHybrid
+  if (parts.includes('distribuitor')) return tr.channelDistributor
+  if (parts.includes('instalator')) return tr.channelInstaller
+  return '—'
 }

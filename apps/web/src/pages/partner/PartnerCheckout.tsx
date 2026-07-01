@@ -23,8 +23,10 @@ import {
   getProductCardImageUrl,
   submitGuestResidentialOrder,
   getAuthEmail,
-  getPartnerCatalogSaleUnitNumeric,
+  getPartnerDisplayUnitPriceWithVat,
   getPartnerCatalogVatPercentForDisplay,
+  partnerCanSeeDiscountPrices,
+  filterProductsForPartnerPanel,
   type PublicProduct,
 } from '../../lib/api'
 import {
@@ -64,20 +66,9 @@ const selectClass = `${inputClassBase} cursor-pointer appearance-none border bor
 const checkoutBackButtonClass =
   'rounded-xl border border-transparent bg-transparent px-4 text-sm font-semibold text-slate-800 transition hover:bg-black/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15'
 
-function catalogNetAfterPartnerPct(net: number, partnerDiscountPct: number | null): number {
-  const pct = partnerDiscountPct != null && partnerDiscountPct > 0 ? partnerDiscountPct : 0
-  if (pct <= 0 || Number.isNaN(net)) return net
-  const f = Math.min(1, Math.max(0, pct / 100))
-  return net * (1 - f)
-}
-
 function unitInclAfterPartnerDiscount(product: PublicProduct, partnerDiscountPct: number | null): number | null {
-  const nu = getPartnerCatalogSaleUnitNumeric(product)
-  if (Number.isNaN(nu)) return null
-  const unitNet = catalogNetAfterPartnerPct(nu, partnerDiscountPct)
-  const vpc = getPartnerCatalogVatPercentForDisplay(product)
-  const unitIncl = vpc != null && vpc > 0 ? unitNet * (1 + vpc / 100) : unitNet
-  return unitIncl
+  const unitIncl = getPartnerDisplayUnitPriceWithVat(product, partnerDiscountPct)
+  return Number.isNaN(unitIncl) ? null : unitIncl
 }
 
 function lineTotalInclVatDisplay(product: PublicProduct, qty: number, partnerDiscountPct: number | null): number | null {
@@ -132,6 +123,18 @@ export default function PartnerCheckout() {
   const [cartHydrated, setCartHydrated] = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [partnerDiscountPct, setPartnerDiscountPct] = useState<number | null>(null)
+  const [partnerContractSignedAt, setPartnerContractSignedAt] = useState<string | null>(null)
+
+  const checkoutDiscountPct = useMemo(
+    () =>
+      partnerCanSeeDiscountPrices({
+        partnerDiscountPercent: partnerDiscountPct,
+        partnerContractSignedAt,
+      })
+        ? partnerDiscountPct
+        : null,
+    [partnerDiscountPct, partnerContractSignedAt],
+  )
 
   const [nume, setNume] = useState('')
   const [prenume, setPrenume] = useState('')
@@ -153,7 +156,7 @@ export default function PartnerCheckout() {
 
   useEffect(() => {
     getProducts()
-      .then(setProducts)
+      .then((list) => setProducts(filterProductsForPartnerPanel(Array.isArray(list) ? list : [])))
       .catch(() => setProducts([]))
       .finally(() => setCatalogLoading(false))
   }, [])
@@ -186,6 +189,11 @@ export default function PartnerCheckout() {
             ? Number(prof.partnerDiscountPercent)
             : null,
         )
+        setPartnerContractSignedAt(
+          typeof prof.partnerContractSignedAt === 'string' && prof.partnerContractSignedAt.trim()
+            ? prof.partnerContractSignedAt
+            : null,
+        )
         setNume(sanitizePersonName(prof.contactLastName || '') || '')
         setPrenume(sanitizePersonName(prof.contactFirstName || '') || '')
         setPhone(loadPhoneE164(prof.phone))
@@ -209,8 +217,8 @@ export default function PartnerCheckout() {
   const delCities = useMemo(() => getCitiesForCounty(delCounty), [delCounty])
 
   const orderTotalDisplay = useMemo(
-    () => computeOrderTotalDisplay(cartItems, partnerDiscountPct),
-    [cartItems, partnerDiscountPct],
+    () => computeOrderTotalDisplay(cartItems, checkoutDiscountPct),
+    [cartItems, checkoutDiscountPct],
   )
 
   const cartSummaryVatLabel = useMemo(() => {
@@ -351,8 +359,8 @@ export default function PartnerCheckout() {
       <ul className="mt-3 divide-y divide-slate-100">
         {cartItems.map(({ product, quantity }) => {
           const img = getProductCardImageUrl(product)
-          const unitIncl = unitInclAfterPartnerDiscount(product, partnerDiscountPct)
-          const lineTotalIncl = lineTotalInclVatDisplay(product, quantity, partnerDiscountPct)
+          const unitIncl = unitInclAfterPartnerDiscount(product, checkoutDiscountPct)
+          const lineTotalIncl = lineTotalInclVatDisplay(product, quantity, checkoutDiscountPct)
           const lineVatPct = getPartnerCatalogVatPercentForDisplay(product)
           const lineVatPctDisp =
             lineVatPct != null && lineVatPct > 0
@@ -406,21 +414,23 @@ export default function PartnerCheckout() {
         <p className="mt-2 font-['Inter'] text-2xl font-extrabold tabular-nums tracking-tight text-slate-900">
           {fmtMoney(orderTotalDisplay)} <span className="text-lg font-bold text-slate-600">{p.currencySuffix}</span>
         </p>
-        {partnerDiscountPct != null && partnerDiscountPct > 0 ? (
+        {checkoutDiscountPct != null && checkoutDiscountPct > 0 ? (
           <p className="mt-2 text-xs leading-snug text-emerald-700 font-['Inter']">
-            {trPartner.partnerDiscountApplied.replace('{pct}', String(partnerDiscountPct))}
+            {trPartner.partnerDiscountApplied.replace('{pct}', String(checkoutDiscountPct))}
           </p>
         ) : cartSummaryVatLabel ? (
           <p className="mt-2 text-xs leading-snug text-slate-500 font-['Inter']">{cartSummaryVatLabel}</p>
         ) : null}
       </div>
 
-      <Link
-        to="/partner/produse"
-        className={`mt-5 inline-flex min-h-[44px] items-center justify-start no-underline ${checkoutBackButtonClass}`}
-      >
-        {tr.btnEditProductsStep1}
-      </Link>
+      {!successOrderNumber ? (
+        <Link
+          to="/partner/produse"
+          className={`mt-5 inline-flex min-h-[44px] items-center justify-start no-underline ${checkoutBackButtonClass}`}
+        >
+          {tr.btnEditProductsStep1}
+        </Link>
+      ) : null}
     </aside>
   )
 
@@ -852,9 +862,6 @@ export default function PartnerCheckout() {
         <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-['Inter'] text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-[2rem]">
-                {tr.headline}
-              </h1>
               <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-sm">
                 {partnerBadge}
               </span>

@@ -81,9 +81,6 @@ export default function PartnerSupport() {
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-4xl w-full">
-      <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">{tr.title}</h1>
-      <p className="text-gray-500 text-sm font-['Inter'] mb-8">{tr.subtitle}</p>
-
       <div className="flex flex-col gap-4">
         {/* Agent — hidden when none assigned or agent suspended/deleted */}
         {(loading || agent) ? (

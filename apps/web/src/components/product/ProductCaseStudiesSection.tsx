@@ -2,7 +2,7 @@ import { MapPin } from 'lucide-react'
 import type { ProductCaseStudyExample } from '../../lib/productCaseStudies'
 
 type Props = {
-  title: string
+  title?: string
   items: ProductCaseStudyExample[]
   className?: string
 }
@@ -11,10 +11,12 @@ export default function ProductCaseStudiesSection({ title, items, className = ''
   if (items.length === 0) return null
 
   return (
-    <section className={className} aria-labelledby="product-case-studies-heading">
-      <h2 id="product-case-studies-heading" className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6">
-        {title}
-      </h2>
+    <section className={className} aria-labelledby={title ? 'product-case-studies-heading' : undefined}>
+      {title ? (
+        <h2 id="product-case-studies-heading" className="text-black text-lg font-bold font-['Inter'] mb-4 sm:mb-6">
+          {title}
+        </h2>
+      ) : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
         {items.map((item, i) => (
           <article

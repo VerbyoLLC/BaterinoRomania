@@ -41,6 +41,22 @@ export type ProduseTranslations = {
   catalogIncludesVatWithPct: string
   /** Residential card under price; `{price}` = net amount + currency */
   catalogPretFaraTva: string
+  /** Partner catalog card: label under net unit price */
+  catalogLabelPretFaraTva: string
+  /** Partner catalog card: label under gross unit price */
+  catalogLabelPretCuTva: string
+  /** Partner catalog card: PRP / RRP (catalog list incl. VAT) */
+  catalogLabelPrp: string
+  /** Partner catalog card: MAP (minimum advertised price net) */
+  catalogLabelMap: string
+  /** Partner PRP/RRP info modal */
+  catalogPrpInfoModalTitle: string
+  catalogPrpInfoModalBody: string
+  catalogMapInfoModalTitle: string
+  catalogMapInfoModalBody: string
+  catalogPriceInfoModalClose: string
+  catalogPrpInfoAria: string
+  catalogMapInfoAria: string
   /** Residential card image corner */
   catalogBadgeStocCategory: string
   catalogBadgeLivrareCategory: string
@@ -100,6 +116,19 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogDisponibilParteneriPrice: 'Disponibil Partneri',
     catalogIncludesVatWithPct: 'Include TVA {pct}%',
     catalogPretFaraTva: 'Preț fără TVA: {price}',
+    catalogLabelPretFaraTva: 'Preț fără TVA',
+    catalogLabelPretCuTva: 'Preț cu TVA',
+    catalogLabelPrp: 'PRP',
+    catalogLabelMap: 'MAP',
+    catalogPrpInfoModalTitle: 'Preț de Vânzare Recomandat',
+    catalogPrpInfoModalBody:
+      'Preț orientativ recomandat de Baterino (importator) pentru vânzarea către clientul final în România. Conform legislației UE, nu este obligatoriu.',
+    catalogMapInfoModalTitle: 'Preț Minim de Publicitate',
+    catalogMapInfoModalBody:
+      'Prețul minim la care acest produs poate fi afișat sau promovat public pe piața din România, conform contractului de partener. Se referă strict la prețul publicat — nu la prețul final negociat cu clientul. Scopul este menținerea unui nivel de preț coerent pe piață și protejarea marjelor partenerilor noștri.',
+    catalogPriceInfoModalClose: 'Închide',
+    catalogPrpInfoAria: 'Informații despre PRP',
+    catalogMapInfoAria: 'Informații despre MAP',
     catalogBadgeStocCategory: 'Stoc',
     catalogBadgeLivrareCategory: 'Livrare',
     catalogBadgeTransportCategory: 'Transport',
@@ -175,6 +204,19 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogDisponibilParteneriPrice: 'Available to partners',
     catalogIncludesVatWithPct: 'Includes VAT {pct}%',
     catalogPretFaraTva: 'Price excl. VAT: {price}',
+    catalogLabelPretFaraTva: 'Price excl. VAT',
+    catalogLabelPretCuTva: 'Price incl. VAT',
+    catalogLabelPrp: 'RRP',
+    catalogLabelMap: 'MAP',
+    catalogPrpInfoModalTitle: 'Recommended Selling Price',
+    catalogPrpInfoModalBody:
+      'Guidance price recommended by Baterino (importer) for sales to end customers in Romania. Under EU law, it is not mandatory.',
+    catalogMapInfoModalTitle: 'Minimum Advertised Price',
+    catalogMapInfoModalBody:
+      'The minimum price at which this product may be publicly displayed or promoted on the Romanian market, under your partner agreement. It applies strictly to the published price — not the final price negotiated with the customer. The aim is to maintain consistent market pricing and protect our partners’ margins.',
+    catalogPriceInfoModalClose: 'Close',
+    catalogPrpInfoAria: 'RRP information',
+    catalogMapInfoAria: 'MAP information',
     catalogBadgeStocCategory: 'Stock',
     catalogBadgeLivrareCategory: 'Delivery',
     catalogBadgeTransportCategory: 'Transport',

@@ -6,9 +6,13 @@ export type PartnerSidebarSupportItem = { id: string; label: string; sub: string
 
 export type PartnerSidebarTranslations = {
   reducereEyebrow: string
+  reducereAllProducts: string
   reducereTitle: string
+  reducereBenefitIntro: string
+  reducereBenefitBold: string
   reducereBenefit: string
   reducereNoDiscount: string
+  reducereLoadingAria: string
   reducereContact: string
   inverterTitle: string
   inverterBody: string
@@ -24,9 +28,14 @@ export type PartnerSidebarTranslations = {
 
 const ro: PartnerSidebarTranslations = {
   reducereEyebrow: 'Reducere partener',
+  reducereAllProducts: 'la toate produsele',
   reducereTitle: 'Reducere',
-  reducereBenefit: 'Beneficiezi de o reducere de {pct}% la toate produsele.',
+  reducereBenefitIntro: 'Reducerea se poate modifica în funcție de volum.',
+  reducereBenefitBold: 'Mai mult volum, mai mult profit.',
+  reducereBenefit:
+    'Reducerea se poate modifica în funcție de volum. Mai mult volum, mai mult profit.',
   reducereNoDiscount: 'Nicio reducere configurată momentan.',
+  reducereLoadingAria: 'Se încarcă reducerea partener',
   reducereContact: 'Contactați-ne pentru a stabili condițiile de parteneriat.',
   inverterTitle: 'Compatibilitate invertoare',
   inverterBody: 'Verifică dacă bateriile noastre sunt compatibile cu invertoarele clienților tăi.',
@@ -80,9 +89,14 @@ const ro: PartnerSidebarTranslations = {
 
 const en: PartnerSidebarTranslations = {
   reducereEyebrow: 'Partner discount',
+  reducereAllProducts: 'on all products',
   reducereTitle: 'Discount',
-  reducereBenefit: 'You benefit from a {pct}% discount on all products.',
+  reducereBenefitIntro: 'Your discount may change based on volume.',
+  reducereBenefitBold: 'More volume, more profit.',
+  reducereBenefit:
+    'Your discount may change based on volume. More volume, more profit.',
   reducereNoDiscount: 'No discount configured at the moment.',
+  reducereLoadingAria: 'Loading partner discount',
   reducereContact: 'Contact us to set up partnership terms.',
   inverterTitle: 'Inverter compatibility',
   inverterBody: "Check whether our batteries are compatible with your customers' inverters.",

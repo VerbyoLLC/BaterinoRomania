@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ComponentProps } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, type ComponentProps } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
 import {
@@ -7,10 +7,13 @@ import {
   getAuthToken,
   uploadPartnerPublicMedia,
   checkPartnerPublicSlugAvailability,
+  partnerDiscountConfigured,
 } from '../../lib/api'
+import { PartnerContractSigningBanner } from '../../components/partner/PartnerContractSigningBanner'
 import {
   isPartnerWebsiteSyntaxValid,
   normalizePartnerWebsite,
+  partnerWebsiteForInput,
   loadPhoneE164,
   sanitizeRoPostalCode,
   sanitizeStreetLine,
@@ -20,6 +23,7 @@ import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counti
 import PartnerPublicProfileCard from '../../components/partner/PartnerPublicProfileCard'
 import { getPartnerServiciiOptions } from '../../i18n/partner/servicii'
 import { getPartnerPublicProfileTranslations } from '../../i18n/partner/public-profile'
+import type { PartnerPublicProfileTranslations } from '../../i18n/partner/public-profile'
 import type { LangCode } from '../../i18n/menu'
 import { slugifyPartnerPublicHandle } from '../../lib/partnerPublicSlug'
 import { normalizePartnerWorkPhotos } from '../../lib/partner-work-photos'
@@ -43,6 +47,10 @@ import {
   Wrench,
   Copy,
   AlertCircle,
+  Users,
+  BadgeCheck,
+  Image,
+  Headphones,
 } from 'lucide-react'
 
 type PartnerData = {
@@ -67,6 +75,8 @@ type PartnerData = {
   workPhotos?: string[]
   /** Din GET /partner/profile — pentru insigna „profil verificat” în previzualizare. */
   isApproved?: boolean
+  partnerDiscountPercent?: number | null
+  partnerContractSignedAt?: string | null
 }
 
 const INPUT_BASE =
@@ -265,6 +275,91 @@ function CompletionItem({ done, label }: { done: boolean; label: string }) {
   )
 }
 
+const PRE_DISCOUNT_ADVANTAGE_ICONS = [Users, MapPin, BadgeCheck, Phone, Image, Headphones] as const
+const PRE_DISCOUNT_BADGE_INDEX = 2
+
+function preDiscountBenefitBorderClass(index: number): string {
+  if (index === 0) return 'border-t-0'
+  if (index === 1) return 'border-t border-[#eff2f8] sm:border-t-0'
+  return 'border-t border-[#eff2f8]'
+}
+
+function PreDiscountAdvantagesPanel({
+  tr,
+  profileUrlHost,
+  slugExample,
+}: {
+  tr: PartnerPublicProfileTranslations
+  profileUrlHost: string
+  slugExample: string
+}) {
+  const urlSlug = slugExample.trim() || tr.preDiscountUrlSlugExample
+
+  return (
+    <section
+      className="w-full min-w-0 self-start overflow-hidden rounded-[20px] border border-[#e6eaf2] bg-white shadow-[0_10px_30px_rgba(16,24,48,0.06)]"
+      aria-labelledby="partner-pre-discount-advantages-heading"
+    >
+      <div className="px-6 pb-1 pt-4">
+        <h2
+          id="partner-pre-discount-advantages-heading"
+          className="mb-[7px] text-[21px] font-bold tracking-[-0.015em] text-[#0a0e1a] font-['Inter']"
+        >
+          {tr.preDiscountSectionTitle}
+        </h2>
+        <p className="m-0 max-w-[560px] text-[13.5px] leading-[1.55] text-[#6b7488] font-['Inter']">
+          {tr.preDiscountSectionIntro}
+        </p>
+      </div>
+
+      <div
+        className="relative mx-6 mb-1.5 mt-[18px] overflow-hidden rounded-2xl px-5 py-[18px] text-white"
+        style={{
+          background: 'radial-gradient(120% 140% at 100% 0%, #1e46b4 0%, #142a6e 45%, #0a1230 100%)',
+        }}
+      >
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9fb2ff] font-['Inter']">
+          {tr.preDiscountDedicatedPageTitle}
+        </p>
+        <p className="mb-[13px] max-w-[520px] text-[13px] leading-[1.5] text-[#dde4fb] font-['Inter']">
+          {tr.preDiscountHeroBodyPrefix}
+          <strong className="font-semibold text-white">{tr.preDiscountHeroBodyHighlight}</strong>
+          {tr.preDiscountHeroBodySuffix}
+        </p>
+        <div className="flex items-center gap-[9px] rounded-[10px] border border-white/15 bg-white/10 px-3 py-[9px] backdrop-blur-[4px]">
+          <Link2 className="h-[14px] w-[14px] shrink-0 text-[#9fb2ff]" strokeWidth={2} aria-hidden />
+          <p className="m-0 min-w-0 truncate font-mono text-xs text-[#eaf0ff]">
+            {profileUrlHost}/{PUBLIC_INSTALLER_PROFILE_PATH_SEGMENT}/
+            <span className="text-[#34e0a8]">{urlSlug}</span>
+          </p>
+        </div>
+      </div>
+
+      <ul className="grid grid-cols-1 gap-x-[26px] px-6 pb-[22px] pt-[14px] sm:grid-cols-2">
+        {tr.preDiscountAdvantages.map((adv, index) => {
+          const Icon = PRE_DISCOUNT_ADVANTAGE_ICONS[index] ?? CheckCircle2
+          const isGreen = index === PRE_DISCOUNT_BADGE_INDEX
+          return (
+            <li key={adv.title} className={`flex gap-[13px] py-[13px] ${preDiscountBenefitBorderClass(index)}`}>
+              <span
+                className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] ${
+                  isGreen ? 'bg-[#e8f7f0] text-[#15a05f]' : 'bg-[#eef2fe] text-[#1e46b4]'
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-bold leading-[1.2] text-[#0a0e1a] font-['Inter']">{adv.title}</p>
+                <p className="mt-[3px] text-[11.5px] leading-[1.45] text-[#6b7488] font-['Inter']">{adv.subtitle}</p>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
 /* ─── main page ──────────────────────────────────────────────────── */
 export default function PartnerPublicProfile() {
   const navigate = useNavigate()
@@ -304,7 +399,7 @@ export default function PartnerPublicProfile() {
   const [linkedinUrl, setLinkedinUrl] = useState('')
   const [instagramUrl, setInstagramUrl] = useState('')
   const [tiktokUrl, setTiktokUrl] = useState('')
-  const [isPublic, setIsPublic] = useState(true)
+  const [isPublic, setIsPublic] = useState(false)
   const [publicSlugInput, setPublicSlugInput] = useState('')
   const [profileUrlHost, setProfileUrlHost] = useState('baterino.ro')
   const [slugCheckStatus, setSlugCheckStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>(
@@ -314,6 +409,11 @@ export default function PartnerPublicProfile() {
   const [slugSaved, setSlugSaved] = useState(false)
   const [slugSaveError, setSlugSaveError] = useState('')
   const [profileLinkCopied, setProfileLinkCopied] = useState(false)
+
+  const applyProfileUpdate = useCallback((updated: PartnerData) => {
+    setProfile(updated)
+    setIsPublic(updated.isPublic === true)
+  }, [])
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -333,12 +433,12 @@ export default function PartnerPublicProfile() {
         setServicii(p.services ? p.services.split(',').filter(Boolean) : [])
         setPublicPhone(loadPhoneE164(p.publicPhone))
         setWhatsapp(loadPhoneE164(p.whatsapp))
-        setWebsite(p.website ?? '')
+        setWebsite(partnerWebsiteForInput(p.website ?? ''))
         setFacebookUrl(p.facebookUrl ?? '')
         setLinkedinUrl(p.linkedinUrl ?? '')
         setInstagramUrl(p.instagramUrl ?? '')
         setTiktokUrl(p.tiktokUrl ?? '')
-        setIsPublic(p.isPublic !== false)
+        setIsPublic(p.isPublic === true)
         setLogoPreview(p.logoUrl ?? null)
         setWorkPhotos(normalizePartnerWorkPhotos(p.workPhotos))
         const slugFromApi = String(p.publicSlug ?? '')
@@ -474,7 +574,7 @@ export default function PartnerPublicProfile() {
     setSlugSaving(true)
     try {
       const updated = await savePartnerProfile({ publicSlug: normalizedSlugInput })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
       const next = String((updated as PartnerData).publicSlug ?? normalizedSlugInput)
         .replace(/^@/, '')
         .toLowerCase()
@@ -523,7 +623,7 @@ export default function PartnerPublicProfile() {
       const { url } = await uploadPartnerPublicMedia(file, 'logo')
       setLogoPreview(url)
       const updated = await savePartnerProfile({ logoUrl: url })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : tr.uploadErrorFallback)
       setLogoPreview(profile?.logoUrl ?? null)
@@ -538,7 +638,7 @@ export default function PartnerPublicProfile() {
     setPhotoUploading(true)
     try {
       const updated = await savePartnerProfile({ logoUrl: null })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
       setLogoPreview(null)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : tr.deleteErrorFallback)
@@ -566,7 +666,7 @@ export default function PartnerPublicProfile() {
       const next = [...workPhotos, ...urls].slice(0, 8)
       setWorkPhotos(next)
       const updated = await savePartnerProfile({ workPhotos: next })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : tr.photoUploadErrorFallback)
     } finally {
@@ -580,7 +680,7 @@ export default function PartnerPublicProfile() {
     setWorkPhotos(next)
     try {
       const updated = await savePartnerProfile({ workPhotos: next.length ? next : null })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : tr.deleteErrorFallback)
       setWorkPhotos(workPhotos)
@@ -602,7 +702,7 @@ export default function PartnerPublicProfile() {
     setIsPublic(next)
     try {
       const updated = await savePartnerProfile({ isPublic: next })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
     } catch (err) {
       setIsPublic(!next)
       const message = err instanceof Error ? err.message : tr.updateErrorFallback
@@ -704,7 +804,7 @@ export default function PartnerPublicProfile() {
         tiktokUrl: tiktokUrl.trim() || undefined,
         ...(workPhotos.length > 0 ? { workPhotos } : {}),
       })
-      setProfile(updated as PartnerData)
+      applyProfileUpdate(updated as PartnerData)
       setHighlightIncompleteFields(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
@@ -781,6 +881,20 @@ export default function PartnerPublicProfile() {
     if (profileFullyComplete) setPublicToggleNotice('')
   }, [profileFullyComplete])
 
+  const reloadProfile = useCallback(() => {
+    getPartnerProfile()
+      .then((data) => {
+        const p = data as PartnerData
+        setProfile(p)
+      })
+      .catch(() => {})
+  }, [])
+
+  const discountConfigured = partnerDiscountConfigured(profile?.partnerDiscountPercent)
+  const contractSigned = Boolean(String(profile?.partnerContractSignedAt ?? '').trim())
+  const profileEditorUnlocked = discountConfigured && contractSigned
+  const previewPublicName = publicName.trim() || profile?.companyName?.trim() || ''
+
   /* ── loading ── */
   if (loading) {
     return (
@@ -815,14 +929,8 @@ export default function PartnerPublicProfile() {
 
   return (
     <div className="relative z-0 box-border block !min-h-min min-w-0 w-full max-w-full shrink-0 bg-[#f5f5f7] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:pb-10 lg:pt-10">
-      {/* Page header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 font-['Inter'] sm:text-3xl">{tr.pageTitle}</h1>
-          <p className="mt-1 text-sm text-slate-500 font-['Inter']">{tr.pageSubtitle}</p>
-        </div>
-
-        {/* Visibility toggle */}
+      {profileEditorUnlocked ? (
+      <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
         <button
           type="button"
           role="switch"
@@ -852,8 +960,9 @@ export default function PartnerPublicProfile() {
           </span>
         </button>
       </div>
+      ) : null}
 
-      {publicToggleNotice ? (
+      {profileEditorUnlocked && publicToggleNotice ? (
         <div
           id="partner-public-toggle-notice"
           role="alert"
@@ -868,8 +977,54 @@ export default function PartnerPublicProfile() {
       ) : null}
 
       {/* Main two-column grid */}
-      <div className="grid min-w-0 max-w-full auto-rows-min grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_minmax(0,360px)] xl:grid-cols-[1fr_minmax(0,400px)] lg:gap-8">
-        {/* ── LEFT: form (self-start avoids grid stretch filler when preview column is taller) ── */}
+      {!discountConfigured || !contractSigned ? (
+        <div className="grid min-w-0 max-w-full auto-rows-min grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,800px)_minmax(0,340px)] xl:grid-cols-[minmax(0,820px)_minmax(0,360px)] lg:gap-8">
+          <div className="flex min-w-0 flex-col gap-5 self-start">
+            {!contractSigned && discountConfigured ? (
+              <PartnerContractSigningBanner onSigned={reloadProfile} className="mt-0" />
+            ) : null}
+            <PreDiscountAdvantagesPanel
+              tr={tr}
+              profileUrlHost={profileUrlHost}
+              slugExample={
+                publicSlugInput ||
+                slugifyPartnerPublicHandle(profile?.companyName || profile?.publicName || '') ||
+                tr.preDiscountUrlSlugExample
+              }
+            />
+          </div>
+          <aside className="min-w-0 max-w-full lg:sticky lg:top-8 lg:z-10 lg:self-start">
+            <div className="mb-3 flex items-center gap-2">
+              <Eye className="h-4 w-4 text-slate-500" strokeWidth={2} />
+              <span className="text-sm font-semibold text-slate-500 font-['Inter']">{tr.previewHeading}</span>
+            </div>
+            <PartnerPublicProfileCard
+              variant="owner-preview"
+              logoUrl={logoPreview}
+              publicName={previewPublicName}
+              companyName={profile?.companyName}
+              city={city}
+              county={county}
+              description={description}
+              servicii={servicii}
+              publicPhone={publicPhone}
+              whatsapp={whatsapp}
+              website={website}
+              facebookUrl={facebookUrl}
+              linkedinUrl={linkedinUrl}
+              instagramUrl={instagramUrl}
+              tiktokUrl={tiktokUrl}
+              isPublic={isPublic}
+              workPhotos={workPhotos}
+              partnerProfileAdministrativelyVerified={profile?.isApproved === true}
+            />
+            <p className="mt-3 text-center text-xs text-slate-400 font-['Inter']">{tr.preDiscountPreviewHint}</p>
+          </aside>
+        </div>
+      ) : (
+      <div
+        className="grid min-w-0 max-w-full auto-rows-min grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_minmax(0,360px)] xl:grid-cols-[1fr_minmax(0,400px)] lg:gap-8"
+      >
         <form ref={formRef} onSubmit={handleSave} className="flex w-full min-w-0 flex-col gap-5 self-start">
           {/* Completion banner */}
           <div
@@ -1228,14 +1383,9 @@ export default function PartnerPublicProfile() {
             </div>
             <Field
               label={tr.websiteLabel}
-              type="url"
               placeholder={tr.websitePlaceholder}
               value={website}
               onChange={setWebsite}
-              onBlur={() => {
-                const n = normalizePartnerWebsite(website)
-                if (n && n !== website) setWebsite(n)
-              }}
               required
               invalid={!!fe?.website}
             />
@@ -1397,7 +1547,7 @@ export default function PartnerPublicProfile() {
           <PartnerPublicProfileCard
             variant="owner-preview"
             logoUrl={logoPreview}
-            publicName={publicName}
+            publicName={previewPublicName}
             companyName={profile?.companyName}
             city={city}
             county={county}
@@ -1414,11 +1564,10 @@ export default function PartnerPublicProfile() {
             workPhotos={workPhotos}
             partnerProfileAdministrativelyVerified={profile?.isApproved === true}
           />
-          <p className="mt-3 text-center text-xs text-slate-400 font-['Inter']">
-            {tr.previewHint}
-          </p>
+          <p className="mt-3 text-center text-xs text-slate-400 font-['Inter']">{tr.previewHint}</p>
         </aside>
       </div>
+      )}
     </div>
   )
 }

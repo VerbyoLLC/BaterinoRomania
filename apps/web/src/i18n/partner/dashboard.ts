@@ -53,7 +53,38 @@ export type PartnerDashboardTranslations = {
   timelineComplete: string
   timelineCurrent: string
   timelineUpcoming: string
+  timelinePriceAllocationOpenAria: string
+  timelineContractSigningOpenAria: string
+  contractSigningHeroTitle: string
+  contractSigningHeroSubtitle: string
+  contractSigningStep1Title: string
+  contractSigningStep1Subtitle: string
+  contractSigningStep2Title: string
+  contractSigningStep2Subtitle: string
+  contractSigningStep3Title: string
+  contractSigningStep3Subtitle: string
+  contractSigningCloseAria: string
+  contractSigningModalTitle: string
+  contractSigningModalSubtitle: string
+  contractSigningSignAs: string
+  contractSigningFirstNameLabel: string
+  contractSigningLastNameLabel: string
+  contractSigningRoleLabel: string
+  contractSigningRolePlaceholder: string
+  contractSigningAgreePrefix: string
+  contractSigningFineprint: (companyName: string) => string
+  contractSigningDoneTitle: string
+  contractSigningDoneBody: (firstName: string) => string
+  contractSigningCalloutTitle: string
+  contractSigningCalloutSubtitle: string
+  contractSigningCalloutReadPdf: string
+  contractSigningReadPdfHint: string
+  contractSigningCalloutButton: string
+  contractSigningSignButton: string
+  contractSigningSigning: string
+  contractSigningLoadingAria: string
   advantagesLoadingAria: string
+  dashboardLoadingAria: string
   myActivity: string
   unavailable: string
   orders: string
@@ -198,15 +229,49 @@ const ro: PartnerDashboardTranslations = {
   pendingAdvantages: roPending,
   approvalTimelineSteps: [
     'Deschidere cont partener',
-    'Dezbatere parteneriat și strategie',
-    'Semnarea contractului',
+    'Alocare preț și reducere',
+    'Semnare contract',
     'Aprobare cont partener',
   ],
   approvalTimelineAria: 'Etape aprobare cont partener',
   timelineComplete: 'Finalizat',
   timelineCurrent: 'În curs',
   timelineUpcoming: 'Urmează',
+  timelinePriceAllocationOpenAria: 'Deschide pașii pentru alocarea prețului și reducerii',
+  timelineContractSigningOpenAria: 'Deschide pașii pentru semnarea contractului',
+  contractSigningHeroTitle: 'Semnare contract partener',
+  contractSigningHeroSubtitle: 'Contractul stabilește termenii parteneriatului. Iată drumul în 3 pași:',
+  contractSigningStep1Title: 'Citești contractul de partener',
+  contractSigningStep1Subtitle: '',
+  contractSigningStep2Title: 'Accepți termenii contractului',
+  contractSigningStep2Subtitle: '',
+  contractSigningStep3Title: 'Semnezi digital',
+  contractSigningStep3Subtitle: '',
+  contractSigningCloseAria: 'Închide fereastra de semnare contract',
+  contractSigningModalTitle: 'Semnează contractul',
+  contractSigningModalSubtitle: 'Completează datele și confirmă acordul pentru a semna.',
+  contractSigningSignAs: 'Semnezi în numele: {company} · CUI {cui}',
+  contractSigningFirstNameLabel: 'Prenume',
+  contractSigningLastNameLabel: 'Nume',
+  contractSigningRoleLabel: 'Funcția în companie',
+  contractSigningRolePlaceholder: 'ex. Administrator, Director general',
+  contractSigningAgreePrefix: 'Am citit și sunt de acord cu termenii contractului.',
+  contractSigningFineprint: (companyName) =>
+    `Prin semnare confirmi că ești autorizat să reprezinți și să angajezi ${companyName} în acest contract. Semnătura este înregistrată cu dată, oră și adresă IP.`,
+  contractSigningDoneTitle: 'Contract semnat',
+  contractSigningDoneBody: (firstName) =>
+    `Mulțumim, ${firstName}! Contractul a fost înregistrat și prețurile tale de partener sunt acum active.`,
+  contractSigningCalloutTitle: 'Citește și semnează contractul de partener',
+  contractSigningCalloutSubtitle:
+    'Mai e un singur pas. Semnează contractul de parteneriat ca să vezi prețurile personalizate în catalog și să plasezi comenzi la condițiile tale.',
+  contractSigningCalloutReadPdf: 'Citește contractul (PDF)',
+  contractSigningReadPdfHint: 'Deschide acordul de parteneriat înainte de semnare.',
+  contractSigningCalloutButton: 'Semnează contractul',
+  contractSigningSignButton: 'Semnează contractul',
+  contractSigningSigning: 'Se semnează…',
+  contractSigningLoadingAria: 'Se încarcă datele contractului',
   advantagesLoadingAria: 'Se încarcă avantajele',
+  dashboardLoadingAria: 'Se încarcă panoul de control',
   myActivity: 'Activitatea mea',
   unavailable: 'Indisponibil',
   orders: 'Comenzi',
@@ -283,16 +348,50 @@ const en: PartnerDashboardTranslations = {
   pendingAdvantagesTitle: 'Baterino partnership benefits',
   pendingAdvantages: enPending,
   approvalTimelineSteps: [
-    'Partner account opened',
-    'Partnership & strategy discussion',
+    'Partner account opening',
+    'Price and discount allocation',
     'Contract signing',
-    'Partner account approved',
+    'Partner account approval',
   ],
   approvalTimelineAria: 'Partner account approval steps',
   timelineComplete: 'Completed',
   timelineCurrent: 'In progress',
   timelineUpcoming: 'Upcoming',
+  timelinePriceAllocationOpenAria: 'Open steps for price and discount allocation',
+  timelineContractSigningOpenAria: 'Open steps for contract signing',
+  contractSigningHeroTitle: 'Partner contract signing',
+  contractSigningHeroSubtitle: 'The contract sets the terms of the partnership. Here is the 3-step path:',
+  contractSigningStep1Title: 'Read the partner contract',
+  contractSigningStep1Subtitle: '',
+  contractSigningStep2Title: 'Accept the contract terms',
+  contractSigningStep2Subtitle: '',
+  contractSigningStep3Title: 'Sign digitally',
+  contractSigningStep3Subtitle: '',
+  contractSigningCloseAria: 'Close contract signing dialog',
+  contractSigningModalTitle: 'Sign the contract',
+  contractSigningModalSubtitle: 'Fill in your details and confirm your agreement to sign.',
+  contractSigningSignAs: 'Signing on behalf of: {company} · CUI {cui}',
+  contractSigningFirstNameLabel: 'First name',
+  contractSigningLastNameLabel: 'Last name',
+  contractSigningRoleLabel: 'Role in the company',
+  contractSigningRolePlaceholder: 'e.g. Administrator, Managing director',
+  contractSigningAgreePrefix: 'I have read and agree to the contract terms.',
+  contractSigningFineprint: (companyName) =>
+    `By signing you confirm that you are authorized to represent and bind ${companyName} under this contract. Your signature is recorded with date, time and IP address.`,
+  contractSigningDoneTitle: 'Contract signed',
+  contractSigningDoneBody: (firstName) =>
+    `Thank you, ${firstName}! Your contract has been recorded and your partner prices are now active.`,
+  contractSigningCalloutTitle: 'Read and sign the partner contract',
+  contractSigningCalloutSubtitle:
+    'One step left. Sign the partnership contract to unlock personalized catalog prices and place orders at your terms.',
+  contractSigningCalloutReadPdf: 'Read the contract (PDF)',
+  contractSigningReadPdfHint: 'Open the partnership agreement before you sign.',
+  contractSigningCalloutButton: 'Sign the contract',
+  contractSigningSignButton: 'Sign the contract',
+  contractSigningSigning: 'Signing…',
+  contractSigningLoadingAria: 'Loading contract details',
   advantagesLoadingAria: 'Loading benefits',
+  dashboardLoadingAria: 'Loading dashboard',
   myActivity: 'My activity',
   unavailable: 'Unavailable',
   orders: 'Orders',

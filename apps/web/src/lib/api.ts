@@ -5,7 +5,7 @@ import { isPartnerPublicProfileFullyComplete } from './partner-public-profile-co
 
 /**
  * Origine pentru `${API_BASE}/admin/...` → server Express `/api/admin/...`.
- * - Fără env: dev → localhost:3001/api; prod (Vercel) → `/api` (rewrite către Railway).
+ * - Fără env: dev → localhost:3005/api; prod (Vercel) → `/api` (rewrite către Railway).
  * - VITE_API_URL: trebuie să fie rădăcina cu `/api`, ex. `https://xxx.up.railway.app/api`.
  *   Dacă lipsește `/api` pe un URL absolut, îl adăugăm automat. Dacă env se termină în `/admin`, îl tăiem (altfel URL-urile devin `/api/admin/admin/...`).
  */
@@ -26,7 +26,7 @@ function resolveApiBase(): string {
     typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ) {
-    return 'http://localhost:3001/api'
+    return 'http://localhost:3005/api'
   }
   return '/api'
 }
@@ -394,7 +394,8 @@ export type PublicProduct = {
   technicalSpecsModels?: CreateProductPayload['technicalSpecsModels']
   images: string[]
   salePrice?: string | number | null
-  partnerSalePrice?: string | number | null
+  /** MAP — preț minim de publicitate (parteneri); net, fără TVA */
+  mapPrice?: string | number | null
   landedPrice?: string | number | null
   vat?: string | number | null
   /** hidden | public | partner_only */
@@ -429,6 +430,39 @@ export type PublicProduct = {
 
 export function isPromoCatalogProduct(product: Pick<PublicProduct, 'promovarePromotie'>): boolean {
   return product.promovarePromotie === true
+}
+
+/** Admin „Partener”: produs evidențiat în catalogul partener (dashboard trending + sortare). */
+export function isPartnerAccountPromotedProduct(
+  product: Pick<PublicProduct, 'promovarePeContPartener'>,
+): boolean {
+  return product.promovarePeContPartener === true
+}
+
+/** Retail promo cards (Acasă / Produse) — excluded from partner dashboard and partner Produse. */
+export function filterProductsForPartnerPanel(products: PublicProduct[]): PublicProduct[] {
+  return products.filter((p) => !isPromoCatalogProduct(p))
+}
+
+export function getPublicCatalogProductHref(
+  product: Pick<PublicProduct, 'id' | 'slug' | 'category'>,
+): string {
+  return `/produse/${[product.category?.slug, product.slug || product.id].filter(Boolean).join('/')}`
+}
+
+/** Public catalog cards: partners open „Partener” products in `/partner/produse` (preț + coș). */
+export function getCatalogProductHrefForViewer(
+  product: Pick<PublicProduct, 'id' | 'slug' | 'category' | 'promovarePeContPartener' | 'promovarePromotie'>,
+  viewerRole?: 'admin' | 'client' | 'partener' | 'sales_agent' | null,
+): string {
+  if (
+    viewerRole === 'partener' &&
+    isPartnerAccountPromotedProduct(product) &&
+    !isPromoCatalogProduct(product)
+  ) {
+    return `/partner/produse?detail=${encodeURIComponent(product.id)}`
+  }
+  return getPublicCatalogProductHref(product)
 }
 
 /** Două linii de specificații pentru cardurile din catalog (Produse / Acasă). */
@@ -508,22 +542,91 @@ export function catalogProductShowsPublicPrice(
   return price != null && String(price).trim() !== ''
 }
 
-/** Partner catalog: validated unit from partnerSalePrice (catalog/net); fallback salePrice; NaN if missing. */
-export function getPartnerCatalogSaleUnitNumeric(
-  product: Pick<PublicProduct, 'salePrice' | 'partnerSalePrice'>,
+/** Partner catalog: validated MAP unit (net ex-VAT); NaN if missing. */
+export function getPartnerCatalogMapUnitNumeric(
+  product: Pick<PublicProduct, 'mapPrice'>,
 ): number {
-  const partner = catalogNum(product.partnerSalePrice)
-  if (partner != null && partner > 0) return partner
+  const map = catalogNum(product.mapPrice)
+  return map != null && map > 0 ? map : NaN
+}
+
+/** Partner catalog: PRP (catalog list net ex-VAT, before account discount). */
+export function getPartnerCatalogPrpUnitNumeric(
+  product: Pick<PublicProduct, 'salePrice'>,
+): number {
+  return getPartnerCatalogSaleUnitNumeric(product)
+}
+
+/** Partner catalog: PRP incl. VAT (before account discount). */
+export function getPartnerCatalogPrpUnitWithVatNumeric(
+  product: Pick<PublicProduct, 'salePrice' | 'vat'>,
+): number {
+  const net = getPartnerCatalogPrpUnitNumeric(product)
+  if (Number.isNaN(net)) return NaN
+  const vat = catalogNum(product.vat)
+  return vat != null && vat > 0 ? net * (1 + vat / 100) : net
+}
+
+/** Partner catalog: validated unit from salePrice (catalog/net); NaN if missing. */
+export function getPartnerCatalogSaleUnitNumeric(
+  product: Pick<PublicProduct, 'salePrice'>,
+): number {
   const sale = catalogNum(product.salePrice)
   return sale != null && sale > 0 ? sale : NaN
 }
 
-/** Partner UI / cart: unit price including VAT when product VAT % > 0 (same rule as residential catalog). */
-export function getPartnerDisplayUnitPriceWithVat(product: PublicProduct): number {
-  const sale = getPartnerCatalogSaleUnitNumeric(product)
-  if (Number.isNaN(sale)) return NaN
+/** Partner account discount % assigned by admin (0–100). */
+export function normalizePartnerDiscountPercent(partnerDiscountPct: number | null | undefined): number {
+  if (partnerDiscountPct == null) return 0
+  const n = Number(partnerDiscountPct)
+  if (!Number.isFinite(n) || n <= 0) return 0
+  return Math.min(100, n)
+}
+
+/** Admin allocated a partner discount (may still require contract before prices unlock). */
+export function partnerDiscountConfigured(partnerDiscountPct: number | null | undefined): boolean {
+  return normalizePartnerDiscountPercent(partnerDiscountPct) > 0
+}
+
+/** Partner sees personalized catalog/checkout prices only after digital contract signing. */
+export function partnerCanSeeDiscountPrices(opts: {
+  partnerDiscountPercent?: number | null
+  partnerContractSignedAt?: string | null
+}): boolean {
+  return (
+    partnerDiscountConfigured(opts.partnerDiscountPercent) &&
+    Boolean(String(opts.partnerContractSignedAt ?? '').trim())
+  )
+}
+
+/** Apply partner account discount on catalog net (ex-VAT), matching order API. */
+export function applyPartnerAccountDiscountToNet(
+  catalogNet: number,
+  partnerDiscountPct: number | null | undefined,
+): number {
+  if (Number.isNaN(catalogNet)) return NaN
+  const pct = normalizePartnerDiscountPercent(partnerDiscountPct)
+  if (pct <= 0) return catalogNet
+  return catalogNet * (1 - pct / 100)
+}
+
+/** Partner catalog net unit (ex-VAT) after account discount. */
+export function getPartnerCatalogNetUnitForDisplay(
+  product: Pick<PublicProduct, 'salePrice'>,
+  partnerDiscountPct?: number | null,
+): number {
+  return applyPartnerAccountDiscountToNet(getPartnerCatalogSaleUnitNumeric(product), partnerDiscountPct)
+}
+
+/** Partner UI / cart: unit incl. VAT; discount on net first, then VAT (same as checkout). */
+export function getPartnerDisplayUnitPriceWithVat(
+  product: PublicProduct,
+  partnerDiscountPct?: number | null,
+): number {
+  const unitNet = getPartnerCatalogNetUnitForDisplay(product, partnerDiscountPct)
+  if (Number.isNaN(unitNet)) return NaN
   const vat = catalogNum(product.vat)
-  return vat != null && vat > 0 ? sale * (1 + vat / 100) : sale
+  return vat != null && vat > 0 ? unitNet * (1 + vat / 100) : unitNet
 }
 
 /** VAT % applied on partner-inclusive price display; null if catalog shows net-only for this product. */
@@ -1366,6 +1469,70 @@ export async function getPartnerOrders(): Promise<ClientOrderRow[]> {
   return Array.isArray(json) ? json : []
 }
 
+export async function submitPartnerRfqRequest(
+  lines: Array<{ productId: string; quantity: number }>,
+): Promise<{ id: string; orderNumber: string }> {
+  const res = await fetch(`${API_BASE}/partner/rfq-requests`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ lines }),
+  })
+  const json = (await res.json().catch(() => ({}))) as { id?: string; orderNumber?: string; error?: string }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error(json.error || 'Eroare la trimiterea cererii.')
+  }
+  return {
+    id: String(json.id || ''),
+    orderNumber: String(json.orderNumber || ''),
+  }
+}
+
+export type AdminPartnerRfqRequestRow = {
+  orderKind?: string
+  id: string
+  orderNumber: string
+  orderSource: string
+  fulfillmentStatus?: string
+  email: string
+  phone: string
+  lastName: string
+  firstName: string
+  companyName?: string
+  partnerChannelType?: string | null
+  activityTypes?: string | null
+  productTitle: string
+  quantity: number
+  currency: string
+  createdAt: string
+  lines?: Array<{
+    id: string
+    productId: string
+    productSlug?: string | null
+    productTitle: string
+    quantity: number
+  }>
+  lineCount?: number
+}
+
+export async function getAdminPartnerRfqRequests(): Promise<AdminPartnerRfqRequestRow[]> {
+  const res = await fetch(`${API_BASE}/admin/partner-rfq-requests`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată. Te rugăm să te autentifici din nou.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la încărcarea cererilor de ofertă.')
+  }
+  return Array.isArray(json) ? json : []
+}
+
 export type ClientRegisteredTechnicalDoc = {
   descriere: string
   url: string
@@ -1419,6 +1586,8 @@ export type ServiceRequestDto = {
   productTitle: string
   savedItemId: string | null
   problemDescription: string
+  endClientName?: string
+  productLocation?: string
   status: 'open' | 'in_progress' | 'resolved' | 'closed' | string
   createdAt: string
   updatedAt: string
@@ -1455,6 +1624,78 @@ export async function createClientServiceRequest(body: {
   problemDescription: string
 }): Promise<CreateServiceRequestResult> {
   const res = await fetch(`${API_BASE}/client/service-requests`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    code?: string
+    serviceRequest?: ServiceRequestDto
+  } & Partial<ServiceRequestDto>
+  if (res.status === 409 && json.code === 'service_request_already_active' && json.serviceRequest) {
+    return {
+      ok: false,
+      code: 'already_active',
+      request: json.serviceRequest,
+      error: json.error || 'Există deja o cerere activă.',
+    }
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    return { ok: false, code: 'error', error: json.error || 'Eroare.' }
+  }
+  return { ok: true, request: json as ServiceRequestDto }
+}
+
+export type PartnerServiceProductLookup = {
+  serialNumber: string
+  modelNumber: string
+  productTitle: string
+  savedItemId: string | null
+  productId: string | null
+  imageUrl: string | null
+  location: string | null
+}
+
+export async function lookupPartnerServiceProduct(serialNumber: string): Promise<PartnerServiceProductLookup> {
+  const sn = normalizeWarehouseSerialNumber(serialNumber)
+  const res = await fetch(`${API_BASE}/partner/service-requests/lookup?${new URLSearchParams({ sn })}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    if (res.status === 404) throw new Error((json as { error?: string }).error || 'SN negăsit.')
+    throw new Error((json as { error?: string }).error || 'Eroare la căutare.')
+  }
+  return json as PartnerServiceProductLookup
+}
+
+export async function getPartnerServiceRequests(): Promise<ServiceRequestDto[]> {
+  const res = await fetch(`${API_BASE}/partner/service-requests`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare.')
+  }
+  return Array.isArray(json) ? (json as ServiceRequestDto[]) : []
+}
+
+export async function createPartnerServiceRequest(body: {
+  serialNumber: string
+  problemDescription: string
+  endClientName?: string
+  productLocation: string
+}): Promise<CreateServiceRequestResult> {
+  const res = await fetch(`${API_BASE}/partner/service-requests`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -1905,6 +2146,39 @@ function authHeaders(): Record<string, string> {
   return h
 }
 
+export type PartnerChannelType = 'installer' | 'distributor' | 'hybrid'
+
+export function formatPartnerActivityTypeLabel(
+  company: Pick<{ partnerChannelType?: PartnerChannelType | string | null; activityTypes?: string | null }, 'partnerChannelType' | 'activityTypes'>,
+): string {
+  const ch = String(company.partnerChannelType ?? '').trim().toLowerCase()
+  if (ch === 'distributor') return 'Distribuitor'
+  if (ch === 'hybrid') return 'Instalator + Distribuitor'
+  if (ch === 'installer') return 'Instalator'
+  const parts = String(company.activityTypes || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  if (parts.includes('distribuitor') && parts.includes('instalator')) return 'Instalator + Distribuitor'
+  if (parts.includes('distribuitor')) return 'Distribuitor'
+  if (parts.includes('instalator')) return 'Instalator'
+  return '—'
+}
+
+export function partnerDiscountLimitsForCompany(
+  company: Pick<{ partnerChannelType?: PartnerChannelType | string | null; activityTypes?: string | null }, 'partnerChannelType' | 'activityTypes'>,
+): { min: number; max: number } {
+  const ch = String(company.partnerChannelType ?? '').trim().toLowerCase()
+  if (ch === 'distributor' || ch === 'hybrid') return { min: 0, max: 30 }
+  if (ch === 'installer') return { min: 0, max: 15 }
+  const parts = String(company.activityTypes || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  if (parts.includes('distribuitor')) return { min: 0, max: 30 }
+  return { min: 0, max: 15 }
+}
+
 export type PartnerProfile = {
   companyName?: string
   cui?: string
@@ -1920,6 +2194,8 @@ export type PartnerProfile = {
   deliveryCity?: string | null
   deliveryPostalCode?: string | null
   tradeRegisterNumber?: string
+  /** installer | distributor — set at signup; hybrid reserved for admin/backfill */
+  partnerChannelType?: PartnerChannelType
   activityTypes?: string[]
   contactFirstName?: string
   contactLastName?: string
@@ -2029,6 +2305,11 @@ export type PartnerProfileGetResponse = PartnerProfile & {
   assignedSalesAgentId?: string | null
   assignedSalesAgent?: PartnerAssignedSalesAgent | null
   partnerDiscountPercent?: number | null
+  partnerChannelType?: PartnerChannelType
+  /** False for Google-only accounts (no local password). */
+  hasPassword?: boolean
+  partnerContractSignedAt?: string | null
+  partnerContractAvailable?: boolean
 }
 
 export async function getPartnerProfile(): Promise<PartnerProfileGetResponse> {
@@ -2038,6 +2319,65 @@ export async function getPartnerProfile(): Promise<PartnerProfileGetResponse> {
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la citirea profilului.')
   return json as PartnerProfileGetResponse
+}
+
+/** Semnare digitală contract partener — generează și arhivează PDF-ul. */
+export async function signPartnerContract(payload: {
+  contactFirstName: string
+  contactLastName: string
+  signerRole: string
+}): Promise<{
+  partnerContractSignedAt: string
+  partnerContractAvailable: boolean
+}> {
+  const res = await fetch(`${API_BASE}/partner/contract/sign`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error((json as { error?: string }).error || 'Eroare la semnarea contractului.')
+  }
+  return json as { partnerContractSignedAt: string; partnerContractAvailable: boolean }
+}
+
+/** Descarcă contractul de partener semnat digital (PDF). */
+export async function downloadPartnerContract(): Promise<{ pdfBlob: Blob; filename: string }> {
+  const res = await fetch(`${API_BASE}/partner/contract/download`, {
+    method: 'GET',
+    headers: authHeaders(),
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error((json as { error?: string }).error || 'Eroare la descărcarea contractului.')
+  }
+  const pdfBlob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') || ''
+  const quoted = /filename="([^"]+)"/i.exec(cd)
+  const filename = quoted?.[1] || 'contract-partener-baterino.pdf'
+  return { pdfBlob, filename }
+}
+
+/** Deschide PDF-ul contractului pentru consultare înainte de semnare. */
+export async function openPartnerContractPreview(): Promise<void> {
+  const res = await fetch(`${API_BASE}/partner/contract/preview`, {
+    method: 'GET',
+    headers: authHeaders(),
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error((json as { error?: string }).error || 'Eroare la previzualizarea contractului.')
+  }
+  const pdfBlob = await res.blob()
+  const url = URL.createObjectURL(pdfBlob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
 }
 
 export type PartnerPublicSlugAvailability = {
@@ -2061,14 +2401,25 @@ export async function checkPartnerPublicSlugAvailability(slug: string): Promise<
 export type PartnerProfileOnboardingFields = {
   companyName?: string | null
   cui?: string | null
+  partnerChannelType?: PartnerChannelType | string | null
   activityTypes?: string | string[] | null
   contactFirstName?: string | null
   phone?: string | null
 }
 
-function partnerActivityTypesFilled(activityTypes: PartnerProfileOnboardingFields['activityTypes']): boolean {
-  if (Array.isArray(activityTypes)) return activityTypes.some((t) => String(t || '').trim())
-  return Boolean(String(activityTypes || '').trim())
+function partnerChannelSelected(p: PartnerProfileOnboardingFields): boolean {
+  const ch = String(p.partnerChannelType ?? '').trim().toLowerCase()
+  if (ch === 'installer' || ch === 'distributor' || ch === 'hybrid') return true
+  if (Array.isArray(p.activityTypes)) {
+    return p.activityTypes.some((t) => {
+      const id = String(t || '').trim().toLowerCase()
+      return id === 'instalator' || id === 'distribuitor'
+    })
+  }
+  const parts = String(p.activityTypes || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+  return parts.includes('instalator') || parts.includes('distribuitor')
 }
 
 /** Ruta de onboarding dacă profilul e incomplet; `null` dacă poate intra în panou. */
@@ -2079,7 +2430,7 @@ export function getPartnerOnboardingRedirect(
     return '/signup/parteneri/profil'
   }
   if (
-    !partnerActivityTypesFilled(p.activityTypes) ||
+    !partnerChannelSelected(p) ||
     !String(p.contactFirstName || '').trim() ||
     !String(p.phone || '').trim()
   ) {
@@ -2168,6 +2519,7 @@ export type AdminCompany = {
   companyCounty: string | null
   companyPostalCode: string | null
   tradeRegisterNumber: string | null
+  partnerChannelType?: PartnerChannelType | string | null
   activityTypes: string
   contactFirstName: string
   contactLastName: string
@@ -2196,36 +2548,37 @@ export type AdminCompany = {
   /** SalesAgent.id — agent de vânzări atribuit la aprobare. */
   assignedSalesAgentId?: string | null
   createdAt: string
+  partnerContractSignedAt?: string | null
+  partnerContractAvailable?: boolean
   user: { email: string }
 }
 
-export type ApproveAdminCompanyPayload = {
-  partnerDiscountPercent?: number | null
-  assignedSalesAgentId?: string | null
-}
-
-export async function approveAdminCompany(
+export async function updateAdminCompanyDiscount(
   id: string,
-  payload?: ApproveAdminCompanyPayload,
+  discountPercent: number | null,
+  assignedSalesAgentId: string | null,
 ): Promise<AdminCompany> {
-  const res = await fetch(`${API_BASE}/admin/companies/${encodeURIComponent(id)}/approve`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify(payload ?? {}),
-  })
-  const json = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(json.error || 'Eroare la aprobare.')
-  return json
-}
-
-export async function updateAdminCompanyDiscount(id: string, discountPercent: number | null): Promise<AdminCompany> {
   const res = await fetch(`${API_BASE}/admin/companies/${id}/discount`, {
     method: 'PATCH',
     headers: authHeaders(),
-    body: JSON.stringify({ discountPercent }),
+    body: JSON.stringify({ discountPercent, assignedSalesAgentId }),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
+  return json
+}
+
+export async function updateAdminCompanySupportAgent(
+  id: string,
+  assignedSalesAgentId: string | null,
+): Promise<AdminCompany> {
+  const res = await fetch(`${API_BASE}/admin/companies/${id}/support-agent`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ assignedSalesAgentId }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(json.error || 'Eroare la atribuirea agentului.')
   return json
 }
 
@@ -2259,6 +2612,37 @@ export async function suspendAdminCompany(id: string, suspended: boolean): Promi
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(json.error || 'Eroare la actualizare.')
   return json
+}
+
+/** Descarcă acordul de parteneriat semnat pentru o companie (admin). */
+export async function downloadAdminPartnerContract(
+  companyId: string,
+  options?: { inline?: boolean },
+): Promise<{ pdfBlob: Blob; filename: string }> {
+  const qs = options?.inline ? '?inline=1' : ''
+  const res = await fetch(`${API_BASE}/admin/companies/${encodeURIComponent(companyId)}/contract${qs}`, {
+    method: 'GET',
+    headers: authHeaders(),
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error((json as { error?: string }).error || 'Eroare la descărcarea contractului.')
+  }
+  const pdfBlob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') || ''
+  const quoted = /filename="([^"]+)"/i.exec(cd)
+  const filename = quoted?.[1] || 'contract-partener-baterino.pdf'
+  return { pdfBlob, filename }
+}
+
+/** Deschide PDF-ul contractului semnat al partenerului (admin). */
+export async function openAdminPartnerContract(companyId: string): Promise<void> {
+  const { pdfBlob } = await downloadAdminPartnerContract(companyId, { inline: true })
+  const url = URL.createObjectURL(pdfBlob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
 }
 
 /** Șterge definitiv partenerul aprobat și contul utilizator din baza de date. */
@@ -2319,7 +2703,7 @@ export type CreateProductPayload = {
   promovarePromotie?: boolean
   reducereProgramIds?: string[]
   salePrice: string | number
-  partnerSalePrice?: string | number
+  mapPrice?: string | number
   vat: string | number
   energieNominala?: string
   capacitate?: string
@@ -3345,6 +3729,9 @@ export type AdminGuestResidentialOrderRow = {
   id: string
   orderNumber: string
   orderSource: string
+  /** Canal partener (Instalator / Distribuitor) — doar când orderSource = partner. */
+  partnerChannelType?: string | null
+  activityTypes?: string | null
   fulfillmentStatus?: OrderFulfillmentStatus | string
   email: string
   phone: string

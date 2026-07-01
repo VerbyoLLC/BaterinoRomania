@@ -1,42 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
 import type { ProductDetailTranslations } from '../i18n/product-detail'
+import { getIndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
+import type { LangCode } from '../i18n/menu'
+import { normalizeIndustrialTechnicalSpecs } from '../lib/industrialTechnicalSpec'
+import { buildProductFlatTechRows } from '../lib/productFlatTechSpecs'
+import { normalizeProductFaq } from '../lib/productFaq'
+import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
+import IndustrialTechnicalSpecTable from './IndustrialTechnicalSpecTable'
+import ProductCaseStudiesSection from './product/ProductCaseStudiesSection'
+import ProductDetailCtaBoxes from './product/ProductDetailCtaBoxes'
 
-function whToKwhDisplay(wh: string | null | undefined): string | null {
-  if (!wh) return null
-  const numStr = String(wh).replace(/\s*Wh$/i, '').replace(',', '.').replace(/\s/g, '')
-  const num = parseFloat(numStr)
-  if (Number.isNaN(num)) return wh
-  const kwh = num / 1000
-  return `${kwh % 1 === 0 ? kwh.toFixed(0) : kwh.toFixed(2)} kWh`
-}
-
-function buildTechData(p: PublicProduct, tr: ProductDetailTranslations): [string, string][] {
-  const rows: [string, string][] = []
-  const add = (k: string, v: unknown) => {
-    if (v != null && typeof v === 'string') rows.push([k, v])
-  }
-  const energieDisplay = whToKwhDisplay(p.energieNominala)
-  if (energieDisplay) rows.push([tr.specEnergieNominala, energieDisplay])
-  add(tr.specCapacitate, p.capacitate)
-  add(tr.techCurentMaxDescarcare, (p as { curentMaxDescarcare?: string }).curentMaxDescarcare)
-  add(tr.techCurentMaxIncarcare, (p as { curentMaxIncarcare?: string }).curentMaxIncarcare)
-  add(tr.specCicluriDescarcare, p.cicluriDescarcare)
-  add(tr.techAdancimeDescarcare, (p as { adancimeDescarcare?: string }).adancimeDescarcare)
-  add(tr.specGreutate, (p as { greutate?: string }).greutate)
-  add(tr.techDimensiuni, (p as { dimensiuni?: string }).dimensiuni)
-  add(tr.techProtectie, (p as { protectie?: string }).protectie)
-  add(tr.techCertificari, (p as { certificari?: string }).certificari)
-  add(tr.techGarantie, (p as { garantie?: string }).garantie)
-  add(tr.techTensiuneNominala, p.tensiuneNominala)
-  add(tr.techEficientaCiclu, (p as { eficientaCiclu?: string }).eficientaCiclu)
-  add(tr.techTemperaturaFunctionare, (p as { temperaturaFunctionare?: string }).temperaturaFunctionare)
-  add(tr.techTemperaturaStocare, (p as { temperaturaStocare?: string }).temperaturaStocare)
-  add(tr.techUmiditate, (p as { umiditate?: string }).umiditate)
-  return rows
-}
+export type PartnerProductDetailTab = 'detalii' | 'tehnice' | 'manuale' | 'videos' | 'caseStudies' | 'faq'
 
 function getBadges(tr: ProductDetailTranslations) {
   return [
@@ -169,12 +147,12 @@ export type ProductDetailRightSectionProps = {
   /** Hide SWAP/Reduceri banners and contact CTA (for partner panel) */
   compact?: boolean
   /** When set (partner panel tabs), only render the corresponding section */
-  partnerTab?: 'detalii' | 'tehnice' | 'manuale' | 'videos'
+  partnerTab?: PartnerProductDetailTab
   /** Hide the benefit badge grid (Garanție, Compatibilitate etc.) */
   hideBadges?: boolean
 }
 
-export default function ProductDetailRightSection({ product, tr, langCode: _langCode, compact = false, partnerTab, hideBadges = false }: ProductDetailRightSectionProps) {
+export default function ProductDetailRightSection({ product, tr, langCode, compact = false, partnerTab, hideBadges = false }: ProductDetailRightSectionProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [showCompatibilitate99Modal, setShowCompatibilitate99Modal] = useState(false)
   const [showGarantieModal, setShowGarantieModal] = useState(false)
@@ -187,9 +165,19 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
   const imgs = Array.isArray(product.images) ? product.images : []
   const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
   const galleryImages = imgs.length > 0 ? imgs : [img]
-  const techData = buildTechData(product, tr)
+  const techData = buildProductFlatTechRows(product, tr)
+  const industrialTr = getIndustrialBessTemplateTranslations(langCode as LangCode)
+  const technicalSpecsRaw =
+    product.technicalSpecsModels ??
+    (product as { technical_specs_models?: unknown }).technical_specs_models
+  const industrialSpecs = normalizeIndustrialTechnicalSpecs(technicalSpecsRaw) ?? { entries: [] }
+  const specLabel = (key: string) => industrialTr.techSpecByKey[key] ?? key
+  const hasIndustrialSpecs = industrialSpecs.entries.length > 0
+  const hasFlatSpecs = techData.length > 0
   const badges = getBadges(tr)
   const docs = (product as { documenteTehnice?: { descriere: string; url: string }[] }).documenteTehnice || []
+  const faqItems = normalizeProductFaq(product.faq)
+  const caseStudyItems = normalizeProductCaseStudyExamples(product.caseStudyExamples)
 
   const showDetalii = !partnerTab || partnerTab === 'detalii'
   const showTehnice = !partnerTab || partnerTab === 'tehnice'
@@ -204,6 +192,37 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
         <p className="text-base font-['Inter']">Videoclipuri de instalare vor fi disponibile în curând.</p>
+      </div>
+    )
+  }
+
+  if (partnerTab === 'caseStudies') {
+    return <ProductCaseStudiesSection items={caseStudyItems} />
+  }
+
+  if (partnerTab === 'faq') {
+    return (
+      <div className="divide-y divide-neutral-200 rounded-[10px] border border-neutral-200/80 bg-neutral-50/80">
+        {faqItems.length > 0 ? (
+          faqItems.map((item) => (
+            <details key={item.q} className="group bg-white open:bg-neutral-50/50">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-left font-semibold text-slate-900 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1 text-base leading-snug">{item.q}</span>
+                <ChevronDown
+                  size={22}
+                  strokeWidth={2}
+                  className="shrink-0 text-slate-600 transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="border-t border-neutral-100 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+                <p className="m-0 pt-3 text-sm leading-relaxed text-gray-700 sm:text-base whitespace-pre-wrap">{item.a}</p>
+              </div>
+            </details>
+          ))
+        ) : (
+          <p className="p-6 text-sm text-slate-500 m-0 font-['Inter']">{tr.faqEmpty}</p>
+        )}
       </div>
     )
   }
@@ -381,9 +400,23 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
           </div>
         )}
 
-        {showTehnice && techData.length > 0 && (
+        {showTehnice && hasIndustrialSpecs && (
           <section>
             {partnerTab !== 'tehnice' ? (
+              <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
+            ) : null}
+            <IndustrialTechnicalSpecTable
+              data={industrialSpecs}
+              modelLabel={industrialTr.modelLabel}
+              labelForKey={specLabel}
+              hideEmptyRows={compact}
+            />
+          </section>
+        )}
+
+        {showTehnice && hasFlatSpecs && (
+          <section>
+            {partnerTab !== 'tehnice' && !hasIndustrialSpecs ? (
               <h2 className="text-black text-2xl font-bold font-['Inter'] mb-6">{tr.dateTehnice}</h2>
             ) : null}
             <div className="overflow-x-auto rounded-xl border border-neutral-200">
@@ -427,54 +460,13 @@ export default function ProductDetailRightSection({ product, tr, langCode: _lang
           </section>
         )}
 
+        {showTehnice && partnerTab === 'tehnice' && !hasIndustrialSpecs && !hasFlatSpecs && (
+          <p className="py-8 text-center text-sm text-slate-500 font-['Inter']">{tr.techSpecsEmpty}</p>
+        )}
+
         {!compact && (
           <>
-            <section className="flex flex-col gap-4">
-              <div className="w-full max-w-[592px] h-64 relative rounded-[10px] overflow-hidden">
-                <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/baterino-swap.jpg" alt="" />
-                <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
-                  <p className="m-0 w-full max-w-md shrink-0 text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
-                    {tr.stiaiCa}
-                  </p>
-                  <p className="m-0 w-full max-w-md text-pretty text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
-                    {tr.swapDesc}
-                  </p>
-                  <div className="shrink-0 pt-0.5">
-                    <Link
-                      to="/siguranta"
-                      className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
-                    >
-                      <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
-                        {tr.swapBannerCta}
-                      </span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full max-w-[589px] h-64 relative overflow-hidden rounded-[10px]">
-                <img className="absolute inset-0 w-full h-full object-cover rounded-[10px]" src="/images/product/reduceri-banner.jpg" alt="" />
-                <div className="absolute inset-0 bg-black/50 rounded-[10px]" />
-                <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2.5 px-6 pb-5 pt-6 sm:gap-3 sm:px-8 sm:pb-6 sm:pt-8">
-                  <p className="m-0 max-w-[calc(100%-0.5rem)] text-xl font-bold leading-tight text-white font-['Inter'] sm:text-2xl">
-                    {tr.reduceriTitle}
-                  </p>
-                  <p className="m-0 max-w-lg shrink-0 text-sm font-normal leading-snug text-white font-['Inter'] sm:text-base">
-                    {tr.reduceriDesc}
-                  </p>
-                  <div className="shrink-0 pt-0.5">
-                    <Link
-                      to="/reduceri"
-                      className="inline-flex h-10 min-w-[11rem] items-center justify-center gap-2 rounded-lg bg-white px-4 hover:bg-neutral-100 transition-colors sm:min-w-[12rem] sm:px-5"
-                    >
-                      <span className="text-center text-xs font-bold uppercase tracking-wide text-black font-['Nunito_Sans'] sm:text-sm">
-                        {tr.intraInCont}
-                      </span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <ProductDetailCtaBoxes tr={tr} />
 
             <section>
               <div className="bg-neutral-100 rounded-[10px] flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7">

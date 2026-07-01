@@ -12,6 +12,8 @@ import {
   getResidentialCatalogStockListingCta,
   residentialCatalogUsesPartnerPriceCta,
   isPromoCatalogProduct,
+  getAuthRole,
+  getCatalogProductHrefForViewer,
   type PublicProduct,
 } from '../lib/api'
 import { syncProductTipsFromList } from '../lib/productTipCache'
@@ -492,7 +494,7 @@ export default function Produse() {
                     : formatResidentialCatalogPriceDisplay(product, language.code, currency)
               const industrialHasPrice =
                 product.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
-              const to = `/produse/${[product.category?.slug, product.slug || product.id].filter(Boolean).join('/')}`
+              const to = getCatalogProductHrefForViewer(product, getAuthRole())
               const linkState = { tipProdus: product.tipProdus }
               const industrialSubtitle = String(product.subtitle || '').trim() || undefined
               const showResPriceExtras =

@@ -79,8 +79,35 @@ function isPartnerPublicProfileFullyComplete(p) {
   )
 }
 
+/**
+ * Profilul e vizibil public doar când checklist-ul e 100% complet.
+ * @param {Record<string, unknown>} existing
+ * @param {Record<string, unknown>} data
+ * @param {{ isPublic?: boolean }} body
+ */
+function resolvePartnerPublicVisibility(existing, data, body) {
+  const merged = { ...existing, ...data }
+  const complete = isPartnerPublicProfileFullyComplete(merged)
+  if (body.isPublic === true && !complete) {
+    return {
+      ok: false,
+      error:
+        'Completează profilul public la 100% înainte de a-l face vizibil. Verifică lista „Completare profil”.',
+      code: 'PUBLIC_PROFILE_INCOMPLETE',
+    }
+  }
+  let isPublic = false
+  if (complete) {
+    if (body.isPublic === true) isPublic = true
+    else if (body.isPublic === false) isPublic = false
+    else isPublic = existing.isPublic === true
+  }
+  return { ok: true, isPublic }
+}
+
 module.exports = {
   isPartnerPublicProfileFullyComplete,
+  resolvePartnerPublicVisibility,
   parseWorkPhotosList,
   hasAtLeastOnePartnerSocialNetwork,
   MIN_PARTNER_PUBLIC_SERVICES,

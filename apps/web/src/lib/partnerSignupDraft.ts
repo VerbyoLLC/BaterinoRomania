@@ -12,8 +12,11 @@ export type PartnerCompanyDraft = {
   companyPostalCode: string
 }
 
+/** instalator | distribuitor — partner signup step 2 channel choice */
+export type PartnerSignupChannel = 'instalator' | 'distribuitor'
+
 export type PartnerActivityDraft = {
-  activities: string[]
+  channel: PartnerSignupChannel | ''
   contactFirstName: string
   contactLastName: string
   legalPhone: string

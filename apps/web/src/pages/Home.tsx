@@ -15,6 +15,8 @@ import {
   residentialCatalogUsesPartnerPriceCta,
   catalogProductShowsPublicPrice,
   isPromoCatalogProduct,
+  getAuthRole,
+  getCatalogProductHrefForViewer,
   type PublicProduct,
 } from '../lib/api'
 import HomePromoModal from '../components/home/HomePromoModal'
@@ -28,9 +30,7 @@ import HomeMobileSliderV2, { MOBILE_SLIDE_V2_COUNT } from '../components/home/Ho
 import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
-import HomeInstalledCapacityCounters from '../components/home/HomeInstalledCapacityCounters'
 import HomeProiecteIndustriale from '../components/home/HomeProiecteIndustriale'
-import HomeCaseStudiesPreview from '../components/home/HomeCaseStudiesPreview'
 import {
   CatalogProductCardSkeleton,
   IndustrialCatalogProductCard,
@@ -595,7 +595,7 @@ export default function Home() {
                     : formatResidentialCatalogPriceDisplay(p, language.code, currency)
               const industrialHasPrice = p.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
               const showIndustrialPriceExtras = industrialHasPrice
-              const to = `/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`
+              const to = getCatalogProductHrefForViewer(p, getAuthRole())
               const linkState = { tipProdus: p.tipProdus }
               const common = {
                 density: 'home' as const,
@@ -881,22 +881,6 @@ export default function Home() {
         </section>
 
         <HomeProiecteIndustriale />
-
-        {/* ── CAPACITATE + STUDII DE CAZ – combined section ── */}
-        <section className="mb-16 lg:mb-24">
-          <div className="flex flex-col items-center text-center mb-2">
-            <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
-              {language.code === 'en' ? 'Case studies' : 'Studii de caz'}
-            </h2>
-            <p className="text-gray-600 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[580px]">
-              {language.code === 'en'
-                ? 'LithTech BESS energy storage solutions deployed in industrial energy projects across Romania and Europe.'
-                : 'Soluții de stocare a energiei BESS LithTech implementate în proiecte energetice industriale în România și Europa.'}
-            </p>
-          </div>
-          <HomeInstalledCapacityCounters tr={tr} />
-          <HomeCaseStudiesPreview />
-        </section>
 
         {/* ── LITHTECH ── */}
         <section className="mb-16 lg:mb-24">

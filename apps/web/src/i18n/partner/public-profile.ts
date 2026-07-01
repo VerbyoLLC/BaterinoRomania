@@ -1,5 +1,7 @@
 import type { LangCode } from '../menu'
 
+export type PartnerPublicProfileAdvantage = { title: string; subtitle: string }
+
 export type PartnerPublicProfileTranslations = {
   pageTitle: string
   pageSubtitle: string
@@ -110,11 +112,21 @@ export type PartnerPublicProfileTranslations = {
   websiteInvalid: string
   saveSlugFirst: string
   saveErrorFallback: string
+  preDiscountSectionTitle: string
+  preDiscountSectionIntro: string
+  preDiscountDedicatedPageTitle: string
+  preDiscountHeroBodyPrefix: string
+  preDiscountHeroBodyHighlight: string
+  preDiscountHeroBodySuffix: string
+  preDiscountUrlSlugExample: string
+  preDiscountAdvantages: PartnerPublicProfileAdvantage[]
+  preDiscountPreviewHint: string
+  contractGateSubtitle: string
 }
 
 const ro: PartnerPublicProfileTranslations = {
   pageTitle: 'Profil Public',
-  pageSubtitle: 'Informațiile afișate clienților care caută instalatori pe Baterino.ro',
+  pageSubtitle: 'Îți promovăm afacerea clienților noștri.',
   profilePublic: 'Profil public',
   profilePrivate: 'Profil privat',
   completeToPublishTitle: 'Completează profilul la 100% pentru a-l face public',
@@ -176,7 +188,7 @@ const ro: PartnerPublicProfileTranslations = {
   phonePlaceholder: '+40 7XX XXX XXX',
   whatsappLabel: 'WhatsApp',
   websiteLabel: 'Website',
-  websitePlaceholder: 'https://www.exemplu.ro',
+  websitePlaceholder: 'exemplu.ro',
   sectionSocial: 'Rețele sociale *',
   socialHint: 'Completează cel puțin o rețea socială (Facebook, LinkedIn, Instagram sau TikTok).',
   facebookLabel: 'Facebook',
@@ -220,15 +232,55 @@ const ro: PartnerPublicProfileTranslations = {
   fieldPhone: 'Telefon',
   fieldWebsite: 'Website',
   fieldSocial: 'Rețele sociale (cel puțin una)',
-  websiteInvalid: 'Introdu un website valid (ex: https://www.exemplu.ro sau exemplu.ro).',
+  websiteInvalid: 'Introdu un domeniu valid (ex: exemplu.ro).',
   saveSlugFirst: 'Salvează mai întâi handle-ul paginii publice sau revino la adresa salvată.',
   saveErrorFallback: 'Eroare la salvare.',
+  preDiscountSectionTitle: 'Avantajele profilului tău public',
+  preDiscountSectionIntro:
+    'Ca partener Baterino, îți promovăm afacerea către clienții care caută instalatori fotovoltaici. După alocarea prețului de partener, vei putea completa și publica pagina dedicată companiei tale.',
+  preDiscountDedicatedPageTitle: 'Pagină dedicată pe Baterino.ro',
+  preDiscountHeroBodyPrefix: 'Îți creăm o pagină publică personalizată unde clienții văd ',
+  preDiscountHeroBodyHighlight: 'serviciile, locația, galeria de lucrări și datele de contact',
+  preDiscountHeroBodySuffix: ' — și te pot contacta direct.',
+  preDiscountUrlSlugExample: 'nume-companie',
+  preDiscountAdvantages: [
+    {
+      title: 'Vizibilitate în fața clienților',
+      subtitle:
+        'Apari în catalogul de instalatori Baterino și te conectăm cu proprietari din zona ta care caută parteneri verificați.',
+    },
+    {
+      title: 'Promovare locală',
+      subtitle:
+        'Profilul evidențiază județul și orașul tău, astfel clienții din apropiere te găsesc mai ușor.',
+    },
+    {
+      title: 'Insignă Partener Baterino',
+      subtitle: 'Badge de încredere care confirmă parteneriatul tău oficial cu platforma.',
+    },
+    {
+      title: 'Contact direct',
+      subtitle: 'Telefon, WhatsApp și website afișate clar — clienții te contactează fără intermediari.',
+    },
+    {
+      title: 'Galerie foto lucrări',
+      subtitle: 'Prezinți proiectele realizate și construiești încredere înainte de primul apel.',
+    },
+    {
+      title: 'Suport Baterino',
+      subtitle:
+        'Echipa noastră te sprijină cu produse, logistică și after-sales, ca tu să te concentrezi pe clienți.',
+    },
+  ],
+  preDiscountPreviewHint: 'Previzualizare — așa va arăta pagina ta publică după ce completezi profilul.',
+  contractGateSubtitle:
+    'Semnează contractul de parteneriat pentru a-ți configura, salva și publica profilul tehnic al companiei.',
 }
 
 const en: PartnerPublicProfileTranslations = {
   ...ro,
   pageTitle: 'Public profile',
-  pageSubtitle: 'Information shown to customers looking for installers on Baterino.ro',
+  pageSubtitle: 'We promote your business to our customers.',
   profilePublic: 'Public profile',
   profilePrivate: 'Private profile',
   completeToPublishTitle: 'Complete your profile to 100% to make it public',
@@ -290,7 +342,7 @@ const en: PartnerPublicProfileTranslations = {
   phonePlaceholder: '+40 7XX XXX XXX',
   whatsappLabel: 'WhatsApp',
   websiteLabel: 'Website',
-  websitePlaceholder: 'https://www.example.com',
+  websitePlaceholder: 'example.com',
   sectionSocial: 'Social networks *',
   socialHint: 'Add at least one social network (Facebook, LinkedIn, Instagram or TikTok).',
   facebookLabel: 'Facebook',
@@ -334,9 +386,47 @@ const en: PartnerPublicProfileTranslations = {
   fieldPhone: 'Phone',
   fieldWebsite: 'Website',
   fieldSocial: 'Social networks (at least one)',
-  websiteInvalid: 'Enter a valid website (e.g. https://www.example.com or example.com).',
+  websiteInvalid: 'Enter a valid domain (e.g. example.com).',
   saveSlugFirst: 'Save the public page handle first or revert to the saved URL.',
   saveErrorFallback: 'Save failed.',
+  preDiscountSectionTitle: 'Your public profile benefits',
+  preDiscountSectionIntro:
+    'As a Baterino partner, we promote your business to customers looking for solar installers. After your partner price is allocated, you can complete and publish your dedicated company page.',
+  preDiscountDedicatedPageTitle: 'Dedicated page on Baterino.ro',
+  preDiscountHeroBodyPrefix: 'We create a personalized public page where customers see ',
+  preDiscountHeroBodyHighlight: 'your services, location, work gallery and contact details',
+  preDiscountHeroBodySuffix: ' — and reach you directly.',
+  preDiscountUrlSlugExample: 'company-name',
+  preDiscountAdvantages: [
+    {
+      title: 'Visibility to customers',
+      subtitle:
+        'Appear in the Baterino installer directory and connect with homeowners in your area looking for verified partners.',
+    },
+    {
+      title: 'Local promotion',
+      subtitle: 'Your county and city are highlighted so nearby customers find you more easily.',
+    },
+    {
+      title: 'Baterino Partner badge',
+      subtitle: 'A trust badge confirming your official partnership with the platform.',
+    },
+    {
+      title: 'Direct contact',
+      subtitle: 'Phone, WhatsApp and website displayed clearly — customers contact you without middlemen.',
+    },
+    {
+      title: 'Work photo gallery',
+      subtitle: 'Showcase completed projects and build trust before the first call.',
+    },
+    {
+      title: 'Baterino support',
+      subtitle: 'Our team helps with products, logistics and after-sales so you can focus on clients.',
+    },
+  ],
+  preDiscountPreviewHint: 'Preview — this is how your public page will look once you complete the profile.',
+  contractGateSubtitle:
+    'Sign the partnership contract to configure, save and publish your company technical profile.',
 }
 
 

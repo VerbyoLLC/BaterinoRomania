@@ -1,9 +1,24 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { getAuthEmail, getPartnerOnboardingRedirect, getPartnerProfile, type PartnerProfileGetResponse } from '../../lib/api'
+import { getAuthEmail, clearAuth, getPartnerOnboardingRedirect, getPartnerProfile, partnerDiscountConfigured, type PartnerProfileGetResponse } from '../../lib/api'
+import { writePartnerProfileHintFromProfile } from '../../lib/partnerProfileHint'
+import {
+  dismissPartnerWelcomeModalForSession,
+  dismissPartnerWelcomeModalPermanently,
+  shouldShowPartnerWelcomeModal,
+} from '../../lib/partnerWelcomeModal'
+import {
+  dispatchPartnerOpenRfqFromWelcome,
+  PartnerWelcomePendingDiscountModal,
+} from '../../components/partner/PartnerWelcomePendingDiscountModal'
+import { getPartnerWelcomeModalTranslations } from '../../i18n/partner/welcome-modal'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { LANGUAGES } from '../../i18n/menu'
-import { getPartnerLayoutTranslations } from '../../i18n/partner/layout'
+import { LANGUAGES, type LangCode } from '../../i18n/menu'
+import { getPartnerLayoutTranslations, getPartnerTopBarPageTitle, getPartnerTopBarPageSubtitle } from '../../i18n/partner/layout'
+import { getPartnerChannelProfileLabel } from '../../i18n/partner/settings'
+import { ReducerePartenerBox } from './PartnerSidebarBoxes'
+import { PartnerTopBarToolbar } from './PartnerTopBarToolbar'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconProfile() {
@@ -107,7 +122,14 @@ function IconChevronRight() {
 }
 function IconChevronDown({ className }: { className?: string }) {
   return (
-    <svg className={className ?? 'w-4 h-4'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+    <svg
+      className={`h-4 w-4 shrink-0 ${className ?? ''}`.trim()}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      aria-hidden
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
   )
@@ -179,11 +201,254 @@ function InactiveNavRow({
   )
 }
 
+function PartnerAccountMenu({
+  tr,
+  language,
+  setLanguage,
+  onNavigate,
+  companyName,
+  channelProfile,
+}: {
+  tr: ReturnType<typeof getPartnerLayoutTranslations>
+  language: (typeof LANGUAGES)[number]
+  setLanguage: (lang: (typeof LANGUAGES)[number]) => void
+  onNavigate?: () => void
+  companyName: string | null
+  channelProfile: { partnerChannelType?: string | null; activityTypes?: string | null } | null
+}) {
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [langExpanded, setLangExpanded] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuPanelRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null)
+
+  const close = () => {
+    setOpen(false)
+    setLangExpanded(false)
+    setMenuPos(null)
+  }
+
+  const updateMenuPos = () => {
+    const btn = triggerRef.current
+    if (!btn) return
+    const r = btn.getBoundingClientRect()
+    const width = Math.min(window.innerWidth - 16, 280)
+    setMenuPos({
+      top: r.bottom + 8,
+      left: Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8),
+      width,
+    })
+  }
+
+  useEffect(() => {
+    if (!open) return
+    updateMenuPos()
+    const onScrollOrResize = () => updateMenuPos()
+    window.addEventListener('resize', onScrollOrResize)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    return () => {
+      window.removeEventListener('resize', onScrollOrResize)
+      window.removeEventListener('scroll', onScrollOrResize, true)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (menuRef.current?.contains(t)) return
+      if (menuPanelRef.current?.contains(t)) return
+      close()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const rowBtn =
+    'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium font-[\'Inter\'] text-slate-200 transition-colors hover:bg-white/5 hover:text-white'
+  const rowLink = `${rowBtn} no-underline`
+
+  const channelLabel = channelProfile
+    ? getPartnerChannelProfileLabel(language.code as LangCode, channelProfile)
+    : null
+  const displayCompany = companyName?.trim() || ''
+  const avatarLetter = (displayCompany[0] || 'P').toUpperCase()
+  const email = getAuthEmail() || '—'
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={open ? tr.closeAccountMenu : tr.openAccountMenu}
+        onClick={() => {
+          if (open) {
+            close()
+            return
+          }
+          setLangExpanded(false)
+          updateMenuPos()
+          setOpen(true)
+        }}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-white ring-2 ring-white transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+      >
+        {avatarLetter}
+      </button>
+
+      {open && menuPos && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={menuPanelRef}
+              role="menu"
+              style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+              className="fixed z-[300] overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900 py-2 shadow-xl"
+            >
+              <div className="px-4 pb-2 pt-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-600 text-sm font-semibold text-white">
+                    {avatarLetter}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="m-0 truncate text-sm font-semibold text-white font-['Inter']">
+                      {displayCompany || tr.partnerAccount}
+                    </p>
+                    {channelLabel && channelLabel !== '—' ? (
+                      <p className="m-0 truncate text-xs font-medium text-slate-300 font-['Inter']">{channelLabel}</p>
+                    ) : null}
+                    <p className="m-0 truncate text-xs text-slate-400 font-['Inter']">{email}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-2 border-t border-slate-700/80" />
+
+              <div className="px-2">
+                <button
+                  type="button"
+                  role="menuitem"
+                  aria-expanded={langExpanded}
+                  className={rowBtn}
+                  onClick={() => setLangExpanded((e) => !e)}
+                >
+                  <IconGlobe />
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate">{tr.language}</span>
+                    <span className="block truncate text-xs font-normal text-slate-400">{language.label}</span>
+                  </span>
+                  <IconChevronDown
+                    className={`text-slate-400 transition-transform ${langExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {langExpanded ? (
+                  <div
+                    className="mb-1 ml-2 flex flex-col gap-0.5 border-l border-slate-700/80 pl-2"
+                    role="group"
+                    aria-label={tr.chooseLanguage}
+                  >
+                    {LANGUAGES.map((lang) => {
+                      const selected = language.code === lang.code
+                      return (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={selected}
+                          className={`rounded-lg py-2 pl-3 pr-2 text-left text-sm font-['Inter'] transition-colors ${
+                            selected
+                              ? 'bg-white/10 font-semibold text-white'
+                              : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                          }`}
+                          onClick={() => {
+                            setLanguage(lang)
+                            close()
+                            onNavigate?.()
+                          }}
+                        >
+                          {lang.label}
+                          {selected ? <span className="ml-2 text-xs text-emerald-400">✓</span> : null}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                <NavLink
+                  to="/partner/setari"
+                  role="menuitem"
+                  className={rowLink}
+                  onClick={() => {
+                    close()
+                    onNavigate?.()
+                  }}
+                >
+                  <IconSettings />
+                  <span>{tr.navSettings}</span>
+                </NavLink>
+                <NavLink
+                  to="/partner/suport"
+                  role="menuitem"
+                  className={rowLink}
+                  onClick={() => {
+                    close()
+                    onNavigate?.()
+                  }}
+                >
+                  <IconSupport />
+                  <span>{tr.navSupport}</span>
+                </NavLink>
+              </div>
+
+              <div className="my-2 border-t border-slate-700/80" />
+
+              <div className="px-2 pt-1">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={rowBtn}
+                  onClick={() => {
+                    clearAuth()
+                    close()
+                    navigate('/login', { replace: true })
+                  }}
+                >
+                  <IconLogout />
+                  <span>{tr.logout}</span>
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  )
+}
+
 export default function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { language, setLanguage } = useLanguage()
   const tr = getPartnerLayoutTranslations(language.code)
+
+  const pageTitle = useMemo(
+    () => getPartnerTopBarPageTitle(location.pathname, language.code),
+    [location.pathname, language.code],
+  )
+
+  const pageSubtitle = useMemo(
+    () => getPartnerTopBarPageSubtitle(location.pathname, language.code),
+    [location.pathname, language.code],
+  )
 
   const navMain = useMemo(
     () => [
@@ -196,20 +461,18 @@ export default function PartnerLayout() {
     [tr],
   )
 
-  const navBottom = useMemo(
-    () => [
-      { to: '/partner/setari', label: tr.navSettings, icon: <IconSettings />, end: false },
-      { to: '/partner/suport', label: tr.navSupport, icon: <IconSupport />, end: false },
-    ],
-    [tr],
-  )
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [langMenuOpen, setLangMenuOpen] = useState(false)
-  const langMenuRef = useRef<HTMLDivElement>(null)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
-  const [isApproved, setIsApproved] = useState<boolean | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
+  const [partnerDiscountPercent, setPartnerDiscountPercent] = useState<number | null>(null)
+  const [partnerCompanyName, setPartnerCompanyName] = useState<string | null>(null)
+  const [partnerChannelProfile, setPartnerChannelProfile] = useState<{
+    partnerChannelType?: string | null
+    activityTypes?: string | null
+  } | null>(null)
+  const [contactFirstName, setContactFirstName] = useState('')
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false)
 
   useEffect(() => {
     getPartnerProfile()
@@ -220,54 +483,49 @@ export default function PartnerLayout() {
           return
         }
         setIsSuspended(p?.isSuspended === true)
-        setIsApproved(p?.isApproved !== false)
+        const raw = p?.partnerDiscountPercent
+        setPartnerDiscountPercent(
+          raw != null && Number.isFinite(Number(raw)) ? Number(raw) : null,
+        )
+        setPartnerCompanyName(String(p?.companyName || '').trim() || null)
+        setContactFirstName(String(p?.contactFirstName ?? '').trim())
+        setPartnerChannelProfile({
+          partnerChannelType: p?.partnerChannelType ?? null,
+          activityTypes: Array.isArray(p?.activityTypes)
+            ? p.activityTypes.join(',')
+            : (p?.activityTypes ?? null),
+        })
+        writePartnerProfileHintFromProfile(p)
         setProfileLoaded(true)
+
+        const email = getAuthEmail()
+        const discountApproved = partnerDiscountConfigured(p?.partnerDiscountPercent)
+        if (
+          p?.isSuspended !== true &&
+          !discountApproved &&
+          shouldShowPartnerWelcomeModal(email)
+        ) {
+          setWelcomeModalOpen(true)
+        }
       })
       .catch(() => {
         setIsSuspended(null)
-        setIsApproved(null)
+        setPartnerDiscountPercent(null)
+        setPartnerCompanyName(null)
+        setPartnerChannelProfile(null)
         setProfileLoaded(true)
       })
   }, [navigate])
 
-  const pendingReview = isApproved === false && isSuspended !== true
-
   const allowedWhenSuspended = (path: string) =>
     path === '/partner' || path.startsWith('/partner/setari') || path.startsWith('/partner/suport')
 
-  const allowedWhenPendingReview = (path: string) =>
-    path === '/partner' ||
-    path.startsWith('/partner/setari') ||
-    path.startsWith('/partner/suport')
-
   useEffect(() => {
-    if (isSuspended === null || isApproved === null) return
+    if (isSuspended === null) return
     if (isSuspended && !allowedWhenSuspended(location.pathname)) {
       navigate('/partner', { replace: true })
-      return
     }
-    if (pendingReview && !allowedWhenPendingReview(location.pathname)) {
-      navigate('/partner', { replace: true })
-    }
-  }, [isSuspended, isApproved, pendingReview, location.pathname, navigate])
-
-  useEffect(() => {
-    if (!langMenuOpen) return
-    const onDown = (e: MouseEvent) => {
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
-        setLangMenuOpen(false)
-      }
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLangMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [langMenuOpen])
+  }, [isSuspended, location.pathname, navigate])
 
   useEffect(() => {
     document.documentElement.classList.add('partner-shell')
@@ -282,6 +540,15 @@ export default function PartnerLayout() {
     `flex items-center rounded-xl text-sm font-['Inter'] font-medium transition-colors ${
       col ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
     } ${isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
+
+  const trWelcome = getPartnerWelcomeModalTranslations(language.code)
+
+  const handleWelcomeDismiss = (dontShowAgain: boolean) => {
+    const email = getAuthEmail()
+    if (dontShowAgain) dismissPartnerWelcomeModalPermanently(email)
+    else dismissPartnerWelcomeModalForSession(email)
+    setWelcomeModalOpen(false)
+  }
 
   return (
     <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-gray-50">
@@ -351,225 +618,85 @@ export default function PartnerLayout() {
               <>
                 <NavItemLoader count={navMain.length} collapsed={collapsed} />
                 <div className="flex-1 min-h-[1rem]" />
-                <NavItemLoader count={1} collapsed={collapsed} />
-                <NavItemLoader count={navBottom.length} collapsed={collapsed} />
               </>
             ) : (
               <>
                 {navMain.map((item) => {
                   const isDashboard = item.to === '/partner' && item.end
                   const disabledWhenSuspended = isSuspended === true && !isDashboard
-                  const disabledWhenPending = pendingReview && !isDashboard
-                  const navDisabled = disabledWhenPending || disabledWhenSuspended
+                  const navDisabled = disabledWhenSuspended
                   if (navDisabled) {
-                    const inactiveTitle = disabledWhenPending
-                      ? tr.tooltipPending
-                      : tr.tooltipSuspended
+                    const inactiveTitle = tr.tooltipSuspended
                     return (
-                      <InactiveNavRow
-                        key={item.to}
-                        tooltip={inactiveTitle}
-                        icon={item.icon}
-                        label={item.label}
-                        collapsed={collapsed}
-                      />
+                      <Fragment key={item.to}>
+                        <InactiveNavRow
+                          tooltip={inactiveTitle}
+                          icon={item.icon}
+                          label={item.label}
+                          collapsed={collapsed}
+                        />
+                        {item.to === '/partner/profil' && !collapsed ? (
+                          <>
+                            <div className="my-3 border-t border-slate-700/50" role="separator" aria-hidden />
+                            <ReducerePartenerBox
+                              variant="sidebar"
+                              className="mx-0.5"
+                              discountPercent={partnerDiscountPercent}
+                              loading={!profileLoaded}
+                            />
+                          </>
+                        ) : null}
+                      </Fragment>
                     )
                   }
                   return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      title={collapsed ? item.label : undefined}
-                      onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) => navLinkClass(isActive, collapsed)}
-                    >
-                      <span className="relative group/nav">
-                        {item.icon}
-                        {/* Tooltip when collapsed */}
-                        {collapsed && (
-                          <span className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
-                            {item.label}
-                          </span>
-                        )}
-                      </span>
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </NavLink>
+                    <Fragment key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
+                        title={collapsed ? item.label : undefined}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) => navLinkClass(isActive, collapsed)}
+                      >
+                        <span className="relative group/nav">
+                          {item.icon}
+                          {collapsed && (
+                            <span className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
+                              {item.label}
+                            </span>
+                          )}
+                        </span>
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                      </NavLink>
+                      {item.to === '/partner/profil' && !collapsed ? (
+                        <>
+                          <div className="my-3 border-t border-slate-700/50" role="separator" aria-hidden />
+                          <ReducerePartenerBox
+                            variant="sidebar"
+                            className="mx-0.5"
+                            discountPercent={partnerDiscountPercent}
+                            loading={!profileLoaded}
+                          />
+                        </>
+                      ) : null}
+                    </Fragment>
                   )
                 })}
                 <div className="flex-1 min-h-[1rem]" />
-                <div className="relative" ref={langMenuRef}>
-                  <button
-                    type="button"
-                    aria-expanded={langMenuOpen}
-                    aria-controls="partner-lang-submenu"
-                    aria-haspopup="listbox"
-                    title={collapsed ? tr.language : undefined}
-                    onClick={() => setLangMenuOpen((o) => !o)}
-                    className={`w-full text-left ${navLinkClass(langMenuOpen, collapsed)} ${
-                      langMenuOpen ? 'ring-1 ring-white/15' : ''
-                    }`}
-                  >
-                    <span className="relative group/nav">
-                      <IconGlobe />
-                      {collapsed && (
-                        <span className="pointer-events-none absolute left-full ml-3 top-1/2 z-[200] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
-                          {tr.language}
-                        </span>
-                      )}
-                    </span>
-                    {!collapsed && (
-                      <>
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate">{tr.language}</span>
-                          <span className="block truncate text-xs font-normal text-slate-400 font-['Inter']">
-                            {language.label}
-                          </span>
-                        </div>
-                        <IconChevronDown
-                          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${
-                            langMenuOpen ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </>
-                    )}
-                  </button>
-                  {langMenuOpen && !collapsed && (
-                    <div
-                      id="partner-lang-submenu"
-                      role="listbox"
-                      aria-label={tr.chooseLanguage}
-                      className="mt-1 flex flex-col gap-0.5 pl-3"
-                    >
-                      {LANGUAGES.map((lang) => {
-                        const selected = language.code === lang.code
-                        return (
-                          <button
-                            key={lang.code}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            className={`flex w-full items-center rounded-lg py-2 pl-9 pr-3 text-left text-sm font-['Inter'] transition-colors ${
-                              selected
-                                ? 'bg-white/10 font-semibold text-white'
-                                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                            }`}
-                            onClick={() => {
-                              setLanguage(lang)
-                              setSidebarOpen(false)
-                            }}
-                          >
-                            {lang.label}
-                            {selected && (
-                              <span className="ml-auto text-xs font-medium text-emerald-400" aria-hidden>
-                                ✓
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {langMenuOpen && collapsed && (
-                    <div
-                      role="listbox"
-                      aria-label={tr.chooseLanguage}
-                      className="absolute left-0 right-0 top-full z-[250] mt-1 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
-                    >
-                      {LANGUAGES.map((lang) => (
-                        <button
-                          key={lang.code}
-                          type="button"
-                          role="option"
-                          aria-selected={language.code === lang.code}
-                          className={`block w-full px-4 py-2.5 text-left text-sm font-['Inter'] transition-colors ${
-                            language.code === lang.code
-                              ? 'bg-slate-100 font-semibold text-slate-900'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                          onClick={() => {
-                            setLanguage(lang)
-                            setLangMenuOpen(false)
-                            setSidebarOpen(false)
-                          }}
-                        >
-                          {lang.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {navBottom.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    title={collapsed ? item.label : undefined}
-                    onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) => navLinkClass(isActive, collapsed)}
-                  >
-                    <span className="relative group/nav">
-                      {item.icon}
-                      {collapsed && (
-                        <span className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[200] whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/nav:opacity-100">
-                          {item.label}
-                        </span>
-                      )}
-                    </span>
-                    {!collapsed && <span className="truncate">{item.label}</span>}
-                  </NavLink>
-                ))}
               </>
             )}
           </nav>
-
-          {/* User + Logout */}
-          <div className="pt-5 border-t border-slate-700/50 flex flex-col gap-1">
-            {!collapsed ? (
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                  P
-                </div>
-                <div className="min-w-0">
-                  <p className="text-white text-sm font-semibold font-['Inter'] truncate">{tr.partnerAccount}</p>
-                  <p className="text-slate-400 text-xs font-['Inter'] truncate">{getAuthEmail() || '—'}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center py-2">
-                <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-semibold">
-                  P
-                </div>
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/login')}
-              title={collapsed ? tr.logout : undefined}
-              className={`flex items-center rounded-xl text-sm font-['Inter'] font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left ${
-                collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
-              }`}
-            >
-              <IconLogout />
-              {!collapsed && tr.logout}
-            </button>
-          </div>
         </div>
       </aside>
 
       {/* ── Main content ── */}
-      {/* Scroll lives only on the outlet wrapper below so nested routes don't stack a second scrollbar (main + inner flex). */}
       <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden">
-        <div
-          id="partner-layout-scroll"
-          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-clip overscroll-y-contain [&>*]:shrink-0"
-        >
-          {/* Mobile header — inside scroll region so sticky works and there is a single vertical scroll */}
-          <div className="lg:hidden sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+        <header className="z-40 flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-4 py-2.5 sm:gap-3 lg:px-6">
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="-ml-2 rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+              className="-ml-1 rounded-lg p-2 text-gray-600 hover:bg-gray-100"
               aria-label={tr.openMenu}
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -577,13 +704,60 @@ export default function PartnerLayout() {
               </svg>
             </button>
             <Link to="/partner" className="flex-shrink-0">
-              <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
+              <img src="/images/shared/baterino-pro-negru-logo.png" alt="Baterino" className="h-6 w-auto" />
             </Link>
-            <div className="w-10" />
           </div>
+          <div
+            id="partner-layout-top-leading"
+            className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3"
+          >
+            {pageTitle ? (
+              <h1 className="m-0 shrink-0 text-lg font-bold tracking-tight text-slate-900 font-['Inter'] sm:text-xl">
+                {pageTitle}
+              </h1>
+            ) : null}
+            {pageSubtitle ? (
+              <p className="m-0 hidden min-w-0 truncate text-sm text-gray-500 font-['Inter'] sm:block">
+                {pageSubtitle}
+              </p>
+            ) : null}
+            <div
+              id="partner-layout-top-leading-extra"
+              className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3"
+            />
+          </div>
+          <div
+            id="partner-layout-top-page-actions"
+            className="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-3"
+          />
+          <PartnerTopBarToolbar />
+          <PartnerAccountMenu
+            tr={tr}
+            language={language}
+            setLanguage={setLanguage}
+            onNavigate={() => setSidebarOpen(false)}
+            companyName={partnerCompanyName}
+            channelProfile={partnerChannelProfile}
+          />
+        </header>
+        <div
+          id="partner-layout-scroll"
+          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-clip overscroll-y-contain [&>*]:shrink-0"
+        >
           <Outlet />
         </div>
       </main>
+
+      <PartnerWelcomePendingDiscountModal
+        open={welcomeModalOpen && profileLoaded && isSuspended !== true && !partnerDiscountConfigured(partnerDiscountPercent)}
+        firstName={contactFirstName}
+        tr={trWelcome}
+        onDismiss={handleWelcomeDismiss}
+        onExploreCatalog={() => {
+          navigate('/partner/produse')
+          dispatchPartnerOpenRfqFromWelcome()
+        }}
+      />
     </div>
   )
 }

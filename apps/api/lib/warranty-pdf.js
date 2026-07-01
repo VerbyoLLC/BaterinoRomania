@@ -62,13 +62,18 @@ async function renderWarrantyPdf(html, options = {}) {
       page.evaluateHandle('document.fonts.ready'),
       new Promise((resolve) => setTimeout(resolve, 12_000)),
     ])
-    const pdf = await page.pdf({
+    const pdfOptions = {
       format: 'A4',
       printBackground: true,
       preferCSSPageSize: true,
-      /* Marginile sunt deja controlate din `@page { margin: 12mm }` în template. */
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    })
+      margin: options.margin ?? { top: '0', right: '0', bottom: '0', left: '0' },
+    }
+    if (options.displayHeaderFooter) {
+      pdfOptions.displayHeaderFooter = true
+      pdfOptions.headerTemplate = options.headerTemplate ?? '<span></span>'
+      pdfOptions.footerTemplate = options.footerTemplate ?? '<span></span>'
+    }
+    const pdf = await page.pdf(pdfOptions)
     return Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf)
   } finally {
     await page.close().catch(() => {})

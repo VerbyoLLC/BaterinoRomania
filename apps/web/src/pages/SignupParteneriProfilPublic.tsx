@@ -5,23 +5,30 @@ import { savePartnerProfile, getPartnerProfile, getAuthToken, getPartnerOnboardi
 import {
   PARTNER_SIGNUP_ACTIVITY_DRAFT_KEY,
   type PartnerActivityDraft,
+  type PartnerSignupChannel,
 } from '../lib/partnerSignupDraft'
-import { normalizePartnerWebsite, sanitizePersonName, sanitizePhoneDigitsOnly, loadPhoneE164 } from '../lib/formInputSanitize'
+import { isPartnerWebsiteSyntaxValid, normalizePartnerWebsite, partnerWebsiteForInput, sanitizePersonName, sanitizePhoneDigitsOnly, loadPhoneE164 } from '../lib/formInputSanitize'
 import PhoneInput from '../components/PhoneInput'
 
-/**
- * Former steps 2–3 of this wizard live in `ArchivedPartnerSignupPublicSteps.tsx`
- * for porting into the partner panel — not routed here.
- */
-
-type ActivityType = 'instalator' | 'distribuitor' | 'integrator' | 'altul'
-
-const ACTIVITY_OPTIONS: { id: ActivityType; label: string }[] = [
+const CHANNEL_OPTIONS: { id: PartnerSignupChannel; label: string }[] = [
   { id: 'instalator', label: 'Instalator' },
   { id: 'distribuitor', label: 'Distribuitor' },
-  { id: 'integrator', label: 'Integrator sisteme' },
-  { id: 'altul', label: 'Altul' },
 ]
+
+function channelFromProfile(p: {
+  partnerChannelType?: string | null
+  activityTypes?: string | string[] | null
+}): PartnerSignupChannel | '' {
+  const ch = String(p.partnerChannelType ?? '').trim().toLowerCase()
+  if (ch === 'distributor') return 'distribuitor'
+  if (ch === 'installer') return 'instalator'
+  const parts = (Array.isArray(p.activityTypes) ? p.activityTypes : String(p.activityTypes ?? '').split(','))
+    .map((s) => String(s).trim().toLowerCase())
+    .filter(Boolean)
+  if (parts.includes('distribuitor')) return 'distribuitor'
+  if (parts.includes('instalator')) return 'instalator'
+  return ''
+}
 
 function Field({ label, type = 'text', placeholder, required, hint, value, onChange, disabled, inputMode, autoComplete }: {
   label: string
@@ -69,10 +76,9 @@ function ActivityFormSkeleton() {
     >
       <div>
         <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-9 bg-gray-100 rounded-[8px] border border-gray-100" />
-          ))}
+        <div className="flex flex-col gap-2">
+          <div className="h-11 bg-gray-100 rounded-[10px] border border-gray-100" />
+          <div className="h-11 bg-gray-100 rounded-[10px] border border-gray-100" />
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -94,7 +100,7 @@ function ActivityFormSkeleton() {
 
 export default function SignupParteneriProfilPublic() {
   const navigate = useNavigate()
-  const [activities, setActivities] = useState<ActivityType[]>([])
+  const [channel, setChannel] = useState<PartnerSignupChannel | ''>('')
   const [contactFirstName, setContactFirstName] = useState('')
   const [contactLastName, setContactLastName] = useState('')
   const [legalPhone, setLegalPhone] = useState('')
@@ -115,23 +121,27 @@ export default function SignupParteneriProfilPublic() {
       try {
         const raw = sessionStorage.getItem(PARTNER_SIGNUP_ACTIVITY_DRAFT_KEY)
         if (raw) {
-          const d = JSON.parse(raw) as PartnerActivityDraft
-          const ids = Array.isArray(d.activities) ? d.activities : []
-          const valid = ids.filter((id): id is ActivityType =>
-            ACTIVITY_OPTIONS.some((o) => o.id === id),
-          )
+          const d = JSON.parse(raw) as PartnerActivityDraft & { activities?: string[] }
+          const ch =
+            d.channel === 'instalator' || d.channel === 'distribuitor'
+              ? d.channel
+              : Array.isArray(d.activities) && d.activities.includes('distribuitor')
+                ? 'distribuitor'
+                : Array.isArray(d.activities) && d.activities.includes('instalator')
+                  ? 'instalator'
+                  : ''
           const hasAny =
-            valid.length > 0 ||
+            ch !== '' ||
             String(d.contactFirstName ?? '').trim() !== '' ||
             String(d.contactLastName ?? '').trim() !== '' ||
             String(d.legalPhone ?? '').trim() !== '' ||
             String(d.website ?? '').trim() !== ''
           if (hasAny && !cancelled) {
-            setActivities(valid)
+            setChannel(ch)
             setContactFirstName(sanitizePersonName(String(d.contactFirstName ?? '')))
             setContactLastName(sanitizePersonName(String(d.contactLastName ?? '')))
             setLegalPhone(loadPhoneE164(String(d.legalPhone ?? '')))
-            setWebsite(String(d.website ?? '').trim())
+            setWebsite(partnerWebsiteForInput(String(d.website ?? '')))
             usedSession = true
           }
         }
@@ -143,32 +153,18 @@ export default function SignupParteneriProfilPublic() {
         return
       }
       try {
-        const p = (await getPartnerProfile()) as {
-          companyName?: string | null
-          cui?: string | null
-          activityTypes?: string | null
-          contactFirstName?: string | null
-          contactLastName?: string | null
-          phone?: string | null
-          website?: string | null
-        }
+        const p = await getPartnerProfile()
         if (cancelled) return
         if (getPartnerOnboardingRedirect(p) === '/signup/parteneri/profil') {
           navigate('/signup/parteneri/profil', { replace: true })
           return
         }
-        const parts = String(p?.activityTypes ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-        const valid = parts.filter((id): id is ActivityType =>
-          ACTIVITY_OPTIONS.some((o) => o.id === id),
-        )
-        if (valid.length) setActivities(valid)
+        const fromProfile = channelFromProfile(p)
+        if (fromProfile) setChannel(fromProfile)
         setContactFirstName(sanitizePersonName(String(p?.contactFirstName ?? '')))
         setContactLastName(sanitizePersonName(String(p?.contactLastName ?? '')))
         setLegalPhone(loadPhoneE164(String(p?.phone ?? '')))
-        setWebsite(String(p?.website ?? '').trim())
+        setWebsite(partnerWebsiteForInput(String(p?.website ?? '')))
       } catch {
         /* ignore */
       }
@@ -183,7 +179,7 @@ export default function SignupParteneriProfilPublic() {
     if (!draftHydrated || !getAuthToken()) return
     try {
       const payload: PartnerActivityDraft = {
-        activities,
+        channel,
         contactFirstName,
         contactLastName,
         legalPhone,
@@ -193,16 +189,17 @@ export default function SignupParteneriProfilPublic() {
     } catch {
       /* ignore */
     }
-  }, [draftHydrated, activities, contactFirstName, contactLastName, legalPhone, website])
-
-  function toggleActivity(id: ActivityType) {
-    setActivities((prev) => (prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]))
-  }
+  }, [draftHydrated, channel, contactFirstName, contactLastName, legalPhone, website])
 
   async function handleSubmitApplication(e: React.FormEvent) {
     e.preventDefault()
-    if (!contactFirstName.trim() || !contactLastName.trim() || !legalPhone.trim() || activities.length === 0) {
-      setError('Completează tipul de activitate, numele contactului și telefonul.')
+    if (!channel || !contactFirstName.trim() || !contactLastName.trim() || !legalPhone.trim()) {
+      setError('Alege canalul (Instalator sau Distribuitor) și completează contactul.')
+      return
+    }
+    const websiteTrimmed = website.trim()
+    if (websiteTrimmed && !isPartnerWebsiteSyntaxValid(websiteTrimmed)) {
+      setError('Introdu un domeniu valid (ex: exemplu.ro).')
       return
     }
     if (!getAuthToken()) {
@@ -213,11 +210,11 @@ export default function SignupParteneriProfilPublic() {
     setLoading(true)
     try {
       await savePartnerProfile({
-        activityTypes: activities,
+        partnerChannelType: channel === 'distribuitor' ? 'distributor' : 'installer',
         contactFirstName: sanitizePersonName(contactFirstName).trim(),
         contactLastName: sanitizePersonName(contactLastName).trim(),
         phone: sanitizePhoneDigitsOnly(legalPhone),
-        website: normalizePartnerWebsite(website),
+        website: websiteTrimmed ? normalizePartnerWebsite(websiteTrimmed) : '',
       })
       try {
         sessionStorage.removeItem(PARTNER_SIGNUP_ACTIVITY_DRAFT_KEY)
@@ -261,7 +258,7 @@ export default function SignupParteneriProfilPublic() {
         Activitate și contact
       </h2>
       <p className="text-gray-500 text-sm font-['Inter'] mb-6">
-        Alege tipul de activitate și introdu persoana de contact principală.
+        Alege canalul tău comercial și introdu persoana de contact principală.
       </p>
 
       {!draftHydrated ? (
@@ -279,42 +276,38 @@ export default function SignupParteneriProfilPublic() {
             <p className="text-sm font-['Inter'] text-red-600">{error}</p>
           </div>
         )}
-        <div>
-          <label className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+        <fieldset>
+          <legend className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
             Tip activitate <span className="text-red-500">*</span>
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {ACTIVITY_OPTIONS.map((opt) => {
-              const selected = activities.includes(opt.id)
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
+          </legend>
+          <div className="flex flex-col gap-2">
+            {CHANNEL_OPTIONS.map((opt) => (
+              <label
+                key={opt.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-4 py-3 text-sm font-['Inter'] font-medium transition-colors ${
+                  channel === opt.id
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-500'
+                } ${loading ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="partner-channel"
+                  value={opt.id}
+                  checked={channel === opt.id}
                   disabled={loading}
-                  onClick={() => toggleActivity(opt.id)}
-                  className={`h-9 px-3 rounded-[8px] border text-sm font-['Inter'] font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selected
-                      ? 'bg-slate-900 border-slate-900 text-white'
-                      : 'border-gray-300 text-gray-600 hover:border-gray-500'
-                  }`}
-                >
-                  {selected && (
-                    <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  {opt.label}
-                </button>
-              )
-            })}
+                  onChange={() => setChannel(opt.id)}
+                  className="h-4 w-4 shrink-0 accent-slate-900"
+                />
+                {opt.label}
+              </label>
+            ))}
           </div>
-        </div>
+        </fieldset>
 
         <Field
           label="Website"
-          type="url"
-          placeholder="https://exemplu.ro"
-          hint="Dacă nu puneți https://, îl adăugăm automat."
+          placeholder="exemplu.ro"
           value={website}
           onChange={(v) => setWebsite(v.replace(/[\u0000-\u001F\u007F]/g, '').slice(0, 512))}
           disabled={loading}

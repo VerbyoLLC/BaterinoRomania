@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { getPublicCaseStudies, type CaseStudyRow } from '../../lib/api'
 import { getStudiiDeCazTranslations } from '../../i18n/studii-de-caz'
@@ -54,18 +55,15 @@ export default function HomeCaseStudiesPreview() {
 
       {!loading && (
         <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            onClick={() =>
-              document.getElementById('proiecte-industriale')?.scrollIntoView({ behavior: 'smooth' })
-            }
+          <Link
+            to="/studii-de-caz"
             className="inline-flex items-center gap-2 h-12 px-7 rounded-[10px] bg-slate-900 text-white text-sm font-semibold font-['Inter'] hover:bg-slate-800 transition-colors"
           >
             {cta}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-          </button>
+          </Link>
         </div>
       )}
     </section>

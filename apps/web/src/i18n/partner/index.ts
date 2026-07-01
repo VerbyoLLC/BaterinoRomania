@@ -1,7 +1,7 @@
 export { getPartnerLayoutTranslations, type PartnerLayoutTranslations } from './layout'
 export { getPartnerDashboardTranslations, type PartnerDashboardTranslations } from './dashboard'
 export { getPartnerPublicProfileTranslations, type PartnerPublicProfileTranslations } from './public-profile'
-export { getPartnerSettingsTranslations, getPartnerSettingsActivityLabel, type PartnerSettingsTranslations } from './settings'
+export { getPartnerSettingsTranslations, getPartnerChannelProfileLabel, type PartnerSettingsTranslations } from './settings'
 export { getPartnerSupportTranslations, type PartnerSupportTranslations } from './support'
 export { getPartnerServiceTranslations, type PartnerServiceTranslations } from './service'
 export {

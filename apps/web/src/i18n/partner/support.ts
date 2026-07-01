@@ -2,7 +2,7 @@ import type { LangCode } from '../menu'
 
 export type PartnerSupportTranslations = {
   title: string
-  subtitle: string
+  pageSubtitle: string
   dedicatedAgent: string
   agentLoadingAria: string
   noAgentBeforeEmail: string
@@ -18,7 +18,7 @@ export type PartnerSupportTranslations = {
 
 const ro: PartnerSupportTranslations = {
   title: 'Suport',
-  subtitle: 'Ai nevoie de ajutor? Contactează echipa Baterino.',
+  pageSubtitle: 'Ai nevoie de ajutor? Contactează echipa Baterino.',
   dedicatedAgent: 'Agentul tău dedicat',
   agentLoadingAria: 'Se încarcă detaliile agentului',
   noAgentBeforeEmail: 'Încă nu ai un agent de vânzări atribuit. Poți folosi contactele de mai jos sau scrie la ',
@@ -34,7 +34,7 @@ const ro: PartnerSupportTranslations = {
 
 const en: PartnerSupportTranslations = {
   title: 'Support',
-  subtitle: 'Need help? Contact the Baterino team.',
+  pageSubtitle: 'Need help? Contact the Baterino team.',
   dedicatedAgent: 'Your dedicated agent',
   agentLoadingAria: 'Loading agent details',
   noAgentBeforeEmail: 'You do not have an assigned sales agent yet. Use the contacts below or email ',

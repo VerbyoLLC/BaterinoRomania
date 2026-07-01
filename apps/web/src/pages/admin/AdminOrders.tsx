@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getAdminDeletedOrders,
   getAdminGuestResidentialOrders,
+  getAdminPartnerRfqRequests,
   patchAdminOrderFulfillmentStatus,
+  formatPartnerActivityTypeLabel,
   type AdminDeletedOrderRow,
   type AdminGuestResidentialOrderRow,
+  type AdminPartnerRfqRequestRow,
 } from '../../lib/api'
 
 const FULFILLMENT_OPTIONS: { value: string; label: string }[] = [
@@ -40,10 +43,27 @@ function formatMoney(amount: string | null, currency: string): string {
   return `${n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency || 'RON'}`
 }
 
-function orderSourceLabel(source: string): { label: string; className: string } {
+function orderSourceLabel(
+  source: string,
+  channel?: Pick<AdminGuestResidentialOrderRow, 'partnerChannelType' | 'activityTypes'>,
+): { label: string; className: string } {
   const s = String(source || '').toLowerCase()
   if (s === 'client') return { label: 'Client', className: 'bg-emerald-100 text-emerald-900' }
-  if (s === 'partner' || s === 'partener') return { label: 'Partener', className: 'bg-sky-100 text-sky-900' }
+  if (s === 'partner' || s === 'partener') {
+    const sub =
+      channel != null
+        ? formatPartnerActivityTypeLabel({
+            partnerChannelType: channel.partnerChannelType,
+            activityTypes:
+              channel.activityTypes != null && channel.activityTypes !== ''
+                ? String(channel.activityTypes)
+                : null,
+          })
+        : '—'
+    const label = sub && sub !== '—' ? `Partener — ${sub}` : 'Partener'
+    return { label, className: 'bg-sky-100 text-sky-900' }
+  }
+  if (s === 'partner_rfq') return { label: 'Cerere ofertă partener', className: 'bg-indigo-100 text-indigo-900' }
   return { label: 'Invitat', className: 'bg-slate-200 text-slate-800' }
 }
 
@@ -73,6 +93,37 @@ function fulfillmentOptionLabel(o: AdminGuestResidentialOrderRow, optionValue: s
   return FULFILLMENT_OPTIONS.find((x) => x.value === optionValue)?.label ?? optionValue
 }
 
+function rfqStatusLabel(status: string): string {
+  switch (String(status || 'pending')) {
+    case 'in_review':
+      return 'În analiză'
+    case 'answered':
+      return 'Răspuns trimis'
+    case 'closed':
+      return 'Închisă'
+    case 'pending':
+    default:
+      return 'În așteptare'
+  }
+}
+
+type AdminActiveRow =
+  | { kind: 'order'; data: AdminGuestResidentialOrderRow }
+  | { kind: 'rfq'; data: AdminPartnerRfqRequestRow }
+
+function orderTypeBadge(kind: AdminActiveRow['kind']): { label: string; className: string } {
+  return kind === 'rfq'
+    ? { label: 'RFQ', className: 'bg-indigo-100 text-indigo-900' }
+    : { label: 'Comandă', className: 'bg-slate-200 text-slate-800' }
+}
+
+function rfqProductSummary(o: AdminPartnerRfqRequestRow): string {
+  const lines = o.lines || []
+  if (lines.length === 0) return o.productTitle || '—'
+  if (lines.length === 1) return `${lines[0].quantity}× ${lines[0].productTitle}`
+  return lines.map((line) => `${line.quantity}× ${line.productTitle}`).join(', ')
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<AdminGuestResidentialOrderRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,11 +131,12 @@ export default function AdminOrders() {
   const [patchingId, setPatchingId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'deleted'>('active')
   const [deletedOrders, setDeletedOrders] = useState<AdminDeletedOrderRow[]>([])
+  const [rfqOrders, setRfqOrders] = useState<AdminPartnerRfqRequestRow[]>([])
   const [deletedLoaded, setDeletedLoaded] = useState(false)
   const [deletedLoading, setDeletedLoading] = useState(false)
   const [deletedError, setDeletedError] = useState<string | null>(null)
   const [deletedSearch, setDeletedSearch] = useState('')
-  const [detailKind, setDetailKind] = useState<'active' | 'deleted'>('active')
+  const [detailKind, setDetailKind] = useState<'active' | 'deleted' | 'rfq'>('active')
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null)
   const [invoiceModal, setInvoiceModal] = useState<{
     order: AdminGuestResidentialOrderRow
@@ -95,11 +147,27 @@ export default function AdminOrders() {
   const [docUploading, setDocUploading] = useState<'proforma' | 'invoice' | null>(null)
 
   const detailIsDeleted = detailKind === 'deleted'
-  const detailOrder: AdminGuestResidentialOrderRow | null = detailOrderId
-    ? (detailIsDeleted
-        ? deletedOrders.find((r) => r.id === detailOrderId)
-        : orders.find((r) => r.id === detailOrderId)) ?? null
-    : null
+  const detailIsRfq = detailKind === 'rfq'
+  const detailOrder: AdminGuestResidentialOrderRow | null =
+    detailOrderId && detailKind === 'active'
+      ? orders.find((r) => r.id === detailOrderId) ?? null
+      : null
+  const detailDeletedOrder: AdminDeletedOrderRow | null =
+    detailOrderId && detailIsDeleted
+      ? deletedOrders.find((r) => r.id === detailOrderId) ?? null
+      : null
+  const detailRfq: AdminPartnerRfqRequestRow | null =
+    detailOrderId && detailIsRfq ? rfqOrders.find((r) => r.id === detailOrderId) ?? null : null
+  const detailPanelOrder = detailOrder ?? detailDeletedOrder
+
+  const activeRows = useMemo<AdminActiveRow[]>(() => {
+    const merged: AdminActiveRow[] = [
+      ...orders.map((data) => ({ kind: 'order' as const, data })),
+      ...rfqOrders.map((data) => ({ kind: 'rfq' as const, data })),
+    ]
+    merged.sort((a, b) => new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime())
+    return merged
+  }, [orders, rfqOrders])
 
   const loadDeletedOrders = useCallback(() => {
     setDeletedLoading(true)
@@ -171,16 +239,24 @@ export default function AdminOrders() {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      setLoading(true)
+      setError(null)
       try {
-        const data = await getAdminGuestResidentialOrders()
-        if (!cancelled) setOrders(data)
+        const [orderData, rfqData] = await Promise.all([
+          getAdminGuestResidentialOrders(),
+          getAdminPartnerRfqRequests(),
+        ])
+        if (!cancelled) {
+          setOrders(orderData)
+          setRfqOrders(rfqData)
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Eroare la încărcare.')
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
-    load()
+    void load()
     return () => {
       cancelled = true
     }
@@ -248,7 +324,7 @@ export default function AdminOrders() {
 
   return (
     <div className="flex flex-col h-full min-h-0 p-4 sm:p-6 lg:p-8">
-      {detailOrder ? (
+      {detailPanelOrder || detailRfq ? (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
           role="presentation"
@@ -260,6 +336,77 @@ export default function AdminOrders() {
             aria-labelledby="order-detail-title"
             onClick={(e) => e.stopPropagation()}
           >
+            {detailRfq ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <h2 id="order-detail-title" className="text-lg font-bold text-slate-900 font-['Inter'] shrink-0">
+                    Detalii cerere de ofertă
+                  </h2>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 font-['Inter'] shrink-0"
+                    onClick={closeDetail}
+                  >
+                    Închide
+                  </button>
+                </div>
+                <div className="space-y-4 pt-4 text-sm font-['Inter']">
+                  <section className="rounded-xl bg-[#f7f7f7] p-4 space-y-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Referință</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900">{detailRfq.orderNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Data</p>
+                      <p className="mt-0.5 text-slate-900">{formatDateTime(detailRfq.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                      <p className="mt-1">
+                        <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200/80">
+                          {rfqStatusLabel(detailRfq.fulfillmentStatus || 'pending')}
+                        </span>
+                      </p>
+                    </div>
+                  </section>
+                  <section className="rounded-xl bg-[#f7f7f7] p-4 space-y-3">
+                    <p className="text-sm font-semibold text-slate-800 pb-1">Partener</p>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Companie</p>
+                      <p className="mt-0.5 text-slate-900">{detailRfq.companyName?.trim() || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
+                      <p className="mt-0.5 text-slate-900">
+                        {`${detailRfq.lastName} ${detailRfq.firstName}`.trim() || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Telefon</p>
+                      <p className="mt-0.5 text-slate-900">{formatPhoneDigits(detailRfq.phone)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</p>
+                      <p className="mt-0.5 text-slate-900 break-all">{detailRfq.email}</p>
+                    </div>
+                  </section>
+                  <section className="rounded-xl bg-[#f7f7f7] p-4 space-y-3">
+                    <p className="text-sm font-semibold text-slate-800 pb-1">Produse solicitate</p>
+                    <ul className="m-0 list-none space-y-2 p-0">
+                      {(detailRfq.lines || []).map((line) => (
+                        <li key={line.id} className="text-slate-800">
+                          <span className="font-semibold tabular-nums">{line.quantity}×</span> {line.productTitle}
+                          {line.productSlug ? (
+                            <span className="mt-0.5 block font-mono text-xs text-slate-500">{line.productSlug}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </div>
+              </>
+            ) : detailPanelOrder ? (
+              <>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <h2 id="order-detail-title" className="text-lg font-bold text-slate-900 font-['Inter'] shrink-0">
                 Detalii comandă
@@ -280,13 +427,13 @@ export default function AdminOrders() {
                     <select
                       id="detail-fulfillment"
                       className="min-w-[11rem] max-w-[14rem] rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
-                      value={normalizeStatus(detailOrder)}
-                      disabled={patchingId === detailOrder.id}
-                      onChange={(e) => void handleFulfillmentChange(detailOrder, e.target.value)}
+                      value={normalizeStatus(detailPanelOrder)}
+                      disabled={patchingId === detailPanelOrder.id}
+                      onChange={(e) => void handleFulfillmentChange(detailPanelOrder, e.target.value)}
                     >
                       {FULFILLMENT_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
-                          {fulfillmentOptionLabel(detailOrder, opt.value)}
+                          {fulfillmentOptionLabel(detailPanelOrder, opt.value)}
                         </option>
                       ))}
                     </select>
@@ -310,19 +457,19 @@ export default function AdminOrders() {
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Număr comandă</p>
-                  <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900">{detailOrder.orderNumber}</p>
+                  <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900">{detailPanelOrder.orderNumber}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Data</p>
-                  <p className="mt-0.5 text-slate-900">{formatDateTime(detailOrder.createdAt)}</p>
+                  <p className="mt-0.5 text-slate-900">{formatDateTime(detailPanelOrder.createdAt)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sursă</p>
                   <p className="mt-1">
                     <span
-                      className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${orderSourceLabel(detailOrder.orderSource).className}`}
+                      className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${orderSourceLabel(detailPanelOrder.orderSource, detailPanelOrder).className}`}
                     >
-                      {orderSourceLabel(detailOrder.orderSource).label}
+                      {orderSourceLabel(detailPanelOrder.orderSource, detailPanelOrder).label}
                     </span>
                   </p>
                 </div>
@@ -334,24 +481,24 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nume</p>
                   <p className="mt-0.5 text-slate-900">
-                    {`${detailOrder.lastName} ${detailOrder.firstName}`.trim() || '—'}
+                    {`${detailPanelOrder.lastName} ${detailPanelOrder.firstName}`.trim() || '—'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Telefon</p>
-                  <p className="mt-0.5 text-slate-900">{formatPhoneDigits(detailOrder.phone)}</p>
+                  <p className="mt-0.5 text-slate-900">{formatPhoneDigits(detailPanelOrder.phone)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</p>
-                  <p className="mt-0.5 text-slate-900 break-all">{detailOrder.email}</p>
+                  <p className="mt-0.5 text-slate-900 break-all">{detailPanelOrder.email}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adresă facturare</p>
                   <p className="mt-0.5 text-slate-800 whitespace-pre-wrap">
                     {[
-                      detailOrder.billAddress,
-                      [detailOrder.billPostal, detailOrder.billCity].filter(Boolean).join(' '),
-                      detailOrder.billCounty,
+                      detailPanelOrder.billAddress,
+                      [detailPanelOrder.billPostal, detailPanelOrder.billCity].filter(Boolean).join(' '),
+                      detailPanelOrder.billCounty,
                     ]
                       .filter(Boolean)
                       .join(', ') || '—'}
@@ -360,11 +507,11 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Adresă livrare</p>
                   <p className="mt-0.5 text-slate-800 whitespace-pre-wrap">
-                    {detailOrder.deliveryDifferent
+                    {detailPanelOrder.deliveryDifferent
                       ? [
-                          detailOrder.delAddress,
-                          [detailOrder.delPostal, detailOrder.delCity].filter(Boolean).join(' '),
-                          detailOrder.delCounty,
+                          detailPanelOrder.delAddress,
+                          [detailPanelOrder.delPostal, detailPanelOrder.delCity].filter(Boolean).join(' '),
+                          detailPanelOrder.delCounty,
                         ]
                           .filter(Boolean)
                           .join(', ') || '—'
@@ -379,14 +526,14 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proforma</p>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-                    {hasProformaUrl(detailOrder) ? (
+                    {hasProformaUrl(detailPanelOrder) ? (
                       <span className="text-emerald-700 font-semibold text-sm">Încărcată ✓</span>
                     ) : (
                       <span className="text-slate-400 text-sm">—</span>
                     )}
-                    {detailOrder.proformaUrl ? (
+                    {detailPanelOrder.proformaUrl ? (
                       <a
-                        href={detailOrder.proformaUrl}
+                        href={detailPanelOrder.proformaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-sky-700 hover:underline"
@@ -405,19 +552,19 @@ export default function AdminOrders() {
                         onChange={(e) => {
                           const f = e.target.files?.[0]
                           e.target.value = ''
-                          if (!f || !detailOrder) return
+                          if (!f || !detailPanelOrder) return
                           setDocUploading('proforma')
                           void (async () => {
                             try {
                               const out = await patchAdminOrderFulfillmentStatus(
-                                detailOrder.id,
-                                normalizeStatus(detailOrder),
+                                detailPanelOrder.id,
+                                normalizeStatus(detailPanelOrder),
                                 undefined,
                                 f,
                               )
                               setOrders((rows) =>
                                 rows.map((r) =>
-                                  r.id === detailOrder.id
+                                  r.id === detailPanelOrder.id
                                     ? {
                                         ...r,
                                         proformaUrl: out.proformaUrl ?? r.proformaUrl ?? null,
@@ -441,14 +588,14 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Factură</p>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-                    {hasInvoiceUrl(detailOrder) ? (
+                    {hasInvoiceUrl(detailPanelOrder) ? (
                       <span className="text-emerald-700 font-semibold text-sm">Încărcată ✓</span>
                     ) : (
                       <span className="text-slate-400 text-sm">—</span>
                     )}
-                    {detailOrder.clientInvoiceUrl ? (
+                    {detailPanelOrder.clientInvoiceUrl ? (
                       <a
-                        href={detailOrder.clientInvoiceUrl}
+                        href={detailPanelOrder.clientInvoiceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-sky-700 hover:underline"
@@ -456,14 +603,14 @@ export default function AdminOrders() {
                         Deschide PDF
                       </a>
                     ) : null}
-                    {!detailIsDeleted && !hasInvoiceUrl(detailOrder) && normalizeStatus(detailOrder) === 'in_pregatire' ? (
+                    {!detailIsDeleted && !hasInvoiceUrl(detailPanelOrder) && normalizeStatus(detailPanelOrder) === 'in_pregatire' ? (
                       <button
                         type="button"
                         className="text-sm font-semibold text-amber-800 underline-offset-2 hover:underline"
                         onClick={() =>
                           setInvoiceModal({
-                            order: detailOrder,
-                            previousStatus: normalizeStatus(detailOrder),
+                            order: detailPanelOrder,
+                            previousStatus: normalizeStatus(detailPanelOrder),
                           })
                         }
                       >
@@ -481,18 +628,18 @@ export default function AdminOrders() {
                         onChange={(e) => {
                           const f = e.target.files?.[0]
                           e.target.value = ''
-                          if (!f || !detailOrder) return
+                          if (!f || !detailPanelOrder) return
                           setDocUploading('invoice')
                           void (async () => {
                             try {
                               const out = await patchAdminOrderFulfillmentStatus(
-                                detailOrder.id,
-                                normalizeStatus(detailOrder),
+                                detailPanelOrder.id,
+                                normalizeStatus(detailPanelOrder),
                                 f,
                               )
                               setOrders((rows) =>
                                 rows.map((r) =>
-                                  r.id === detailOrder.id
+                                  r.id === detailPanelOrder.id
                                     ? {
                                         ...r,
                                         clientInvoiceUrl: out.clientInvoiceUrl ?? r.clientInvoiceUrl ?? null,
@@ -521,21 +668,21 @@ export default function AdminOrders() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Motiv</p>
                     <p className="mt-0.5 text-rose-900">
-                      {deletionReasonLabel((detailOrder as AdminDeletedOrderRow).deletionReason)}
+                      {deletionReasonLabel((detailPanelOrder as AdminDeletedOrderRow).deletionReason)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Arhivată la</p>
                     <p className="mt-0.5 text-rose-900">
-                      {(detailOrder as AdminDeletedOrderRow).archivedAt
-                        ? formatDateTime((detailOrder as AdminDeletedOrderRow).archivedAt as string)
+                      {(detailPanelOrder as AdminDeletedOrderRow).archivedAt
+                        ? formatDateTime((detailPanelOrder as AdminDeletedOrderRow).archivedAt as string)
                         : '—'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">ID cont original</p>
                     <p className="mt-0.5 font-mono text-xs text-rose-900 break-all">
-                      {(detailOrder as AdminDeletedOrderRow).originalUserId || '—'}
+                      {(detailPanelOrder as AdminDeletedOrderRow).originalUserId || '—'}
                     </p>
                   </div>
                 </section>
@@ -549,7 +696,7 @@ export default function AdminOrders() {
                 <p className="text-sm font-semibold text-slate-800">Detalii comandă</p>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Linii comandă</p>
-                  {detailOrder.lines && detailOrder.lines.length > 0 ? (
+                  {detailPanelOrder.lines && detailPanelOrder.lines.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-slate-200/80 bg-white">
                       <table className="w-full text-left text-xs font-['Inter']">
                         <thead className="bg-white border-b border-slate-200">
@@ -562,7 +709,7 @@ export default function AdminOrders() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                          {detailOrder.lines.map((L) => (
+                          {detailPanelOrder.lines.map((L) => (
                             <tr key={L.id}>
                               <td className="px-3 py-2 text-slate-900">
                                 <span className="line-clamp-3">{L.productTitle}</span>
@@ -572,10 +719,10 @@ export default function AdminOrders() {
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums">{L.quantity}</td>
                               <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
-                                {formatMoney(L.unitPriceInclVat, detailOrder.currency)}
+                                {formatMoney(L.unitPriceInclVat, detailPanelOrder.currency)}
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">
-                                {formatMoney(L.lineTotalInclVat, detailOrder.currency)}
+                                {formatMoney(L.lineTotalInclVat, detailPanelOrder.currency)}
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums text-slate-600 whitespace-nowrap">
                                 {L.vatPercent != null ? `${L.vatPercent}%` : '—'}
@@ -587,21 +734,23 @@ export default function AdminOrders() {
                     </div>
                   ) : (
                     <p className="text-sm text-slate-600">
-                      <span className="font-medium text-slate-900">{detailOrder.productTitle}</span>
-                      {detailOrder.productSlug ? (
-                        <span className="block text-xs text-slate-500 font-mono mt-0.5">{detailOrder.productSlug}</span>
+                      <span className="font-medium text-slate-900">{detailPanelOrder.productTitle}</span>
+                      {detailPanelOrder.productSlug ? (
+                        <span className="block text-xs text-slate-500 font-mono mt-0.5">{detailPanelOrder.productSlug}</span>
                       ) : null}
                     </p>
                   )}
                   <p className="mt-3 text-right text-sm font-['Inter']">
                     <span className="text-slate-500">Total comandă cu TVA: </span>
                     <span className="font-semibold text-slate-900">
-                      {formatMoney(detailOrder.orderTotalInclVat ?? detailOrder.lineTotalInclVat, detailOrder.currency)}
+                      {formatMoney(detailPanelOrder.orderTotalInclVat ?? detailPanelOrder.lineTotalInclVat, detailPanelOrder.currency)}
                     </span>
                   </p>
                 </div>
               </section>
             </div>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -664,7 +813,7 @@ export default function AdminOrders() {
         <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900">Comenzi</h1>
         <p className="text-gray-500 text-sm font-['Inter'] mt-0.5">
           {activeTab === 'active'
-            ? `Comenzi rezidențiale din /comanda — ${orders.length} în listă (max. 500). La „În pregătire” este obligatoriu PDF-ul facturii (R2 configurat pe API).`
+            ? `Comenzi rezidențiale și cereri de ofertă partener — ${activeRows.length} în listă (${orders.length} comenzi, ${rfqOrders.length} RFQ, max. 500). La „În pregătire” este obligatoriu PDF-ul facturii (R2 configurat pe API).`
             : 'Comenzi mutate în arhivă la ștergerea contului. Datele sunt păstrate (fiscal), dar comenzile nu mai apar în „comenzile mele” și nu pot fi re-asociate unui cont nou.'}
         </p>
       </div>
@@ -679,7 +828,7 @@ export default function AdminOrders() {
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          Comenzi active
+          Comenzi active ({activeRows.length})
         </button>
         <button
           type="button"
@@ -735,7 +884,7 @@ export default function AdminOrders() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredDeletedOrders.map((o) => {
-                    const src = orderSourceLabel(o.orderSource)
+                    const src = orderSourceLabel(o.orderSource, o)
                     const name = `${o.lastName} ${o.firstName}`.trim() || '—'
                     const totalIncl = o.orderTotalInclVat ?? o.lineTotalInclVat
                     return (
@@ -794,17 +943,18 @@ export default function AdminOrders() {
         </div>
       ) : (
       <div className="flex-1 min-h-0 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col">
-        {orders.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">Nu există comenzi încă.</div>
+        {activeRows.length === 0 ? (
+          <div className="p-8 text-center text-gray-500 text-sm font-['Inter']">Nu există comenzi sau cereri de ofertă încă.</div>
         ) : (
           <div className="overflow-auto flex-1">
-            <table className="min-w-[960px] w-full text-left text-sm font-['Inter']">
+            <table className="min-w-[1040px] w-full text-left text-sm font-['Inter']">
               <thead className="sticky top-0 z-10 bg-slate-100 border-b border-gray-200">
                 <tr>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Data</th>
+                  <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Tip</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Nr. comandă</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap min-w-[11rem]">
-                    Status comandă
+                    Status
                   </th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Sursă</th>
                   <th className="px-3 py-3 font-semibold text-slate-700 whitespace-nowrap">Client</th>
@@ -817,17 +967,83 @@ export default function AdminOrders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {orders.map((o) => {
-                  const src = orderSourceLabel(o.orderSource)
+                {activeRows.map((row) => {
+                  const typeBadge = orderTypeBadge(row.kind)
+                  if (row.kind === 'rfq') {
+                    const o = row.data
+                    const name = `${o.lastName} ${o.firstName}`.trim() || '—'
+                    const company = o.companyName?.trim() || ''
+                    const clientLabel = company || name
+                    const clientSub = company && name !== '—' ? name : null
+                    const src = orderSourceLabel(o.orderSource, o)
+                    return (
+                      <tr key={`rfq-${o.id}`} className="hover:bg-slate-50/80 align-top">
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{formatDateTime(o.createdAt)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${typeBadge.className}`}>
+                            {typeBadge.label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-slate-900 whitespace-nowrap">{o.orderNumber}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap align-top">
+                          <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200/80">
+                            {rfqStatusLabel(o.fulfillmentStatus || 'pending')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${src.className}`}>
+                            {src.label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-900 max-w-[180px]">
+                          <span className="line-clamp-2" title={clientLabel}>
+                            {clientLabel}
+                          </span>
+                          {clientSub ? (
+                            <span className="block text-xs text-slate-500 mt-0.5 line-clamp-1" title={clientSub}>
+                              {clientSub}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-700 max-w-[200px] break-all">{o.email}</td>
+                        <td className="px-3 py-2.5 text-slate-800">
+                          <span className="line-clamp-2" title={rfqProductSummary(o)}>
+                            {rfqProductSummary(o)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right tabular-nums font-medium text-slate-400 whitespace-nowrap">
+                          —
+                        </td>
+                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setDetailKind('rfq')
+                              setDetailOrderId(o.id)
+                            }}
+                          >
+                            Vezi
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  const o = row.data
+                  const src = orderSourceLabel(o.orderSource, o)
                   const name = `${o.lastName} ${o.firstName}`.trim() || '—'
                   const st = normalizeStatus(o)
                   const totalIncl = o.orderTotalInclVat ?? o.lineTotalInclVat
                   return (
-                    <tr key={o.id} className="hover:bg-slate-50/80 align-top">
+                    <tr key={`order-${o.id}`} className="hover:bg-slate-50/80 align-top">
                       <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{formatDateTime(o.createdAt)}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-slate-900 whitespace-nowrap">
-                        {o.orderNumber}
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${typeBadge.className}`}>
+                          {typeBadge.label}
+                        </span>
                       </td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-slate-900 whitespace-nowrap">{o.orderNumber}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap align-top">
                         <select
                           className="max-w-[11rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-900 disabled:opacity-50"

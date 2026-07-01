@@ -205,19 +205,6 @@ export default function AdminDashboard() {
         ),
       },
       {
-        key: 'partners',
-        label: 'Parteneri de aprobat',
-        hint: 'Înscrieri în așteptare',
-        count: n?.partnersPending ?? 0,
-        to: '/admin/companies',
-        accent: 'border-blue-300 bg-blue-50/40 ring-blue-200',
-        icon: (
-          <svg viewBox="0 0 24 24" className="h-5 w-5 text-blue-800" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.054 5.054 0 0015 12.75a5.054 5.054 0 00-4.059-2.472m0 0a5.054 5.054 0 00-4.059 2.472m0 0A5.971 5.971 0 006 18.719M12 12.75a5.054 5.054 0 10-4.059-2.472m0 0a5.054 5.054 0 104.059 2.472m0 0a5.054 5.054 0 00-4.059 2.472m0 0A5.971 5.971 0 006 18.719" />
-          </svg>
-        ),
-      },
-      {
         key: 'clients',
         label: 'Clienți noi',
         hint: 'Înscrieri în ultimele 30 zile',
@@ -272,10 +259,9 @@ export default function AdminDashboard() {
 
       <section className="mb-10">
         <h2 className="mb-3 text-lg font-bold font-['Inter'] text-slate-900">Statistici platformă</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           <StatTile label="Clienți" value={s?.clients ?? 0} loading={loading} />
           <StatTile label="Parteneri activi" value={s?.partners ?? 0} loading={loading} />
-          <StatTile label="Parteneri în așteptare" value={s?.partnersPending ?? 0} loading={loading} />
           <StatTile label="Leads total" value={s?.leads ?? 0} loading={loading} />
           <StatTile label="Oferte generate" value={s?.offersGenerated ?? 0} loading={loading} />
           <StatTile label="Agenți vânzări" value={s?.agents ?? 0} loading={loading} />

@@ -4,16 +4,20 @@ import { useNavigate } from 'react-router-dom'
 import {
   getAdminCompanies,
   getAdminAgents,
-  isAdminAgentAssignable,
   getAuthToken,
   testApiDb,
   suspendAdminCompany,
-  approveAdminCompany,
   updateAdminCompanyDiscount,
+  updateAdminCompanySupportAgent,
   deleteApprovedAdminCompany,
+  downloadAdminPartnerContract,
+  openAdminPartnerContract,
+  formatPartnerActivityTypeLabel,
+  partnerDiscountLimitsForCompany,
   isPublicProfileComplete,
   type AdminCompany,
   type AdminSalesAgent,
+  isAdminAgentAssignable,
 } from '../../lib/api'
 
 function formatAssignedAgentLabel(agents: AdminSalesAgent[], id: string | null | undefined): string {
@@ -36,6 +40,21 @@ function formatDate(s: string) {
   }
 }
 
+function formatDateTime(s: string | null | undefined) {
+  if (!s) return '—'
+  try {
+    return new Date(s).toLocaleString('ro-RO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return '—'
+  }
+}
+
 export default function AdminCompanies() {
   const navigate = useNavigate()
   const [companies, setCompanies] = useState<AdminCompany[]>([])
@@ -45,24 +64,22 @@ export default function AdminCompanies() {
   const [detailCompany, setDetailCompany] = useState<AdminCompany | null>(null)
   const [actionOpenId, setActionOpenId] = useState<string | null>(null)
   const [discountSavingId, setDiscountSavingId] = useState<string | null>(null)
-  const [approvingId, setApprovingId] = useState<string | null>(null)
   const [salesAgents, setSalesAgents] = useState<AdminSalesAgent[]>([])
-  const [approveModalCompany, setApproveModalCompany] = useState<AdminCompany | null>(null)
-  const [approveDiscount, setApproveDiscount] = useState('')
-  const [approveAgentId, setApproveAgentId] = useState('')
-  const [approveModalError, setApproveModalError] = useState('')
+  const [discountModalCompany, setDiscountModalCompany] = useState<AdminCompany | null>(null)
+  const [discountSliderValue, setDiscountSliderValue] = useState(0)
+  const [discountSupportAgentId, setDiscountSupportAgentId] = useState('')
+  const [discountModalError, setDiscountModalError] = useState('')
+  const [agentSavingId, setAgentSavingId] = useState<string | null>(null)
   const [suspendingId, setSuspendingId] = useState<string | null>(null)
+  const [contractLoadingId, setContractLoadingId] = useState<string | null>(null)
+  const [contractError, setContractError] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<keyof AdminCompany | 'user' | ''>('')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [editingDiscount, setEditingDiscount] = useState<Record<string, string>>({})
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const actionMenuRef = useRef<HTMLDivElement>(null)
   const [actionMenuPos, setActionMenuPos] = useState<{ top: number; left: number } | null>(null)
-
-  const pendingCompanies = companies.filter((c) => !c.isApproved)
-  const approvedCompanies = companies.filter((c) => c.isApproved)
 
   const filteredAndSorted = (list: AdminCompany[]) => (() => {
     const q = searchQuery.trim().toLowerCase()
@@ -74,7 +91,8 @@ export default function AdminCompanies() {
         const contact = [c.contactFirstName, c.contactLastName].filter(Boolean).join(' ').toLowerCase()
         const phone = (c.phone || '').toLowerCase()
         const reg = (c.tradeRegisterNumber || '').toLowerCase()
-        const activity = (c.activityTypes || '').toLowerCase()
+        const activity = formatPartnerActivityTypeLabel(c).toLowerCase()
+        const activityRaw = (c.activityTypes || '').toLowerCase()
         const compAddr = [
           c.companyStreet,
           c.companyCity,
@@ -93,6 +111,7 @@ export default function AdminCompanies() {
           phone.includes(q) ||
           reg.includes(q) ||
           activity.includes(q) ||
+          activityRaw.includes(q) ||
           compAddr.includes(q)
         )
       })
@@ -105,6 +124,11 @@ export default function AdminCompanies() {
         if (av == null && bv == null) cmp = 0
         else if (av == null) cmp = 1
         else if (bv == null) cmp = -1
+        else if (sortBy === 'assignedSalesAgentId') {
+          const agentLabel = (id: unknown) =>
+            formatAssignedAgentLabel(salesAgents, id as string | null | undefined).toLowerCase()
+          cmp = agentLabel(av).localeCompare(agentLabel(bv), 'ro')
+        }
         else if (typeof av === 'string' && typeof bv === 'string') cmp = av.localeCompare(bv, 'ro')
         else if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv
         else if (typeof av === 'boolean' && typeof bv === 'boolean') cmp = (av ? 1 : 0) - (bv ? 1 : 0)
@@ -115,14 +139,14 @@ export default function AdminCompanies() {
     return list
   })()
 
-  const filteredPending = filteredAndSorted(pendingCompanies)
-  const filteredApproved = filteredAndSorted(approvedCompanies)
+  const filteredCompanies = filteredAndSorted(companies)
+
+  const assignableSupportAgents = salesAgents.filter(isAdminAgentAssignable)
 
   const loadCompanies = () => {
     getAdminCompanies()
       .then((data) => {
         setCompanies(data)
-        setEditingDiscount({})
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Eroare la încărcare.'))
       .finally(() => setLoading(false))
@@ -176,15 +200,49 @@ export default function AdminCompanies() {
   }, [actionOpenId])
 
   const handleViewDetails = (c: AdminCompany) => {
+    setContractError('')
     setDetailCompany(c)
   }
 
   const closeDetailModal = useCallback(() => {
+    setContractError('')
     setDetailCompany(null)
   }, [])
 
-  const handleDeleteApproved = async (c: AdminCompany) => {
-    if (!c.isApproved) return
+  const handleViewPartnerContract = async (c: AdminCompany) => {
+    setContractError('')
+    setContractLoadingId(c.id)
+    try {
+      await openAdminPartnerContract(c.id)
+    } catch (err) {
+      setContractError(err instanceof Error ? err.message : 'Eroare la deschiderea contractului.')
+    } finally {
+      setContractLoadingId(null)
+    }
+  }
+
+  const handleDownloadPartnerContract = async (c: AdminCompany) => {
+    setContractError('')
+    setContractLoadingId(c.id)
+    try {
+      const { pdfBlob, filename } = await downloadAdminPartnerContract(c.id)
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    } catch (err) {
+      setContractError(err instanceof Error ? err.message : 'Eroare la descărcarea contractului.')
+    } finally {
+      setContractLoadingId(null)
+    }
+  }
+
+  const handleDeletePartner = async (c: AdminCompany) => {
     const label = (c.companyName || c.publicName || c.user?.email || 'acest partener').trim()
     const ok = window.confirm(
       `Sigur vrei să ștergi definitiv „${label}”? Contul de utilizator și datele companiei vor fi eliminate din baza de date. Acțiunea nu poate fi anulată.`,
@@ -219,106 +277,92 @@ export default function AdminCompanies() {
     }
   }
 
-  const openApproveModal = (c: AdminCompany) => {
-    setApproveModalCompany(c)
-    setApproveDiscount(c.partnerDiscountPercent != null ? String(c.partnerDiscountPercent) : '')
-    setApproveAgentId(c.assignedSalesAgentId ?? '')
-    setApproveModalError('')
+  const openDiscountModal = (c: AdminCompany) => {
+    const { min, max } = partnerDiscountLimitsForCompany(c)
+    const existing = c.partnerDiscountPercent != null ? Number(c.partnerDiscountPercent) : null
+    const initial =
+      existing != null && Number.isFinite(existing) ? Math.min(max, Math.max(min, existing)) : min
+    setDiscountModalCompany(c)
+    setDiscountSliderValue(initial)
+    setDiscountSupportAgentId(c.assignedSalesAgentId?.trim() || '')
+    setDiscountModalError('')
   }
 
-  const closeApproveModal = useCallback(() => {
-    setApproveModalCompany(null)
-    setApproveModalError('')
-  }, [])
+  const discountActionBtnClass =
+    'px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 whitespace-nowrap'
 
-  const handleConfirmApprove = async () => {
-    if (!approveModalCompany) return
-    const discRaw = approveDiscount.trim()
-    if (discRaw === '') {
-      setApproveModalError('Reducerea este obligatorie.')
+  const closeDiscountModal = useCallback(() => {
+    if (discountSavingId) return
+    setDiscountModalCompany(null)
+    setDiscountSupportAgentId('')
+    setDiscountModalError('')
+  }, [discountSavingId])
+
+  const handleConfirmDiscount = async () => {
+    if (!discountModalCompany) return
+    const { min, max } = partnerDiscountLimitsForCompany(discountModalCompany)
+    const num = Number(discountSliderValue)
+    if (Number.isNaN(num) || num < min || num > max) {
+      setDiscountModalError(`Reducerea trebuie să fie între ${min}% și ${max}%.`)
       return
     }
-    const num = parseFloat(discRaw)
-    if (Number.isNaN(num) || num < 0.5 || num > 60) {
-      setApproveModalError('Reducerea trebuie să fie între 0,5 și 60.')
+    const agentId = discountSupportAgentId.trim()
+    if (!agentId) {
+      setDiscountModalError('Selectează persoana de suport atribuită partenerului.')
       return
     }
-    const partnerDiscountPercent = num
-
-    const assignedSalesAgentId = approveAgentId.trim()
-    if (!assignedSalesAgentId) {
-      setApproveModalError('Agentul de vânzări este obligatoriu.')
-      return
-    }
-
-    setApproveModalError('')
-    setApprovingId(approveModalCompany.id)
+    setDiscountModalError('')
+    setDiscountSavingId(discountModalCompany.id)
     try {
-      const updated = await approveAdminCompany(approveModalCompany.id, {
-        partnerDiscountPercent,
-        assignedSalesAgentId,
-      })
+      const updated = await updateAdminCompanyDiscount(discountModalCompany.id, num, agentId)
       setCompanies((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
       if (detailCompany?.id === updated.id) setDetailCompany(updated)
-      closeApproveModal()
+      setDiscountModalCompany(null)
+      setDiscountModalError('')
     } catch (err) {
-      setApproveModalError(err instanceof Error ? err.message : 'Eroare la aprobare.')
-    } finally {
-      setApprovingId(null)
-    }
-  }
-
-  useEffect(() => {
-    if (!approveModalCompany || approvingId) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeApproveModal()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [approveModalCompany, approvingId, closeApproveModal])
-
-  const handleDiscountChange = useCallback(async (c: AdminCompany, value: string) => {
-    const num = value.trim() === '' ? null : parseFloat(value)
-    if (num !== null && (Number.isNaN(num) || num < 0.5 || num > 60)) return
-    const current = c.partnerDiscountPercent ?? null
-    if (num === current) return
-    setDiscountSavingId(c.id)
-    try {
-      const updated = await updateAdminCompanyDiscount(c.id, num)
-      setCompanies((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
-      if (detailCompany?.id === c.id) setDetailCompany(updated)
-      setEditingDiscount((prev) => {
-        const next = { ...prev }
-        delete next[c.id]
-        return next
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Eroare la actualizarea reducerii.')
+      setDiscountModalError(err instanceof Error ? err.message : 'Eroare la aplicarea reducerii.')
     } finally {
       setDiscountSavingId(null)
     }
-  }, [detailCompany?.id])
+  }
 
-  const discountDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
-  const handleDiscountInput = useCallback((c: AdminCompany, value: string) => {
-    const prev = discountDebounceRef.current[c.id]
-    if (prev) clearTimeout(prev)
-    const num = value.trim() === '' ? null : parseFloat(value)
-    if (num !== null && (Number.isNaN(num) || num < 0.5 || num > 60)) return
-    discountDebounceRef.current[c.id] = setTimeout(() => {
-      handleDiscountChange(c, value)
-      delete discountDebounceRef.current[c.id]
-    }, 600)
-  }, [handleDiscountChange])
+  async function handleAssignSupportAgent(companyId: string, assignedSalesAgentId: string) {
+    setAgentSavingId(companyId)
+    setError('')
+    try {
+      const updated = await updateAdminCompanySupportAgent(
+        companyId,
+        assignedSalesAgentId.trim() || null,
+      )
+      setCompanies((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      if (detailCompany?.id === updated.id) setDetailCompany(updated)
+      if (discountModalCompany?.id === updated.id) {
+        setDiscountSupportAgentId(updated.assignedSalesAgentId?.trim() || '')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Eroare la atribuirea agentului.')
+    } finally {
+      setAgentSavingId(null)
+    }
+  }
 
   useEffect(() => {
-    if (!detailCompany || approveModalCompany) return
+    if (!discountModalCompany || discountSavingId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDiscountModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [discountModalCompany, discountSavingId, closeDiscountModal])
+
+  useEffect(() => {
+    if (!detailCompany || discountModalCompany) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeDetailModal()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [detailCompany, approveModalCompany, closeDetailModal])
+  }, [detailCompany, discountModalCompany, closeDetailModal])
 
   const handleSort = (col: keyof AdminCompany | 'user') => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -405,99 +449,9 @@ export default function AdminCompanies() {
 
         <div className="flex flex-1 min-h-0 overflow-hidden gap-0">
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col gap-8">
-            {/* Table 1: Partners Awaiting Approval */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden shrink-0">
-              <h2 className="text-base font-bold font-['Inter'] text-black px-5 py-4 border-b border-gray-200 bg-amber-50/50">
-                Partners Awaiting Approval
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm font-['Inter']">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('companyName')} className="flex items-center hover:text-slate-900">
-                          Denumire <SortIcon column="companyName" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('cui')} className="flex items-center hover:text-slate-900">
-                          CUI <SortIcon column="cui" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('user')} className="flex items-center hover:text-slate-900">
-                          Email <SortIcon column="user" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('contactFirstName')} className="flex items-center hover:text-slate-900">
-                          Contact <SortIcon column="contactFirstName" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('phone')} className="flex items-center hover:text-slate-900">
-                          Telefon <SortIcon column="phone" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('createdAt')} className="flex items-center hover:text-slate-900">
-                          Înregistrat <SortIcon column="createdAt" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Acțiuni</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPending.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-6 text-center text-gray-500">
-                          {pendingCompanies.length === 0 ? 'Niciun partener în așteptarea aprobării.' : 'Niciun rezultat pentru căutarea ta.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPending.map((c) => (
-                        <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                          <td className="py-3 px-4 text-gray-900 font-medium">{c.companyName || c.publicName || '—'}</td>
-                          <td className="py-3 px-4 text-gray-700">{c.cui || '—'}</td>
-                          <td className="py-3 px-4 text-gray-700">{c.user?.email ?? '—'}</td>
-                          <td className="py-3 px-4 text-gray-700">{[c.contactFirstName, c.contactLastName].filter(Boolean).join(' ') || '—'}</td>
-                          <td className="py-3 px-4 text-gray-700">{c.phone || '—'}</td>
-                          <td className="py-3 px-4 text-gray-600">{formatDate(c.createdAt)}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <button type="button" onClick={() => handleViewDetails(c)} className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-                                Detalii
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openApproveModal(c)}
-                                disabled={approvingId === c.id}
-                                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                Aprobă
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleSuspend(c)}
-                                disabled={suspendingId === c.id}
-                                className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200 disabled:opacity-50"
-                              >
-                                {suspendingId === c.id ? '...' : c.isSuspended ? 'Unsuspend' : 'Suspendă'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Table 2: Approved Partners */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex-1 min-h-0">
               <h2 className="text-base font-bold font-['Inter'] text-black px-5 py-4 border-b border-gray-200 bg-green-50/50">
-                Approved Partners
+                Parteneri
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm font-['Inter']">
@@ -529,8 +483,8 @@ export default function AdminCompanies() {
                         </button>
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('activityTypes')} className="flex items-center hover:text-slate-900">
-                          Activitate <SortIcon column="activityTypes" />
+                        <button type="button" onClick={() => handleSort('partnerChannelType')} className="flex items-center hover:text-slate-900">
+                          Tip activitate <SortIcon column="partnerChannelType" />
                         </button>
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
@@ -539,8 +493,13 @@ export default function AdminCompanies() {
                         </button>
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        <button type="button" onClick={() => handleSort('isPublic')} className="flex items-center hover:text-slate-900">
-                          Public <SortIcon column="isPublic" />
+                        <button type="button" onClick={() => handleSort('assignedSalesAgentId')} className="flex items-center hover:text-slate-900">
+                          Agent suport <SortIcon column="assignedSalesAgentId" />
+                        </button>
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                        <button type="button" onClick={() => handleSort('isApproved')} className="flex items-center hover:text-slate-900">
+                          Verificat <SortIcon column="isApproved" />
                         </button>
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
@@ -552,14 +511,14 @@ export default function AdminCompanies() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredApproved.length === 0 ? (
+                    {filteredCompanies.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-gray-500">
-                          {approvedCompanies.length === 0 ? 'Niciun partener aprobat.' : 'Niciun rezultat pentru căutarea ta.'}
+                        <td colSpan={11} className="py-8 text-center text-gray-500">
+                          {companies.length === 0 ? 'Niciun partener înregistrat.' : 'Niciun rezultat pentru căutarea ta.'}
                         </td>
                       </tr>
                     ) : (
-                      filteredApproved.map((c) => (
+                      filteredCompanies.map((c) => (
                       <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                         <td className="py-3 px-4 text-gray-900 font-medium">
                           {c.companyName || c.publicName || '—'}
@@ -570,33 +529,60 @@ export default function AdminCompanies() {
                           {[c.contactFirstName, c.contactLastName].filter(Boolean).join(' ') || '—'}
                         </td>
                         <td className="py-3 px-4 text-gray-700">{c.phone || '—'}</td>
-                        <td className="py-3 px-4 text-gray-700">
-                          {c.activityTypes ? c.activityTypes.split(',').join(', ') : '—'}
-                        </td>
+                        <td className="py-3 px-4 text-gray-700">{formatPartnerActivityTypeLabel(c)}</td>
                         <td className="py-3 px-4">
-                          <input
-                            type="number"
-                            min={0.5}
-                            max={60}
-                            step={0.5}
-                            placeholder="—"
-                            value={editingDiscount[c.id] ?? (c.partnerDiscountPercent != null ? String(c.partnerDiscountPercent) : '')}
-                            onChange={(e) => {
-                              setEditingDiscount((prev) => ({ ...prev, [c.id]: e.target.value }))
-                              handleDiscountInput(c, e.target.value)
-                            }}
-                            onBlur={(e) => {
-                              const id = discountDebounceRef.current[c.id]
-                              if (id) {
-                                clearTimeout(id)
-                                delete discountDebounceRef.current[c.id]
-                              }
-                              handleDiscountChange(c, e.target.value)
-                            }}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                            disabled={discountSavingId === c.id}
-                            className="w-16 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50"
-                          />
+                          {c.partnerDiscountPercent != null ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="tabular-nums font-medium text-gray-900">
+                                {Number(c.partnerDiscountPercent).toLocaleString('ro-RO', {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 1,
+                                })}
+                                %
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => openDiscountModal(c)}
+                                disabled={discountSavingId === c.id}
+                                className={discountActionBtnClass}
+                              >
+                                Modifică Reducere
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openDiscountModal(c)}
+                              disabled={discountSavingId === c.id}
+                              className={discountActionBtnClass}
+                            >
+                              Aloca Reducere
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-gray-700 min-w-[11rem]">
+                          <select
+                            value={c.assignedSalesAgentId?.trim() || ''}
+                            onChange={(e) => void handleAssignSupportAgent(c.id, e.target.value)}
+                            disabled={
+                              agentSavingId === c.id ||
+                              discountSavingId === c.id ||
+                              assignableSupportAgents.length === 0
+                            }
+                            aria-label={`Agent suport pentru ${c.companyName || c.publicName || 'partener'}`}
+                            className="h-9 w-full min-w-[10.5rem] max-w-[14rem] cursor-pointer rounded-lg border border-gray-300 bg-white px-2.5 text-sm text-gray-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 disabled:cursor-wait disabled:opacity-60"
+                          >
+                            <option value="">— Selectează —</option>
+                            {assignableSupportAgents.map((agent) => {
+                              const label =
+                                [agent.firstName, agent.lastName].filter(Boolean).join(' ').trim() || agent.email
+                              return (
+                                <option key={agent.id} value={agent.id}>
+                                  {label}
+                                </option>
+                              )
+                            })}
+                          </select>
                         </td>
                         <td className="py-3 px-4">
                           <button
@@ -605,14 +591,12 @@ export default function AdminCompanies() {
                             className={`inline-flex px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity ${
                               c.isSuspended
                                 ? 'bg-red-100 text-red-800'
-                                : !isPublicProfileComplete(c)
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : c.isPublic
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-600'
+                                : c.isApproved
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-amber-100 text-amber-800'
                             }`}
                           >
-                            {c.isSuspended ? 'Suspendat' : !isPublicProfileComplete(c) ? 'Pending' : c.isPublic ? 'Da' : 'Nu'}
+                            {c.isSuspended ? 'Suspendat' : c.isApproved ? 'Da' : 'Pending'}
                           </button>
                         </td>
                         <td className="py-3 px-4 text-gray-600">{formatDate(c.createdAt)}</td>
@@ -731,9 +715,9 @@ export default function AdminCompanies() {
                       <dt className="text-gray-500 font-medium mb-0.5">Adresă (legacy)</dt>
                       <dd className="text-gray-900 break-words">{detailCompany.address || '—'}</dd>
                     </div>
-                    <div className="min-w-0 col-span-2">
-                      <dt className="text-gray-500 font-medium mb-0.5">Tipuri activitate</dt>
-                      <dd className="text-gray-900">{detailCompany.activityTypes ? detailCompany.activityTypes.split(',').join(', ') : '—'}</dd>
+                    <div className="min-w-0">
+                      <dt className="text-gray-500 font-medium mb-0.5">Tip activitate</dt>
+                      <dd className="text-gray-900">{formatPartnerActivityTypeLabel(detailCompany)}</dd>
                     </div>
                   </dl>
                 </section>
@@ -776,35 +760,52 @@ export default function AdminCompanies() {
                     <div className="min-w-0">
                       <dt className="text-gray-500 font-medium mb-0.5">Reducere %</dt>
                       <dd className="flex flex-wrap items-center gap-2">
-                        <input
-                          type="number"
-                          min={0.5}
-                          max={60}
-                          step={0.5}
-                          placeholder="—"
-                          value={editingDiscount[detailCompany.id] ?? (detailCompany.partnerDiscountPercent != null ? String(detailCompany.partnerDiscountPercent) : '')}
-                          onChange={(e) => {
-                            setEditingDiscount((prev) => ({ ...prev, [detailCompany.id]: e.target.value }))
-                            handleDiscountInput(detailCompany, e.target.value)
-                          }}
-                          onBlur={(e) => {
-                            const id = discountDebounceRef.current[detailCompany.id]
-                            if (id) {
-                              clearTimeout(id)
-                              delete discountDebounceRef.current[detailCompany.id]
-                            }
-                            handleDiscountChange(detailCompany, e.target.value)
-                          }}
-                          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                          disabled={discountSavingId === detailCompany.id}
-                          className="w-24 max-w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50"
-                        />
+                        {detailCompany.partnerDiscountPercent != null ? (
+                          <>
+                            <span className="tabular-nums font-semibold text-gray-900">
+                              {Number(detailCompany.partnerDiscountPercent).toLocaleString('ro-RO', {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 1,
+                              })}
+                              %
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openDiscountModal(detailCompany)}
+                              disabled={discountSavingId === detailCompany.id}
+                              className={discountActionBtnClass}
+                            >
+                              Modifică Reducere
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openDiscountModal(detailCompany)}
+                            disabled={discountSavingId === detailCompany.id}
+                            className={discountActionBtnClass}
+                          >
+                            Aloca Reducere
+                          </button>
+                        )}
                         <span className="text-gray-500 text-xs block w-full">(preț partener)</span>
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="text-gray-500 font-medium mb-0.5">Agent atribuit</dt>
+                      <dt className="text-gray-500 font-medium mb-0.5">Persoană suport</dt>
                       <dd className="text-gray-900">{formatAssignedAgentLabel(salesAgents, detailCompany.assignedSalesAgentId)}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-gray-500 font-medium mb-0.5">Verificat</dt>
+                      <dd>
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+                            detailCompany.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {detailCompany.isApproved ? 'Da' : 'Pending'}
+                        </span>
+                      </dd>
                     </div>
                   </dl>
                 </section>
@@ -910,18 +911,55 @@ export default function AdminCompanies() {
                     ) : null}
                   </dl>
                 </section>
+
+                {/* 5. Documente */}
+                <section
+                  className="rounded-xl border border-slate-200/80 p-4 shadow-sm"
+                  style={{ backgroundColor: '#f7f7f7' }}
+                >
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-600 font-['Inter']">
+                    Documente
+                  </h3>
+                  {detailCompany.partnerContractAvailable ? (
+                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900">Acord de parteneriat Baterino</p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Semnat digital la {formatDateTime(detailCompany.partnerContractSignedAt)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewPartnerContract(detailCompany)}
+                            disabled={contractLoadingId === detailCompany.id}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Vizualizează PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadPartnerContract(detailCompany)}
+                            disabled={contractLoadingId === detailCompany.id}
+                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                          >
+                            Descarcă
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Nu există documente semnate pentru această companie.</p>
+                  )}
+                  {contractError ? (
+                    <p className="mt-2 text-sm text-red-600" role="alert">
+                      {contractError}
+                    </p>
+                  ) : null}
+                </section>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
-                {!detailCompany.isApproved ? (
-                  <button
-                    type="button"
-                    onClick={() => openApproveModal(detailCompany)}
-                    disabled={approvingId === detailCompany.id}
-                    className="w-full px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Aprobă partenerul
-                  </button>
-                ) : null}
                 <button
                   type="button"
                   onClick={() => handleSuspend(detailCompany)}
@@ -949,88 +987,119 @@ export default function AdminCompanies() {
         </div>
       )}
 
-      {approveModalCompany && (
-        <div
-          className="fixed inset-0 z-[190] flex items-center justify-center bg-slate-900/40 p-4"
-          role="presentation"
-          onClick={() => !approvingId && closeApproveModal()}
-        >
+      {discountModalCompany && (() => {
+        const limits = partnerDiscountLimitsForCompany(discountModalCompany)
+        const companyLabel =
+          discountModalCompany.companyName ||
+          discountModalCompany.publicName ||
+          discountModalCompany.user?.email ||
+          '—'
+        const channelLabel = formatPartnerActivityTypeLabel(discountModalCompany)
+        return (
           <div
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-            role="dialog"
-            aria-labelledby="approve-partner-modal-title"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[195] flex items-center justify-center bg-slate-900/40 p-4"
+            role="presentation"
+            onClick={() => !discountSavingId && closeDiscountModal()}
           >
-            <h2 id="approve-partner-modal-title" className="text-lg font-bold text-slate-900 font-['Inter']">
-              Aprobă partenerul
-            </h2>
-            <p className="mt-1 text-sm text-slate-600 font-['Inter']">
-              {approveModalCompany.companyName ||
-                approveModalCompany.publicName ||
-                approveModalCompany.user?.email ||
-                '—'}
-            </p>
-            <div className="mt-4 space-y-4">
-              <label className="block text-sm font-medium text-slate-700 font-['Inter']">
-                Reducere % (față de catalog) <span className="text-red-500">*</span>
-                <input
-                  type="number"
-                  min={0.5}
-                  max={60}
-                  step={0.5}
-                  placeholder="Ex: 10"
-                  value={approveDiscount}
-                  onChange={(e) => setApproveDiscount(e.target.value)}
-                  disabled={Boolean(approvingId)}
-                  required
-                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] focus:outline-none focus:ring-2 focus:ring-slate-900/15"
-                />
-              </label>
-              <label className="block text-sm font-medium text-slate-700 font-['Inter']">
-                Agent de vânzări <span className="text-red-500">*</span>
-                <select
-                  value={approveAgentId}
-                  onChange={(e) => setApproveAgentId(e.target.value)}
-                  disabled={Boolean(approvingId)}
-                  required
-                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-['Inter'] bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/15"
-                >
-                  <option value="">— Selectează agentul —</option>
-                  {salesAgents.filter(isAdminAgentAssignable).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {[a.firstName, a.lastName].filter(Boolean).join(' ').trim() || a.email || a.id}
-                      {a.agentKind === 'ai' ? ' (AI)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {approveModalError ? (
-              <p className="mt-3 text-sm text-red-600 font-['Inter']" role="alert">
-                {approveModalError}
+            <div
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+              role="dialog"
+              aria-labelledby="allocate-discount-modal-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="allocate-discount-modal-title" className="text-lg font-bold text-slate-900 font-['Inter']">
+                Alocă reducere și suport partener
+              </h2>
+              <p className="mt-2 text-sm text-slate-600 font-['Inter']">
+                Reducerea și persoana de suport sunt obligatorii pentru verificarea partenerului.
               </p>
-            ) : null}
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={Boolean(approvingId)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']"
-                onClick={() => !approvingId && closeApproveModal()}
-              >
-                Anulează
-              </button>
-              <button
-                type="button"
-                disabled={Boolean(approvingId)}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 font-['Inter']"
-                onClick={() => void handleConfirmApprove()}
-              >
-                {approvingId ? 'Se aprobă…' : 'Aprobă'}
-              </button>
+              <p className="mt-2 text-sm font-semibold text-slate-800 font-['Inter']">{companyLabel}</p>
+              <p className="mt-1 text-sm text-slate-600 font-['Inter']">
+                Tip cont: <span className="font-medium text-slate-800">{channelLabel}</span>
+              </p>
+              <div className="mt-6">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <label htmlFor="partner-discount-slider" className="text-sm font-medium text-slate-700 font-['Inter']">
+                    Reducere
+                  </label>
+                  <span className="text-lg font-bold tabular-nums text-indigo-700 font-['Inter']">
+                    {discountSliderValue}%
+                  </span>
+                </div>
+                <input
+                  id="partner-discount-slider"
+                  type="range"
+                  min={limits.min}
+                  max={limits.max}
+                  step={1}
+                  value={discountSliderValue}
+                  onChange={(e) => setDiscountSliderValue(Number(e.target.value))}
+                  disabled={Boolean(discountSavingId)}
+                  className="w-full h-2 accent-indigo-600 cursor-pointer disabled:opacity-50"
+                />
+                <div className="mt-1 flex justify-between text-xs text-slate-500 font-['Inter'] tabular-nums">
+                  <span>{limits.min}%</span>
+                  <span>{limits.max}%</span>
+                </div>
+              </div>
+              <div className="mt-5">
+                <label htmlFor="partner-support-agent" className="mb-1.5 block text-sm font-medium text-slate-700 font-['Inter']">
+                  Persoană suport <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="partner-support-agent"
+                  value={discountSupportAgentId}
+                  onChange={(e) => {
+                    setDiscountSupportAgentId(e.target.value)
+                    setDiscountModalError('')
+                  }}
+                  disabled={Boolean(discountSavingId)}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/25 disabled:opacity-50 font-['Inter']"
+                >
+                  <option value="">Selectează persoana de suport</option>
+                  {assignableSupportAgents.map((agent) => {
+                    const label = [agent.firstName, agent.lastName].filter(Boolean).join(' ').trim() || agent.email
+                    return (
+                      <option key={agent.id} value={agent.id}>
+                        {label}
+                        {agent.county ? ` · ${agent.county}` : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+                {assignableSupportAgents.length === 0 ? (
+                  <p className="mt-2 text-xs text-amber-800 font-['Inter']">
+                    Nu există agenți activi. Adaugă un agent în Setări → Agenți.
+                  </p>
+                ) : null}
+              </div>
+              {discountModalError ? (
+                <p className="mt-3 text-sm text-red-600 font-['Inter']" role="alert">
+                  {discountModalError}
+                </p>
+              ) : null}
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={Boolean(discountSavingId)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 font-['Inter']"
+                  onClick={closeDiscountModal}
+                >
+                  Anulează
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(discountSavingId) || assignableSupportAgents.length === 0}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 font-['Inter']"
+                  onClick={() => void handleConfirmDiscount()}
+                >
+                  {discountSavingId ? 'Se aplică…' : 'Aplică'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {actionOpenId &&
         actionMenuPos &&
@@ -1055,16 +1124,14 @@ export default function AdminCompanies() {
                   >
                     {suspendingId === c.id ? '...' : c.isSuspended ? 'Unsuspend' : 'Suspendă'}
                   </button>
-                  {c.isApproved && (
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteApproved(c)}
-                      disabled={deletingId === c.id || suspendingId === c.id}
-                      className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 border-t border-gray-100"
-                    >
-                      {deletingId === c.id ? 'Se șterge...' : 'Șterge'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleDeletePartner(c)}
+                    disabled={deletingId === c.id || suspendingId === c.id}
+                    className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 border-t border-gray-100"
+                  >
+                    {deletingId === c.id ? 'Se șterge...' : 'Șterge'}
+                  </button>
                 </>
               )
             })()}

@@ -6,18 +6,22 @@ const { getPasswordResetTemplate } = require('../templates/password-reset-email.
 const { getAccountDeletedTemplate } = require('../templates/account-deleted-email.js')
 const { getInquiryNotificationTemplate, getInquiryConfirmationTemplate } = require('../templates/inquiry-email.js')
 const { getSalesLeadCreatedNotificationTemplate } = require('../templates/sales-lead-created-email.js')
-/** Reîncarcă modulul la fiecare trimitere — evită cache-ul Node `require` (altfel rămâne textul vechi până la restart API). */
-function getPartnerApplicationReceivedTemplateRender() {
-  const resolved = require.resolve('../templates/partner-application-received-email.js')
-  delete require.cache[resolved]
-  return require(resolved).getPartnerApplicationReceivedTemplate
-}
-
-function getPartnerAccountApprovedTemplateRender() {
-  const resolved = require.resolve('../templates/partner-account-approved-email.js')
-  delete require.cache[resolved]
-  return require(resolved).getPartnerAccountApprovedTemplate
-}
+const { getAdminNewOrderNotificationTemplate } = require('../templates/admin-new-order-email.js')
+const { getSalesAgentPartnerRfqReceivedTemplate } = require('../templates/sales-agent-partner-rfq-received-email.js')
+const {
+  getPartnerWelcomeTemplate,
+  formatAgentDisplayName,
+  formatPartnerDisplayName,
+  defaultPartnerPortalUrl,
+  defaultSupportEmail,
+  defaultSupportPhone,
+} = require('../templates/partner-welcome-email.js')
+const {
+  getPartnerDiscountApprovedTemplate,
+  tierLabelForPartnerChannel,
+  defaultPartnerContractUrl,
+  defaultPartnerProductsUrl,
+} = require('../templates/partner-discount-approved-email.js')
 
 function getPartnerAssignedToAgentTemplateRender() {
   const resolved = require.resolve('../templates/partner-assigned-to-agent-email.js')
@@ -343,82 +347,87 @@ function getMailFrom() {
 
 const INQUIRY_NOTIFICATION_RECIPIENTS = ['alexander@baterino.ro', 'razvan@baterino.ro']
 const INQUIRY_CONFIRMATION_FROM = envTrim('RESEND_FROM') || envTrim('MAIL_FROM') || 'Baterino <no-reply@baterino.ro>'
+/** Emailuri către parteneri (welcome, etc.) */
+const PARTNER_MAIL_FROM = envTrim('PARTNER_MAIL_FROM') || 'Baterino Partener <parteneri@baterino.ro>'
+const SERVICE_MAIL_FROM = envTrim('SERVICE_MAIL_FROM') || 'Baterino Service <service@baterino.ro>'
 
-async function sendInquiryNotification(inquiry) {
+function getAdminNotificationRecipients() {
+  const fromEnv = envTrim('ADMIN_NOTIFICATION_EMAILS')
+  if (fromEnv) {
+    return [
+      ...new Set(
+        fromEnv
+          .split(/[,;]+/)
+          .map((e) => String(e || '').trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ]
+  }
+  return INQUIRY_NOTIFICATION_RECIPIENTS
+}
+
+async function sendHtmlToRecipients({ recipients, subject, html, logLabel }) {
   if (!isMailConfigured()) {
-    console.warn('[Mail] No mail configured – skipping inquiry notification.')
+    console.warn(`[Mail] No mail configured – skipping ${logLabel}.`)
+    return
+  }
+  const toList = Array.isArray(recipients)
+    ? [...new Set(recipients.map((e) => String(e || '').trim().toLowerCase()).filter(Boolean))]
+    : []
+  if (toList.length === 0) {
+    console.warn(`[Mail] No recipients for ${logLabel}.`)
     return
   }
 
-  const subject = `Contact nou – ${inquiry.registrationNumber || inquiry.id} – ${SITE_NAME}`
-  const html = getInquiryNotificationTemplate(inquiry)
-
-  for (const to of INQUIRY_NOTIFICATION_RECIPIENTS) {
+  const fromAddr = useResend() ? RESEND_FROM : MAIL_FROM
+  for (const to of toList) {
     try {
       if (useResend()) {
         const { error } = await resend.emails.send({
-          from: RESEND_FROM,
+          from: fromAddr,
           to,
           subject,
           html,
         })
         if (error) {
-          console.error('[Mail] Resend inquiry notification error:', error)
+          console.error(`[Mail] Resend ${logLabel} error:`, error)
         }
       } else {
         await transporter.sendMail({
-          from: MAIL_FROM,
+          from: fromAddr,
           to,
           subject,
           html,
         })
       }
     } catch (err) {
-      console.error('[Mail] Inquiry notification to', to, err?.message)
+      console.error(`[Mail] ${logLabel} to`, to, err?.message)
     }
   }
 }
 
-/**
- * Partener: după completarea formularului (activități + contact), înainte de aprobare admin.
- * @returns {Promise<boolean>} true dacă mesajul a fost trimis (sau s-a încercat trimiterea reușită)
- */
-async function sendPartnerApplicationReceivedEmail(email, { contactFirstName, companyName } = {}) {
-  if (!isMailConfigured()) {
-    console.warn('[Mail] No mail configured – skipping partner application received email.')
-    return false
-  }
+async function sendInquiryNotification(inquiry) {
+  const subject = `Contact nou – ${inquiry.registrationNumber || inquiry.id} – ${SITE_NAME}`
+  const html = getInquiryNotificationTemplate(inquiry)
+  await sendHtmlToRecipients({
+    recipients: getAdminNotificationRecipients(),
+    subject,
+    html,
+    logLabel: 'inquiry notification',
+  })
+}
 
-  const subject = `Am primit cererea ta de parteneriat – ${SITE_NAME}`
-  const getPartnerApplicationReceivedTemplate = getPartnerApplicationReceivedTemplateRender()
-  const html = getPartnerApplicationReceivedTemplate({ contactFirstName, companyName })
-  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
-
-  try {
-    if (useResend()) {
-      const { error } = await resend.emails.send({
-        from: fromAddr,
-        to: email,
-        subject,
-        html,
-      })
-      if (error) {
-        console.error('[Mail] Resend partner application received error:', error)
-        return false
-      }
-    } else {
-      await transporter.sendMail({
-        from: fromAddr,
-        to: email,
-        subject,
-        html,
-      })
-    }
-    return true
-  } catch (err) {
-    console.error('[Mail] Partner application received error:', err?.message)
-    return false
-  }
+async function sendAdminNewOrderNotification(order) {
+  const orderNumber = String(order?.orderNumber || '').trim()
+  if (!orderNumber) return
+  const subject = `Comandă nouă ${orderNumber} – ${SITE_NAME}`
+  const html = getAdminNewOrderNotificationTemplate(order)
+  await sendHtmlToRecipients({
+    recipients: getAdminNotificationRecipients(),
+    subject,
+    html,
+    logLabel: 'admin new order notification',
+  })
 }
 
 const PARTNER_LOGIN_URL = envTrim('PARTNER_LOGIN_URL') || 'https://app.baterino.com/login'
@@ -435,53 +444,121 @@ function defaultSalesAgentPanelUrl() {
 }
 
 /**
- * Partener: după aprobarea contului de către echipa Baterino (prima aprobare).
- * @returns {Promise<boolean>} true dacă trimiterea a reușit
+ * Agent de vânzări: partener nou atribuit.
+ * @param {string} agentEmail
+ * @param {object} details
+ * @returns {Promise<boolean>}
  */
-async function sendPartnerAccountApprovedEmail(email) {
+/**
+ * Email de bun venit către partener după crearea profilului (înregistrare finalizată).
+ * @param {string} email
+ * @param {object} details
+ * @returns {Promise<boolean>}
+ */
+async function sendPartnerWelcomeEmail(email, details) {
+  const to = String(email || '').trim()
+  if (!to) return false
   if (!isMailConfigured()) {
-    console.warn('[Mail] No mail configured – skipping partner account approved email.')
+    console.warn('[Mail] No mail configured – skipping partner welcome email.')
     return false
   }
 
-  const subject = `Contul tău de partener a fost aprobat – ${SITE_NAME}`
-  const getPartnerAccountApprovedTemplate = getPartnerAccountApprovedTemplateRender()
-  const html = getPartnerAccountApprovedTemplate({ loginUrl: PARTNER_LOGIN_URL })
-  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+  const companyName = String(details?.companyName || '').trim() || 'Partener'
+  const subject = `Bine ai venit la Baterino Partener – ${SITE_NAME}`
+  const html = getPartnerWelcomeTemplate({
+    partnerName: details?.partnerName || formatPartnerDisplayName(details),
+    companyName,
+    portalUrl: details?.portalUrl || defaultPartnerPortalUrl(),
+    agentName: details?.agentName || formatAgentDisplayName(details?.assignedSalesAgent),
+    supportEmail: details?.supportEmail || defaultSupportEmail(),
+    supportPhone: details?.supportPhone || defaultSupportPhone(),
+  })
+  const fromAddr = PARTNER_MAIL_FROM
 
   try {
     if (useResend()) {
       const { error } = await resend.emails.send({
         from: fromAddr,
-        to: email,
+        to,
         subject,
         html,
       })
       if (error) {
-        console.error('[Mail] Resend partner account approved error:', error)
+        console.error('[Mail] Resend partner welcome error:', error)
         return false
       }
     } else {
       await transporter.sendMail({
         from: fromAddr,
-        to: email,
+        to,
         subject,
         html,
       })
     }
     return true
   } catch (err) {
-    console.error('[Mail] Partner account approved error:', err?.message)
+    console.error('[Mail] Partner welcome email error:', err?.message)
     return false
   }
 }
 
 /**
- * Agent de vânzări: partener nou aprobat și atribuit (prima aprobare + agent alocat).
- * @param {string} agentEmail
+ * Email către partener când reducerea este aprobată și prețurile devin active.
+ * @param {string} email
  * @param {object} details
  * @returns {Promise<boolean>}
  */
+async function sendPartnerDiscountApprovedEmail(email, details) {
+  const to = String(email || '').trim()
+  if (!to) return false
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping partner discount approved email.')
+    return false
+  }
+
+  const companyName = String(details?.companyName || '').trim() || 'Partener'
+  const discountPercent = Number(details?.discountPercent)
+  if (Number.isNaN(discountPercent) || discountPercent <= 0) return false
+
+  const subject = `Prețurile tale de partener sunt active – ${SITE_NAME}`
+  const html = getPartnerDiscountApprovedTemplate({
+    partnerName: details?.partnerName || formatPartnerDisplayName(details),
+    companyName,
+    discountPercent,
+    tierLabel: details?.tierLabel || tierLabelForPartnerChannel(details?.partnerChannelType),
+    agent: details?.assignedSalesAgent || details?.agent || null,
+    contractUrl: details?.contractUrl || defaultPartnerContractUrl(),
+    portalUrl: details?.portalUrl || defaultPartnerProductsUrl(),
+  })
+  const fromAddr = PARTNER_MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend partner discount approved error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Partner discount approved email error:', err?.message)
+    return false
+  }
+}
+
 async function sendSalesAgentPartnerAssignedEmail(agentEmail, details) {
   const to = String(agentEmail || '').trim()
   if (!to) return false
@@ -536,6 +613,71 @@ async function sendSalesAgentPartnerAssignedEmail(agentEmail, details) {
     return true
   } catch (err) {
     console.error('[Mail] Sales agent partner assigned error:', err?.message)
+    return false
+  }
+}
+
+/**
+ * Agent de vânzări: cerere de ofertă (RFQ) nouă de la un partener alocat.
+ * @param {string} agentEmail
+ * @param {object} details
+ * @returns {Promise<boolean>}
+ */
+async function sendSalesAgentPartnerRfqReceivedEmail(agentEmail, details) {
+  const to = String(agentEmail || '').trim()
+  if (!to) return false
+  if (!isMailConfigured()) {
+    console.warn('[Mail] No mail configured – skipping sales agent partner RFQ email.')
+    return false
+  }
+
+  const referenceNumber = String(details?.referenceNumber || '').trim()
+  const companyName = String(details?.companyName || '').trim() || 'Partener'
+  const subject = referenceNumber
+    ? `Cerere de ofertă ${referenceNumber} – ${companyName} – ${SITE_NAME}`
+    : `Cerere de ofertă partener – ${companyName} – ${SITE_NAME}`
+
+  const base = envTrim('FRONTEND_URL')
+  const ordersUrl =
+    details?.ordersUrl ||
+    (base ? `${base.replace(/\/+$/, '')}/admin/orders` : 'https://baterino.ro/admin/orders')
+
+  const html = getSalesAgentPartnerRfqReceivedTemplate({
+    agentFirstName: details?.agentFirstName,
+    referenceNumber,
+    companyName,
+    contactName: details?.contactName,
+    contactPhone: details?.contactPhone,
+    contactEmail: details?.contactEmail,
+    lines: details?.lines,
+    createdAt: details?.createdAt,
+    ordersUrl,
+  })
+  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+
+  try {
+    if (useResend()) {
+      const { error } = await resend.emails.send({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+      if (error) {
+        console.error('[Mail] Resend sales agent partner RFQ error:', error)
+        return false
+      }
+    } else {
+      await transporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      })
+    }
+    return true
+  } catch (err) {
+    console.error('[Mail] Sales agent partner RFQ error:', err?.message)
     return false
   }
 }
@@ -687,6 +829,9 @@ async function sendResidentialOrderProformaEmail(params) {
  *   serialNumber: string,
  *   modelNumber: string,
  *   problemDescription: string,
+ *   endClientName?: string,
+ *   productLocation?: string,
+ *   accountType?: string,
  * }} params
  * @returns {Promise<boolean>}
  */
@@ -704,7 +849,7 @@ async function sendServiceRequestReceivedEmail(params) {
   const subject = `Cerere service primită ${params.requestNumber || ''} – ${SITE_NAME}`.trim()
   const getTemplate = getServiceRequestReceivedTemplateRender()
   const html = getTemplate(params)
-  const fromAddr = useResend() ? INQUIRY_CONFIRMATION_FROM : MAIL_FROM
+  const fromAddr = SERVICE_MAIL_FROM
 
   try {
     if (useResend()) {
@@ -884,10 +1029,12 @@ module.exports = {
   sendAccountDeletedEmail,
   sendInquiryNotification,
   sendInquiryConfirmation,
+  sendAdminNewOrderNotification,
   sendReferralInviteEmail,
-  sendPartnerApplicationReceivedEmail,
-  sendPartnerAccountApprovedEmail,
+  sendPartnerWelcomeEmail,
+  sendPartnerDiscountApprovedEmail,
   sendSalesAgentPartnerAssignedEmail,
+  sendSalesAgentPartnerRfqReceivedEmail,
   sendResidentialOrderProformaEmail,
   sendServiceRequestReceivedEmail,
   sendReturRequestReceivedEmail,

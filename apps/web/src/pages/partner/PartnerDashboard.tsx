@@ -2,29 +2,17 @@ import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode, type
 import { Link } from 'react-router-dom'
 import {
   Percent,
-  Truck,
-  Headphones,
-  Store,
-  UserCheck,
-  RefreshCw,
-  Check,
-  ShoppingCart,
   Package,
   ClipboardList,
   Wrench,
-  ChevronLeft,
   ChevronRight,
   BarChart3,
-  Building2,
-  Cable,
   Info,
-  Bell,
   TrendingUp,
   Activity,
   Award,
-  ChevronDown,
-  ExternalLink,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import {
@@ -35,8 +23,9 @@ import {
   getCatalogProductSpecLines,
   getResidentialCatalogStockListingCta,
   residentialProductStockUnavailable,
-  getPartnerDisplayUnitPriceWithVat,
-  getPartnerCatalogVatPercentForDisplay,
+  filterProductsForPartnerPanel,
+  isPartnerAccountPromotedProduct,
+  partnerDiscountConfigured,
   type PublicProduct,
 } from '../../lib/api'
 import {
@@ -44,23 +33,17 @@ import {
   type PartnerDashboardProductBucketKey,
 } from '../../lib/catalog-sector'
 import { countPartnerOrderDashboardBuckets, partnerOrdersActiveSubtotal, type PartnerOrderDashBuckets } from '../../lib/partner-order-dashboard'
+import { readPartnerProfileHint, writePartnerProfileHintFromProfile } from '../../lib/partnerProfileHint'
 import { getProduseTranslations } from '../../i18n/produse'
 import { getPartnerDashboardTranslations } from '../../i18n/partner/dashboard'
+import { getPartnerProductsTranslations } from '../../i18n/partner/products'
 import type { LangCode } from '../../i18n/menu'
-import { readPartnerCartFromStorage } from '../../lib/partnerCart'
-import { publicInstallerProfileCanonical } from '../../lib/public-installer-profile-path'
-import { isPartnerPublicProfileFullyComplete } from '../../lib/partner-public-profile-complete'
-import CompatibilitateInvertorModal from '../../components/CompatibilitateInvertorModal'
-import { ReducerePartenerBox, SigurantaClientuluiBox, SuportTehnicBox, PartnerInverterCompatibilityBox, AvantajePartenerDashboardBox, quickPanelEyebrowCls, quickPanelTitleCls, quickPanelBodyCls } from './PartnerSidebarBoxes'
-
-/** Pending-approval timeline: active step (0-based) — partnership discussion. */
-const APPROVAL_TIMELINE_CURRENT_INDEX = 1
-
-const PENDING_ADVANTAGE_ICONS = [Truck, Headphones, Store, UserCheck, RefreshCw, Percent] as const
-
-const PARTNER_DASH_SIDEBAR_COLLAPSED_KEY = 'baterino.partner-dash.sidebarCollapsed'
-/** PartnerLayout `<main>` — overflow toggled while Quick Panel is expanded (desktop). */
-const PARTNER_LAYOUT_SCROLL_ID = 'partner-layout-scroll'
+import { PartnerCatalogPriceBlock } from '../../components/product/PartnerCatalogPriceBlock'
+import { PartnerCatalogCardMedia } from '../../components/partner/PartnerCatalogCardMedia'
+import { partnerProductHasListPrice } from '../../lib/partnerCart'
+import { PartnerAccountApprovalSection } from '../../components/partner/PartnerAccountApprovalSection'
+import { PartnerApprovalTimelineSkeleton } from '../../components/partner/PartnerApprovalTimeline'
+import { SigurantaClientuluiBox, SuportTehnicBox, AvantajePartenerDashboardBox } from './PartnerSidebarBoxes'
 
 function IconAlert() {
   return (
@@ -101,21 +84,38 @@ function PartnerDashStatCardInfo({
   )
 }
 
-const PARTNER_DASH_SURFACE_SHADOW =
-  'shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12),0_4px_16px_-8px_rgba(15,23,42,0.06)]'
-
 const PARTNER_DASH_KPI_NAV_CARD_CLS =
-  `group relative flex min-h-0 min-w-0 flex-col gap-0 rounded-2xl bg-white p-4 pr-10 ${PARTNER_DASH_SURFACE_SHADOW} transition-all duration-200 sm:pr-11 hover:-translate-y-0.5 hover:shadow-[0_20px_48px_-14px_rgba(15,23,42,0.16),0_8px_24px_-10px_rgba(15,23,42,0.09)] focus-within:shadow-[0_20px_48px_-14px_rgba(15,23,42,0.16),0_8px_24px_-10px_rgba(15,23,42,0.09)]`
+  "group relative flex min-h-0 min-w-0 flex-col gap-0 rounded-2xl border border-slate-200 bg-white p-4 pr-10 transition-colors duration-200 sm:pr-11 hover:border-slate-300"
 
 const PARTNER_DASH_PROFILE_NAV_CARD_CLS =
-  `group relative flex h-full min-h-0 w-full flex-nowrap items-center gap-4 rounded-2xl bg-white p-5 pr-11 ${PARTNER_DASH_SURFACE_SHADOW} transition-all duration-200 sm:pr-12 hover:-translate-y-0.5 hover:shadow-[0_20px_48px_-14px_rgba(15,23,42,0.16),0_8px_24px_-10px_rgba(15,23,42,0.09)] focus-within:shadow-[0_20px_48px_-14px_rgba(15,23,42,0.16),0_8px_24px_-10px_rgba(15,23,42,0.09)]`
+  "group relative flex h-full min-h-0 w-full flex-nowrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 pr-11 transition-colors duration-200 sm:pr-12 hover:border-slate-300"
 
-const PARTNER_DASH_BENEFIT_CARD_CLS = 'min-w-0 sm:col-span-1'
+const PARTNER_DASH_BENEFIT_CARD_CLS = 'flex h-full min-w-0 sm:col-span-1'
+
+const PARTNER_DASH_SECTION_BOX =
+  'rounded-2xl border border-slate-200 bg-white p-4 sm:p-6'
+
+const PARTNER_DASH_SECTION_HEADING =
+  'mb-4 flex flex-wrap items-center justify-between gap-2'
+
+const PARTNER_DASH_SECTION_TITLE =
+  "m-0 flex min-w-0 flex-1 items-center gap-2.5 text-xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:gap-3 sm:text-2xl"
+
+function PartnerDashSectionTitleIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_5px_12px_rgba(30,70,180,0.26)] sm:h-11 sm:w-11"
+      aria-hidden
+    >
+      <Icon className="h-5 w-5" strokeWidth={1.9} />
+    </span>
+  )
+}
 
 function PartnerDashActivityKpiCardSkeleton() {
   return (
     <div
-      className={`flex min-h-[11.5rem] min-w-0 flex-col gap-0 rounded-2xl bg-white p-4 pr-10 sm:pr-11 ${PARTNER_DASH_SURFACE_SHADOW}`}
+      className="flex min-h-[11.5rem] min-w-0 flex-col gap-0 rounded-2xl border border-slate-200 bg-white p-4 pr-10 sm:pr-11"
       aria-busy="true"
       aria-hidden
     >
@@ -143,7 +143,7 @@ function PartnerDashActivityKpiCardSkeleton() {
 function PartnerDashProfileStatCardSkeleton() {
   return (
     <div
-      className={`relative flex h-full min-h-[5.5rem] min-w-0 w-full flex-nowrap items-center gap-4 rounded-2xl bg-white p-5 pr-11 sm:pr-12 ${PARTNER_DASH_SURFACE_SHADOW}`}
+      className="relative flex h-full min-h-[5.5rem] min-w-0 w-full flex-nowrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 pr-11 sm:pr-12"
       aria-busy="true"
     >
       <div
@@ -192,196 +192,40 @@ function PartnerDashKpiNavShell({
   )
 }
 
-function PartnerApprovalTimelineSkeleton() {
-  return (
-    <div
-      className={`mb-6 rounded-2xl bg-white px-5 py-6 sm:px-7 ${PARTNER_DASH_SURFACE_SHADOW}`}
-      aria-busy="true"
-      aria-hidden
-    >
-      <div className="pointer-events-none mb-5 h-1 w-full max-w-xs rounded-full bg-slate-100 sm:mb-6" />
-      <div className="hidden animate-pulse sm:flex sm:w-full sm:items-start">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="flex min-w-0 flex-1 items-start last:flex-[0_0_auto]">
-            <div className="flex min-w-0 flex-1 flex-col items-center">
-              <div className="h-10 w-10 shrink-0 rounded-full bg-slate-100" />
-              <div className="mt-3 h-3 w-full max-w-[5.5rem] rounded bg-slate-100" />
-            </div>
-            {i < 3 ? <div className="mx-1.5 mt-[22px] h-[3px] min-w-[0.5rem] flex-1 rounded-full bg-slate-100" /> : null}
-          </div>
-        ))}
-      </div>
-      <div className="animate-pulse space-y-0 sm:hidden">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="flex gap-3.5">
-            <div className="flex flex-col items-center">
-              <div className="h-10 w-10 shrink-0 rounded-full bg-slate-100" />
-              {i < 3 ? <div className="my-1.5 min-h-[1.25rem] w-[3px] flex-1 rounded-full bg-slate-100" /> : null}
-            </div>
-            <div className="flex-1 pb-5 pt-2">
-              <div className="h-4 w-[85%] max-w-[14rem] rounded bg-slate-100" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function PartnerApprovalTimeline({
-  steps,
+function PartnerPartnershipBenefitsSkeleton({
+  sectionTitle,
   ariaLabel,
-  timelineComplete,
-  timelineCurrent,
-  timelineUpcoming,
 }: {
-  steps: readonly string[]
+  sectionTitle: string
   ariaLabel: string
-  timelineComplete: string
-  timelineCurrent: string
-  timelineUpcoming: string
 }) {
   return (
-    <div className={`mb-6 rounded-2xl bg-white px-5 py-6 sm:px-7 ${PARTNER_DASH_SURFACE_SHADOW}`}>
-      {/* Accent stripe */}
-      <div className="pointer-events-none mb-5 h-1 w-full max-w-xs rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-sky-500 sm:mb-6" aria-hidden />
-
-      {/* Desktop / tablet: horizontal */}
-      <ol className="hidden sm:flex sm:items-start sm:w-full" aria-label={ariaLabel}>
-        {steps.map((label, i) => {
-          const isComplete = i < APPROVAL_TIMELINE_CURRENT_INDEX
-          const isCurrent = i === APPROVAL_TIMELINE_CURRENT_INDEX
-          return (
-            <li key={label} className="flex flex-1 min-w-0 items-start last:flex-[0_0_auto]">
-              <div className="flex flex-1 min-w-0 flex-col items-center text-center">
-                <TimelineStepMarker
-                  index={i}
-                  isComplete={isComplete}
-                  isCurrent={isCurrent}
-                  timelineComplete={timelineComplete}
-                  timelineCurrent={timelineCurrent}
-                  timelineUpcoming={timelineUpcoming}
-                />
-                <span
-                  className={`mt-3 text-xs font-['Inter'] leading-tight sm:text-[13px] px-0.5 ${
-                    isCurrent
-                      ? 'font-semibold text-indigo-950'
-                      : isComplete
-                        ? 'font-medium text-slate-700'
-                        : 'font-medium text-slate-500'
-                  }`}
-                >
-                  {label}
-                </span>
-              </div>
-              {i < steps.length - 1 && (
-                <div
-                  className={`mx-1.5 mt-[22px] h-[3px] min-w-[0.5rem] flex-1 rounded-full ${
-                    i < APPROVAL_TIMELINE_CURRENT_INDEX ? 'bg-indigo-400' : 'bg-slate-200'
-                  }`}
-                  aria-hidden
-                />
-              )}
-            </li>
-          )
-        })}
-      </ol>
-
-      {/* Mobile: vertical */}
-      <ol className="sm:hidden space-y-0 font-['Inter']" aria-label={ariaLabel}>
-        {steps.map((label, i) => {
-          const isComplete = i < APPROVAL_TIMELINE_CURRENT_INDEX
-          const isCurrent = i === APPROVAL_TIMELINE_CURRENT_INDEX
-          const isLast = i === steps.length - 1
-          return (
-            <li key={label} className="flex gap-3.5">
-              <div className="flex flex-col items-center">
-                <TimelineStepMarker
-                  index={i}
-                  isComplete={isComplete}
-                  isCurrent={isCurrent}
-                  timelineComplete={timelineComplete}
-                  timelineCurrent={timelineCurrent}
-                  timelineUpcoming={timelineUpcoming}
-                />
-                {!isLast && (
-                  <div
-                    className={`w-[3px] flex-1 min-h-[1.25rem] my-1.5 rounded-full ${
-                      i < APPROVAL_TIMELINE_CURRENT_INDEX ? 'bg-indigo-400' : 'bg-slate-200'
-                    }`}
-                    aria-hidden
-                  />
-                )}
-              </div>
-              <div
-                className={`pb-5 pt-2 text-sm leading-snug ${
-                  isCurrent ? 'font-semibold text-indigo-950' : isComplete ? 'font-medium text-slate-700' : 'font-medium text-slate-500'
-                }`}
-              >
-                {label}
-              </div>
-            </li>
-          )
-        })}
-      </ol>
-    </div>
-  )
-}
-
-function TimelineStepMarker({
-  index,
-  isComplete,
-  isCurrent,
-  timelineComplete,
-  timelineCurrent,
-  timelineUpcoming,
-}: {
-  index: number
-  isComplete: boolean
-  isCurrent: boolean
-  timelineComplete: string
-  timelineCurrent: string
-  timelineUpcoming: string
-}) {
-  if (isComplete) {
-    return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
-        <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden />
-        <span className="sr-only">{timelineComplete}</span>
+    <section className={PARTNER_DASH_SECTION_BOX} aria-busy="true" aria-label={ariaLabel}>
+      <div className={PARTNER_DASH_SECTION_HEADING}>
+        <h2 className={PARTNER_DASH_SECTION_TITLE}>
+          <PartnerDashSectionTitleIcon icon={Award} />
+          <span className="min-w-0">{sectionTitle}</span>
+        </h2>
       </div>
-    )
-  }
-  if (isCurrent) {
-    return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-sm font-bold text-indigo-700 shadow-sm ring-2 ring-indigo-500 ring-offset-2 ring-offset-white">
-        {index + 1}
-        <span className="sr-only">{timelineCurrent}</span>
-      </div>
-    )
-  }
-  return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-sm font-semibold text-slate-400 shadow-[0_4px_14px_-6px_rgba(15,23,42,0.12)]">
-      {index + 1}
-      <span className="sr-only">{timelineUpcoming}</span>
-    </div>
-  )
-}
-
-function PartnerAdvantageBoxesSkeleton({ ariaLabel }: { ariaLabel: string }) {
-  return (
-    <section className="mb-12 sm:mb-14" aria-busy="true" aria-label={ariaLabel}>
-      <div className="mb-4 h-8 w-72 max-w-full animate-pulse rounded-md bg-slate-100 sm:h-9" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }, (_, i) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-stretch">
+        {Array.from({ length: 3 }, (_, i) => (
           <div
             key={i}
-            className={`flex animate-pulse flex-col gap-1.5 rounded-2xl bg-white p-5 sm:p-6 ${PARTNER_DASH_SURFACE_SHADOW}`}
+            className="flex min-h-[14rem] animate-pulse flex-col rounded-2xl border border-slate-200 bg-white p-5"
+            aria-hidden
           >
-            <div className="h-10 w-10 rounded-xl bg-slate-100" />
-            <div className="h-5 w-[80%] max-w-[14rem] rounded bg-slate-100" />
-            <div className="h-3.5 w-full rounded bg-slate-100" />
-            <div className="h-3.5 w-full rounded bg-slate-100" />
-            <div className="h-3.5 w-[92%] rounded bg-slate-100" />
+            <div className="mb-3 h-8 w-40 rounded-md bg-slate-100" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((__, j) => (
+                <div key={j} className="flex items-start gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-[70%] rounded bg-slate-100" />
+                    <div className="h-3 w-full rounded bg-slate-100" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -394,75 +238,21 @@ function formatTrendCardPrice(price: number, langCode: string, currency: string)
   return `${price.toLocaleString(locale, { maximumFractionDigits: 0 })} ${currency}`
 }
 
-function formatTrendCardVatPctLabel(pct: number): string {
-  if (Number.isInteger(pct)) return String(pct)
-  const rounded = Math.round(pct * 100) / 100
-  return String(rounded).replace(/\.?0+$/, '')
-}
-
 /** Skeleton tile for trending products carousel — mirrors `PartnerTrendingProductCard` sizing. */
 function PartnerTrendingProductCardSkeleton() {
   return (
     <li
       aria-hidden
-      className={`flex w-[min(17.5rem,calc(100vw-6.75rem))] shrink-0 snap-start animate-pulse flex-col overflow-hidden rounded-2xl bg-white sm:w-[17.75rem] ${PARTNER_DASH_SURFACE_SHADOW}`}
+      className="flex w-[min(18rem,calc(100vw-3rem))] shrink-0 snap-start animate-pulse flex-col overflow-hidden rounded-2xl border border-[#e8eaf0] bg-white max-md:snap-start md:w-full md:min-w-0 md:shrink md:snap-align-none"
     >
-      <div className="relative bg-[#f7f7f7]">
-        <div className="absolute left-3 top-3 h-5 w-[4.875rem] rounded-full bg-slate-200/90" aria-hidden />
-        <div className="flex h-56 items-center justify-center p-6">
-          <div className="h-44 w-[90%] max-w-[11.5rem] rounded-xl bg-slate-200/90" aria-hidden />
-        </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-4">
-        <div className="min-w-0 space-y-2">
-          <div className="h-4 w-[92%] max-w-[11rem] rounded-md bg-slate-200/90" />
-          <div className="h-4 w-[68%] max-w-[9rem] rounded-md bg-slate-200/80" />
-          <div className="h-3 w-[54%] max-w-[7rem] rounded-md bg-slate-200/70" />
-        </div>
-        <div className="mt-auto space-y-2 pt-1">
-          <div className="h-5 w-28 max-w-full rounded-md bg-slate-200/85" />
-          <div className="h-3 w-36 max-w-full rounded-md bg-slate-200/65" />
-        </div>
-        <div className="mt-1 h-[2.5rem] w-full rounded-xl bg-slate-200/65" aria-hidden />
+      <div className="h-[178px] bg-[#f7f7f7]" />
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+        <div className="h-5 w-[92%] rounded-md bg-[#e8eaf0]" />
+        <div className="h-3 w-[54%] rounded-md bg-[#e8eaf0]" />
+        <div className="h-[88px] w-full rounded-xl bg-[#eef2f7]" />
+        <div className="h-10 w-full rounded-[10px] bg-[#f4f5f7]" />
       </div>
     </li>
-  )
-}
-
-/** Matches partner catalog stock pill (PartnerProducts `StockBadge`). */
-function PartnerTrendStockBadge({
-  product,
-  inStockLabel,
-  outOfStockLabel,
-  comingSoonLabel,
-}: {
-  product: PublicProduct
-  inStockLabel: string
-  outOfStockLabel: string
-  comingSoonLabel: string
-}) {
-  const status = product.catalogStockStatus
-  if (status === 'out_of_stock') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 font-['Inter']">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-        {outOfStockLabel}
-      </span>
-    )
-  }
-  if (status === 'coming_soon') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 font-['Inter']">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
-        {comingSoonLabel}
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 font-['Inter']">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-      {inStockLabel}
-    </span>
   )
 }
 
@@ -470,15 +260,21 @@ function PartnerTrendStockBadge({
 function PartnerTrendingProductCard({
   product,
   trProduse,
+  trProducts,
   trDash,
   langCode,
   currency,
+  partnerDiscountPct,
+  partnerContractSignedAt,
 }: {
   product: PublicProduct
   trProduse: ReturnType<typeof getProduseTranslations>
+  trProducts: ReturnType<typeof getPartnerProductsTranslations>
   trDash: ReturnType<typeof getPartnerDashboardTranslations>
   langCode: string
   currency: string
+  partnerDiscountPct: number | null
+  partnerContractSignedAt: string | null
 }) {
   const img = getProductCardImageUrl(product)
   const { specLine1 } = getCatalogProductSpecLines(product)
@@ -487,74 +283,69 @@ function PartnerTrendingProductCard({
     outOfStock: trProduse.catalogStockOutOfStock,
     comingSoon: trProduse.catalogStockComingSoon,
   })
-  const unitWithVat = getPartnerDisplayUnitPriceWithVat(product)
-  const priceDisplay = !Number.isNaN(unitWithVat) ? formatTrendCardPrice(unitWithVat, langCode, currency) : null
-  const partnerVatPct = getPartnerCatalogVatPercentForDisplay(product)
+  const hasListPrice = partnerProductHasListPrice(product)
+  const quoteStyle = !hasListPrice || product.catalogStockStatus === 'on_order'
   const subtitle = String(product.subtitle || '').trim()
-  const detailsLabel = trDash.detailsLabel
+  const detailsLabel = hasListPrice ? trProducts.cardDetailsLabel : trProducts.cardSpecsLabel
   const detailHref = `/partner/produse?detail=${encodeURIComponent(product.id)}`
   const detailsAria = trDash.detailsAria(product.title)
 
   return (
-    <li className={`group relative flex w-[min(17.5rem,calc(100vw-6.75rem))] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-white transition-all duration-200 hover:shadow-[0_20px_48px_-14px_rgba(15,23,42,0.16),0_8px_24px_-10px_rgba(15,23,42,0.09)] sm:w-[17.75rem] ${PARTNER_DASH_SURFACE_SHADOW}`}>
+    <li className="group relative flex h-full w-[min(18rem,calc(100vw-3rem))] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e8eaf0] bg-white shadow-[0_1px_2px_rgba(15,20,34,0.04),0_16px_36px_-22px_rgba(15,20,34,0.16)] transition-colors duration-200 hover:border-[#d9dde6] max-md:snap-start md:w-full md:min-w-0 md:shrink md:snap-align-none">
       <Link to={detailHref} className="absolute inset-0 z-0 rounded-2xl" aria-label={detailsAria} />
       <div className="relative z-[1] flex min-h-0 flex-1 flex-col pointer-events-none">
-        <div className="relative bg-[#f7f7f7]">
-          <div className="flex h-56 items-center justify-center p-6">
-            <img
-              src={img}
-              alt=""
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
-          </div>
-          <div className="absolute left-3 top-3">
-            <PartnerTrendStockBadge
-              product={product}
-              inStockLabel={trProduse.catalogStockInStock}
-              outOfStockLabel={trProduse.catalogStockOutOfStock}
-              comingSoonLabel={trProduse.catalogStockComingSoon}
-            />
-          </div>
+        <div className="relative grid h-[172px] shrink-0 place-items-center bg-[#f7f7f7]">
+          <img
+            src={img}
+            alt=""
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            className="max-h-[130px] max-w-[calc(100%-3rem)] object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+          <PartnerCatalogCardMedia
+            product={product}
+            trProduse={trProduse}
+            trProducts={trProducts}
+            quoteStyle={quoteStyle}
+          />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
-          <div className="min-w-0">
-            <p className="m-0 line-clamp-2 text-base font-bold leading-snug text-slate-900 font-['Inter']">{product.title}</p>
+        <div className="flex min-h-0 flex-1 flex-col p-4">
+          <div className="min-h-0 flex-1">
+            <p className="m-0 line-clamp-2 text-[15.5px] font-bold leading-snug tracking-[-0.01em] text-[#0f1422]">{product.title}</p>
             {(subtitle || specLine1) && (
-              <p className="mt-1 m-0 line-clamp-1 text-xs text-slate-500 font-['Inter']">{subtitle || specLine1}</p>
+              <p className={`mt-1 m-0 line-clamp-2 text-[12px] font-semibold leading-relaxed ${quoteStyle ? 'text-[#4d6079]' : 'text-[#0e8459]'}`}>
+                {subtitle || specLine1}
+              </p>
             )}
           </div>
 
-          <div className="mt-auto pt-1">
-            {priceDisplay && !stockUnavailable ? (
-              <div>
-                <p className="m-0 text-base font-extrabold tabular-nums text-slate-900 font-['Inter']">{priceDisplay}</p>
-                {partnerVatPct != null ? (
-                  <p className="mt-0.5 m-0 text-[11px] font-medium text-slate-500 font-['Inter']">
-                    {trProduse.catalogIncludesVatWithPct.replace('{pct}', formatTrendCardVatPctLabel(partnerVatPct))}
-                  </p>
-                ) : null}
-              </div>
+          <div className="mt-auto shrink-0 pt-3.5">
+            {!stockUnavailable ? (
+              <PartnerCatalogPriceBlock
+                  product={product}
+                  partnerDiscountPct={partnerDiscountPct}
+                  partnerContractSignedAt={partnerContractSignedAt}
+                  className="w-full"
+                  formatAmount={(amount) => formatTrendCardPrice(amount, langCode, currency)}
+              />
             ) : stockCta ? (
-              <p className="m-0 text-xs font-semibold text-slate-500 font-['Inter']">{stockCta}</p>
-            ) : (
-              <p className="m-0 text-xs text-slate-400 font-['Inter']">—</p>
-            )}
-          </div>
-
-          <div className="mt-1 flex flex-col gap-2">
-            {stockUnavailable ? (
-              <div className="rounded-xl bg-slate-50 px-3 py-2 text-center shadow-[0_4px_14px_-8px_rgba(15,23,42,0.08)]">
-                <p className="m-0 text-xs font-semibold text-slate-500 font-['Inter']">{trProduse.catalogStockPartnerFooterNote}</p>
-              </div>
+              <p className="m-0 rounded-xl border border-[#e8eaf0] bg-[#fafbfc] px-3 py-3 text-center text-xs font-semibold text-[#6a7281]">{stockCta}</p>
             ) : null}
-            <span className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_4px_14px_-8px_rgba(15,23,42,0.08)] transition group-hover:bg-slate-50 group-hover:text-slate-900 group-hover:shadow-[0_8px_22px_-10px_rgba(15,23,42,0.12)] font-['Inter']">
-              <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
-              <span aria-hidden>{detailsLabel}</span>
-            </span>
+
+            <div className="pt-3.5">
+              {stockUnavailable ? (
+                <div className="rounded-[10px] border border-[#e8eaf0] bg-[#f4f5f7] px-3 py-2 text-center">
+                  <p className="m-0 text-xs font-semibold text-[#6a7281]">{trProduse.catalogStockPartnerFooterNote}</p>
+                </div>
+              ) : (
+                <span className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[#e8eaf0] bg-white px-3 py-[11px] text-[13.5px] font-semibold text-[#4d6079] transition group-hover:bg-[#f4f5f7]">
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                  <span aria-hidden>{detailsLabel}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -645,50 +436,11 @@ export default function PartnerDashboard() {
   const { currency } = useCatalogCurrency()
   const lang = language.code
 
-  const [pendingApproval, setPendingApproval] = useState<boolean | null>(null)
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
-  const [partnerCartLineCount, setPartnerCartLineCount] = useState(0)
-  const [invertorCompatibilityModalOpen, setInvertorCompatibilityModalOpen] = useState(false)
-  const [partnerSidebarCollapsed, setPartnerSidebarCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false
-    try {
-      return window.localStorage.getItem(PARTNER_DASH_SIDEBAR_COLLAPSED_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
-
-  const togglePartnerSidebarCollapsed = useCallback(() => {
-    setPartnerSidebarCollapsed((prev) => {
-      const next = !prev
-      try {
-        window.localStorage.setItem(PARTNER_DASH_SIDEBAR_COLLAPSED_KEY, next ? '1' : '0')
-      } catch {
-        /* ignore quota / private mode */
-      }
-      return next
-    })
-  }, [])
-
-  const syncPartnerCartCount = useCallback(() => {
-    setPartnerCartLineCount(readPartnerCartFromStorage().length)
-  }, [])
-
-  useEffect(() => {
-    syncPartnerCartCount()
-    window.addEventListener('storage', syncPartnerCartCount)
-    window.addEventListener('focus', syncPartnerCartCount)
-    document.addEventListener('visibilitychange', syncPartnerCartCount)
-    return () => {
-      window.removeEventListener('storage', syncPartnerCartCount)
-      window.removeEventListener('focus', syncPartnerCartCount)
-      document.removeEventListener('visibilitychange', syncPartnerCartCount)
-    }
-  }, [syncPartnerCartCount])
+  const [profileHint] = useState(() => readPartnerProfileHint())
 
   const [catalogProductsCountLoaded, setCatalogProductsCountLoaded] = useState(false)
-  const [profitableProductsSectionExpanded, setProfitableProductsSectionExpanded] = useState(true)
   const [partnerCatalogProducts, setPartnerCatalogProducts] = useState<PublicProduct[]>([])
   const [catalogProductsTotal, setCatalogProductsTotal] = useState(0)
   const [catalogProductBuckets, setCatalogProductBuckets] = useState<Record<
@@ -701,7 +453,7 @@ export default function PartnerDashboard() {
     getProducts()
       .then((list) => {
         if (!cancelled) {
-          const arr = Array.isArray(list) ? list : []
+          const arr = filterProductsForPartnerPanel(Array.isArray(list) ? list : [])
           setPartnerCatalogProducts(arr)
           setCatalogProductsTotal(arr.length)
           setCatalogProductBuckets(countPartnerDashboardProductBuckets(arr))
@@ -757,6 +509,7 @@ export default function PartnerDashboard() {
     publicName?: string
     logoUrl?: string | null
     partnerDiscountPercent?: number | null
+    partnerContractSignedAt?: string | null
     publicSlug?: string | null
     street?: string
     county?: string
@@ -777,7 +530,6 @@ export default function PartnerDashboard() {
     setLoading(true)
     getPartnerProfile()
       .then((p: {
-        isApproved?: boolean
         isSuspended?: boolean
         contactFirstName?: string
         contactLastName?: string
@@ -785,6 +537,7 @@ export default function PartnerDashboard() {
         publicName?: string
         logoUrl?: string | null
         partnerDiscountPercent?: number | null
+        partnerContractSignedAt?: string | null
         publicSlug?: string | null
         street?: string
         county?: string
@@ -800,7 +553,6 @@ export default function PartnerDashboard() {
         workPhotos?: string[] | string | null
         isPublic?: boolean
       }) => {
-        setPendingApproval(p?.isApproved === false)
         setIsSuspended(p?.isSuspended === true)
         setProfile({
           contactFirstName: p?.contactFirstName,
@@ -809,6 +561,10 @@ export default function PartnerDashboard() {
           publicName: p?.publicName,
           logoUrl: p?.logoUrl,
           partnerDiscountPercent: p?.partnerDiscountPercent,
+          partnerContractSignedAt:
+            typeof p?.partnerContractSignedAt === 'string' && p.partnerContractSignedAt.trim()
+              ? p.partnerContractSignedAt
+              : null,
           publicSlug: p?.publicSlug != null ? String(p.publicSlug) : undefined,
           street: p?.street,
           county: p?.county,
@@ -842,50 +598,19 @@ export default function PartnerDashboard() {
               : undefined,
           isPublic: p?.isPublic,
         })
+        writePartnerProfileHintFromProfile(p)
       })
       .catch(() => {
-        setPendingApproval(null)
         setIsSuspended(null)
         setProfile(null)
       })
       .finally(() => setLoading(false))
   }, [])
 
-  const showQuickPanel = !loading && !isSuspended && !pendingApproval
-
-  useEffect(() => {
-    const mainEl = document.getElementById(PARTNER_LAYOUT_SCROLL_ID)
-    if (!mainEl) return
-
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const apply = () => {
-      const quickPanelExpanded = showQuickPanel && !partnerSidebarCollapsed
-      mainEl.style.overflowY = mq.matches && quickPanelExpanded ? 'hidden' : ''
-    }
-    apply()
-    mq.addEventListener('change', apply)
-    return () => {
-      mq.removeEventListener('change', apply)
-      mainEl.style.overflowY = ''
-    }
-  }, [showQuickPanel, partnerSidebarCollapsed])
-
   const tr = getPartnerDashboardTranslations(lang as LangCode)
 
-  const sidebarWelcomeDisplayName =
-    [profile?.contactFirstName, profile?.contactLastName].filter(Boolean).join(' ') || tr.defaultDisplayName
-
-  const sidebarWelcomeCompanyDisplay =
-    String(profile?.companyName ?? '').trim() || String(profile?.publicName ?? '').trim() || null
-
-  const collapsedRailIconCls =
-    'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-white/80 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f7f7]'
-
-  /** Collapse/expand control — blue accent, separated from shortcut icons */
-  const collapsedRailChevronCls =
-    `${collapsedRailIconCls} border-blue-200/90 bg-blue-50/90 text-blue-600 shadow-none ring-1 ring-blue-100/70 hover:border-blue-200 hover:bg-blue-100/90 hover:text-blue-700 focus-visible:ring-blue-400/40`
-
   const trProdCatalog = getProduseTranslations(lang as LangCode)
+  const trProducts = getPartnerProductsTranslations(lang as LangCode)
   const dashboardProductBucketKeysOnCard: PartnerDashboardProductBucketKey[] = [
     'rezidential',
     'industrial',
@@ -900,17 +625,12 @@ export default function PartnerDashboard() {
   const activityKpiMetricsReady = catalogProductsCountLoaded && partnerOrdersCountLoaded
 
   const trendingPartnerProducts = useMemo(
-    () => partnerCatalogProducts.filter((p) => p.promovarePeContPartener === true),
+    () => partnerCatalogProducts.filter((p) => isPartnerAccountPromotedProduct(p)),
     [partnerCatalogProducts],
   )
 
   const profitableScrollerRef = useRef<HTMLUListElement | null>(null)
   const profitableCarouselDrag = useProfitCarouselDragScroll(profitableScrollerRef)
-
-  const partnerPublicProfileFullyComplete = useMemo(
-    () => (profile ? isPartnerPublicProfileFullyComplete(profile) : false),
-    [profile],
-  )
 
   /** Public listing: same required fields as Profil Public save + published toggle. */
   const partnerPublicProfileListedAndComplete = useMemo(() => {
@@ -930,22 +650,41 @@ export default function PartnerDashboard() {
     )
   }, [profile])
 
-  const isPendingApproval = pendingApproval === true
-  const showPendingApprovalView = isSuspended !== true && (isPendingApproval || loading)
-  const showPendingApprovalSkeleton = showPendingApprovalView && loading
-  const showPendingApprovalContent = showPendingApprovalView && !loading && isPendingApproval
-  const showApprovedDashboard = !loading && isSuspended !== true && !isPendingApproval
+  const showMainDashboard = loading || isSuspended !== true
+  const showProfitableSection =
+    showMainDashboard && (loading || !catalogProductsCountLoaded || trendingPartnerProducts.length > 0)
+  const kpiCardsLoading = loading || !activityKpiMetricsReady
+  const reloadPartnerProfile = useCallback(() => {
+    getPartnerProfile()
+      .then((p) => {
+        setProfile((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            partnerDiscountPercent: p?.partnerDiscountPercent,
+            partnerContractSignedAt:
+              typeof p?.partnerContractSignedAt === 'string' && p.partnerContractSignedAt.trim()
+                ? p.partnerContractSignedAt
+                : null,
+          }
+        })
+      })
+      .catch(() => {})
+  }, [])
+
+  const discountConfigured = partnerDiscountConfigured(profile?.partnerDiscountPercent)
+  const contractSigned = Boolean(String(profile?.partnerContractSignedAt ?? '').trim())
+  const skipApprovalTimelinePreload = profileHint?.discountConfigured === true || discountConfigured
+  const showApprovalTimeline = !loading && !contractSigned
 
   return (
-    <div className="relative flex min-h-full min-w-0 w-full flex-1 flex-col bg-white lg:min-h-0">
-      <div className="min-w-0 flex-1 bg-white pl-6 pt-6 pb-6 pr-[76px] sm:pl-8 sm:pt-8 sm:pb-8 lg:pl-10 lg:pt-10 lg:pb-10 lg:w-full">
-        <div className="w-full max-w-7xl">
-          <h1 className="sr-only">{tr.srTitle}</h1>
+    <div className="relative flex min-h-full min-w-0 w-full flex-1 flex-col bg-[#f7f7f7] lg:min-h-0">
+      <div className="min-w-0 flex-1 bg-[#f7f7f7] px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10 lg:w-full">
 
       {/* Suspended banner */}
       {!loading && isSuspended === true && (
         <div
-          className="mb-6 rounded-2xl pt-2 pb-5 px-5 flex items-center gap-4 shadow-[0_10px_36px_-12px_rgba(220,38,38,0.22),0_4px_18px_-10px_rgba(15,23,42,0.06)] sm:pt-3 sm:pb-6 sm:px-6"
+          className="mb-6 rounded-2xl pt-2 pb-5 px-5 flex items-center gap-4 shadow-[0_10px_36px_-12px_rgba(220,38,38,0.22),0_4px_18px_-10px_rgba(15,23,42,0.06)] sm:pt-3 sm:pb-6 sm:px-6 max-w-7xl"
           style={{ background: 'linear-gradient(to right, #FFF5F5, #FECACA)' }}
         >
           <div className="flex-shrink-0">
@@ -958,92 +697,32 @@ export default function PartnerDashboard() {
         </div>
       )}
 
-      {/* Pending approval: skeleton while profile loads, then timeline + advantages */}
-      {showPendingApprovalSkeleton ? (
-        <>
-          <PartnerApprovalTimelineSkeleton />
-          <PartnerAdvantageBoxesSkeleton ariaLabel={tr.advantagesLoadingAria} />
-        </>
-      ) : null}
-
-      {showPendingApprovalContent ? (
-        <>
-          <PartnerApprovalTimeline
-            steps={tr.approvalTimelineSteps}
-            ariaLabel={tr.approvalTimelineAria}
-            timelineComplete={tr.timelineComplete}
-            timelineCurrent={tr.timelineCurrent}
-            timelineUpcoming={tr.timelineUpcoming}
-          />
-
-          <section className="mb-12 sm:mb-14" aria-labelledby="pending-partner-advantages-heading">
-            <h2
-              id="pending-partner-advantages-heading"
-              className="mb-4 text-xl font-bold tracking-tight text-slate-900 font-['Inter'] sm:text-2xl"
-            >
-              {tr.pendingAdvantagesTitle}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tr.pendingAdvantages.map((adv, i) => {
-                const Icon = PENDING_ADVANTAGE_ICONS[i] ?? Percent
-                return (
-                <div
-                    key={adv.title}
-                    className={`flex flex-col gap-1.5 rounded-2xl bg-white p-5 sm:p-6 ${PARTNER_DASH_SURFACE_SHADOW}`}
-                >
-                  <div
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700 shadow-[0_4px_14px_-8px_rgba(245,158,11,0.22)]"
-                    aria-hidden
-                  >
-                    <Icon className="h-5 w-5" strokeWidth={1.75} />
-                  </div>
-                    <h3 className="text-base font-bold font-['Inter'] text-slate-900 leading-tight">{adv.title}</h3>
-                    <p className="text-sm font-['Inter'] text-gray-600 leading-snug">{adv.subtitle}</p>
-                </div>
-                )
-              })}
-            </div>
-          </section>
-        </>
-      ) : null}
-        </div>
-
-      {showApprovedDashboard ? (
-        <>
-          {!isSuspended && (!catalogProductsCountLoaded || trendingPartnerProducts.length > 0) ? (
+      {showMainDashboard ? (
+        <div
+          className="flex w-full max-w-7xl flex-col gap-6 pb-4"
+          aria-busy={loading}
+          aria-label={loading ? tr.dashboardLoadingAria : undefined}
+        >
+          {loading && !skipApprovalTimelinePreload ? (
+            <PartnerApprovalTimelineSkeleton sectionTitle={tr.approvalTimelineAria} />
+          ) : null}
+          {showApprovalTimeline ? (
+            <PartnerAccountApprovalSection
+              discountConfigured={discountConfigured}
+              onContractSigned={reloadPartnerProfile}
+            />
+          ) : null}
+          {showProfitableSection ? (
             <section
-              className="relative z-0 mb-12 min-w-0 w-full max-w-none self-stretch sm:mb-14 lg:-mr-[76px]"
+              className={`${PARTNER_DASH_SECTION_BOX} relative z-0 min-w-0 w-full`}
               aria-labelledby="partner-dash-profitable-products-heading"
             >
-              <div className="mb-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                <div className="min-w-0 max-w-7xl flex-1">
-                  <h2
-                    id="partner-dash-profitable-products-heading"
-                    className="m-0 flex min-w-0 items-center gap-2 text-xl font-bold text-slate-900 font-['Inter'] sm:gap-2.5 sm:text-2xl"
-                  >
-                    <TrendingUp className="h-7 w-7 shrink-0 text-slate-700 sm:h-8 sm:w-8" strokeWidth={1.85} aria-hidden />
-                    <span className="min-w-0">{tr.profitableProductsSectionTitle}</span>
-                  </h2>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto sm:ml-auto">
-                  <button
-                    type="button"
-                    aria-expanded={profitableProductsSectionExpanded}
-                    aria-controls="partner-dash-profitable-carousel"
-                    onClick={() => setProfitableProductsSectionExpanded((v) => !v)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                    aria-label={
-                      profitableProductsSectionExpanded
-                        ? tr.profitableProductsCollapseAria
-                        : tr.profitableProductsExpandAria
-                    }
-                  >
-                    <ChevronDown
-                      className={`h-5 w-5 shrink-0 transition-transform duration-200 ${profitableProductsSectionExpanded ? 'rotate-0' : '-rotate-90'}`}
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                  </button>
+              <div className={`${PARTNER_DASH_SECTION_HEADING} flex-col items-stretch gap-3 sm:flex-row sm:items-center`}>
+                <h2 id="partner-dash-profitable-products-heading" className={PARTNER_DASH_SECTION_TITLE}>
+                  <PartnerDashSectionTitleIcon icon={TrendingUp} />
+                  <span className="min-w-0">{tr.profitableProductsSectionTitle}</span>
+                </h2>
+                <div className="flex shrink-0 items-center gap-2 self-end sm:ml-auto sm:self-auto">
                   <Link
                     to="/partner/produse"
                     className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 font-['Inter']"
@@ -1053,53 +732,52 @@ export default function PartnerDashboard() {
                   </Link>
                 </div>
               </div>
-              {profitableProductsSectionExpanded ? (
-                <div
-                  id="partner-dash-profitable-carousel"
-                  role="region"
-                  aria-roledescription="carousel"
-                  aria-busy={!catalogProductsCountLoaded}
-                  aria-label={tr.profitableProductsSectionTitle}
-                  className="relative z-0 min-w-0 w-full"
+              <div
+                id="partner-dash-profitable-carousel"
+                role="region"
+                aria-roledescription="carousel"
+                aria-busy={!catalogProductsCountLoaded}
+                aria-label={tr.profitableProductsSectionTitle}
+                className="relative z-0 min-w-0 w-full"
+              >
+                <ul
+                  ref={catalogProductsCountLoaded ? profitableScrollerRef : undefined}
+                  {...(catalogProductsCountLoaded ? profitableCarouselDrag : {})}
+                  className={`m-0 list-none p-0 max-md:flex max-md:min-w-0 max-md:gap-4 max-md:overflow-x-auto max-md:overflow-y-visible max-md:overscroll-x-contain max-md:pb-2 max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden max-md:touch-pan-x max-md:snap-x max-md:snap-proximity md:grid md:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] md:gap-5 md:overflow-visible md:snap-none md:pb-0 lg:gap-6 ${catalogProductsCountLoaded ? 'max-md:cursor-grab max-md:select-none max-md:active:cursor-grabbing' : ''}`}
                 >
-                  <ul
-                    ref={catalogProductsCountLoaded ? profitableScrollerRef : undefined}
-                    {...(catalogProductsCountLoaded ? profitableCarouselDrag : {})}
-                    className={`flex w-full min-w-0 gap-4 overflow-x-auto overflow-y-visible overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden touch-pan-x ${catalogProductsCountLoaded ? 'cursor-grab select-none snap-x snap-proximity active:cursor-grabbing' : 'snap-x snap-proximity'}`}
-                  >
-                    {catalogProductsCountLoaded ? (
-                      trendingPartnerProducts.map((product) => (
-                        <PartnerTrendingProductCard
-                          key={product.id}
-                          product={product}
-                          trProduse={trProdCatalog}
-                          trDash={tr}
-                          langCode={lang}
-                          currency={currency}
-                        />
-                      ))
-                    ) : (
-                      Array.from({ length: 5 }).map((_, i) => <PartnerTrendingProductCardSkeleton key={i} />)
-                    )}
-                  </ul>
-                </div>
-              ) : null}
+                  {catalogProductsCountLoaded ? (
+                    trendingPartnerProducts.map((product) => (
+                      <PartnerTrendingProductCard
+                        key={product.id}
+                        product={product}
+                        trProduse={trProdCatalog}
+                        trProducts={trProducts}
+                        trDash={tr}
+                        langCode={lang}
+                        currency={currency}
+                        partnerDiscountPct={profile?.partnerDiscountPercent ?? null}
+                        partnerContractSignedAt={profile?.partnerContractSignedAt ?? null}
+                      />
+                    ))
+                  ) : (
+                    Array.from({ length: 5 }).map((_, i) => <PartnerTrendingProductCardSkeleton key={i} />)
+                  )}
+                </ul>
+              </div>
             </section>
           ) : null}
-          <div className="w-full max-w-7xl">
-          <section className="mb-12 sm:mb-14" aria-labelledby="partner-dash-activity-heading">
-            <h2
-              id="partner-dash-activity-heading"
-              className="mb-3 flex items-center gap-2 text-xl font-bold text-slate-900 font-['Inter'] sm:gap-2.5 sm:text-2xl"
-            >
-              <Activity className="h-7 w-7 shrink-0 text-slate-700 sm:h-8 sm:w-8" strokeWidth={1.85} aria-hidden />
-              <span>{tr.myActivity}</span>
-            </h2>
+          <section className={PARTNER_DASH_SECTION_BOX} aria-labelledby="partner-dash-activity-heading">
+            <div className={PARTNER_DASH_SECTION_HEADING}>
+              <h2 id="partner-dash-activity-heading" className={PARTNER_DASH_SECTION_TITLE}>
+                <PartnerDashSectionTitleIcon icon={Activity} />
+                <span className="min-w-0">{tr.myActivity}</span>
+              </h2>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-stretch">
               <PartnerDashKpiNavShell
                 to="/partner/produse"
                 ariaLabel={tr.dashNavAriaKpiProducts}
-                loading={!activityKpiMetricsReady}
+                loading={kpiCardsLoading}
                 tooltipText={tr.dashTooltipProductsSite}
                 infoAria={tr.dashInfoAriaProducts}
               >
@@ -1156,7 +834,7 @@ export default function PartnerDashboard() {
               <PartnerDashKpiNavShell
                 to="/partner/comenzi"
                 ariaLabel={tr.dashNavAriaKpiOrders}
-                loading={!activityKpiMetricsReady}
+                loading={kpiCardsLoading}
                 tooltipText={tr.dashTooltipOrders}
                 infoAria={tr.dashInfoAriaOrders}
               >
@@ -1220,7 +898,7 @@ export default function PartnerDashboard() {
               <PartnerDashKpiNavShell
                 to="/partner/servicii"
                 ariaLabel={tr.dashNavAriaKpiService}
-                loading={!activityKpiMetricsReady}
+                loading={kpiCardsLoading}
                 tooltipText={tr.dashTooltipService}
                 infoAria={tr.dashInfoAriaService}
               >
@@ -1274,14 +952,13 @@ export default function PartnerDashboard() {
             </div>
           </section>
 
-          <section className="mb-12 sm:mb-14" aria-labelledby="partner-dash-profile-stats-heading">
-            <h2
-              id="partner-dash-profile-stats-heading"
-              className="mb-3 flex items-center gap-2 text-xl font-bold text-slate-900 font-['Inter'] sm:gap-2.5 sm:text-2xl"
-            >
-              <BarChart3 className="h-7 w-7 shrink-0 text-slate-700 sm:h-8 sm:w-8" strokeWidth={1.85} aria-hidden />
-              <span>{tr.publicProfileStats}</span>
-            </h2>
+          <section className={PARTNER_DASH_SECTION_BOX} aria-labelledby="partner-dash-profile-stats-heading">
+            <div className={PARTNER_DASH_SECTION_HEADING}>
+              <h2 id="partner-dash-profile-stats-heading" className={PARTNER_DASH_SECTION_TITLE}>
+                <PartnerDashSectionTitleIcon icon={BarChart3} />
+                <span className="min-w-0">{tr.publicProfileStats}</span>
+              </h2>
+            </div>
             <div
               className={`grid w-full gap-4 sm:items-stretch ${
                 loading || partnerPublicProfileListedAndComplete
@@ -1295,7 +972,7 @@ export default function PartnerDashboard() {
                   aria-label={tr.profileStatsGateAria}
                   className="min-w-0 w-full self-start lg:h-auto"
                 >
-                  <div className={`flex w-full flex-col items-start justify-start gap-3 text-left rounded-2xl bg-white px-5 py-5 sm:gap-4 sm:px-6 sm:py-6 ${PARTNER_DASH_SURFACE_SHADOW}`}>
+                  <div className="flex w-full flex-col items-start justify-start gap-3 text-left rounded-2xl border border-slate-200 bg-white px-5 py-5 sm:gap-4 sm:px-6 sm:py-6">
                     <h3 className="m-0 text-base font-bold leading-tight text-slate-900 font-['Inter'] sm:text-lg">
                       {tr.profileStatsGateTitle}
                     </h3>
@@ -1357,18 +1034,20 @@ export default function PartnerDashboard() {
             </div>
           </section>
 
-          {!loading && (
-          <section className="mb-12 sm:mb-14" aria-labelledby="partner-dash-partnership-advantages-heading">
-            <h2
-              id="partner-dash-partnership-advantages-heading"
-              className="mb-4 flex items-center gap-2 text-xl font-bold text-slate-900 font-['Inter'] sm:gap-2.5 sm:text-2xl"
-            >
-              <Award className="h-7 w-7 shrink-0 text-slate-700 sm:h-8 sm:w-8" strokeWidth={1.85} aria-hidden />
-              <span>
-                {tr.partnershipBenefitsTitle}
-              </span>
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {loading ? (
+            <PartnerPartnershipBenefitsSkeleton
+              sectionTitle={tr.partnershipBenefitsTitle}
+              ariaLabel={tr.advantagesLoadingAria}
+            />
+          ) : (
+          <section className={PARTNER_DASH_SECTION_BOX} aria-labelledby="partner-dash-partnership-advantages-heading">
+            <div className={PARTNER_DASH_SECTION_HEADING}>
+              <h2 id="partner-dash-partnership-advantages-heading" className={PARTNER_DASH_SECTION_TITLE}>
+                <PartnerDashSectionTitleIcon icon={Award} />
+                <span className="min-w-0">{tr.partnershipBenefitsTitle}</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-stretch">
               <div className={PARTNER_DASH_BENEFIT_CARD_CLS}>
                 <AvantajePartenerDashboardBox />
               </div>
@@ -1381,255 +1060,9 @@ export default function PartnerDashboard() {
             </div>
           </section>
           )}
-          </div>
-        </>
+        </div>
       ) : null}
       </div>
-
-      {showQuickPanel && (
-        <aside
-          className={`flex w-full shrink-0 flex-col border-t border-slate-200 bg-[#f7f7f7] px-4 py-6 duration-300 ease-out sm:px-5 lg:z-30 lg:border-l lg:border-t-0 lg:transition-[width,padding,gap,box-shadow] ${
-            partnerSidebarCollapsed ? 'lg:shadow-none' : 'lg:shadow-[-16px_0_40px_rgba(15,23,42,0.08)]'
-          } ${
-            partnerSidebarCollapsed
-              ? 'lg:fixed lg:inset-y-0 lg:right-0 lg:w-14 lg:min-w-[3.5rem] lg:max-w-[3.5rem] lg:gap-2 lg:overflow-x-hidden lg:overflow-y-hidden lg:px-2 lg:py-8'
-              : 'lg:absolute lg:top-0 lg:right-0 lg:h-full lg:w-[23rem] lg:max-w-[23rem] lg:gap-4 lg:overflow-y-auto lg:px-5 lg:py-10'
-          }`}
-          aria-label={tr.quickPanelAria}
-        >
-          {partnerSidebarCollapsed ? (
-            <div className="hidden lg:flex lg:flex-col lg:items-center lg:gap-2.5 mb-2" role="presentation">
-              <button
-                type="button"
-                id="partner-dash-sidebar-collapse-toggle"
-                onClick={togglePartnerSidebarCollapsed}
-                aria-expanded={false}
-                aria-controls="partner-dash-sidebar-cards"
-                className={collapsedRailChevronCls}
-                title={tr.expandSidebar}
-              >
-                <ChevronLeft className="h-6 w-6" aria-hidden strokeWidth={2.5} />
-                <span className="sr-only">{tr.expandSidebar}</span>
-              </button>
-              <div
-                className="h-px w-10 shrink-0 bg-slate-300/80"
-                aria-hidden
-                role="separator"
-              />
-              <button
-                type="button"
-                className={collapsedRailIconCls}
-                title={tr.notifications}
-                aria-label={tr.notificationsAria}
-              >
-                <Bell className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                <span className="sr-only">{tr.notificationsAria}</span>
-              </button>
-              <button
-                type="button"
-                className={collapsedRailIconCls}
-                onClick={() => setPartnerSidebarCollapsed(false)}
-                title={tr.showWelcomeSummary}
-              >
-                <Building2 className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                <span className="sr-only">{tr.showWelcomeSummary}</span>
-              </button>
-              <button
-                type="button"
-                className={collapsedRailIconCls}
-                onClick={() => setPartnerSidebarCollapsed(false)}
-                title={tr.showPartnerDiscount}
-              >
-                <Percent className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                <span className="sr-only">{tr.showPartnerDiscount}</span>
-              </button>
-              <button
-                type="button"
-                className={collapsedRailIconCls}
-                onClick={() => setInvertorCompatibilityModalOpen(true)}
-                title={tr.searchInverterCompatibility}
-              >
-                <Cable className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                <span className="sr-only">{tr.searchInverterCompatibilitySr}</span>
-              </button>
-              {partnerCartLineCount > 0 ? (
-                <Link
-                  to="/partner/produse"
-                  className={`${collapsedRailIconCls} relative text-inherit`}
-                  title={tr.finishOrderOpenCart}
-                  aria-label={tr.finishOrderOpenCartAria}
-                >
-                  <ShoppingCart className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                  <span
-                    className="pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#f7f7f7]"
-                    aria-hidden
-                  />
-                </Link>
-              ) : null}
-            </div>
-          ) : (
-            <div className="hidden lg:mb-4 lg:flex lg:items-center lg:justify-start lg:gap-2.5">
-              <button
-                type="button"
-                id="partner-dash-sidebar-collapse-toggle"
-                onClick={togglePartnerSidebarCollapsed}
-                aria-expanded
-                aria-controls="partner-dash-sidebar-cards"
-                className={collapsedRailChevronCls}
-                title={tr.collapseSidebar}
-              >
-                <ChevronRight className="h-6 w-6" aria-hidden strokeWidth={2.5} />
-                <span className="sr-only">{tr.collapseSidebar}</span>
-              </button>
-              <div className="h-10 w-px shrink-0 self-center bg-slate-300/80" aria-hidden role="separator" />
-              <button
-                type="button"
-                className={collapsedRailIconCls}
-                title={tr.notifications}
-                aria-label={tr.notificationsAria}
-              >
-                <Bell className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
-                <span className="sr-only">{tr.notificationsAria}</span>
-              </button>
-              <h2
-                id="partner-dash-quick-panel-heading"
-                className="m-0 min-w-0 flex-1 text-left text-base font-extrabold leading-tight tracking-tight text-slate-900 font-['Inter'] sm:text-lg"
-              >
-                {tr.quickPanelTitle}
-              </h2>
-            </div>
-          )}
-
-          <div
-            id="partner-dash-sidebar-cards"
-            role="region"
-            aria-labelledby="partner-dash-quick-panel-heading"
-            className={`flex flex-col gap-4 ${partnerSidebarCollapsed ? 'lg:hidden' : ''}`}
-          >
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-200/90 p-3.5 sm:p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/70">
-            {profile?.logoUrl ? (
-                  <img src={profile.logoUrl} alt="" className="h-7 w-7 object-contain" />
-            ) : (
-                  <svg className="h-6 w-6 text-green-700/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            )}
-          </div>
-              <div className="flex min-w-0 flex-col gap-1 pt-px">
-                <p className="m-0 text-sm font-medium leading-snug text-slate-700 font-['Inter'] sm:text-[15px]">
-                  {tr.welcomePrefix}
-                </p>
-                <p className="m-0 text-xl font-extrabold leading-tight tracking-tight text-slate-900 font-['Inter'] sm:text-2xl">
-                  {sidebarWelcomeDisplayName}
-                </p>
-                {sidebarWelcomeCompanyDisplay ? (
-                  <p className="m-0 line-clamp-2 text-sm font-medium leading-snug text-slate-600 font-['Inter'] sm:text-[15px]">
-                    {sidebarWelcomeCompanyDisplay}
-                  </p>
-                ) : null}
-                <p className="mt-0.5 m-0 text-xs font-bold leading-snug text-emerald-900/90 font-['Inter'] sm:text-sm">
-                  {tr.accountStatusActive}
-                </p>
-          </div>
-        </div>
-          </div>
-
-          {profile
-            ? (() => {
-                const publicProfileCardCls =
-                  'flex items-center gap-3 rounded-2xl bg-gradient-to-br from-sky-50 to-white px-3.5 py-3 transition hover:from-sky-100/80 hover:to-white sm:px-4'
-                const slugSeg = String(profile.publicSlug ?? '')
-                  .trim()
-                  .replace(/^@/, '')
-                  .toLowerCase()
-                const publicPageUrl = slugSeg ? publicInstallerProfileCanonical(slugSeg) : null
-
-                if (!partnerPublicProfileFullyComplete) {
-                  return (
-                    <Link to="/partner/profil" className={publicProfileCardCls}>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700">
-                        <Building2 className="h-5 w-5" strokeWidth={2} aria-hidden />
-            </div>
-                      <div className="min-w-0 flex-1 text-left">
-                        <h3 className={quickPanelTitleCls}>{tr.quickPanelPublicProfileTitle}</h3>
-                        <p className={`${quickPanelBodyCls} mt-1`}>{tr.quickPanelPublicProfileIncompleteBody}</p>
-            </div>
-                    </Link>
-                  )
-                }
-
-                if (profile.isPublic === true && publicPageUrl) {
-                  return (
-                    <Link
-                      to={publicPageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={publicProfileCardCls}
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700">
-                        <ExternalLink className="h-5 w-5" strokeWidth={2} aria-hidden />
-            </div>
-                      <div className="min-w-0 flex-1 text-left">
-                        <h3 className={quickPanelTitleCls}>{tr.quickPanelPublicProfileTitle}</h3>
-                        <p className={`${quickPanelBodyCls} mt-1`}>{tr.quickPanelPublicProfilePublicBody}</p>
-          </div>
-                    </Link>
-                  )
-                }
-
-                return (
-                  <Link to="/partner/profil" className={publicProfileCardCls}>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700">
-                      <Building2 className="h-5 w-5" strokeWidth={2} aria-hidden />
-                </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <h3 className={quickPanelTitleCls}>{tr.quickPanelPublicProfileTitle}</h3>
-                      <p className={`${quickPanelBodyCls} mt-1`}>{tr.quickPanelPublicProfilePrivateBody}</p>
-                </div>
-                  </Link>
-                )
-              })()
-            : null}
-
-          <ReducerePartenerBox discountPercent={profile?.partnerDiscountPercent ?? null} loading={loading} />
-
-          <PartnerInverterCompatibilityBox onOpenSearch={() => setInvertorCompatibilityModalOpen(true)} />
-
-          {partnerCartLineCount > 0 ? (
-            <Link
-              to="/partner/produse"
-              aria-label={tr.goToPartnerProducts}
-              className="group flex flex-col rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/80 p-3.5 transition-colors duration-200 hover:from-amber-100 hover:to-amber-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/35 focus-visible:ring-offset-2 sm:p-4"
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/80 text-amber-700 transition group-hover:bg-white"
-                  aria-hidden
-                >
-                  <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
-              </div>
-                <div className="min-w-0 pt-px text-left">
-                  <p className={`${quickPanelEyebrowCls} text-amber-900/90`}>
-                    {tr.activeCartEyebrow}
-                  </p>
-                  <h3 className={quickPanelTitleCls}>
-                    {tr.finishOrderTitle}
-                  </h3>
-                  <p className={quickPanelBodyCls}>
-                    {tr.finishOrderBody}
-                  </p>
-            </div>
-          </div>
-            </Link>
-          ) : null}
-          </div>
-        </aside>
-      )}
-      {showApprovedDashboard && invertorCompatibilityModalOpen ? (
-        <CompatibilitateInvertorModal onClose={() => setInvertorCompatibilityModalOpen(false)} />
-      ) : null}
     </div>
   )
 }
