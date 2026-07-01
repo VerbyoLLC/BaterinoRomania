@@ -21,8 +21,8 @@ import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import {
-  CatalogProductCardSkeleton,
-  HorizontalCatalogProductCard,
+  ProduseCatalogProductCard,
+  ProduseCatalogProductCardSkeleton,
   type HorizontalFeatureBadge,
 } from '../components/product/CatalogProductCard'
 import {
@@ -464,13 +464,13 @@ export default function Produse() {
 
         {/* ── PRODUCT GRID ── */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <CatalogProductCardSkeleton key={i} />
+              <ProduseCatalogProductCardSkeleton key={i} />
             ))}
           </div>
         ) : filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2">
             {filtered.map((product) => {
               const img = getProductCardImageUrl(product)
               const imgs = Array.isArray(product.images) ? product.images : []
@@ -496,7 +496,6 @@ export default function Produse() {
                 product.tipProdus === 'industrial' && priceDisplay != null && priceDisplay !== ''
               const to = getCatalogProductHrefForViewer(product, getAuthRole())
               const linkState = { tipProdus: product.tipProdus }
-              const industrialSubtitle = String(product.subtitle || '').trim() || undefined
               const showResPriceExtras =
                 priceDisplay != null &&
                 priceDisplay !== '' &&
@@ -506,30 +505,44 @@ export default function Produse() {
               const stockLabel = getCatalogStockBadgeLabel(product, { inStock: tr.catalogStockInStock, outOfStock: tr.catalogStockOutOfStock, comingSoon: tr.catalogStockComingSoon, onOrder: tr.catalogStockOnOrder })
               if (stockLabel) featureBadges.push({ type: 'stock', label: stockLabel })
               const deliveryLabel = getCatalogDeliveryBadgeLabel(product, { h24: tr.catalogDelivery24h, h48: tr.catalogDelivery48h, d7_14: tr.catalogDelivery7_14d, d60: catalogBadgeLabels.delivery60d })
-              if (deliveryLabel) featureBadges.push({ type: 'delivery', label: `${catalogBadgeLabels.deliveryCategory} ${deliveryLabel}` })
+              if (deliveryLabel) featureBadges.push({ type: 'delivery', label: deliveryLabel })
               const transportLabel = getCatalogTransportBadgeLabel(product, { free: catalogBadgeLabels.transportFree, paid: catalogBadgeLabels.transportPaid })
-              if (transportLabel) featureBadges.push({ type: 'transport', label: `${catalogBadgeLabels.transportCategory} ${transportLabel}` })
+              if (transportLabel) {
+                featureBadges.push({
+                  type: 'transport',
+                  label: `${catalogBadgeLabels.transportCategory} ${transportLabel}`,
+                })
+              }
               if (product.tipProdus === 'industrial') {
                 const installLabel = getCatalogInstallBadgeLabel(product, { baterino: catalogBadgeLabels.installBaterino, partner: catalogBadgeLabels.installPartner })
-                if (installLabel) featureBadges.push({ type: 'install', label: `${catalogBadgeLabels.installCategory} ${installLabel}` })
+                if (installLabel) {
+                  featureBadges.push({
+                    type: 'install',
+                    label: `${catalogBadgeLabels.installCategory} ${installLabel}`,
+                  })
+                }
               } else if (productHasEligibleReducerePrograms(product)) {
                 featureBadges.push({ type: 'reduceri', label: catalogBadgeLabels.reduceri })
               }
+              const specText = [specLine1, specLine2].filter((s) => s && s !== '—').join(' · ')
+              const cardLabels = {
+                pretLabel: tr.pretLabel,
+                requestQuote: tr.catalogRequestQuote,
+                priceOnRequest: tr.catalogPriceOnRequest,
+                priceOnRequestNote: tr.catalogPriceOnRequestNote,
+              }
               return (
-                <HorizontalCatalogProductCard
+                <ProduseCatalogProductCard
                   key={product.id}
                   variant={product.tipProdus === 'industrial' ? 'industrial' : 'residential'}
                   imageSrc={img}
                   fallbackImageSrc={fallbackImg}
                   imageAlt={product.title}
                   title={product.title}
-                  subtitle={industrialSubtitle}
-                  specLine1={specLine1}
-                  specLine2={specLine2}
+                  specText={specText || undefined}
                   to={to}
                   linkState={linkState}
                   priceDisplay={priceDisplay}
-                  ctaLabel={product.tipProdus === 'industrial' && !industrialHasPrice ? tr.disponibilPentruParteneri : undefined}
                   residentialPartnerPriceCta={residentialPartnerPriceCta}
                   residentialStockListingCta={stockListingCta}
                   residentialPriceHeading={showResPriceExtras || industrialHasPrice ? tr.pretLabel : null}
@@ -537,12 +550,13 @@ export default function Produse() {
                     showResPriceExtras || industrialHasPrice
                       ? (() => {
                           const net = formatResidentialCatalogNetPriceDisplay(product, language.code, currency)
-                          return net ? tr.catalogPretFaraTva.replace('{price}', net) : null
+                          return net ? tr.catalogNetPriceLine.replace('{price}', net) : null
                         })()
                       : null
                   }
                   featureBadges={featureBadges}
                   promoted={isPromoCatalogProduct(product)}
+                  labels={cardLabels}
                   capacityTag={(() => {
                     const raw = product.energieNominala
                     if (raw) {

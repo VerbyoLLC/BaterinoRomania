@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Truck, Tag, Wrench, Clock } from 'lucide-react'
+import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Truck, Tag, Wrench, Clock, FileText } from 'lucide-react'
 
 export type CatalogProductCardDensity = 'produse' | 'home' | 'partner'
 
@@ -556,6 +556,238 @@ export function HorizontalCatalogProductCard({
   )
 }
 
+export type ProduseCatalogCardLabels = {
+  pretLabel: string
+  requestQuote: string
+  priceOnRequest: string
+  priceOnRequestNote: string
+}
+
+export type ProduseCatalogProductCardProps = {
+  variant?: 'residential' | 'industrial'
+  imageSrc: string
+  imageAlt: string
+  title: string
+  /** Technical spec line (e.g. voltage · chemistry · cycles) */
+  specText?: string
+  to: string
+  linkState?: { tipProdus?: 'rezidential' | 'industrial' }
+  priceDisplay?: string | null
+  residentialPriceHeading?: string | null
+  residentialPriceVatNote?: string | null
+  residentialPartnerPriceCta?: string | null
+  residentialStockListingCta?: string | null
+  featureBadges?: HorizontalFeatureBadge[]
+  fallbackImageSrc?: string
+  capacityTag?: string | null
+  promoted?: boolean
+  labels: ProduseCatalogCardLabels
+}
+
+/**
+ * Produse page BESS card — image left, details + price/CTA right.
+ */
+export function ProduseCatalogProductCard({
+  variant = 'residential',
+  imageSrc,
+  imageAlt,
+  title,
+  specText,
+  to,
+  linkState,
+  priceDisplay,
+  residentialPriceHeading,
+  residentialPriceVatNote,
+  residentialPartnerPriceCta = null,
+  residentialStockListingCta = null,
+  featureBadges = [],
+  fallbackImageSrc,
+  capacityTag = null,
+  promoted = false,
+  labels,
+}: ProduseCatalogProductCardProps) {
+  const navigate = useNavigate()
+  const [currentSrc, setCurrentSrc] = useState(imageSrc)
+  const isIndustrial = variant === 'industrial'
+
+  const stockListingTrim =
+    !isIndustrial &&
+    residentialStockListingCta != null &&
+    String(residentialStockListingCta).trim() !== ''
+  const partnerListingCta =
+    residentialPartnerPriceCta != null &&
+    String(residentialPartnerPriceCta).trim() !== ''
+  const darkLabel = stockListingTrim
+    ? String(residentialStockListingCta).trim()
+    : partnerListingCta
+      ? String(residentialPartnerPriceCta).trim()
+      : ''
+  const showDarkChip = !isIndustrial && darkLabel !== ''
+  const showPrice = !showDarkChip && priceDisplay != null && String(priceDisplay).trim() !== ''
+  const showQuoteState = isIndustrial && !showPrice && !showDarkChip
+
+  const imageBadges = featureBadges.filter((b) => b.type === 'stock' || b.type === 'delivery')
+  const featureRow = featureBadges.filter(
+    (b) => b.type === 'transport' || b.type === 'install' || b.type === 'reduceri',
+  )
+
+  const specLine = String(specText ?? '').trim()
+
+  const capacityParts = (() => {
+    if (!capacityTag) return null
+    const m = capacityTag.match(/^([\d.,]+)\s*(kWh)$/i)
+    if (m) return { value: m[1], unit: m[2] }
+    return { value: capacityTag, unit: null as string | null }
+  })()
+
+  const openDetails = () => {
+    navigate(to, { state: linkState })
+  }
+
+  const handleCardKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openDetails()
+    }
+  }
+
+  return (
+    <div className="@container h-full">
+      <article
+        role="link"
+        tabIndex={0}
+        onClick={openDetails}
+        onKeyDown={handleCardKeyDown}
+        className={`grid h-full cursor-pointer grid-cols-1 overflow-hidden rounded-2xl border border-[#e8eaf0] bg-[#f7f7f7] shadow-none transition-shadow duration-200 hover:shadow-lg @min-[360px]:grid-cols-[minmax(0,48%)_minmax(0,1fr)] ${promoted ? 'ring-1 ring-sky-200' : ''}`}
+      >
+        {/* Left — image */}
+        <div className="relative grid min-h-[230px] place-items-center bg-[#f7f7f7] p-4 @min-[360px]:min-h-[260px] @min-[360px]:p-[18px]">
+          {imageBadges.length > 0 ? (
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
+              {imageBadges.map((b) => (
+                <ProduseChip key={b.type} badge={b} />
+              ))}
+            </div>
+          ) : null}
+          <img
+            src={currentSrc}
+            alt={imageAlt}
+            className="max-h-[200px] w-full max-w-full object-contain object-center @min-[360px]:max-h-[230px]"
+            onError={() => {
+              const next =
+                fallbackImageSrc && currentSrc !== fallbackImageSrc
+                  ? fallbackImageSrc
+                  : '/images/shared/HP2000-all-in-one.png'
+              if (currentSrc !== next) setCurrentSrc(next)
+            }}
+          />
+          {capacityParts ? (
+            <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-[9px] bg-[#0f1422] px-3 py-1.5 text-[13px] font-bold tracking-tight text-white">
+              {capacityParts.value}
+              {capacityParts.unit ? (
+                <small className="ml-0.5 text-[11px] font-medium opacity-70">{capacityParts.unit}</small>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Right — details + price/CTA */}
+        <div className="flex min-h-0 flex-col justify-between px-4 py-4 @min-[360px]:px-[22px] @min-[360px]:py-[22px]">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold leading-snug tracking-tight text-[#0f1422] @min-[360px]:text-[17px]">
+              {title}
+            </h3>
+            {specLine ? (
+              <p className="mt-2 text-xs font-medium leading-snug text-[#4d6079]">{specLine}</p>
+            ) : null}
+            {featureRow.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {featureRow.map((b) => (
+                  <ProduseFeatureBadge key={b.type} badge={b} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#9aa1af]">
+              {residentialPriceHeading ?? labels.pretLabel}
+            </span>
+
+            {showDarkChip ? (
+              <>
+                <p className="mt-0.5 text-lg font-bold leading-tight tracking-tight text-[#0f1422]">
+                  {darkLabel}
+                </p>
+                <p className="mt-0.5 text-xs text-[#6a7281]">&nbsp;</p>
+              </>
+            ) : showPrice ? (
+              <>
+                <p className="mt-0.5 text-[22px] font-bold leading-tight tracking-tight text-[#0f1422] tabular-nums">
+                  {priceDisplay}
+                </p>
+                {residentialPriceVatNote ? (
+                  <p className="mt-0.5 text-xs text-[#6a7281]">{residentialPriceVatNote}</p>
+                ) : null}
+              </>
+            ) : showQuoteState ? (
+              <>
+                <p className="mt-0.5 text-lg font-bold leading-tight tracking-tight text-[#0f1422]">
+                  {labels.priceOnRequest}
+                </p>
+                <p className="mt-0.5 text-xs text-[#4d6079]">{labels.priceOnRequestNote}</p>
+              </>
+            ) : null}
+
+            {showQuoteState ? (
+              <Link
+                to={to}
+                state={linkState}
+                onClick={(e) => e.stopPropagation()}
+                className="relative z-10 mt-3 flex w-full items-center justify-center gap-2 rounded-[11px] border-0 bg-[#4d6079] px-3 py-3 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#3c4d63]"
+              >
+                <FileText size={16} aria-hidden />
+                {labels.requestQuote}
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </article>
+    </div>
+  )
+}
+
+function ProduseChip({ badge }: { badge: HorizontalFeatureBadge }) {
+  const isStock = badge.type === 'stock'
+  const deliveryOnly =
+    badge.type === 'delivery'
+      ? badge.label.replace(/^(Livrare|Delivery)\s+/i, '').trim() || badge.label
+      : badge.label
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-[5px] text-[11px] font-semibold shadow-[0_2px_6px_-2px_rgba(15,20,34,0.15)] ${
+        isStock ? 'text-[#0e8459]' : 'text-[#6a7281]'
+      }`}
+    >
+      {isStock ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#159b6a]" aria-hidden /> : null}
+      {badge.type === 'delivery' ? <Clock size={12} aria-hidden /> : null}
+      {isStock ? badge.label : deliveryOnly}
+    </span>
+  )
+}
+
+function ProduseFeatureBadge({ badge }: { badge: HorizontalFeatureBadge }) {
+  const Icon = badge.type === 'transport' ? Truck : badge.type === 'install' ? Wrench : Tag
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#e8eaf0] bg-[#f4f5f7] px-2.5 py-[5px] text-[11.5px] font-semibold text-[#4d6079]">
+      <Icon size={13} className="shrink-0 text-[#159b6a]" aria-hidden />
+      {badge.label}
+    </span>
+  )
+}
+
 // ── Internal sub-components ────────────────────────────────────────────────
 
 function stockVariantStyle(type: HorizontalFeatureBadge['type'], label: string) {
@@ -696,6 +928,32 @@ export function CatalogProductCardSkeleton({
         <div className="h-3 w-14 rounded bg-neutral-300" />
         <div className="h-8 w-36 max-w-[calc(100%-2rem)] rounded bg-neutral-200" />
         <div className="h-3 w-32 rounded bg-neutral-300" />
+      </div>
+    </div>
+  )
+}
+
+export function ProduseCatalogProductCardSkeleton() {
+  return (
+    <div className="@container h-full">
+      <div className="grid h-full animate-pulse grid-cols-1 overflow-hidden rounded-2xl border border-[#e8eaf0] bg-[#f7f7f7] @min-[360px]:grid-cols-[minmax(0,48%)_minmax(0,1fr)]">
+        <div className="min-h-[230px] bg-[#f7f7f7] @min-[360px]:min-h-[260px]" />
+        <div className="flex flex-col justify-between px-4 py-4 @min-[360px]:px-[22px] @min-[360px]:py-[22px]">
+          <div className="space-y-3">
+            <div className="h-5 w-4/5 rounded bg-neutral-200" />
+            <div className="h-3 w-3/5 rounded bg-neutral-100" />
+            <div className="flex gap-2">
+              <div className="h-7 w-28 rounded-lg bg-neutral-100" />
+              <div className="h-7 w-32 rounded-lg bg-neutral-100" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="h-2.5 w-10 rounded bg-neutral-200" />
+            <div className="h-7 w-32 rounded bg-neutral-200" />
+            <div className="h-3 w-24 rounded bg-neutral-100" />
+            <div className="mt-2 h-11 w-full rounded-[11px] bg-neutral-200" />
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -75,6 +75,13 @@ export type ProduseTranslations = {
   catalogInstallBaterino: string
   catalogInstallPartner: string
   catalogReducereBadge: string
+  catalogAddToCart: string
+  catalogViewDetails: string
+  catalogRequestQuote: string
+  catalogPriceOnRequest: string
+  catalogPriceOnRequestNote: string
+  /** Catalog Produse: linie sub preț brut — `{price}` = sumă + monedă */
+  catalogNetPriceLine: string
   /** Pagină produs: text sub eticheta stoc */
   catalogStockUnavailableDetailNote: string
   /** Panou parteneri: sub eticheta stoc când nu se poate comanda */
@@ -146,6 +153,12 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partener',
     catalogReducereBadge: 'Programe Reduceri',
+    catalogAddToCart: 'Adaugă în coș',
+    catalogViewDetails: 'Vezi detalii',
+    catalogRequestQuote: 'Cere ofertă',
+    catalogPriceOnRequest: 'La cerere',
+    catalogPriceOnRequestNote: 'Se stabilește pe configurație',
+    catalogNetPriceLine: '{price} fără TVA',
     catalogStockUnavailableDetailNote: 'Acest produs nu este disponibil pentru comandă în acest moment.',
     catalogStockPartnerFooterNote: 'Momentan indisponibil pentru comenzi în contul partener.',
     seoTitle: 'Baterii LiFePO4',
@@ -234,6 +247,12 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partner',
     catalogReducereBadge: 'Discount programs',
+    catalogAddToCart: 'Add to cart',
+    catalogViewDetails: 'View details',
+    catalogRequestQuote: 'Request quote',
+    catalogPriceOnRequest: 'On request',
+    catalogPriceOnRequestNote: 'Based on configuration',
+    catalogNetPriceLine: '{price} excl. VAT',
     catalogStockUnavailableDetailNote: 'This product is not available to order at the moment.',
     catalogStockPartnerFooterNote: 'Currently unavailable for partner portal orders.',
     seoTitle: 'LiFePO4 Batteries',

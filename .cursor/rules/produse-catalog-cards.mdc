@@ -1,0 +1,49 @@
+---
+description: Produse page catalog card layout and behavior (ProduseCatalogProductCard)
+globs: apps/web/src/pages/Produse.tsx,apps/web/src/components/product/CatalogProductCard.tsx
+alwaysApply: false
+---
+
+# Produse catalog cards
+
+The `/produse` product grid uses **`ProduseCatalogProductCard`** (not `HorizontalCatalogProductCard`). Home and related products keep the old horizontal card.
+
+## Page grid
+
+- `grid grid-cols-1 sm:grid-cols-2 items-stretch gap-[18px]`
+- Skeleton: `ProduseCatalogProductCardSkeleton`
+
+## Card layout (2 columns inside card)
+
+- **Container queries**: `@container` wrapper; side-by-side from `@min-[360px]`
+- **Grid**: `@min-[360px]:grid-cols-[minmax(0,48%)_minmax(0,1fr)]` — image **48%**, details **52%**
+- **Background**: card + image area both `#f7f7f7` (`bg-[#f7f7f7]`)
+- **Border**: `border-[#e8eaf0]`, `rounded-2xl`
+- **Hover**: `shadow-none transition-shadow duration-200 hover:shadow-lg` (same as HomeFeaturesGrid / product benefit cards)
+- **Click**: whole card navigates to product details (`role="link"`, Enter/Space supported)
+
+## Left column (image)
+
+- Min height: `230px` / `@min-[360px]:260px`
+- Image max height: `200px` / `@min-[360px]:230px`, `object-contain`
+- Overlays: stock + delivery chips (top-left), kWh badge (bottom-left, ink `#0f1422`)
+
+## Right column (details + price)
+
+- **Title** + **spec line only** — no product description, subtitle, or overview
+- Spec text: `[specLine1, specLine2].filter(≠ '—').join(' · ')`
+- Feature pills: transport, instalare, reduceri (below specs)
+- Price block at bottom: label, gross price, net line (`catalogNetPriceLine`)
+- **No** add-to-cart button, **no** „Vezi detalii” link, **no** divider above price
+- Industrial no-price: „La cerere” + **Cere ofertă** button only (`stopPropagation` on button)
+
+## i18n (`produse.ts`)
+
+Card labels: `pretLabel`, `catalogRequestQuote`, `catalogPriceOnRequest`, `catalogPriceOnRequestNote`, `catalogNetPriceLine`
+
+## Do not change without explicit request
+
+- 48% image column width
+- `#f7f7f7` backgrounds
+- 2-up page grid on `sm+`
+- Click-to-details on card (no cart CTA on listing)
