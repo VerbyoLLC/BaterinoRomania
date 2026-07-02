@@ -20,8 +20,16 @@ interface SEOProps {
 
 const SITE_NAME = 'Baterino Romania'
 const BASE_URL = 'https://baterino.ro'
-const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.webp`
+const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.jpg`
 const TWITTER_SITE = '@baterino_ro'
+
+function ogImageMimeType(url: string): string {
+  const lower = url.toLowerCase()
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.gif')) return 'image/gif'
+  return 'image/jpeg'
+}
 
 export default function SEO({
   title,
@@ -72,6 +80,8 @@ export default function SEO({
       <meta property="og:title" content={resolvedOgTitle} />
       <meta property="og:description" content={resolvedOgDesc} />
       <meta property="og:image" content={resolvedOgImage} />
+      <meta property="og:image:secure_url" content={resolvedOgImage} />
+      <meta property="og:image:type" content={ogImageMimeType(resolvedOgImage)} />
       <meta property="og:image:width" content={String(ogImageWidth)} />
       <meta property="og:image:height" content={String(ogImageHeight)} />
       <meta property="og:image:alt" content={resolvedOgTitle} />

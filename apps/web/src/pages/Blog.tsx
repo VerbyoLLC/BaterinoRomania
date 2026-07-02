@@ -103,7 +103,7 @@ export default function Blog() {
         title={pageTitle}
         description={pageDesc}
         canonical="/blog"
-        ogImage={seo.ogImage || '/images/home/og-baterino-romania.webp'}
+        ogImage={seo.ogImage || '/images/home/og-baterino-romania.jpg'}
         lang={language.code}
       />
       <SchemaOrg schema={[

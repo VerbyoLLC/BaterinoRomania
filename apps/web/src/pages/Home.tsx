@@ -306,7 +306,7 @@ export default function Home() {
         canonical="/"
         ogTitle={seo.ogTitle || undefined}
         ogDescription={seo.ogDescription || undefined}
-        ogImage={seo.ogImage || '/images/home/og-baterino-romania.webp'}
+        ogImage={seo.ogImage || '/images/home/og-baterino-romania.jpg'}
         lang={language.code}
       />
 

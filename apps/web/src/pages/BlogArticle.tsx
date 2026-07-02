@@ -135,7 +135,7 @@ export default function BlogArticle() {
   const canonicalUrl = `https://baterino.ro/blog/${post.slug}`
   const seoTitle = post.seoTitle || post.title
   const seoDesc = post.seoDescription || post.excerpt
-  const ogImage = post.coverImage || '/images/home/og-baterino-romania.webp'
+  const ogImage = post.coverImage || '/images/home/og-baterino-romania.jpg'
 
   const articleSchema = {
     '@context': 'https://schema.org',

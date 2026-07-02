@@ -299,7 +299,7 @@ export default function AdminSiteSeo() {
                             type="text"
                             value={d.ogImage}
                             onChange={(e) => setField(page.key, 'ogImage', e.target.value)}
-                            placeholder="/images/home/og-baterino-romania.webp"
+                            placeholder="/images/home/og-baterino-romania.jpg"
                             className={inputCls}
                           />
                           <button
