@@ -70,11 +70,6 @@ function parseQty(raw: string | null): number {
 
 type CheckoutStep = 1 | 2 | 3 | 4
 
-function checkoutPath(slug: string, qty: number): string {
-  const q = new URLSearchParams({ slug, qty: String(qty) })
-  return `/comanda?${q.toString()}`
-}
-
 /**
  * Pasul 3 pentru PJ înseamnă adresa de livrare. Prefilează câmpurile de adresă din profilul
  * client folosind delivery-ul salvat (dacă există), altfel cade pe billing-ul vechi salvat.
