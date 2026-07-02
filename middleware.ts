@@ -1,17 +1,18 @@
+import { next } from '@vercel/functions'
 import { buildOgHtml, resolveOg } from './og-data'
 
 /** Social / link-preview crawlers only — Googlebot intentionally excluded (executes JS). */
 const CRAWLER_UA =
   /facebookexternalhit|meta-externalagent|facebookcatalog|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot|discordbot|pinterestbot|redditbot|skypeuripreview|applebot/i
 
-export default function middleware(request: Request): Response | undefined {
+export default function middleware(request: Request) {
   const ua = request.headers.get('user-agent') ?? ''
-  if (!CRAWLER_UA.test(ua)) return undefined
+  if (!CRAWLER_UA.test(ua)) return next()
 
   const { pathname } = new URL(request.url)
-  const og = resolveOg(pathname)
+  if (!pathname.startsWith('/produse')) return next()
 
-  console.log('[og-middleware] hit', { pathname, ua: ua.slice(0, 120) })
+  const og = resolveOg(pathname)
 
   return new Response(buildOgHtml(og), {
     status: 200,
@@ -24,5 +25,6 @@ export default function middleware(request: Request): Response | undefined {
 }
 
 export const config = {
-  matcher: ['/produse/(.*)'],
+  runtime: 'edge',
+  matcher: ['/produse/:path*'],
 }

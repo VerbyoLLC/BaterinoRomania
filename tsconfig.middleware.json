@@ -10,5 +10,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["middleware.ts", "og-data.ts"]
+  "include": ["middleware.ts", "og-data.ts", "api/og.ts"]
 }
