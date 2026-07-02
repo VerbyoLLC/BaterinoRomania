@@ -7,6 +7,7 @@
     "dev:api": "npm run dev --prefix apps/api",
     "dev:all": "concurrently \"cd apps/api && node index.js\" \"npm run dev:web\"",
     "build": "npm install --prefix apps/web && npm run build --prefix apps/web",
+    "typecheck:middleware": "npm exec --prefix apps/web tsc --noEmit -p tsconfig.middleware.json",
     "preview": "npm run preview --prefix apps/web",
     "vercel:link": "vercel link --yes --project prj_FXUyvmhxQrhUSVfhpn6kYdQmRj8P",
     "deploy:staging": "vercel --prod"
