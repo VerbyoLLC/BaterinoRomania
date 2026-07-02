@@ -1,5 +1,5 @@
 export const COOKIE_CONSENT_NAME = 'baterino_cookie_consent'
-export const GTM_ID = 'GTM-NFRKTBHS'
+export const GA_MEASUREMENT_ID = 'G-2RMHQMTY9H'
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 
@@ -31,31 +31,36 @@ export function writeCookieConsent(analytics: boolean): void {
   setCookie(COOKIE_CONSENT_NAME, analytics ? '1' : '0', COOKIE_MAX_AGE_SECONDS)
 }
 
-let gtmLoaded = false
+let gaLoaded = false
 
 declare global {
   interface Window {
-    dataLayer?: Record<string, unknown>[]
+    dataLayer?: unknown[]
+    gtag?: (...args: unknown[]) => void
   }
 }
 
-export function loadGoogleTagManager(): void {
-  if (gtmLoaded || typeof window === 'undefined' || typeof document === 'undefined') return
-  gtmLoaded = true
+export function loadGoogleAnalytics(): void {
+  if (gaLoaded || typeof window === 'undefined' || typeof document === 'undefined') return
+  gaLoaded = true
 
   window.dataLayer = window.dataLayer || []
-  window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' })
+  window.gtag = function gtag(...args: unknown[]) {
+    window.dataLayer!.push(args)
+  }
+  window.gtag('js', new Date())
+  window.gtag('config', GA_MEASUREMENT_ID)
 
   const script = document.createElement('script')
   script.async = true
-  script.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`
   document.head.appendChild(script)
 }
 
 export function applyStoredCookieConsent(): CookieConsentPreference {
   const preference = readCookieConsent()
   if (preference.analytics) {
-    loadGoogleTagManager()
+    loadGoogleAnalytics()
   }
   return preference
 }

@@ -8,7 +8,7 @@ import {
 } from 'react'
 import {
   applyStoredCookieConsent,
-  loadGoogleTagManager,
+  loadGoogleAnalytics,
   writeCookieConsent,
   type CookieConsentPreference,
 } from '../lib/cookieConsent'
@@ -35,7 +35,7 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
 
   const acceptAnalytics = useCallback(() => {
     writeCookieConsent(true)
-    loadGoogleTagManager()
+    loadGoogleAnalytics()
     setPreference({ analytics: true, decided: true })
     void recordCookieConsent(true)
   }, [])

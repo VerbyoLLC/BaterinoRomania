@@ -1,16 +1,19 @@
 <!doctype html>
 <html lang="ro">
   <head>
-    <!-- Analytics (GTM) loads only after cookie consent — see src/lib/cookieConsent.ts -->
+    <!-- Google Analytics (gtag.js) loads only after cookie consent — see src/lib/cookieConsent.ts -->
     <script>
       (function () {
         var match = document.cookie.match(/(?:^|; )baterino_cookie_consent=([^;]*)/);
         if (!match || decodeURIComponent(match[1]) !== '1') return;
         window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        function gtag(){dataLayer.push(arguments);}
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', 'G-2RMHQMTY9H');
         var script = document.createElement('script');
         script.async = true;
-        script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-NFRKTBHS';
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-2RMHQMTY9H';
         document.head.appendChild(script);
       })();
     </script>
