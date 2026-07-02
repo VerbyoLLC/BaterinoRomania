@@ -88,7 +88,7 @@ export default function ServiceLithtech() {
             </div>
             <div className="flex flex-col items-center lg:items-end gap-4">
               <img
-                src="/images/menu/lithtech.png"
+                src="/images/menu/lithtech.webp"
                 alt="LithTech"
                 className="h-12 w-auto object-contain"
               />

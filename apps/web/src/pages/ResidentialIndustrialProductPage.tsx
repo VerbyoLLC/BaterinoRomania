@@ -37,11 +37,15 @@ import {
 import SEO from '../components/SEO'
 import OutlineButton from '../components/OutlineButton'
 import ProductPriceBlock from '../components/ProductPriceBlock'
+import ResidentialClientPriceBlock, {
+  showResidentialClientPurchaseUI,
+} from '../components/ResidentialClientPriceBlock'
 import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
 import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
 import { getProduseTranslations } from '../i18n/produse'
 import { getProductDetailTranslations } from '../i18n/product-detail'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
+import { collectProductImageUrls, resolveProductOgImageUrl, SITE_BASE_URL } from '../lib/productSeoImages'
 import type { LangCode } from '../i18n/menu'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getIndustrialBessTemplateTranslations } from '../i18n/industrial-bess-template'
@@ -297,14 +301,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
         description={templateSeo.description}
         canonical={canonical}
         lang={language.code}
-        ogImage={templateSeo.ogImage}
+        ogImage={templateSeo.ogImage ?? resolveProductOgImageUrl(product)}
       />
       {(() => {
-        const BASE = 'https://baterino.ro'
+        const BASE = SITE_BASE_URL
         const productUrl = `${BASE}${canonical}`
-        const images = Array.isArray(product.images) && product.images.length > 0
-          ? product.images.map((img) => img.startsWith('http') ? img : `${BASE}${img}`)
-          : undefined
+        const images = collectProductImageUrls(product, { base: BASE })
         const stockMap: Record<string, string> = {
           in_stock: 'https://schema.org/InStock',
           out_of_stock: 'https://schema.org/OutOfStock',
@@ -333,7 +335,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
               name: product.title,
               description: templateSeo.description,
               url: productUrl,
-              ...(images ? { image: images } : {}),
+              image: images,
               brand: { '@type': 'Brand', name: product.brand || 'LithTech' },
               offers: {
                 '@type': 'Offer',
@@ -740,37 +742,42 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
 
             {/* ── Right: sticky sidebar with boxes ── */}
             <div className="min-w-0 flex flex-col gap-4 lg:sticky lg:top-6">
-
-              {/* Price / contact */}
-              <div className="min-w-0 rounded-[10px] border border-neutral-200/80 bg-neutral-100 p-5 sm:p-6">
-                <img
-                  src="/images/shared/baterino-industrial-black.png"
-                  alt="Baterino Industrial"
-                  className="mb-4 h-5 w-auto max-w-full object-contain object-left"
+              {showResidentialClientPurchaseUI(product) ? (
+                <ResidentialClientPriceBlock
+                  product={product}
+                  tr={productDetailTr}
+                  lang={language.code as LangCode}
                 />
-                <div className="mb-4">
-                  <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+              ) : (
+                <div className="min-w-0 rounded-[10px] border border-neutral-200/80 bg-neutral-100 p-5 sm:p-6">
+                  <img
+                    src="/images/shared/baterino-industrial-black.webp"
+                    alt="Baterino Industrial"
+                    className="mb-4 h-5 w-auto max-w-full object-contain object-left"
+                  />
+                  <div className="mb-4">
+                    <ProductPriceBlock product={product} lang={language.code as LangCode} embedded />
+                  </div>
+                  <hr className="mb-4 border-0 border-t border-neutral-200" aria-hidden />
+                  {tr.contactBlurb.trim() ? (
+                    <>
+                      <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>
+                      <p className="mb-4 text-sm font-normal font-['Inter'] leading-5 text-gray-700">{tr.contactBlurb}</p>
+                    </>
+                  ) : (
+                    <p className="mb-4 text-sm font-semibold font-['Inter'] leading-snug text-gray-900 sm:text-base">
+                      {tr.contactTitle}
+                    </p>
+                  )}
+                  <Link
+                    to="/contact"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 font-['Inter'] sm:text-base"
+                  >
+                    <Phone size={18} aria-hidden />
+                    {tr.contactCta}
+                  </Link>
                 </div>
-                <hr className="mb-4 border-0 border-t border-neutral-200" aria-hidden />
-                {tr.contactBlurb.trim() ? (
-                  <>
-                    <h3 className="mb-2 text-base font-bold font-['Inter'] text-black">{tr.contactTitle}</h3>
-                    <p className="mb-4 text-sm font-normal font-['Inter'] leading-5 text-gray-700">{tr.contactBlurb}</p>
-                  </>
-                ) : (
-                  <p className="mb-4 text-sm font-semibold font-['Inter'] leading-snug text-gray-900 sm:text-base">
-                    {tr.contactTitle}
-                  </p>
-                )}
-                <Link
-                  to="/contact"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 font-['Inter'] sm:text-base"
-                >
-                  <Phone size={18} aria-hidden />
-                  {tr.contactCta}
-                </Link>
-              </div>
-
+              )}
             </div>
           </div>
         </section>

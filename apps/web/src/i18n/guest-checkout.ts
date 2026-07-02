@@ -88,29 +88,6 @@ export type GuestCheckoutTranslations = {
   orderSuccessViewOrders: string
   orderSuccessTitle: string
   orderSuccessBody: string
-  authTitle: string
-  authSubline: string
-  authEmail: string
-  authPassword: string
-  authSubmit: string
-  authLoading: string
-  authPasswordTooShort: string
-  authErrorGeneric: string
-  /** Footer: „Ai deja cont?” */
-  authSignupPrompt: string
-  /** Footer: link text → login */
-  authSignupLink: string
-  authDividerOr: string
-  authGoogleSignup: string
-  /** Checkbox before Google signup — fragments around `/termeni-si-conditii` and `/politica-confidentialitate`. */
-  authTermsLead: string
-  authTermsLinkTerms: string
-  authTermsMiddle: string
-  authTermsLinkPrivacy: string
-  /** Shown if Google signup is attempted without accepting terms (defensive). */
-  authTermsRequiredError: string
-  /** Optional marketing email opt-in at signup (unchecked by default). */
-  authMarketingOptInLabel: string
   missingSlugTitle: string
   missingSlugBody: string
   /** No slug and empty cart on `/comanda` */
@@ -163,11 +140,9 @@ export type GuestCheckoutTranslations = {
 const translations: Record<LangCode, GuestCheckoutTranslations> = {
   ro: {
     pageTitle: 'Comandă ca invitat',
-    pageDescription:
-      'Finalizează comanda pentru bateria rezidențială fără cont sau creează un cont client pentru beneficii suplimentare.',
+    pageDescription: 'Finalizează comanda pentru bateria rezidențială fără cont.',
     headline: 'Comanda ta',
-    subline:
-      'Poți continua fără cont (fără program de reducere) sau îți poți crea un cont client în dreapta pentru reduceri și o experiență completă.',
+    subline: 'Completează pașii de mai jos pentru a plasa comanda. Nu este necesar un cont client.',
     navStep1: 'Produs și preț',
     navStep2: 'Persoană de contact și date de facturare',
     navStep3: 'Adresa de livrare',
@@ -244,26 +219,6 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     orderSuccessTitle: 'Comanda a fost înregistrată',
     orderSuccessBody:
       'Îți mulțumim! Vei primi în curând factura proformă la adresa de e-mail indicată. Te vom contacta și telefonic, conform pașilor de mai sus.',
-    authTitle: 'Creează cont client',
-    authSubline: 'Înregistrează-te pentru a salva datele și a accesa programele de reducere.',
-    authEmail: 'Email',
-    authPassword: 'Parolă',
-    authSubmit: 'Creează contul',
-    authLoading: 'Se creează contul…',
-    authPasswordTooShort: 'Parola trebuie să aibă cel puțin 8 caractere.',
-    authErrorGeneric: 'Eroare la înregistrare.',
-    authSignupPrompt: 'Ai deja cont?',
-    authSignupLink: 'Autentifică-te',
-    authDividerOr: 'sau',
-    authGoogleSignup: 'Înregistrare cu Google',
-    authTermsLead: 'Sunt de acord cu ',
-    authTermsLinkTerms: 'Termenii și Condițiile',
-    authTermsMiddle: ' și ',
-    authTermsLinkPrivacy: 'Politica de Confidențialitate',
-    authTermsRequiredError:
-      'Trebuie să accepți Termenii și Condițiile și Politica de Confidențialitate pentru a continua cu Google.',
-    authMarketingOptInLabel:
-      'Doresc să primesc comunicări comerciale și oferte de la Baterino prin email. (Opțional)',
     missingSlugTitle: 'Lipsește produsul',
     missingSlugBody: 'Nu s-a putut identifica produsul. Alege un produs din catalog.',
     emptyCheckoutTitle: 'Nu există produse de comandat',
@@ -300,11 +255,9 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
   },
   en: {
     pageTitle: 'Guest checkout',
-    pageDescription:
-      'Complete your residential battery order without an account, or create a client account on the right for the full experience.',
+    pageDescription: 'Complete your residential battery order without an account.',
     headline: 'Your order',
-    subline:
-      'You can continue as a guest (no discount programme) or create a client account on the right for discounts and the full experience.',
+    subline: 'Complete the steps below to place your order. A client account is not required.',
     navStep1: 'Product and price',
     navStep2: 'Contact person & billing details',
     navStep3: 'Delivery address',
@@ -381,26 +334,6 @@ const translations: Record<LangCode, GuestCheckoutTranslations> = {
     orderSuccessTitle: 'Order received',
     orderSuccessBody:
       'Thank you. Your proforma invoice will arrive shortly at the email address you provided. We will also call you as described in the steps above.',
-    authTitle: 'Create a client account',
-    authSubline: 'Register to save your details and access discount programmes.',
-    authEmail: 'Email',
-    authPassword: 'Password',
-    authSubmit: 'Create account',
-    authLoading: 'Creating account…',
-    authPasswordTooShort: 'Password must be at least 8 characters.',
-    authErrorGeneric: 'Registration failed.',
-    authSignupPrompt: 'Already have an account?',
-    authSignupLink: 'Sign in',
-    authDividerOr: 'or',
-    authGoogleSignup: 'Continue with Google',
-    authTermsLead: 'I agree to the ',
-    authTermsLinkTerms: 'Terms & Conditions',
-    authTermsMiddle: ' and ',
-    authTermsLinkPrivacy: 'Privacy Policy',
-    authTermsRequiredError:
-      'Please accept the Terms & Conditions and Privacy Policy to continue with Google.',
-    authMarketingOptInLabel:
-      'I would like to receive commercial communications and offers from Baterino by email. (Optional)',
     missingSlugTitle: 'Missing product',
     missingSlugBody: 'We could not tell which product to order. Pick one from the catalogue.',
     emptyCheckoutTitle: 'Nothing to checkout',

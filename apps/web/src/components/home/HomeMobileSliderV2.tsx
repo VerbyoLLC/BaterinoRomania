@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
+import { HOME_PROMO_PRODUCT_LINK } from './HomePromoModal'
 
 /** Card dimensions — shorter than desktop, wider to fill more of the viewport. */
 const CARD_H = 450
@@ -98,7 +99,7 @@ function OfertaDetailsModal({
         {/* ── Image header ── */}
         <div className="relative h-52 shrink-0 bg-neutral-900 overflow-hidden">
           <img
-            src="/images/home/offer-baterino.jpg"
+            src="/images/home/offer-baterino.webp"
             alt=""
             className="h-full w-full object-cover opacity-80 scale-105 [filter:blur(2px)]"
           />
@@ -184,7 +185,7 @@ function OfertaDetailsModal({
         {/* ── Sticky CTA ── */}
         <div className="px-5 pt-3 border-t border-neutral-100">
           <Link
-            to="/produse/baterii-solare/20kwh-2-x-10kwh-ecohome-10-10kwh"
+            to={HOME_PROMO_PRODUCT_LINK}
             className="inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-slate-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-700 active:bg-slate-800"
           >
             {tr.promoModalCtaPrimary}
@@ -207,7 +208,7 @@ function SlideOfertaImage({
   return (
     <div className="absolute inset-0 bg-neutral-100">
       <img
-        src="/images/slider2/card1-mobile.jpg"
+        src="/images/slider2/card1-mobile.webp"
         alt=""
         fetchPriority="high"
         className="h-full w-full object-cover object-center"
@@ -256,7 +257,7 @@ function SlideOfertaImage({
 function SlideReduceri({ tr }: { tr: HomeTranslations }) {
   return (
     <div className="absolute inset-0">
-      <img src="/images/slider2/slide1.jpg" alt="" className="h-full w-full object-cover" />
+      <img src="/images/slider2/slide1.webp" alt="" className="h-full w-full object-cover" />
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -270,7 +271,7 @@ function SlideReduceri({ tr }: { tr: HomeTranslations }) {
         style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.5)' }}
       >
         <img
-          src="/images/shared/baterino-logo-white.png"
+          src="/images/shared/baterino-logo-white.webp"
           alt="Baterino"
           draggable={false}
           className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))] pointer-events-none"
@@ -346,7 +347,7 @@ function BessDetailsModal({
         {/* Image header */}
         <div className="relative h-52 shrink-0 bg-neutral-900 overflow-hidden">
           <img
-            src="/images/slider2/bess-baterino-card.jpg"
+            src="/images/slider2/bess-baterino-card.webp"
             alt=""
             className="h-full w-full object-cover opacity-80 scale-105 [filter:blur(2px)]"
           />
@@ -442,7 +443,7 @@ function SlideBessImage({
   return (
     <div className="absolute inset-0 bg-neutral-100">
       <img
-        src="/images/slider2/bess-baterino-card.jpg"
+        src="/images/slider2/bess-baterino-card.webp"
         alt=""
         className="h-full w-full object-cover object-center"
       />
@@ -494,14 +495,14 @@ function SlideProiecte({ tr }: { tr: HomeTranslations }) {
       className="absolute inset-0 block cursor-pointer"
       aria-label={tr.heroV2Card3Cta}
     >
-      <img src="/images/slider2/slider3.jpg" alt="" className="h-full w-full object-cover pointer-events-none" />
+      <img src="/images/slider2/slider3.webp" alt="" className="h-full w-full object-cover pointer-events-none" />
       <div className="absolute inset-0 bg-black/45 pointer-events-none" aria-hidden />
       <div
         className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none"
         style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.5)' }}
       >
         <img
-          src="/images/lithtech/logo-baterino-pro-white.png"
+          src="/images/lithtech/logo-baterino-pro-white.webp"
           alt="Baterino Pro"
           draggable={false}
           className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
@@ -532,7 +533,7 @@ function SlideInstalatoriImage({
   return (
     <div className="absolute inset-0 bg-neutral-900">
       <img
-        src="/images/home/slider-apple/slide4-instalatori.jpg"
+        src="/images/home/slider-apple/slide4-instalatori.webp"
         alt=""
         className="h-full w-full object-cover object-center"
       />
@@ -620,7 +621,7 @@ function InstalatoriDetailsModal({
         {/* Image header */}
         <div className="relative h-52 shrink-0 bg-neutral-900 overflow-hidden">
           <img
-            src="/images/home/slider-apple/slide4-instalatori.jpg"
+            src="/images/home/slider-apple/slide4-instalatori.webp"
             alt=""
             className="h-full w-full object-cover opacity-80 scale-105 [filter:blur(2px)]"
           />

@@ -33,7 +33,7 @@ function BlogCard({ post }: { post: BlogPostRow }) {
           />
           <div className="pointer-events-none absolute bottom-3 right-3 z-10">
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt=""
               aria-hidden
               className="h-5 w-auto max-w-[88px] object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
@@ -103,7 +103,7 @@ export default function Blog() {
         title={pageTitle}
         description={pageDesc}
         canonical="/blog"
-        ogImage={seo.ogImage || '/images/home/og-baterino-romania.jpg'}
+        ogImage={seo.ogImage || '/images/home/og-baterino-romania.webp'}
         lang={language.code}
       />
       <SchemaOrg schema={[

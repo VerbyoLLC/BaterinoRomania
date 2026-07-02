@@ -1,6 +1,13 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Truck, Tag, Wrench, Clock, FileText } from 'lucide-react'
+import {
+  CatalogProductFeatureBadge,
+  CatalogProductImageChip,
+  type CatalogProductFeatureBadgeData,
+} from './CatalogProductTagBadges'
+import { getAuthRole } from '../../lib/api'
+import { CONTACT_WHATSAPP_WAME } from '../../lib/contactWhatsApp'
 
 export type CatalogProductCardDensity = 'produse' | 'home' | 'partner'
 
@@ -387,10 +394,7 @@ export function IndustrialCatalogProductCard(props: IndustrialCatalogProductCard
   return <CatalogProductCard {...props} variant="industrial" capacityTag={props.capacityTag} />
 }
 
-export type HorizontalFeatureBadge = {
-  type: 'stock' | 'delivery' | 'transport' | 'install' | 'reduceri'
-  label: string
-}
+export type HorizontalFeatureBadge = CatalogProductFeatureBadgeData
 
 export type HorizontalCatalogProductCardProps = Omit<CatalogProductCardBaseProps, 'priceAboveBadge' | 'imageOverlay'> & {
   variant?: 'residential' | 'industrial'
@@ -469,7 +473,7 @@ export function HorizontalCatalogProductCard({
             className={`h-full w-full max-h-full max-w-full object-contain object-center transition-all duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}
             onError={() => {
-              const next = fallbackImageSrc && currentSrc !== fallbackImageSrc ? fallbackImageSrc : '/images/shared/HP2000-all-in-one.png'
+              const next = fallbackImageSrc && currentSrc !== fallbackImageSrc ? fallbackImageSrc : '/images/shared/HP2000-all-in-one.webp'
               if (currentSrc !== next) setCurrentSrc(next)
             }}
           />
@@ -559,6 +563,7 @@ export function HorizontalCatalogProductCard({
 export type ProduseCatalogCardLabels = {
   pretLabel: string
   requestQuote: string
+  requestQuoteWhatsappPrefill: string
   priceOnRequest: string
   priceOnRequestNote: string
 }
@@ -644,6 +649,20 @@ export function ProduseCatalogProductCard({
     navigate(to, { state: linkState })
   }
 
+  const handleRequestQuote = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    if (getAuthRole() == null) {
+      const text = labels.requestQuoteWhatsappPrefill.replace('{title}', title.trim())
+      window.open(
+        `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(text)}`,
+        '_blank',
+        'noopener,noreferrer',
+      )
+      return
+    }
+    navigate(to, { state: linkState })
+  }
+
   const handleCardKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -665,7 +684,7 @@ export function ProduseCatalogProductCard({
           {imageBadges.length > 0 ? (
             <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
               {imageBadges.map((b) => (
-                <ProduseChip key={b.type} badge={b} />
+                <CatalogProductImageChip key={b.type} badge={b} />
               ))}
             </div>
           ) : null}
@@ -677,7 +696,7 @@ export function ProduseCatalogProductCard({
               const next =
                 fallbackImageSrc && currentSrc !== fallbackImageSrc
                   ? fallbackImageSrc
-                  : '/images/shared/HP2000-all-in-one.png'
+                  : '/images/shared/HP2000-all-in-one.webp'
               if (currentSrc !== next) setCurrentSrc(next)
             }}
           />
@@ -703,7 +722,7 @@ export function ProduseCatalogProductCard({
             {featureRow.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {featureRow.map((b) => (
-                  <ProduseFeatureBadge key={b.type} badge={b} />
+                  <CatalogProductFeatureBadge key={b.type} badge={b} />
                 ))}
               </div>
             ) : null}
@@ -740,51 +759,19 @@ export function ProduseCatalogProductCard({
             ) : null}
 
             {showQuoteState ? (
-              <Link
-                to={to}
-                state={linkState}
-                onClick={(e) => e.stopPropagation()}
-                className="relative z-10 mt-3 flex w-full items-center justify-center gap-2 rounded-[11px] border-0 bg-[#4d6079] px-3 py-3 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#3c4d63]"
+              <button
+                type="button"
+                onClick={handleRequestQuote}
+                className="relative z-10 mt-3 flex w-full items-center justify-center gap-2 rounded-[11px] border-0 bg-[#4d6079] px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#3c4d63]"
               >
                 <FileText size={16} aria-hidden />
                 {labels.requestQuote}
-              </Link>
+              </button>
             ) : null}
           </div>
         </div>
       </article>
     </div>
-  )
-}
-
-function ProduseChip({ badge }: { badge: HorizontalFeatureBadge }) {
-  const isStock = badge.type === 'stock'
-  const deliveryOnly =
-    badge.type === 'delivery'
-      ? badge.label.replace(/^(Livrare|Delivery)\s+/i, '').trim() || badge.label
-      : badge.label
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-[5px] text-[11px] font-semibold shadow-[0_2px_6px_-2px_rgba(15,20,34,0.15)] ${
-        isStock ? 'text-[#0e8459]' : 'text-[#6a7281]'
-      }`}
-    >
-      {isStock ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#159b6a]" aria-hidden /> : null}
-      {badge.type === 'delivery' ? <Clock size={12} aria-hidden /> : null}
-      {isStock ? badge.label : deliveryOnly}
-    </span>
-  )
-}
-
-function ProduseFeatureBadge({ badge }: { badge: HorizontalFeatureBadge }) {
-  const Icon = badge.type === 'transport' ? Truck : badge.type === 'install' ? Wrench : Tag
-
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#e8eaf0] bg-[#f4f5f7] px-2.5 py-[5px] text-[11.5px] font-semibold text-[#4d6079]">
-      <Icon size={13} className="shrink-0 text-[#159b6a]" aria-hidden />
-      {badge.label}
-    </span>
   )
 }
 

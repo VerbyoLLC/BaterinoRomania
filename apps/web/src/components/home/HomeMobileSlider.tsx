@@ -4,11 +4,11 @@ import { CheckCircle } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
 const SLIDES = [
-  '/images/slider2mobile/slide1.jpg',
-  '/images/slider2mobile/slide3.jpg',
-  '/images/slider2mobile/slide4.jpg',
-  '/images/slider2mobile/slide6.jpg',
-  '/images/slider2mobile/skide5.jpg',
+  '/images/slider2mobile/slide1.webp',
+  '/images/slider2mobile/slide3.webp',
+  '/images/slider2mobile/slide4.webp',
+  '/images/slider2mobile/slide6.webp',
+  '/images/slider2mobile/skide5.webp',
 ]
 
 const CARD_HEIGHT = 450
@@ -23,7 +23,7 @@ function SlideReduceri({ tr }: { tr: HomeTranslations }) {
     <>
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.12) 70%, transparent 85%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
-        <img src="/images/shared/baterino-logo-white.png" alt="Baterino" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
+        <img src="/images/shared/baterino-logo-white.webp" alt="Baterino" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
         <h3 className="text-xl font-bold leading-tight uppercase text-white font-['Inter']">{tr.heroV2Card2Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white font-['Inter']">{tr.heroV2Card2Subtitle}</p>
         <Link to="/reduceri" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
@@ -71,7 +71,7 @@ function SlideMaritim({ tr }: { tr: HomeTranslations }) {
     <>
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.10) 66%, transparent 82%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
-        <img src="/images/lithtech/logo-baterino-pro-white.png" alt="Baterino Pro" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
+        <img src="/images/lithtech/logo-baterino-pro-white.webp" alt="Baterino Pro" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
         <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Subtitle}</p>
         <Link to="/studii-de-caz" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">

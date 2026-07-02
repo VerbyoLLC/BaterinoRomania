@@ -22,7 +22,7 @@ export default function ProductDetailCtaBoxes({ tr, className = '', variant = 'b
       {showSwap ? (
       <div className="relative flex min-h-[260px] items-center overflow-hidden rounded-[18px]">
         <img
-          src="/images/product/baterino-swap.jpg"
+          src="/images/product/baterino-swap.webp"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />
@@ -50,7 +50,7 @@ export default function ProductDetailCtaBoxes({ tr, className = '', variant = 'b
       {showReduceri ? (
       <div className="relative flex min-h-[260px] items-center overflow-hidden rounded-[18px]">
         <img
-          src="/images/product/reduceri-banner.jpg"
+          src="/images/product/reduceri-banner.webp"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />

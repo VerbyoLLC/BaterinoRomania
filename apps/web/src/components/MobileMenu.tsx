@@ -15,10 +15,10 @@ const DIVIZII_SUBMENU_ITEMS = [
 ]
 
 const PRODUCTS_SUBMENU_ITEMS = [
-  { key: 'rezidential', path: '/produse', sectorFilter: 'rezidential' as const, image: '/images/menu/rezidential-icon.png', subtypeKey: 'prodRezSubtype' as const },
-  { key: 'industrial', path: '/produse', sectorFilter: 'industrial' as const, image: '/images/menu/industrial-icon.png', subtypeKey: 'prodHighVoltage' as const },
-  { key: 'medical', path: '/produse', sectorFilter: 'medical' as const, image: '/images/menu/medical-icon.png', subtypeKey: 'prodHighVoltage' as const },
-  { key: 'maritim', path: '/produse', sectorFilter: 'maritim' as const, image: '/images/menu/maritim-icon.png', subtypeKey: 'prodHighVoltage' as const },
+  { key: 'rezidential', path: '/produse', sectorFilter: 'rezidential' as const, image: '/images/menu/rezidential-icon.webp', subtypeKey: 'prodRezSubtype' as const },
+  { key: 'industrial', path: '/produse', sectorFilter: 'industrial' as const, image: '/images/menu/industrial-icon.webp', subtypeKey: 'prodHighVoltage' as const },
+  { key: 'medical', path: '/produse', sectorFilter: 'medical' as const, image: '/images/menu/medical-icon.webp', subtypeKey: 'prodHighVoltage' as const },
+  { key: 'maritim', path: '/produse', sectorFilter: 'maritim' as const, image: '/images/menu/maritim-icon.webp', subtypeKey: 'prodHighVoltage' as const },
 ]
 
 const COMPANIE_SUBMENU_ITEMS = [
@@ -208,7 +208,7 @@ export default function MobileMenu({
         <div className="flex items-center justify-between h-14 px-4 bg-white border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-gray-700 text-xs font-normal font-['Nunito_Sans'] leading-9">powered by</span>
-            <img src="/images/menu/lithtech.png" alt="LithTech" className="w-36 h-6 object-contain" />
+            <img src="/images/menu/lithtech.webp" alt="LithTech" className="w-36 h-6 object-contain" />
           </div>
           <button
             type="button"

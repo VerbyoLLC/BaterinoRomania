@@ -579,7 +579,7 @@ export default function PartnerLayout() {
                 onClick={() => setSidebarOpen(false)}
               >
                 <img
-                  src="/images/shared/baterino-logo-white.png"
+                  src="/images/shared/baterino-logo-white.webp"
                   alt="Baterino"
                   className="h-7 w-auto object-contain"
                 />
@@ -591,7 +591,7 @@ export default function PartnerLayout() {
             {collapsed && (
               <Link to="/partner" className="flex items-center justify-center" onClick={() => setSidebarOpen(false)}>
                 <img
-                  src="/images/shared/baterino-logo-white.png"
+                  src="/images/shared/baterino-logo-white.webp"
                   alt="Baterino"
                   className="h-6 w-auto object-contain"
                 />
@@ -704,7 +704,7 @@ export default function PartnerLayout() {
               </svg>
             </button>
             <Link to="/partner" className="flex-shrink-0">
-              <img src="/images/shared/baterino-pro-negru-logo.png" alt="Baterino" className="h-6 w-auto" />
+              <img src="/images/shared/baterino-pro-negru-logo.webp" alt="Baterino" className="h-6 w-auto" />
             </Link>
           </div>
           <div

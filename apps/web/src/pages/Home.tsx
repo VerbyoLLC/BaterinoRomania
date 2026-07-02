@@ -39,6 +39,11 @@ import {
 import ResidentialProductCatalogBadges from '../components/product/ResidentialProductCatalogBadges'
 import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
 import { sortCatalogProducts } from '../lib/catalogProductSort'
+import {
+  catalogSectorsWithProducts,
+  publicProductMatchesSector,
+  type PublicCatalogSectorKey,
+} from '../lib/catalog-sector'
 
 function renderBaterinoGlobalLink(text: string) {
   return text.split('Baterino Global').map((part, i, arr) =>
@@ -235,22 +240,7 @@ export default function Home() {
   const featuredProducts = useMemo(() => {
     const filtered = products.filter((p) => {
       if (!activeTab) return true
-      const cat = String(p.categorie || '').toLowerCase()
-      if (cat && cat.includes(activeTab)) {
-        // pass sector filter
-      } else if (!p.categorie?.trim()) {
-        const tip = String(p.tipProdus || '').toLowerCase()
-        if (activeTab === 'rezidential' && tip === 'industrial') {
-          // pass — carousel-template products skew residential sector
-        } else if (activeTab === 'industrial' && tip === 'rezidential') {
-          // pass — classic-page products skew industrial sector
-        } else {
-          return false
-        }
-      } else {
-        return false
-      }
-      return true
+      return publicProductMatchesSector(p, activeTab as PublicCatalogSectorKey)
     })
     const withPrice = filtered.filter((p) => catalogProductShowsPublicPrice(p, language.code, currency))
     if (voltageFilter) {
@@ -274,18 +264,37 @@ export default function Home() {
     return sortCatalogProducts(withPrice).slice(0, 6)
   }, [products, activeTab, voltageFilter, locationFilter, language.code, currency])
 
-  const tabs = [
-    { id: 'rezidential', label: tr.productsTabRez },
-    { id: 'industrial',  label: tr.productsTabInd },
-    { id: 'medical',     label: tr.productsTabMed },
-    { id: 'maritim',     label: tr.productsTabMar },
-  ]
+  const allProductTabs = useMemo(
+    () => [
+      { id: 'rezidential' as const, label: tr.productsTabRez },
+      { id: 'industrial' as const, label: tr.productsTabInd },
+      { id: 'medical' as const, label: tr.productsTabMed },
+      { id: 'maritim' as const, label: tr.productsTabMar },
+    ],
+    [tr.productsTabRez, tr.productsTabInd, tr.productsTabMed, tr.productsTabMar],
+  )
+
+  const sectorsWithProducts = useMemo(
+    () => catalogSectorsWithProducts(products, publicProductMatchesSector),
+    [products],
+  )
+
+  const tabs = useMemo(
+    () => allProductTabs.filter((tab) => sectorsWithProducts.includes(tab.id)),
+    [allProductTabs, sectorsWithProducts],
+  )
+
+  useEffect(() => {
+    if (activeTab && !tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab('')
+    }
+  }, [activeTab, tabs])
 
   const reduceriCards = [
-    { img: '/images/programe%20reduceri/energie-pentru-parinti-campenie-reduceri-baterino.jpg', pct: '20%', title: tr.reduceriCard1Title, desc: tr.reduceriCard1Desc },
-    { img: '/images/programe%20reduceri/tva-ul-cum-era-campanie-reducere-baterino.jpg', pct: '12%', title: tr.reduceriCard2Title, desc: tr.reduceriCard2Desc },
-    { img: '/images/programe%20reduceri/cum-e-viata-la-tara-campanie-reduceri-baterino.jpg', pct: '7%', title: tr.reduceriCard3Title, desc: tr.reduceriCard3Desc },
-    { img: '/images/programe%20reduceri/stiu-de-la-vecinu-program-reducere-baterino.jpg', pct: '5%', title: tr.reduceriCard4Title, desc: tr.reduceriCard4Desc },
+    { img: '/images/programe%20reduceri/energie-pentru-parinti-campenie-reduceri-baterino.webp', pct: '15%', title: tr.reduceriCard1Title, desc: tr.reduceriCard1Desc },
+    { img: '/images/programe%20reduceri/tva-ul-cum-era-campanie-reducere-baterino.webp', pct: '12%', title: tr.reduceriCard2Title, desc: tr.reduceriCard2Desc },
+    { img: '/images/programe%20reduceri/cum-e-viata-la-tara-campanie-reduceri-baterino.webp', pct: '7%', title: tr.reduceriCard3Title, desc: tr.reduceriCard3Desc },
+    { img: '/images/programe%20reduceri/stiu-de-la-vecinu-program-reducere-baterino.webp', pct: '5%', title: tr.reduceriCard4Title, desc: tr.reduceriCard4Desc },
   ]
   const reduceriVisibleCards = reduceriCards.slice(0, isMobile ? reduceriVisibleCount : 4)
 
@@ -297,7 +306,7 @@ export default function Home() {
         canonical="/"
         ogTitle={seo.ogTitle || undefined}
         ogDescription={seo.ogDescription || undefined}
-        ogImage={seo.ogImage || '/images/home/og-baterino-romania.jpg'}
+        ogImage={seo.ogImage || '/images/home/og-baterino-romania.webp'}
         lang={language.code}
       />
 
@@ -577,7 +586,7 @@ export default function Home() {
             featuredProducts.map((p) => {
               const img = getProductCardImageUrl(p)
               const pImgs = Array.isArray(p.images) ? p.images : []
-              const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.png'
+              const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.webp'
               const { specLine1, specLine2 } = getCatalogProductSpecLines(p)
               const stockListingCta = getResidentialCatalogStockListingCta(p, {
                 outOfStock: tr.catalogStockOutOfStock,
@@ -654,7 +663,7 @@ export default function Home() {
                     <ResidentialProductCatalogBadges
                       product={p}
                       labels={catalogBadgeLabels}
-                      layout="stack"
+                      layout="wrap"
                       include={['stock', 'delivery']}
                     />
                   }
@@ -663,9 +672,8 @@ export default function Home() {
                       product={p}
                       labels={catalogBadgeLabels}
                       layout="wrap"
-                      className="justify-center gap-1.5"
+                      className="justify-center"
                       include={['transport', 'install']}
-                      appearance="neutral"
                     />
                   }
                 />
@@ -688,7 +696,7 @@ export default function Home() {
                     <ResidentialProductCatalogBadges
                       product={p}
                       labels={catalogBadgeLabels}
-                      layout="stack"
+                      layout="wrap"
                       include={['stock', 'delivery']}
                     />
                   }
@@ -697,9 +705,8 @@ export default function Home() {
                       product={p}
                       labels={catalogBadgeLabels}
                       layout="wrap"
-                      className="justify-center gap-1.5"
+                      className="justify-center"
                       include={['transport', 'reducere']}
-                      appearance="neutral"
                     />
                   }
                 />
@@ -789,36 +796,36 @@ export default function Home() {
             {/* Desktop: 4 cards in grid */}
             <div className="hidden w-full lg:grid lg:grid-cols-4 lg:gap-6">
               <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/rezidential-baterii-lifepo4.jpg" alt={tr.divRezTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/rezidential-baterii-lifepo4.webp" alt={tr.divRezTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-logo-white.png" alt="Baterino" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-logo-white.webp" alt="Baterino" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[21px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/industrial" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/industrial-baterii-lifepo4.jpg" alt={tr.divIndTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/industrial-baterii-lifepo4.webp" alt={tr.divIndTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-pro-industrial-logo.png" alt="Baterino Industrial" loading="lazy" className="absolute top-5 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-pro-industrial-logo.webp" alt="Baterino Industrial" loading="lazy" className="absolute top-5 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[22px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/medical" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/medical-baterii-lifepo4.jpg" alt={tr.divMedTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/medical-baterii-lifepo4.webp" alt={tr.divMedTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-medical-logo-white.png" alt="Baterino Medical" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-medical-logo-white.webp" alt="Baterino Medical" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 left-[18px]">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
                 </div>
               </Link>
               <Link to="/divizii/maritim" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/maritim-baterii-lifepo4.jpg" alt={tr.divMarTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src="/images/home/maritim-baterii-lifepo4.webp" alt={tr.divMarTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-maritim-logo-white.png" alt="Baterino Maritim" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <img src="/images/shared/baterino-maritim-logo-white.webp" alt="Baterino Maritim" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
                 <div className="absolute bottom-6 inset-x-0 px-4 text-center">
                   <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
                   <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px] mx-auto">{tr.divMarDesc}</p>
@@ -838,10 +845,10 @@ export default function Home() {
                   }}
                 >
                   {[
-                    { img: '/images/home/rezidential-baterii-lifepo4.jpg', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.png' },
-                    { img: '/images/home/industrial-baterii-lifepo4.jpg', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.png' },
-                    { img: '/images/home/medical-baterii-lifepo4.jpg', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.png' },
-                    { img: '/images/home/maritim-baterii-lifepo4.jpg', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.png' },
+                    { img: '/images/home/rezidential-baterii-lifepo4.webp', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.webp' },
+                    { img: '/images/home/industrial-baterii-lifepo4.webp', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.webp' },
+                    { img: '/images/home/medical-baterii-lifepo4.webp', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.webp' },
+                    { img: '/images/home/maritim-baterii-lifepo4.webp', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.webp' },
                   ].map((d, i) => (
                     <Link
                       key={i}
@@ -905,14 +912,14 @@ export default function Home() {
             {/* Left card – LithTech */}
             <div className="hidden lg:block order-1 lg:order-2 lg:col-span-3 h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 shadow-md group">
               <img
-                src="/images/home/lithtech-importator-baterino.jpg"
+                src="/images/home/lithtech-importator-baterino.webp"
                 alt={tr.lithtechImgAltLithTech}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
               />
               <div className="absolute inset-0 bg-black/40 transition-colors duration-300 group-hover:bg-black/25 z-[1]" />
               <div className="absolute left-[18px] bottom-8 w-60 h-16 z-10">
                 <img
-                  src="/images/shared/lithtech-logo-white.png"
+                  src="/images/shared/lithtech-logo-white.webp"
                   alt="LithTech"
                   className="w-28 h-5 left-[60px] top-0 absolute object-contain object-left"
                 />
@@ -924,14 +931,14 @@ export default function Home() {
             {/* Right card – Baterino */}
             <div className="hidden lg:block order-1 lg:order-3 lg:col-span-3 h-96 relative rounded-[10px] overflow-hidden bg-zinc-300 shadow-md group">
               <img
-                src="/images/home/importatori-lithtech.jpg"
+                src="/images/home/importatori-lithtech.webp"
                 alt={tr.lithtechImgAltBaterino}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
               />
               <div className="absolute inset-0 bg-black/40 transition-colors duration-300 group-hover:bg-black/25 z-[1]" />
               <div className="absolute left-1/2 -translate-x-1/2 bottom-8 w-48 h-16 z-10">
                 <img
-                  src="/images/shared/baterino-logo-white.png"
+                  src="/images/shared/baterino-logo-white.webp"
                   alt="Baterino"
                   className="w-24 h-5 left-1/2 -translate-x-1/2 top-0 absolute object-contain"
                 />
@@ -945,13 +952,13 @@ export default function Home() {
               {/* Card A – LithTech */}
               <div className="w-full max-w-[24rem] h-60 relative rounded-[10px] overflow-hidden bg-zinc-300 shadow-md mx-auto">
                 <img
-                  src="/images/home/parteneriat-lithtech-baterino1-mobile.jpg"
+                  src="/images/home/parteneriat-lithtech-baterino1-mobile.webp"
                   alt={tr.lithtechImgAltLithTech}
                   className="absolute inset-0 w-full h-full object-cover z-0"
                 />
                 <div className="absolute inset-0 bg-black/40 z-[1]" />
                 <img
-                  src="/images/shared/lithtech-logo-white.png"
+                  src="/images/shared/lithtech-logo-white.webp"
                   alt="LithTech"
                   className="absolute w-36 h-6 left-1/2 -translate-x-1/2 top-[149px] object-contain z-10"
                 />
@@ -962,13 +969,13 @@ export default function Home() {
               {/* Card B – Baterino */}
               <div className="w-full max-w-[24rem] h-60 relative rounded-[10px] overflow-hidden bg-zinc-300 shadow-md mx-auto">
                 <img
-                  src="/images/home/parteneriat-lithtech-baterino2-mobile.jpg"
+                  src="/images/home/parteneriat-lithtech-baterino2-mobile.webp"
                   alt={tr.lithtechImgAltBaterino}
                   className="absolute inset-0 w-full h-full object-cover z-0"
                 />
                 <div className="absolute inset-0 bg-black/40 z-[1]" />
                 <img
-                  src="/images/shared/baterino-logo-white.png"
+                  src="/images/shared/baterino-logo-white.webp"
                   alt="Baterino"
                   className="absolute w-28 h-5 left-1/2 -translate-x-1/2 top-[165px] object-contain z-10"
                 />
@@ -996,7 +1003,7 @@ export default function Home() {
               {renderBaterinoGlobalLink(tr.divisionsSectionBody)}
             </p>
             <div className="flex items-center gap-4 sm:gap-6 p-4 rounded-[10px] bg-neutral-100 mb-6 w-full max-w-md">
-              <img src="/images/home/harta-romania.png" alt="" aria-hidden loading="lazy" className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
+              <img src="/images/home/harta-romania.webp" alt="" aria-hidden loading="lazy" className="w-32 sm:w-40 h-32 sm:h-40 shrink-0 object-contain" />
               <h3 className="text-black text-lg sm:text-xl font-bold font-['Inter'] leading-tight text-left min-w-0 flex-1">{tr.netTitle}</h3>
             </div>
             <Link to="/companie/viziune" className="w-fit h-11 sm:h-12 px-4 sm:px-5 py-[5px] rounded-[10px] outline outline-1 outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors">
@@ -1014,7 +1021,7 @@ export default function Home() {
             <div className="col-span-6 w-full max-w-[578px] h-96 relative flex items-center justify-start">
               <div className="absolute inset-0 bg-neutral-100 rounded-[10px]" />
               <div className="relative z-10 flex items-center justify-start gap-8 w-full pl-0 pr-5">
-                <img className="size-80 shrink-0 object-contain" src="/images/home/harta-romania.png" alt="" aria-hidden loading="lazy" />
+                <img className="size-80 shrink-0 object-contain" src="/images/home/harta-romania.webp" alt="" aria-hidden loading="lazy" />
                 <div className="flex flex-col gap-4">
                   <p className="text-black text-3xl font-bold font-['Inter'] leading-9">{tr.netTitle}</p>
                   <p className="text-black text-base font-normal font-['Inter'] leading-5 max-w-[256px]">{tr.netBody}</p>

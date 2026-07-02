@@ -71,7 +71,7 @@ const {
   allocateUniquePartnerSlug,
   MAX_SLUG_LEN,
 } = require('./lib/partner-public-slug.js')
-const { isPartnerPublicProfileFullyComplete, resolvePartnerPublicVisibility } = require('./lib/partner-public-profile-complete.js')
+const { normalizeReducereProgramAssetUrl } = require('./lib/reducere-program-assets.js')
 const {
   parsePartnerChannelType,
   activityTypesFromPartnerChannel,
@@ -448,9 +448,10 @@ function applyPublicPricePolicy(apiProduct, authPayload) {
 function guestResidentialProductEligible(apiProduct) {
   const vis = apiProduct.priceVisibility || 'public'
   if (vis !== 'public') return false
-  if (String(apiProduct.tipProdus || '').toLowerCase() !== 'rezidential') return false
+  const tip = String(apiProduct.tipProdus || '').toLowerCase()
+  if (tip !== 'rezidential' && tip !== 'industrial') return false
   const stock = apiProduct.catalogStockStatus
-  if (stock === 'out_of_stock' || stock === 'coming_soon') return false
+  if (tip === 'rezidential' && (stock === 'out_of_stock' || stock === 'coming_soon')) return false
   const saleRaw = apiProduct.salePrice
   const sale =
     saleRaw == null || saleRaw === ''
@@ -6886,7 +6887,7 @@ function reducereProgramToApi(row) {
   return {
     id: row.id,
     locale: row.locale,
-    photo: row.photo,
+    photo: normalizeReducereProgramAssetUrl(row.photo),
     programLabel: row.programLabel,
     title: row.title,
     descriereScurta: row.descriereScurta ?? undefined,
@@ -6894,7 +6895,7 @@ function reducereProgramToApi(row) {
     ctaLabel: row.ctaLabel,
     ctaTo: row.ctaTo,
     termsLabel: row.termsLabel,
-    topIcon: row.topIcon ?? undefined,
+    topIcon: normalizeReducereProgramAssetUrl(row.topIcon) ?? undefined,
     stiaiCa,
     durataProgram: row.durataProgram ?? undefined,
     discountPercent: row.discountPercent != null ? Number(row.discountPercent) : undefined,
@@ -6966,7 +6967,7 @@ app.post('/api/admin/reducere-programs', authMiddleware, adminAuthMiddleware, as
     const row = await prisma.reducereProgram.create({
       data: {
         locale,
-        photo: String(b.photo || '').trim() || '/images/programe%20reduceri/tva-cum-era.jpg',
+        photo: normalizeReducereProgramAssetUrl(String(b.photo || '').trim()) || '/images/programe%20reduceri/tva-cum-era.webp',
         programLabel: String(b.programLabel || '').trim() || 'PROGRAM',
         title: String(b.title || '').trim() || '',
         descriereScurta: b.descriereScurta ? String(b.descriereScurta).trim() : null,
@@ -6995,7 +6996,7 @@ app.patch('/api/admin/reducere-programs/:id', authMiddleware, adminAuthMiddlewar
     const { id } = req.params
     const b = req.body || {}
     const data = {}
-    if (typeof b.photo === 'string') data.photo = b.photo.trim()
+    if (typeof b.photo === 'string') data.photo = normalizeReducereProgramAssetUrl(b.photo.trim())
     if (typeof b.programLabel === 'string') data.programLabel = b.programLabel.trim()
     if (typeof b.title === 'string') data.title = b.title.trim()
     if (b.descriereScurta !== undefined) {
@@ -7005,7 +7006,12 @@ app.patch('/api/admin/reducere-programs/:id', authMiddleware, adminAuthMiddlewar
     if (typeof b.ctaLabel === 'string') data.ctaLabel = b.ctaLabel.trim()
     if (typeof b.ctaTo === 'string') data.ctaTo = b.ctaTo.trim()
     if (typeof b.termsLabel === 'string') data.termsLabel = b.termsLabel.trim()
-    if (b.topIcon !== undefined) data.topIcon = b.topIcon == null || b.topIcon === '' ? null : String(b.topIcon).trim()
+    if (b.topIcon !== undefined) {
+      data.topIcon =
+        b.topIcon == null || b.topIcon === ''
+          ? null
+          : normalizeReducereProgramAssetUrl(String(b.topIcon).trim())
+    }
     if (b.durataProgram !== undefined) data.durataProgram = b.durataProgram == null || b.durataProgram === '' ? null : String(b.durataProgram).trim()
     if (b.discountPercent !== undefined) {
       const disc = parseDiscountPercent(b.discountPercent)
@@ -7109,7 +7115,7 @@ function normalizeCaseStudyImageFields(body, existing) {
         ? String(existing.image).trim()
         : ''
   const images = parseCaseStudyImages(body?.images, fallbackImage)
-  const image = images[0] || fallbackImage || '/images/divizii/industrial/centre-de-date.jpg'
+  const image = images[0] || fallbackImage || '/images/divizii/industrial/centre-de-date.webp'
   const imageCount = images.length
   return { images, image, imageCount }
 }
@@ -11173,82 +11179,10 @@ app.put('/api/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, put
 app.put('/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
 
 // ── Public: sitemap.xml ─────────────────────────────────────────────────
-app.get('/api/sitemap.xml', async (req, res) => {
-  try {
-    const BASE = 'https://baterino.ro'
-    const fmt = (d) => new Date(d).toISOString().split('T')[0]
-    const today = fmt(new Date())
-
-    const staticPages = [
-      { path: '/',                                         changefreq: 'weekly',  priority: '1.0' },
-      { path: '/produse',                                  changefreq: 'daily',   priority: '0.9' },
-      { path: '/blog',                                     changefreq: 'daily',   priority: '0.8' },
-      { path: '/instalatori',                              changefreq: 'weekly',  priority: '0.8' },
-      { path: '/reduceri',                                 changefreq: 'weekly',  priority: '0.7' },
-      { path: '/studii-de-caz',                            changefreq: 'weekly',  priority: '0.7' },
-      { path: '/divizii/rezidential',                      changefreq: 'monthly', priority: '0.7' },
-      { path: '/divizii/industrial',                       changefreq: 'monthly', priority: '0.7' },
-      { path: '/divizii/medical',                          changefreq: 'monthly', priority: '0.7' },
-      { path: '/divizii/maritim',                          changefreq: 'monthly', priority: '0.7' },
-      { path: '/companie/viziune',                         changefreq: 'monthly', priority: '0.6' },
-      { path: '/contact',                                  changefreq: 'monthly', priority: '0.6' },
-      { path: '/siguranta',                                changefreq: 'monthly', priority: '0.6' },
-      { path: '/service-baterii-lithtech-romania',         changefreq: 'monthly', priority: '0.6' },
-      { path: '/intrebari-frecvente',                      changefreq: 'monthly', priority: '0.6' },
-      { path: '/verificare-garantie',                      changefreq: 'monthly', priority: '0.5' },
-      { path: '/parteneriat-strategic-lithtech-baterino',  changefreq: 'monthly', priority: '0.5' },
-      { path: '/cariere',                                  changefreq: 'monthly', priority: '0.5' },
-      { path: '/returnare-produse',                        changefreq: 'monthly', priority: '0.4' },
-      { path: '/termeni-si-conditii',                      changefreq: 'yearly',  priority: '0.3' },
-      { path: '/politica-confidentialitate',               changefreq: 'yearly',  priority: '0.3' },
-    ]
-
-    const [products, blogPosts, partners] = await Promise.all([
-      prisma.product.findMany({
-        where: { status: 'published' },
-        select: { slug: true, id: true, updatedAt: true, category: { select: { slug: true } } },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.blogPost.findMany({
-        where: { status: 'published' },
-        select: { slug: true, updatedAt: true },
-        orderBy: { publishedAt: 'desc' },
-      }),
-      prisma.partner.findMany({
-        where: { publicSlug: { not: null } },
-        select: { publicSlug: true, updatedAt: true },
-      }),
-    ])
-
-    const urlTag = (loc, lastmod, changefreq, priority) =>
-      `\n  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
-
-    const entries = [
-      ...staticPages.map(({ path, changefreq, priority }) =>
-        urlTag(`${BASE}${path}`, today, changefreq, priority)
-      ),
-      ...products.map((p) => {
-        const segments = [p.category?.slug, p.slug || p.id].filter(Boolean)
-        return urlTag(`${BASE}/produse/${segments.join('/')}`, fmt(p.updatedAt), 'weekly', '0.8')
-      }),
-      ...blogPosts.map((p) =>
-        urlTag(`${BASE}/blog/${p.slug}`, fmt(p.updatedAt), 'monthly', '0.7')
-      ),
-      ...partners.filter((p) => p.publicSlug).map((p) =>
-        urlTag(`${BASE}/companii-instalatori-fotovoltaice/${p.publicSlug}`, fmt(p.updatedAt), 'monthly', '0.6')
-      ),
-    ]
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join('')}\n</urlset>`
-
-    res.set('Content-Type', 'application/xml; charset=utf-8')
-    res.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
-    return res.send(xml)
-  } catch (err) {
-    console.error('Sitemap error:', err)
-    res.status(500).type('xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>')
-  }
-})
+const { createSitemapRouter } = require('./routes/sitemap.route.js')
+const sitemapRouter = createSitemapRouter(prisma)
+app.use(sitemapRouter)
+app.use('/api', sitemapRouter)
 
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────
 app.use((req, res) => {

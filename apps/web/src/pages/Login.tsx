@@ -115,7 +115,7 @@ export default function Login() {
     }
   }
 
-  const image = INSTALATORI_ONLY ? '/images/login/login-partner.jpg' : '/images/login/login-client.jpg'
+  const image = INSTALATORI_ONLY ? '/images/login/login-partner.webp' : '/images/login/login-client.webp'
 
   const clientLeftContent = (
     <div className="w-[384px] h-[192px] relative">

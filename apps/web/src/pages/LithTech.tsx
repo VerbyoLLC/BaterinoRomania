@@ -171,7 +171,7 @@ export default function LithTech() {
         title={seoTitles[language.code] ?? seoTitles.ro}
         description={seoDescriptions[language.code] ?? seoDescriptions.ro}
         canonical="/parteneriat-strategic-lithtech-baterino"
-        ogImage="/images/lithtech/importator-lithtech-og.jpg"
+        ogImage="/images/lithtech/importator-lithtech-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -181,7 +181,7 @@ export default function LithTech() {
           name: 'Parteneriat Strategic LithTech',
           description: 'Baterino, importator unic pentru tehnologie avansată de stocare LiFePo4, în parteneriat strategic cu LithTech: sisteme BMS/EMS, baterii solid-state și implementare completă în România.',
           url: 'https://baterino.ro/parteneriat-strategic-lithtech-baterino',
-          image: 'https://baterino.ro/images/lithtech/importator-lithtech-og.jpg',
+          image: 'https://baterino.ro/images/lithtech/importator-lithtech-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },
@@ -215,8 +215,8 @@ export default function LithTech() {
               <MobileHeroCard brand={tr.sectionALeftBrand} title={tr.sectionALeftTitle} />
               <div className="bg-neutral-50 rounded-[10px] p-4 flex flex-col gap-4">
                 <MobilePanelImage
-                  img="/images/lithtech/fabricare-produse-mobil.jpg"
-                  logo="/images/shared/lithtech-logo-white.png"
+                  img="/images/lithtech/fabricare-produse-mobil.webp"
+                  logo="/images/shared/lithtech-logo-white.webp"
                   logoAlt="LithTech"
                 />
                 <MobileArrow />
@@ -244,8 +244,8 @@ export default function LithTech() {
               <MobileHeroCard brand={tr.sectionARightBrand} title={tr.sectionARightTitle} />
               <div className="bg-neutral-50 rounded-[10px] p-4 flex flex-col gap-4">
                 <MobilePanelImage
-                  img="/images/lithtech/implementare-baterino-mobil.jpg"
-                  logo="/images/lithtech/logo-baterino-pro-white.png"
+                  img="/images/lithtech/implementare-baterino-mobil.webp"
+                  logo="/images/lithtech/logo-baterino-pro-white.webp"
                   logoAlt="Baterino PRO"
                 />
                 <MobileArrow />
@@ -276,8 +276,8 @@ export default function LithTech() {
               <ColumnHeader brand={tr.sectionARightBrand} title={tr.sectionARightTitle} align="left" />
             </div>
             <div className="grid grid-cols-2 gap-6 mb-5">
-              <ImagePanel img="/images/lithtech/fabricare-produse.jpg" logo="/images/shared/lithtech-logo-white.png" logoAlt="LithTech" logoPosition="right" alt={tr.sectionALeftTitle} />
-              <ImagePanel img="/images/lithtech/implementare-baterino.jpg" logo="/images/lithtech/logo-baterino-pro-white.png" logoAlt="Baterino PRO" logoPosition="right" alt={tr.sectionARightTitle} />
+              <ImagePanel img="/images/lithtech/fabricare-produse.webp" logo="/images/shared/lithtech-logo-white.webp" logoAlt="LithTech" logoPosition="right" alt={tr.sectionALeftTitle} />
+              <ImagePanel img="/images/lithtech/implementare-baterino.webp" logo="/images/lithtech/logo-baterino-pro-white.webp" logoAlt="Baterino PRO" logoPosition="right" alt={tr.sectionARightTitle} />
             </div>
             <div className="grid grid-cols-2 gap-6 mb-6">
               <SectionTitle>{tr.sectionBLeftTitle}</SectionTitle>
@@ -305,8 +305,8 @@ export default function LithTech() {
               <MobileHeroCard brand={tr.sectionCLeftBrand} title={tr.sectionCLeftTitle} />
               <div className="bg-neutral-50 rounded-[10px] p-4 flex flex-col gap-4">
                 <MobilePanelImage
-                  img="/images/lithtech/siguranta-mobile.jpg"
-                  logo="/images/shared/lithtech-logo-white.png"
+                  img="/images/lithtech/siguranta-mobile.webp"
+                  logo="/images/shared/lithtech-logo-white.webp"
                   logoAlt="LithTech"
                 />
                 <MobileArrow />
@@ -334,8 +334,8 @@ export default function LithTech() {
               <MobileHeroCard brand={tr.sectionCRightBrand} title={tr.sectionCRightTitle} />
               <div className="bg-neutral-50 rounded-[10px] p-4 flex flex-col gap-4">
                 <MobilePanelImage
-                  img="/images/lithtech/suport-mobile.jpg"
-                  logo="/images/lithtech/logo-baterino-pro-white.png"
+                  img="/images/lithtech/suport-mobile.webp"
+                  logo="/images/lithtech/logo-baterino-pro-white.webp"
                   logoAlt="Baterino PRO"
                 />
                 <MobileArrow />
@@ -366,8 +366,8 @@ export default function LithTech() {
               <ColumnHeader brand={tr.sectionCRightBrand} title={tr.sectionCRightTitle} align="left" />
             </div>
             <div className="grid grid-cols-2 gap-6 mb-5">
-              <ImagePanel img="/images/lithtech/siguranta.jpg" logo="/images/shared/lithtech-logo-white.png" logoAlt="LithTech" logoPosition="right" alt={tr.sectionCLeftTitle} />
-              <ImagePanel img="/images/lithtech/suport.jpg" logo="/images/lithtech/logo-baterino-pro-white.png" logoAlt="Baterino PRO" logoPosition="right" alt={tr.sectionCRightTitle} />
+              <ImagePanel img="/images/lithtech/siguranta.webp" logo="/images/shared/lithtech-logo-white.webp" logoAlt="LithTech" logoPosition="right" alt={tr.sectionCLeftTitle} />
+              <ImagePanel img="/images/lithtech/suport.webp" logo="/images/lithtech/logo-baterino-pro-white.webp" logoAlt="Baterino PRO" logoPosition="right" alt={tr.sectionCRightTitle} />
             </div>
             <div className="grid grid-cols-2 gap-6 mb-6">
               <SectionTitle>{tr.sectionDLeftTitle}</SectionTitle>

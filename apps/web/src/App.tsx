@@ -29,6 +29,8 @@ import SignupParteneriProfilPublic from './pages/SignupParteneriProfilPublic'
 import ProductRezidential from './pages/ProductRezidential'
 import GuestCheckout from './pages/GuestCheckout'
 import AdminLogin from './pages/admin/AdminLogin'
+import AdminForgotPassword from './pages/admin/AdminForgotPassword'
+import AdminResetPassword from './pages/admin/AdminResetPassword'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCompanies from './pages/admin/AdminCompanies'
@@ -126,6 +128,8 @@ export default function App() {
       <Routes>
         {/* ── Admin (no header / footer) ── */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+        <Route path="/admin/reset-password" element={<AdminResetPassword />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="products"  element={<AdminProducts />} />

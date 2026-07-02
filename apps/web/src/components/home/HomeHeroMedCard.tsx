@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Award, Clock, Droplets, Shield, Zap, type LucideIcon } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
-const MED_IMAGE_SRC = '/images/slider2/bess-baterino-card.jpg'
+const MED_IMAGE_SRC = '/images/slider2/bess-baterino-card.webp'
 
 type MedCardTranslations = Pick<
   HomeTranslations,

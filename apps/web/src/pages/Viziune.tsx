@@ -123,7 +123,7 @@ export default function Viziune() {
       title={seoTitles[language.code] ?? seoTitles.ro}
       description={seoDescriptions[language.code] ?? seoDescriptions.ro}
       canonical="/companie/viziune"
-      ogImage="/images/companie/viziune-og.jpg"
+      ogImage="/images/companie/viziune-og.webp"
       lang={language.code}
     />
     <SchemaOrg schema={[
@@ -133,7 +133,7 @@ export default function Viziune() {
         name: 'Viziune, Misiune & Echipă',
         description: 'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
         url: 'https://baterino.ro/companie/viziune',
-        image: 'https://baterino.ro/images/companie/viziune-og.jpg',
+        image: 'https://baterino.ro/images/companie/viziune-og.webp',
         inLanguage: 'ro',
         publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
       },

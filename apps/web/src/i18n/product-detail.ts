@@ -275,12 +275,12 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     swapCtaDesc:
       'Cât timp bateria ta e la noi în service, îți dăm una la schimb pentru toată perioada. Sistemul tău funcționează în continuare, fără pauze.',
     swapBannerCta: 'VEZI TOATE SERVICIILE',
-    reduceriTitle: 'REDUCERI ÎNTRE 5% ȘI 20%',
+    reduceriTitle: 'REDUCERI ÎNTRE 5% ȘI 15%',
     reduceriDesc:
       'La Baterino, bateriile LiFePO4 au prețuri reduse prin programele noastre de reduceri dedicate. Vezi care ți se potrivește.',
     reduceriCtaEyebrow: 'Programe de reduceri',
     reduceriCtaTitleBefore: 'Reduceri ',
-    reduceriCtaTitleHighlight: 'între 5% și 20%',
+    reduceriCtaTitleHighlight: 'între 5% și 15%',
     reduceriCtaTitleAfter: ' la bateriile LiFePO₄.',
     reduceriCtaDesc:
       'Avem programe de reduceri dedicate, pentru situații diferite. Vezi în 30 de secunde care ți se potrivește și cât economisești.',
@@ -414,12 +414,12 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     swapCtaDesc:
       'While your battery is with us for service, we provide a replacement for the entire period. Your system keeps running without downtime.',
     swapBannerCta: 'VIEW ALL SERVICES',
-    reduceriTitle: 'DISCOUNTS FROM 5% TO 20%',
+    reduceriTitle: 'DISCOUNTS FROM 5% TO 15%',
     reduceriDesc:
       'At Baterino, LiFePO4 batteries are available at reduced prices through our dedicated discount programmes. See which one suits you.',
     reduceriCtaEyebrow: 'Discount programmes',
     reduceriCtaTitleBefore: 'Discounts ',
-    reduceriCtaTitleHighlight: 'from 5% to 20%',
+    reduceriCtaTitleHighlight: 'from 5% to 15%',
     reduceriCtaTitleAfter: ' on LiFePO₄ batteries.',
     reduceriCtaDesc:
       'We have dedicated discount programmes for different situations. See in 30 seconds which one fits you and how much you save.',

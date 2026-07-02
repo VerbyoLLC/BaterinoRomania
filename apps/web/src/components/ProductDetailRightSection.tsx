@@ -163,7 +163,7 @@ export default function ProductDetailRightSection({ product, tr, langCode, compa
   const [showImageModal, setShowImageModal] = useState(false)
 
   const imgs = Array.isArray(product.images) ? product.images : []
-  const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.webp'
   const galleryImages = imgs.length > 0 ? imgs : [img]
   const techData = buildProductFlatTechRows(product, tr)
   const industrialTr = getIndustrialBessTemplateTranslations(langCode as LangCode)

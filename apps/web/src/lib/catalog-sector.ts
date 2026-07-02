@@ -2,7 +2,14 @@ import type { PublicProduct } from './api'
 
 export type PublicCatalogSectorKey = 'rezidential' | 'industrial' | 'medical' | 'maritim'
 
-/** Same rules as Produse.tsx sector filter — counts stay aligned with the public catalog tabs. */
+export const PUBLIC_CATALOG_SECTOR_KEYS: PublicCatalogSectorKey[] = [
+  'rezidential',
+  'industrial',
+  'medical',
+  'maritim',
+]
+
+/** Home page sector tabs — uncategorized products may appear in rezidential/industrial via tipProdus. */
 export function publicProductMatchesSector(p: PublicProduct, sector: PublicCatalogSectorKey): boolean {
   const cat = String(p.categorie || '').toLowerCase()
   if (cat && cat.includes(sector)) return true
@@ -14,12 +21,36 @@ export function publicProductMatchesSector(p: PublicProduct, sector: PublicCatal
   return false
 }
 
+/** Produse page sector filter — stricter tipProdus fallback than the home tabs. */
+export function produseCatalogProductMatchesSector(
+  p: PublicProduct,
+  sector: PublicCatalogSectorKey,
+): boolean {
+  const cat = String(p.categorie || '').toLowerCase()
+  if (cat && cat.includes(sector)) return true
+  if (!String(p.categorie || '').trim()) {
+    const tip = String(p.tipProdus || '').toLowerCase()
+    if (sector === 'rezidential' && tip === 'rezidential') return true
+    if (sector === 'industrial' && tip === 'industrial') return true
+  }
+  return false
+}
+
+export function catalogSectorsWithProducts(
+  products: PublicProduct[],
+  matches: (p: PublicProduct, sector: PublicCatalogSectorKey) => boolean,
+): PublicCatalogSectorKey[] {
+  return PUBLIC_CATALOG_SECTOR_KEYS.filter((sector) => products.some((p) => matches(p, sector)))
+}
+
 export function countPublicProductsBySector(
   products: PublicProduct[],
 ): Record<PublicCatalogSectorKey, number> {
-  const keys: PublicCatalogSectorKey[] = ['rezidential', 'industrial', 'medical', 'maritim']
   return Object.fromEntries(
-    keys.map((k) => [k, products.filter((p) => publicProductMatchesSector(p, k)).length]),
+    PUBLIC_CATALOG_SECTOR_KEYS.map((k) => [
+      k,
+      products.filter((p) => publicProductMatchesSector(p, k)).length,
+    ]),
   ) as Record<PublicCatalogSectorKey, number>
 }
 

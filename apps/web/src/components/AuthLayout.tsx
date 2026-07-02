@@ -32,7 +32,7 @@ export default function AuthLayout({ image, supertitle, title, leftContent, chil
         <div className="relative z-10 p-8">
           <Link to="/" aria-label="Baterino – acasă">
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt="Baterino"
               className="h-7 w-auto object-contain"
             />

@@ -9,11 +9,13 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': { target: 'http://localhost:3005', changeOrigin: true },
+      '/sitemap.xml': { target: 'http://localhost:3005/sitemap.xml', changeOrigin: true },
     },
   },
   preview: {
     proxy: {
       '/api': { target: 'http://localhost:3005', changeOrigin: true },
+      '/sitemap.xml': { target: 'http://localhost:3005/sitemap.xml', changeOrigin: true },
     },
   },
 })

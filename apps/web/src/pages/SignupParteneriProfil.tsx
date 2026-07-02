@@ -252,7 +252,7 @@ export default function SignupParteneriProfil() {
 
   return (
     <AuthLayout
-      image="/images/login/login-partner.jpg"
+      image="/images/login/login-partner.webp"
       supertitle="APROAPE GATA"
       title="DATE COMPANIE"
     >

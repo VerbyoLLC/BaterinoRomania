@@ -26,28 +26,28 @@ const PRODUCTS: {
   colSpan?: string
   imgClass?: string
 }[] = [
-  { nameKey: 'product1Name', specKey: 'product1Spec', img: '/images/shared/lithtech-60kwh.png' },
-  { nameKey: 'product2Name', specKey: 'product2Spec', img: '/images/shared/lithtech-100kwh.png' },
-  { nameKey: 'product3Name', specKey: 'product3Spec', img: '/images/shared/lithtech-200kwh-exterior.png' },
-  { nameKey: 'product4Name', specKey: 'product4Spec', img: '/images/shared/lithtech-261kwh.png' },
-  { nameKey: 'product5Name', specKey: 'product5Spec', img: '/images/shared/lithtech-288kwh.png' },
-  { nameKey: 'product6Name', specKey: 'product6Spec', img: '/images/shared/lithtech-all-in-one-215kwh.png' },
-  { nameKey: 'product7Name', specKey: 'product7Spec', img: '/images/shared/10HC-container.png' },
-  { nameKey: 'product8Name', specKey: 'product8Spec', img: '/images/shared/20ft-container.png' },
+  { nameKey: 'product1Name', specKey: 'product1Spec', img: '/images/shared/lithtech-60kwh.webp' },
+  { nameKey: 'product2Name', specKey: 'product2Spec', img: '/images/shared/lithtech-100kwh.webp' },
+  { nameKey: 'product3Name', specKey: 'product3Spec', img: '/images/shared/lithtech-200kwh-exterior.webp' },
+  { nameKey: 'product4Name', specKey: 'product4Spec', img: '/images/shared/lithtech-261kwh.webp' },
+  { nameKey: 'product5Name', specKey: 'product5Spec', img: '/images/shared/lithtech-288kwh.webp' },
+  { nameKey: 'product6Name', specKey: 'product6Spec', img: '/images/shared/lithtech-all-in-one-215kwh.webp' },
+  { nameKey: 'product7Name', specKey: 'product7Spec', img: '/images/shared/10HC-conainer.webp' },
+  { nameKey: 'product8Name', specKey: 'product8Spec', img: '/images/shared/20ft-container.webp' },
   {
-    nameKey: 'product9Name', specKey: 'product9Spec', img: '/images/shared/40ft-container.png',
+    nameKey: 'product9Name', specKey: 'product9Spec', img: '/images/shared/40ft-container.webp',
     colSpan: 'col-span-4 lg:col-span-6',
     imgClass: 'w-4/5 h-44 absolute top-[24px] left-1/2 -translate-x-1/2 object-contain transition-transform duration-300 group-hover:scale-105',
   },
 ]
 
 const APLICATII: { key: keyof ReturnType<typeof getIndustrialTranslations>; img: string }[] = [
-  { key: 'aplicatiiFabrici',    img: '/images/divizii/industrial/fabrica-panouri-solare.jpg' },
-  { key: 'aplicatiiSolare',     img: '/images/divizii/industrial/ferme-solare.jpg' },
-  { key: 'aplicatiiDate',       img: '/images/divizii/industrial/centre-de-date.jpg' },
-  { key: 'aplicatiiAeroporturi',img: '/images/divizii/industrial/aeroport.jpg' },
-  { key: 'aplicatiiLogistica',  img: '/images/divizii/industrial/centre-logistica.jpg' },
-  { key: 'aplicatiiHoteluri',   img: '/images/divizii/industrial/hotel.jpg' },
+  { key: 'aplicatiiFabrici',    img: '/images/divizii/industrial/fabrica-panouri-solare.webp' },
+  { key: 'aplicatiiSolare',     img: '/images/divizii/industrial/ferme-solare.webp' },
+  { key: 'aplicatiiDate',       img: '/images/divizii/industrial/centre-de-date.webp' },
+  { key: 'aplicatiiAeroporturi',img: '/images/divizii/industrial/aeroport.webp' },
+  { key: 'aplicatiiLogistica',  img: '/images/divizii/industrial/centre-logistica.webp' },
+  { key: 'aplicatiiHoteluri',   img: '/images/divizii/industrial/hotel.webp' },
 ]
 
 const FEATURE_CARDS: { key: keyof ReturnType<typeof getIndustrialTranslations>; icon: string; labelMaxW?: string }[] = [
@@ -151,7 +151,7 @@ export default function Industrial() {
         title={seoTitles[language.code] ?? seoTitles.ro}
         description={seoDescriptions[language.code] ?? seoDescriptions.ro}
         canonical="/divizii/industrial"
-        ogImage="/images/divizii/industrial/baterii-stocare-industrial-og.jpg"
+        ogImage="/images/divizii/industrial/baterii-stocare-industrial-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -161,7 +161,7 @@ export default function Industrial() {
           name: 'Stocare Energie Industrial',
           description: 'Sisteme BESS LiFePo4 High Voltage pentru industrie, ferme solare și micro-griduri complexe. Soluții scalabile cu garanție 10 ani și monitorizare remotă.',
           url: 'https://baterino.ro/divizii/industrial',
-          image: 'https://baterino.ro/images/divizii/industrial/baterii-stocare-industrial-og.jpg',
+          image: 'https://baterino.ro/images/divizii/industrial/baterii-stocare-industrial-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },
@@ -238,19 +238,19 @@ export default function Industrial() {
           </p>
           <div className="w-full relative">
             <picture>
-              <source media="(max-width: 1023px)" srcSet="/images/divizii/industrial/hero-card-industrial-mobile.jpg" />
+              <source media="(max-width: 1023px)" srcSet="/images/divizii/industrial/hero-card-industrial-mobile.webp" />
               <img
-                src="/images/divizii/industrial/hero-card-industrial.jpg"
+                src="/images/divizii/industrial/hero-card-industrial.webp"
                 alt={tr.heroTitle}
                 className="relative w-full object-cover rounded-[10px]"
                 style={{ height: '440px' }}
               />
             </picture>
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0 min-w-0 z-10">
-              <img src="/images/divizii/industrial/baterino-pro-industrial-logo-white.png" alt="Baterino Pro" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
+              <img src="/images/divizii/industrial/baterino-pro-industrial-logo-white.webp" alt="Baterino Pro" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
               <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
                 <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
-                <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
+                <img src="/images/shared/lithtech-logo-white.webp" alt="LithTech" className="h-5 w-auto object-contain" />
               </div>
             </div>
           </div>

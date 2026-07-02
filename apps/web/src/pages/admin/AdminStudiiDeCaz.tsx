@@ -336,7 +336,7 @@ export default function AdminStudiiDeCaz() {
     category: form.category || 'INDUSTRIAL',
     title: form.title || 'Titlu studiu de caz',
     location: form.location || 'Locație',
-    image: form.images[0] || '/images/divizii/industrial/centre-de-date.jpg',
+    image: form.images[0] || '/images/divizii/industrial/centre-de-date.webp',
     imageAlt: form.imageAlt || form.title,
     imageCount: form.images.length,
     specs: form.specs.filter((s) => s.label.trim() || s.value.trim()),

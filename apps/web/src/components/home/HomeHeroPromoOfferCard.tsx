@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { HomePromoModalTranslations } from './HomePromoModal'
 
-const PROMO_IMAGE_SRC = '/images/home/offer-baterino.jpg'
+const PROMO_IMAGE_SRC = '/images/home/offer-baterino.webp'
 
 type HeroPromoOfferCardTranslations = HomePromoModalTranslations & {
   heroPromoBadgeDiscount: string

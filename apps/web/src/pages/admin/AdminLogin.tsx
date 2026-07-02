@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import PasswordInput from '../../components/PasswordInput'
 import { login, setAuthToken } from '../../lib/api'
 
@@ -39,7 +39,7 @@ export default function AdminLogin() {
         {/* Top image with logo */}
         <div className="relative h-[200px] overflow-hidden">
           <img
-            src="/images/home/slider-apple/slide1-baterii-rezidential.jpg"
+            src="/images/home/slider-apple/slide1-baterii-rezidential.webp"
             alt="Baterino Admin"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -91,6 +91,12 @@ export default function AdminLogin() {
           >
             {loading ? 'Se conectează...' : 'Login'}
           </button>
+
+          <p className="m-0 text-center text-sm font-['Inter']">
+            <Link to="/admin/forgot-password" className="text-slate-600 hover:text-slate-900 hover:underline">
+              Ai uitat parola?
+            </Link>
+          </p>
 
         </form>
       </div>

@@ -118,7 +118,7 @@ export default function FloatingStickyButtons() {
           className="w-14 h-14 flex items-center justify-center bg-white rounded-[5px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] hover:bg-gray-50 hover:shadow-md active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
           aria-label="Avertizment"
         >
-          <img src="/images/contact/warning2.png" alt="" className="w-9 h-9 object-contain" />
+          <img src="/images/contact/warning2.webp" alt="" className="w-9 h-9 object-contain" />
         </button>
         <button
           type="button"
@@ -130,7 +130,7 @@ export default function FloatingStickyButtons() {
           aria-label="Sună"
           aria-expanded={callBoxOpen}
         >
-          <img src="/images/contact/call2.png" alt="" className="w-9 h-9 object-contain" />
+          <img src="/images/contact/call2.webp" alt="" className="w-9 h-9 object-contain" />
         </button>
         <button
           type="button"
@@ -142,7 +142,7 @@ export default function FloatingStickyButtons() {
           aria-label="WhatsApp"
           aria-expanded={whatsappBoxOpen}
         >
-          <img src="/images/contact/whatsapp2.png" alt="" className="w-9 h-9 object-contain" />
+          <img src="/images/contact/whatsapp2.webp" alt="" className="w-9 h-9 object-contain" />
         </button>
         </div>
       </div>

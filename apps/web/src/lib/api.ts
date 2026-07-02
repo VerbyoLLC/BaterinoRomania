@@ -353,7 +353,7 @@ export function getProductCardImageUrl(
   const card = String(product.cardImage ?? '').trim()
   if (card) return card
   const imgs = Array.isArray(product.images) ? product.images : []
-  return imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  return imgs[0] || '/images/shared/HP2000-all-in-one.webp'
 }
 
 /** Produs public (pagina /produse) */
@@ -946,6 +946,17 @@ export async function verifySignupCode(
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Eroare la verificare.')
   return data as { token: string; user: AuthUser }
+}
+
+export async function requestAdminPasswordReset(email: string) {
+  const res = await fetch(`${API_BASE}/auth/admin/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Eroare la trimiterea link-ului de resetare.')
+  return data as { message: string }
 }
 
 export async function requestPasswordReset(email: string) {

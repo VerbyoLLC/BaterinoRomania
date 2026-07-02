@@ -34,18 +34,9 @@ const skBar = 'animate-pulse rounded-md bg-slate-200/80'
 
 function CartLineSpecsSkeleton({ ariaLabel }: { ariaLabel: string }) {
   return (
-    <div
-      className="mt-2 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-4"
-      role="status"
-      aria-busy="true"
-      aria-label={ariaLabel}
-    >
-      {Array.from({ length: 4 }, (_, i) => (
-        <div key={i}>
-          <div className={`h-3 w-[4.5rem] max-w-full ${skBar}`} />
-          <div className={`mt-2 h-4 w-20 max-w-full ${skBar}`} />
-        </div>
-      ))}
+    <div className="mt-1.5 space-y-1.5" role="status" aria-busy="true" aria-label={ariaLabel}>
+      <div className={`h-3.5 w-[min(100%,14rem)] mx-auto sm:mx-0 ${skBar}`} />
+      <div className={`h-3 w-[min(100%,10rem)] mx-auto sm:mx-0 ${skBar}`} />
     </div>
   )
 }

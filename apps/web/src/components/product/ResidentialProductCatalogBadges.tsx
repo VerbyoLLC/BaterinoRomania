@@ -8,6 +8,11 @@ import {
   catalogProductSupportsBadges,
   type CatalogBadgeLabels,
 } from '../../lib/catalogProductBadges'
+import {
+  CatalogProductFeatureBadge,
+  CatalogProductImageChip,
+  type CatalogProductFeatureBadgeData,
+} from './CatalogProductTagBadges'
 
 export type { CatalogBadgeLabels } from '../../lib/catalogProductBadges'
 
@@ -108,56 +113,23 @@ export function buildResidentialCatalogBadgeItems(
   return items
 }
 
-const variantClass: Record<BadgeVariant, string> = {
-  'stock-in': 'bg-emerald-100 text-emerald-700 [&_.dot]:bg-emerald-500',
-  'stock-out': 'bg-red-100 text-red-700 [&_.dot]:bg-red-500',
-  'stock-soon': 'bg-amber-100 text-amber-700 [&_.dot]:bg-amber-400',
-  'stock-on-order': 'bg-sky-100 text-sky-800 [&_.dot]:bg-sky-500',
-  delivery: 'bg-slate-100 text-slate-700',
-  transport: 'bg-teal-100 text-teal-800',
-  install: 'bg-indigo-100 text-indigo-800',
-  reducere: 'bg-violet-100 text-violet-800',
+function badgeItemToFeatureBadge(item: BadgeItem): CatalogProductFeatureBadgeData {
+  const typeMap: Record<BadgeItem['id'], CatalogProductFeatureBadgeData['type']> = {
+    stock: 'stock',
+    delivery: 'delivery',
+    transport: 'transport',
+    install: 'install',
+    reducere: 'reduceri',
+  }
+  const label =
+    item.category && (item.id === 'transport' || item.id === 'install')
+      ? `${item.category} ${item.label}`
+      : item.label
+  return { type: typeMap[item.id], label }
 }
 
-const neutralVariantClass: Record<'transport' | 'install' | 'reducere', string> = {
-  transport: 'bg-white text-black [&_.dot]:bg-neutral-500',
-  install: 'bg-white text-black',
-  reducere: 'bg-white text-black',
-}
-
-function CatalogBadgePill({
-  category,
-  label,
-  variant,
-  appearance = 'default',
-}: {
-  category?: string
-  label: string
-  variant: BadgeVariant
-  appearance?: 'default' | 'neutral'
-}) {
-  const showDot = variant.startsWith('stock-')
-  const useNeutral =
-    appearance === 'neutral' && (variant === 'transport' || variant === 'install' || variant === 'reducere')
-  const pillClass = useNeutral ? neutralVariantClass[variant] : variantClass[variant]
-  return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold font-['Inter'] sm:text-[13px] ${pillClass}`}
-    >
-      {showDot ? <span className="dot h-2 w-2 shrink-0 rounded-full" aria-hidden /> : null}
-      {category ? (
-        <>
-          <span className={useNeutral ? 'font-bold text-black' : 'font-medium opacity-75'}>
-            {category}
-          </span>
-          <span className={useNeutral ? 'font-bold text-black' : 'opacity-40'} aria-hidden>
-            ·
-          </span>
-        </>
-      ) : null}
-      {label}
-    </span>
-  )
+function isImageChipBadge(id: BadgeItem['id']) {
+  return id === 'stock' || id === 'delivery'
 }
 
 type Props = {
@@ -167,42 +139,64 @@ type Props = {
   layout?: 'stack' | 'wrap' | 'row'
   /** When set, only render these badge types (e.g. stock+delivery on image, transport above price). */
   include?: CatalogBadgeId[]
-  /** White pills with black text — used for transport/reduceri above price on catalog cards. */
+  /** @deprecated Produse-style badges ignore this; kept for call-site compatibility. */
   appearance?: 'default' | 'neutral'
 }
 
-/** Stoc / Livrare / Transport / Reduceri pills for residential catalog cards and product detail. */
+/** Stoc / Livrare / Transport / Reduceri tags for catalog cards and product detail. */
 export default function ResidentialProductCatalogBadges({
   product,
   labels,
   className = '',
   layout = 'stack',
   include,
-  appearance = 'default',
 }: Props) {
   const items = buildResidentialCatalogBadgeItems(product, labels).filter(
     (item) => !include || include.includes(item.id),
   )
   if (items.length === 0) return null
 
+  const imageChips = items.filter((item) => isImageChipBadge(item.id))
+  const featureBadges = items.filter((item) => !isImageChipBadge(item.id))
+  const mixed = imageChips.length > 0 && featureBadges.length > 0
+
+  if (mixed) {
+    return (
+      <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
+        {items.map((item) => {
+          const badge = badgeItemToFeatureBadge(item)
+          return isImageChipBadge(item.id) ? (
+            <CatalogProductImageChip key={item.id} badge={badge} />
+          ) : (
+            <CatalogProductFeatureBadge key={item.id} badge={badge} />
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (imageChips.length > 0) {
+    return (
+      <div
+        className={`flex flex-wrap items-center gap-1.5 ${
+          layout === 'stack' ? '' : layout === 'row' ? 'flex-nowrap' : ''
+        } ${className}`.trim()}
+      >
+        {imageChips.map((item) => (
+          <CatalogProductImageChip key={item.id} badge={badgeItemToFeatureBadge(item)} />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div
-      className={
-        layout === 'stack'
-          ? `flex flex-col items-start gap-1.5 ${className}`.trim()
-          : layout === 'row'
-            ? `flex flex-row flex-nowrap items-center gap-2 ${className}`.trim()
-            : `flex flex-wrap items-center gap-2 ${className}`.trim()
-      }
+      className={`flex flex-wrap items-center gap-2 ${
+        layout === 'row' ? 'flex-nowrap' : ''
+      } ${className}`.trim()}
     >
-      {items.map((item) => (
-        <CatalogBadgePill
-          key={item.id}
-          category={item.category}
-          label={item.label}
-          variant={item.variant}
-          appearance={appearance}
-        />
+      {featureBadges.map((item) => (
+        <CatalogProductFeatureBadge key={item.id} badge={badgeItemToFeatureBadge(item)} />
       ))}
     </div>
   )

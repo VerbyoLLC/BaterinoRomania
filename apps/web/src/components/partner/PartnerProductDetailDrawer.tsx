@@ -155,7 +155,7 @@ export function PartnerProductDetailDrawer({
     const imgs = Array.isArray(product.images) ? product.images.filter(Boolean) : []
     if (imgs.length > 0) return imgs
     if (product.cardImage) return [product.cardImage]
-    return ['/images/shared/HP2000-all-in-one.png']
+    return ['/images/shared/HP2000-all-in-one.webp']
   }, [product])
 
   const heroImage = images[activeImage] ?? images[0]

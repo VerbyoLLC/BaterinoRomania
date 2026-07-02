@@ -82,7 +82,7 @@ export default function Instalatori() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/instalatori"
-        ogImage="/images/instalatori/instalatori-sisteme-fotovoltaice.jpg"
+        ogImage="/images/instalatori/instalatori-sisteme-fotovoltaice.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -109,7 +109,7 @@ export default function Instalatori() {
       <div className="relative">
         <section className="relative bg-slate-900">
           <img
-            src="/images/instalatori/instalatori-sisteme-fotovoltaice.jpg"
+            src="/images/instalatori/instalatori-sisteme-fotovoltaice.webp"
             alt=""
             aria-hidden
             className="absolute inset-0 w-full h-full object-cover opacity-25 select-none"
@@ -314,7 +314,7 @@ export default function Instalatori() {
         {/* ── ȘTIAI CĂ? – CTA banner ───────────────────────────────── */}
         <div className="relative mb-16 lg:mb-24 rounded-2xl overflow-hidden">
           <img
-            src="/images/instalatori/cta-instalatori.jpg"
+            src="/images/instalatori/cta-instalatori.webp"
             alt=""
             aria-hidden
             className="absolute inset-0 w-full h-full object-cover"

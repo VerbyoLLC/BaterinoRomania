@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "images:webp": "node scripts/convert-public-images-to-webp.mjs",
+    "images:webp:refs": "node scripts/update-image-refs-to-webp.mjs"
   },
   "overrides": {
     "react-helmet-async": {
@@ -21,6 +23,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.24",
     "postcss": "^8.5.6",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4.2.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"

@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { Battery, Home, Layers2, RefreshCw, Shield, Truck, Wifi, X, type LucideIcon } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
-const PROMO_IMAGE_SRC = '/images/home/offer-baterino.jpg'
-const PROMO_PRODUCT_LINK = '/produse/ecohome10'
+const PROMO_IMAGE_SRC = '/images/home/offer-baterino.webp'
+export const HOME_PROMO_PRODUCT_LINK = '/produse/baterii-solare/pachet-baterii-lifepo4-20kwh'
+const PROMO_PRODUCT_LINK = HOME_PROMO_PRODUCT_LINK
 
 export type HomePromoModalTranslations = Pick<
   HomeTranslations,
@@ -31,7 +32,6 @@ export type HomePromoModalTranslations = Pick<
   | 'promoModalDeliveryTitle'
   | 'promoModalDeliverySubtitle'
   | 'promoModalCtaPrimary'
-  | 'promoModalCtaSpecs'
   | 'promoModalFooter'
   | 'featureModalClose'
   | 'heroPromoBadgeDiscount'
@@ -206,7 +206,7 @@ export default function HomePromoModal({ open, onClose, tr }: Props) {
               className="h-full w-full object-cover object-center"
             />
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt="Baterino"
               className="absolute left-4 top-4 z-10 h-8 w-auto max-w-[50%] object-contain sm:left-5 sm:top-5 sm:h-9"
             />
@@ -270,20 +270,13 @@ export default function HomePromoModal({ open, onClose, tr }: Props) {
             />
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6">
             <Link
               to={PROMO_PRODUCT_LINK}
               onClick={onClose}
-              className="inline-flex h-11 flex-1 items-center justify-center rounded-[10px] bg-slate-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 sm:flex-none sm:px-8"
+              className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-slate-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 sm:w-auto sm:px-8"
             >
               {tr.promoModalCtaPrimary}
-            </Link>
-            <Link
-              to={PROMO_PRODUCT_LINK}
-              onClick={onClose}
-              className="text-center text-sm font-semibold text-slate-700 underline-offset-2 hover:text-slate-900 hover:underline sm:px-2"
-            >
-              {tr.promoModalCtaSpecs}
             </Link>
           </div>
 

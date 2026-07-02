@@ -237,7 +237,7 @@ export default function SalesAgentLayout() {
         <div className="flex flex-col h-full py-6 px-4">
           <a href="/" className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50">
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt="Baterino"
               className="h-7 w-auto object-contain"
             />
@@ -284,7 +284,7 @@ export default function SalesAgentLayout() {
               {tr.salesAgentBadge}
             </span>
             <a href="/" className="flex-shrink-0 lg:hidden">
-              <img src="/images/shared/baterino-pro-alb-logo.png" alt="Baterino" className="h-6 w-auto" />
+              <img src="/images/shared/baterino-pro-alb-logo.webp" alt="Baterino" className="h-6 w-auto" />
             </a>
           </div>
 

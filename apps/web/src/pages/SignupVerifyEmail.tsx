@@ -52,7 +52,7 @@ export default function SignupVerifyEmail() {
 
   return (
     <AuthLayout
-      image="/images/login/login-client.jpg"
+      image="/images/login/login-client.webp"
       supertitle="BATERINO"
       title="Confirmare cont"
       leftContent={

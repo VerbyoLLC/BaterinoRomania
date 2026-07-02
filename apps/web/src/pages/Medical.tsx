@@ -24,18 +24,18 @@ const PRODUCTS: {
   specKey: keyof ReturnType<typeof getMedicalTranslations>
   img: string
 }[] = [
-  { nameKey: 'product1Name', specKey: 'product1Spec', img: '/images/shared/HP2000-all-in-one.png' },
-  { nameKey: 'product2Name', specKey: 'product2Spec', img: '/images/shared/lithtech-60kwh.png' },
+  { nameKey: 'product1Name', specKey: 'product1Spec', img: '/images/shared/HP2000-all-in-one.webp' },
+  { nameKey: 'product2Name', specKey: 'product2Spec', img: '/images/shared/lithtech-60kwh.webp' },
 ]
 
 const APLICATII: { key: keyof ReturnType<typeof getMedicalTranslations>; img: string }[] = [
-  { key: 'aplicatiiImagistica',    img: '/images/divizii/medical/clinici-imagistica.png' },
-  { key: 'aplicatiiStomatologice', img: '/images/divizii/medical/cabinete-stomatologice.png' },
-  { key: 'aplicatiiRecoltare',     img: '/images/divizii/medical/centre-recoltare.png' },
-  { key: 'aplicatiiDentare',       img: '/images/divizii/medical/laboratoare-dentare.png' },
-  { key: 'aplicatiiSpitale',       img: '/images/divizii/medical/clinici-spitale-medii.png' },
-  { key: 'aplicatiiDializa',       img: '/images/divizii/medical/centre-dializa.png' },
-  { key: 'aplicatiiAmbulanta',     img: '/images/divizii/medical/statii-ambulanta.png' },
+  { key: 'aplicatiiImagistica',    img: '/images/divizii/medical/clinici-imagistica.webp' },
+  { key: 'aplicatiiStomatologice', img: '/images/divizii/medical/cabinete-stomatologice.webp' },
+  { key: 'aplicatiiRecoltare',     img: '/images/divizii/medical/centre-recoltare.webp' },
+  { key: 'aplicatiiDentare',       img: '/images/divizii/medical/laboratoare-dentare.webp' },
+  { key: 'aplicatiiSpitale',       img: '/images/divizii/medical/clinici-spitale-medii.webp' },
+  { key: 'aplicatiiDializa',       img: '/images/divizii/medical/centre-dializa.webp' },
+  { key: 'aplicatiiAmbulanta',     img: '/images/divizii/medical/statii-ambulanta.webp' },
 ]
 
 const FEATURE_CARDS: { key: keyof ReturnType<typeof getMedicalTranslations>; icon: string }[] = [
@@ -147,7 +147,7 @@ export default function Medical() {
         title={seoTitles[language.code] ?? seoTitles.ro}
         description={seoDescriptions[language.code] ?? seoDescriptions.ro}
         canonical="/divizii/medical"
-        ogImage="/images/divizii/medical/baterii-stocare-sector-medical-og.jpg"
+        ogImage="/images/divizii/medical/baterii-stocare-sector-medical-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -157,7 +157,7 @@ export default function Medical() {
           name: 'Stocare Energie Medical',
           description: 'Sisteme LiFePo4 de stocare a energiei dedicate exclusiv infrastructurii medicale din România. Soluții certificate pentru clinici, spitale și laboratoare, cu suport tehnic specializat.',
           url: 'https://baterino.ro/divizii/medical',
-          image: 'https://baterino.ro/images/divizii/medical/baterii-stocare-sector-medical-og.jpg',
+          image: 'https://baterino.ro/images/divizii/medical/baterii-stocare-sector-medical-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },
@@ -234,16 +234,16 @@ export default function Medical() {
           </p>
           <div className="w-full relative">
             <img
-              src="/images/divizii/medical/card-hero-medical.jpg"
+              src="/images/divizii/medical/card-hero-medical.webp"
               alt={tr.heroTitle}
               className="relative w-full object-cover rounded-[10px]"
               style={{ height: '440px' }}
             />
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0 min-w-0 z-10">
-              <img src="/images/divizii/medical/baterino-medical-logo-white.png" alt="Baterino MED" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
+              <img src="/images/divizii/medical/baterino-medical-logo-white.webp" alt="Baterino MED" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
               <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
                 <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
-                <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
+                <img src="/images/shared/lithtech-logo-white.webp" alt="LithTech" className="h-5 w-auto object-contain" />
               </div>
             </div>
           </div>
@@ -391,7 +391,7 @@ export default function Medical() {
 
         {/* CTA bar */}
         <CTABar
-          logo="/images/divizii/medical/baterino-med-logo-black.png"
+          logo="/images/divizii/medical/baterino-med-logo-black.webp"
           logoAlt="Baterino MED"
           logoClassName="h-6 lg:h-16"
           title={tr.ctaTitle}

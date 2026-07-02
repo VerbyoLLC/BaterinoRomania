@@ -19,6 +19,7 @@ import {
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
+import { getPrimaryProductImageUrl } from '../lib/productSeoImages'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import {
   ProduseCatalogProductCard,
@@ -34,6 +35,11 @@ import {
   productHasEligibleReducerePrograms,
 } from '../lib/catalogProductBadges'
 import { sortCatalogProducts } from '../lib/catalogProductSort'
+import {
+  catalogSectorsWithProducts,
+  produseCatalogProductMatchesSector,
+  type PublicCatalogSectorKey,
+} from '../lib/catalog-sector'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
@@ -54,13 +60,6 @@ export default function Produse() {
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
 
   useEffect(() => {
-    const sectorParam = searchParams.get('sector')
-    if (sectorParam && VALID_SECTORS.includes(sectorParam)) {
-      setSector(sectorParam)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
     getProducts()
       .then(setProducts)
       .catch(() => setProducts([]))
@@ -74,19 +73,46 @@ export default function Produse() {
     )
   }, [products])
 
+  const sectorsWithProducts = useMemo(
+    () => catalogSectorsWithProducts(products, produseCatalogProductMatchesSector),
+    [products],
+  )
+
+  const visibleSectorOptions = useMemo(
+    () =>
+      tr.sectorOptions.filter(
+        (opt) =>
+          !opt.value ||
+          sectorsWithProducts.includes(String(opt.value) as PublicCatalogSectorKey),
+      ),
+    [tr.sectorOptions, sectorsWithProducts],
+  )
+
+  useEffect(() => {
+    if (loading) return
+    const sectorParam = searchParams.get('sector')
+    if (
+      sectorParam &&
+      VALID_SECTORS.includes(sectorParam) &&
+      sectorsWithProducts.includes(sectorParam as PublicCatalogSectorKey)
+    ) {
+      setSector(sectorParam)
+    }
+  }, [searchParams, loading, sectorsWithProducts])
+
+  useEffect(() => {
+    if (loading) return
+    if (sector && !sectorsWithProducts.includes(sector as PublicCatalogSectorKey)) {
+      setSector('')
+    }
+  }, [sector, sectorsWithProducts, loading])
+
   const filtered = useMemo(() => {
     let list = products
     if (sector) {
-      list = list.filter((p) => {
-        const cat = String(p.categorie || '').toLowerCase()
-        if (cat && cat.includes(sector)) return true
-        if (!p.categorie?.trim()) {
-          const tip = String(p.tipProdus || '').toLowerCase()
-          if (sector === 'rezidential' && tip === 'rezidential') return true
-          if (sector === 'industrial' && tip === 'industrial') return true
-        }
-        return false
-      })
+      list = list.filter((p) =>
+        produseCatalogProductMatchesSector(p, sector as PublicCatalogSectorKey),
+      )
     }
     if (voltageFilter) {
       list = list.filter((p) => {
@@ -131,7 +157,7 @@ export default function Produse() {
               position: i + 1,
               name: p.title,
               url: `https://baterino.ro/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`,
-              image: p.cardImage || p.images?.[0] || undefined,
+              image: getPrimaryProductImageUrl(p),
             })),
           },
           {
@@ -173,8 +199,8 @@ export default function Produse() {
             >
               <span className="truncate">
                 {sector
-                  ? tr.sectorOptions.find((o) => o.value === sector)?.label ?? tr.sectorOptions[0].label
-                  : tr.sectorOptions[0].label}
+                  ? visibleSectorOptions.find((o) => o.value === sector)?.label ?? visibleSectorOptions[0].label
+                  : visibleSectorOptions[0].label}
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
                 <path d="M6 9l6 6 6-6" />
@@ -248,7 +274,7 @@ export default function Produse() {
             role="group"
             aria-label={tr.filterSector}
           >
-            {tr.sectorOptions.filter((opt) => opt.value !== '').map((opt) => {
+            {visibleSectorOptions.filter((opt) => opt.value !== '').map((opt) => {
               const val = String(opt.value)
               const active = sector === val
               return (
@@ -436,7 +462,7 @@ export default function Produse() {
               </div>
               {/* Options */}
               <div className="flex flex-col gap-2 px-5 py-4">
-                {tr.sectorOptions.map((opt) => {
+                {visibleSectorOptions.map((opt) => {
                   const val = String(opt.value)
                   const active = sector === val
                   return (
@@ -474,7 +500,7 @@ export default function Produse() {
             {filtered.map((product) => {
               const img = getProductCardImageUrl(product)
               const imgs = Array.isArray(product.images) ? product.images : []
-              const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.png'
+              const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.webp'
               const { specLine1, specLine2 } = getCatalogProductSpecLines(product)
               const stockListingCta = getResidentialCatalogStockListingCta(product, {
                 outOfStock: tr.catalogStockOutOfStock,
@@ -528,6 +554,7 @@ export default function Produse() {
               const cardLabels = {
                 pretLabel: tr.pretLabel,
                 requestQuote: tr.catalogRequestQuote,
+                requestQuoteWhatsappPrefill: tr.catalogRequestQuoteWhatsappPrefill,
                 priceOnRequest: tr.catalogPriceOnRequest,
                 priceOnRequestNote: tr.catalogPriceOnRequestNote,
               }

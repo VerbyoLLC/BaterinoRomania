@@ -16,6 +16,7 @@ import {
 import type { LangCode } from '../i18n/menu'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import { useCart } from '../contexts/CartContext'
+import { getProduseTranslations } from '../i18n/produse'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import ResidentialMobileDiscountModals from './ResidentialMobileDiscountModals'
 
@@ -45,11 +46,18 @@ function formatResidentialDiscountOption(
 
 type Props = { product: PublicProduct; tr: ProductDetailTranslations; lang: LangCode }
 
+const ADD_TO_CART_BTN_CLS =
+  "w-full min-h-[3rem] rounded-xl border-2 border-slate-900 bg-white py-3 text-base font-bold uppercase tracking-wide text-slate-900 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-50 font-['Inter']"
+
+const ORDER_BTN_CLS =
+  "w-full min-h-[3.25rem] rounded-xl bg-gray-900 py-3.5 text-base font-bold uppercase tracking-wide text-white transition-colors hover:bg-gray-800 disabled:cursor-wait disabled:opacity-50 sm:min-h-[3.5rem] sm:py-4 font-['Inter']"
+
 export default function ResidentialClientPriceBlock({ product, tr, lang }: Props) {
   const navigate = useNavigate()
   const { addLine } = useCart()
   const { currency } = useCatalogCurrency()
   const p = getProductPricingTranslations(lang, currency)
+  const produseTr = getProduseTranslations(lang)
   const showReducereProgramPicker = productHasEligibleReducerePrograms(product)
   const [qty, setQty] = useState(1)
   const [discountOptions, setDiscountOptions] = useState<DiscountProgramOption[]>([])
@@ -388,9 +396,9 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               })
               navigate('/cos')
             }}
-            className="w-full min-h-[3rem] font-bold py-3 rounded-xl text-base uppercase tracking-wide border-2 border-slate-900 text-slate-900 bg-white hover:bg-slate-50 transition-colors disabled:cursor-wait disabled:opacity-50"
+            className={ADD_TO_CART_BTN_CLS}
           >
-            Adaugă în coș
+            {produseTr.catalogAddToCart}
           </button>
         ) : null}
         {/* Pentru clienții autentificați ascundem „COMANDĂ” direct — checkout-ul se face din coș,
@@ -428,10 +436,8 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
               lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
               window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
             }}
-            className={`w-full min-h-[3.25rem] sm:min-h-[3.5rem] font-bold py-3.5 sm:py-4 rounded-xl text-base uppercase tracking-wide transition-colors disabled:cursor-wait disabled:opacity-50 ${
-              hasProgramDiscount
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-900 hover:bg-gray-800 text-white'
+            className={`${ORDER_BTN_CLS} ${
+              hasProgramDiscount ? 'bg-green-600 hover:bg-green-700' : ''
             }`}
           >
             {guestWithDiscount ? tr.comandaCuContBtn || 'COMANDĂ CU CONT' : tr.comandaBtn}

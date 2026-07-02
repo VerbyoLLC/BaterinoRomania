@@ -151,7 +151,7 @@ export function PartnerWelcomePendingDiscountModal({
         <div className="rounded-t-[20px] bg-gradient-to-br from-[#141b2c] to-[#0f1422] px-8 pb-[26px] pt-[26px] text-white">
           <div className="mb-4 flex items-center gap-3 pr-10">
             <img
-              src="/images/shared/baterino-pro-alb-logo.png"
+              src="/images/shared/baterino-pro-alb-logo.webp"
               alt="Baterino Pro"
               className="h-7 w-auto object-contain"
             />

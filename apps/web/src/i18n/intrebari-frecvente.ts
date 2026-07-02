@@ -150,7 +150,7 @@ const translations: Record<LangCode, IntrebariFrecventeTranslations> = {
           },
           {
             q: 'Cum vă contactez pentru alte întrebări?',
-            a: 'Ne poți scrie prin formularul de contact, email la suport@baterino.ro sau telefon/WhatsApp — datele sunt pe pagina Contact.',
+            a: 'Ne poți scrie prin formularul de contact, email la contact@baterino.ro sau telefon/WhatsApp — datele sunt pe pagina Contact.',
           },
         ],
       },
@@ -286,7 +286,7 @@ const translations: Record<LangCode, IntrebariFrecventeTranslations> = {
           },
           {
             q: 'How can I contact you for other questions?',
-            a: 'Use the contact form, email support@baterino.ro, or phone/WhatsApp — details are on the Contact page.',
+            a: 'Use the contact form, email contact@baterino.ro, or phone/WhatsApp — details are on the Contact page.',
           },
         ],
       },

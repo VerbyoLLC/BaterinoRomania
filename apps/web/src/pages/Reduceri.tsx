@@ -52,7 +52,7 @@ export default function Reduceri() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/reduceri"
-        ogImage="/images/programe%20reduceri/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.jpg"
+        ogImage="/images/instalatori/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -62,7 +62,7 @@ export default function Reduceri() {
           name: 'Reduceri & Oferte',
           description: 'Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu\' și Viața la Țară. Reduceri reale pentru oameni reali.',
           url: 'https://baterino.ro/reduceri',
-          image: 'https://baterino.ro/images/programe%20reduceri/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.jpg',
+          image: 'https://baterino.ro/images/instalatori/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },

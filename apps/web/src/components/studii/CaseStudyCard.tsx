@@ -88,7 +88,7 @@ export default function CaseStudyCard({
           </div>
         ) : null}
         <img
-          src="/images/shared/lithtech-logo-white 3.png"
+          src="/images/shared/lithtech-logo-white 3.webp"
           alt=""
           aria-hidden
           className="absolute bottom-3 right-3 z-10 h-5 w-auto max-w-[88px] object-contain opacity-95"

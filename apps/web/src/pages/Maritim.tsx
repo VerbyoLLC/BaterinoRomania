@@ -20,12 +20,12 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]['id']
 
 const APLICATII: { key: keyof ReturnType<typeof getMaritimTranslations>; img: string }[] = [
-  { key: 'aplicatiiRemorcher', img: '/images/divizii/maritim/remorcher.jpg' },
-  { key: 'aplicatiiFerry',     img: '/images/divizii/maritim/ferry-boat.jpg' },
-  { key: 'aplicatiiRoPax',     img: '/images/divizii/maritim/nava-ro-pax.jpg' },
-  { key: 'aplicatiiOffshore',  img: '/images/divizii/maritim/nava-de-suport-offshore.jpg' },
-  { key: 'aplicatiiCargo',     img: '/images/divizii/maritim/nava-cargo.jpg' },
-  { key: 'aplicatiiPescuit',   img: '/images/divizii/maritim/nava-pescuit.jpg' },
+  { key: 'aplicatiiRemorcher', img: '/images/divizii/maritim/remorcher.webp' },
+  { key: 'aplicatiiFerry',     img: '/images/divizii/maritim/ferry-boat.webp' },
+  { key: 'aplicatiiRoPax',     img: '/images/divizii/maritim/nava-ro-pax.webp' },
+  { key: 'aplicatiiOffshore',  img: '/images/divizii/maritim/nava-de-suport-offshore.webp' },
+  { key: 'aplicatiiCargo',     img: '/images/divizii/maritim/nava-cargo.webp' },
+  { key: 'aplicatiiPescuit',   img: '/images/divizii/maritim/nava-pescuit.webp' },
 ]
 
 const FEATURE_CARDS: { key: keyof ReturnType<typeof getMaritimTranslations>; icon: string }[] = [
@@ -136,7 +136,7 @@ export default function Maritim() {
         title={seoTitles[language.code] ?? seoTitles.ro}
         description={seoDescriptions[language.code] ?? seoDescriptions.ro}
         canonical="/divizii/maritim"
-        ogImage="/images/divizii/maritim/sisteme-stocare-sector-maritim-og.jpg"
+        ogImage="/images/divizii/maritim/sisteme-stocare-sector-maritim-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -146,7 +146,7 @@ export default function Maritim() {
           name: 'Stocare Energie Maritim',
           description: 'Sisteme de stocare a energiei LiFePo4 pentru nave comerciale, remorchere, ferry-boat și infrastructură portuară. Soluții Full-Electric și Hibride certificate pentru sectorul naval.',
           url: 'https://baterino.ro/divizii/maritim',
-          image: 'https://baterino.ro/images/divizii/maritim/sisteme-stocare-sector-maritim-og.jpg',
+          image: 'https://baterino.ro/images/divizii/maritim/sisteme-stocare-sector-maritim-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },
@@ -223,19 +223,19 @@ export default function Maritim() {
           </p>
           <div className="w-full relative">
             <picture>
-              <source media="(max-width: 1023px)" srcSet="/images/divizii/maritim/hero-card-maritim-mobile.jpg" />
+              <source media="(max-width: 1023px)" srcSet="/images/divizii/maritim/hero-card-maritim-mobile.webp" />
               <img
-                src="/images/divizii/maritim/hero-card-maritim.jpg"
+                src="/images/divizii/maritim/hero-card-maritim.webp"
                 alt={tr.heroTitle}
                 className="relative w-full object-cover rounded-[10px]"
                 style={{ height: '440px' }}
               />
             </picture>
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0 min-w-0 z-10">
-              <img src="/images/divizii/maritim/baterino-maritim-logo-white.png" alt="Baterino At Sea" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
+              <img src="/images/divizii/maritim/baterino-maritim-logo-white.webp" alt="Baterino At Sea" className="h-9 w-auto max-w-[90vw] object-contain flex-shrink-0" />
               <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
                 <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
-                <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
+                <img src="/images/shared/lithtech-logo-white.webp" alt="LithTech" className="h-5 w-auto object-contain" />
               </div>
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function Maritim() {
             </div>
             <div className="w-full lg:w-[55%] bg-neutral-100 flex items-center justify-center p-4 h-52 lg:h-auto">
               <img
-                src="/images/shared/white-sharl-series.png"
+                src="/images/shared/white-sharl-series.webp"
                 alt={tr.product1Name}
                 className="h-44 w-auto object-contain"
               />
@@ -384,7 +384,7 @@ export default function Maritim() {
 
         {/* CTA bar */}
         <CTABar
-          logo="/images/divizii/maritim/baterino-maritim-logo-black.png"
+          logo="/images/divizii/maritim/baterino-maritim-logo-black.webp"
           logoAlt="Baterino At Sea"
           logoClassName="h-6 lg:h-16"
           title={tr.ctaTitle}

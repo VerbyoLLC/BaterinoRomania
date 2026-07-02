@@ -20,14 +20,14 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]['id']
 
 const ANSAMBLURI: { key: keyof ReturnType<typeof getRezidentialTranslations>; img: string }[] = [
-  { key: 'ansambluriRezidential', img: '/images/divizii/rezidential/ansambluri-rezidentiale.jpg' },
-  { key: 'ansambluriHoteluri', img: '/images/divizii/rezidential/hoteluri-si-pensiuni.jpg' },
-  { key: 'ansambluriCentre', img: '/images/divizii/rezidential/centre-comerciale.jpg' },
-  { key: 'ansambluriLocuinte', img: '/images/divizii/rezidential/locuinte-individuale.jpg' },
-  { key: 'ansambluriFerme', img: '/images/divizii/rezidential/ferme-agricole.jpg' },
-  { key: 'ansambluriStatiuni', img: '/images/divizii/rezidential/statiuni-meteorologice.jpg' },
-  { key: 'ansambluriCladiri', img: '/images/divizii/rezidential/cladiri-de-birouri.jpg' },
-  { key: 'ansambluriZone', img: '/images/divizii/rezidential/zone-greu-accesibile.jpg' },
+  { key: 'ansambluriRezidential', img: '/images/divizii/rezidential/ansambluri-rezidentiale.webp' },
+  { key: 'ansambluriHoteluri', img: '/images/divizii/rezidential/hoteluri-si-pensiuni.webp' },
+  { key: 'ansambluriCentre', img: '/images/divizii/rezidential/centre-comerciale.webp' },
+  { key: 'ansambluriLocuinte', img: '/images/divizii/rezidential/locuinte-individuale.webp' },
+  { key: 'ansambluriFerme', img: '/images/divizii/rezidential/ferme-agricole.webp' },
+  { key: 'ansambluriStatiuni', img: '/images/divizii/rezidential/statiuni-meteorologice.webp' },
+  { key: 'ansambluriCladiri', img: '/images/divizii/rezidential/cladiri-de-birouri.webp' },
+  { key: 'ansambluriZone', img: '/images/divizii/rezidential/zone-greu-accesibile.webp' },
 ]
 
 const CTA_FEATURES: { key: keyof ReturnType<typeof getRezidentialTranslations>; icon: string }[] = [
@@ -143,7 +143,7 @@ export default function Rezidential() {
           : 'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.'
       }
       canonical="/divizii/rezidential"
-      ogImage="/images/divizii/rezidential/stocare-energie-rezidential-og.jpg"
+      ogImage="/images/divizii/rezidential/stocare-energie-rezidential-og.webp"
       lang={language.code}
     />
     <SchemaOrg schema={[
@@ -153,7 +153,7 @@ export default function Rezidential() {
         name: 'Stocare Energie Rezidențial',
         description: 'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.',
         url: 'https://baterino.ro/divizii/rezidential',
-        image: 'https://baterino.ro/images/divizii/rezidential/stocare-energie-rezidential-og.jpg',
+        image: 'https://baterino.ro/images/divizii/rezidential/stocare-energie-rezidential-og.webp',
         inLanguage: 'ro',
         publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
       },
@@ -186,10 +186,10 @@ export default function Rezidential() {
           <picture>
             <source
               media="(max-width: 1023px)"
-              srcSet="/images/divizii/rezidential/hero-card-rezidential-mobile.jpg"
+              srcSet="/images/divizii/rezidential/hero-card-rezidential-mobile.webp"
             />
             <img
-              src="/images/divizii/rezidential/hero-card-rezidential.jpg"
+              src="/images/divizii/rezidential/hero-card-rezidential.webp"
               alt={tr.heroTitle}
               className="relative w-full object-cover rounded-[10px]"
               style={{ height: '440px' }}
@@ -197,10 +197,10 @@ export default function Rezidential() {
           </picture>
           {/* Baterino logo + Powered by LithTech – bottom center/right */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 flex flex-col items-center gap-2 pt-4 lg:pt-0">
-            <img src="/images/divizii/rezidential/baterino-logo-white.png" alt="Baterino" className="h-9 w-auto" />
+            <img src="/images/divizii/rezidential/baterino-logo-white.webp" alt="Baterino" className="h-9 w-auto" />
             <div className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2">
               <span className="text-white text-xs font-normal font-['Inter'] leading-5">Powered by</span>
-              <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
+              <img src="/images/shared/lithtech-logo-white.webp" alt="LithTech" className="h-5 w-auto object-contain" />
             </div>
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function Rezidential() {
           {/* TRX Series LiFePo4 LV – cols 1–3 */}
           <div className="group col-span-4 lg:col-span-3 relative h-72 bg-neutral-100 rounded-[10px] overflow-hidden cursor-pointer transition-shadow duration-300 hover:shadow-md">
             <img
-              src="/images/shared/eco-home5kwh-lithtech.png"
+              src="/images/shared/eco-home5kwh-lithtech.webp"
               alt={tr.productTRX}
               className="w-32 h-40 absolute top-[29px] left-1/2 -translate-x-1/2 object-contain transition-transform duration-300 group-hover:scale-110"
             />
@@ -356,7 +356,7 @@ export default function Rezidential() {
           {/* TA6000 LiFePo4 LV – cols 4–6 */}
           <div className="group col-span-4 lg:col-span-3 relative h-72 bg-neutral-100 rounded-[10px] overflow-hidden cursor-pointer transition-shadow duration-300 hover:shadow-md">
             <img
-              src="/images/shared/ta6000-lithtech.png"
+              src="/images/shared/ta6000-lithtech.webp"
               alt={tr.productTA6000}
               className="w-28 h-40 absolute top-[29px] left-1/2 -translate-x-1/2 object-contain transition-transform duration-300 group-hover:scale-110"
             />
@@ -368,7 +368,7 @@ export default function Rezidential() {
           {/* LiFePo4 HV – cols 7–9 */}
           <div className="group col-span-4 lg:col-span-3 relative h-72 bg-neutral-100 rounded-[10px] overflow-hidden cursor-pointer transition-shadow duration-300 hover:shadow-md">
             <img
-              src="/images/shared/HP2000-all-in-one.png"
+              src="/images/shared/HP2000-all-in-one.webp"
               alt={tr.productHV}
               className="w-28 h-40 absolute top-[29px] left-1/2 -translate-x-1/2 object-contain transition-transform duration-300 group-hover:scale-110"
             />

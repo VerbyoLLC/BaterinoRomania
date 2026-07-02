@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { ReducereProgram } from '../../i18n/reduceri'
+import { normalizeReducereProgramAssetUrl } from '../../lib/reducereProgramAssets'
 
 function renderBold(text: string) {
   return text.split(/\*\*(.*?)\*\*/g).map((part, i) =>
@@ -87,6 +88,8 @@ export function ReduceriProgramCard({
   hoverApply,
 }: CardProps) {
   const programName = program.programLabel.replace(/^PROGRAMUL\s*/i, '')
+  const photoSrc = normalizeReducereProgramAssetUrl(program.photo)
+  const topIconSrc = program.topIcon ? normalizeReducereProgramAssetUrl(program.topIcon) : undefined
   const compact = hideCta
 
   return (
@@ -112,16 +115,16 @@ export function ReduceriProgramCard({
       >
         <div className={`relative flex-shrink-0 ${compact ? 'h-36 sm:h-40' : 'h-56 md:h-48'}`}>
           <div className="absolute inset-0 bg-zinc-300" />
-          <img src={program.photo} alt={programName} className="absolute inset-0 w-full h-full object-cover" />
+          <img src={photoSrc} alt={programName} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40" />
           <img
-            src="/images/programe reduceri/baterino-white-logo.png"
+            src="/images/programe%20reduceri/baterino-white-logo.webp"
             alt="Baterino"
             className="absolute top-3 right-3 z-[1] h-5 w-auto object-contain"
           />
-          {program.topIcon ? (
+          {topIconSrc ? (
             <SmileyPopover
-              icon={program.topIcon}
+              icon={topIconSrc}
               info={program.stiaiCa}
               stopSelectBubble={selectable || Boolean(hoverApply)}
             />

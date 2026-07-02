@@ -12,6 +12,7 @@ import ResidentialProductCatalogBadges from '../components/product/ResidentialPr
 import { catalogBadgeLabelsFromProduseTr } from '../lib/catalogProductBadges'
 import { getProduseTranslations } from '../i18n/produse'
 import { getProductTemplateSeo } from '../lib/productTemplateSeo'
+import { collectProductImageUrls, resolveProductOgImageUrl, SITE_BASE_URL } from '../lib/productSeoImages'
 import type { LangCode } from '../i18n/menu'
 import {
   IndustrialProductPageSkeleton,
@@ -860,7 +861,7 @@ export default function ProductRezidential() {
   }
 
   const imgs = Array.isArray(product.images) ? product.images : []
-  const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.png'
+  const img = imgs[activeImage] || imgs[0] || '/images/shared/HP2000-all-in-one.webp'
 
   const rezProductQrUrl = (() => {
     const path = `/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`
@@ -892,14 +893,12 @@ export default function ProductRezidential() {
         description={templateSeo.description}
         canonical={`/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`}
         lang={language.code}
-        ogImage={templateSeo.ogImage}
+        ogImage={templateSeo.ogImage ?? resolveProductOgImageUrl(product)}
       />
       <SchemaOrg schema={(() => {
-        const BASE = 'https://baterino.ro'
+        const BASE = SITE_BASE_URL
         const productUrl = `${BASE}/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`
-        const images = product.images?.length
-          ? product.images.map((img) => img.startsWith('http') ? img : `${BASE}${img}`)
-          : undefined
+        const images = collectProductImageUrls(product, { base: BASE })
         const stockMap: Record<string, string> = {
           in_stock: 'https://schema.org/InStock',
           out_of_stock: 'https://schema.org/OutOfStock',
@@ -916,7 +915,7 @@ export default function ProductRezidential() {
           name: product.title,
           description: templateSeo.description,
           url: productUrl,
-          ...(images ? { image: images } : {}),
+          image: images,
           brand: { '@type': 'Brand', name: product.brand || 'LithTech' },
           sku: product.slug || product.id,
           ...(product.garantie ? { warranty: product.garantie } : {}),

@@ -65,7 +65,7 @@ export default function SignupClienti() {
     checkApiHealth().then(setApiOk)
   }, [])
 
-  const image = tab === 'client' ? '/images/login/login-client.jpg' : '/images/login/login-partner.jpg'
+  const image = tab === 'client' ? '/images/login/login-client.webp' : '/images/login/login-partner.webp'
 
   const clientLeftContent = (
     <div className="w-[384px] h-[192px] relative">

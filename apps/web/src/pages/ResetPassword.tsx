@@ -4,7 +4,7 @@ import AuthLayout from '../components/AuthLayout'
 import PasswordInput from '../components/PasswordInput'
 import { requestPasswordReset, resetPassword } from '../lib/api'
 
-const PLACEHOLDER_IMG = '/images/instalatori/instalatori-baterino.jpg'
+const PLACEHOLDER_IMG = '/images/instalatori/instalatori-baterino.webp'
 
 type Step = 'email' | 'sent' | 'reset' | 'done'
 

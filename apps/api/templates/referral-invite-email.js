@@ -57,10 +57,10 @@ function getReferralInviteTemplate({
   const safeSite = escapeHtml(SITE_NAME)
   // Path fără spații — unii clienți de email tratează prost %20 în URL; fișier duplicat în web/public/images/email/
   const logoSrc = escapeHtmlAttr(
-    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/baterino-white-logo.png`,
+    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/baterino-white-logo.webp`,
   )
   const iconCheckSrc = escapeHtmlAttr(
-    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/benefit-check.png`,
+    `${String(assetBaseUrl || '').replace(/\/$/, '')}/images/email/benefit-check.webp`,
   )
 
   return `

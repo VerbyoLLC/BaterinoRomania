@@ -119,12 +119,12 @@ const translations: Record<LangCode, TermeniProgrameReducereTranslations> = {
               '**Condiții:** nu necesită documente justificative.',
             ],
           },
-          { kind: 'h3', text: `4.2. Programul „Energie pentru părinți" — 20% reducere pentru pensionari` },
+          { kind: 'h3', text: `4.2. Programul „Energie pentru părinți" — 15% reducere pentru pensionari` },
           {
             kind: 'ul',
             items: [
               '**Cui se adresează:** persoanelor aflate la pensie.',
-              '**Reducere:** 20% din prețul cu TVA, la orice produs Baterino.',
+              '**Reducere:** 15% din prețul cu TVA, la orice produs Baterino.',
               '**Condiții:** Clientul trebuie să facă **dovada pensionării** (de exemplu: cupon de pensie sau decizie de pensionare) și să fie **beneficiarul produsului** — factura se emite pe numele său.',
             ],
           },
@@ -296,12 +296,12 @@ const translations: Record<LangCode, TermeniProgrameReducereTranslations> = {
               '**Conditions:** no supporting documents required.',
             ],
           },
-          { kind: 'h3', text: `4.2. "Energy for parents" program — 20% discount for retirees` },
+          { kind: 'h3', text: `4.2. "Energy for parents" program — 15% discount for retirees` },
           {
             kind: 'ul',
             items: [
               '**Who it is for:** persons receiving a pension.',
-              '**Discount:** 20% of the VAT-inclusive price, on any Baterino product.',
+              '**Discount:** 15% of the VAT-inclusive price, on any Baterino product.',
               '**Conditions:** the Customer must **prove retirement status** (e.g. pension slip or retirement decision) and be the **product beneficiary** — the invoice is issued in their name.',
             ],
           },

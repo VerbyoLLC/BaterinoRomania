@@ -696,7 +696,7 @@ export default function AdminLayout() {
             className="flex flex-col items-center gap-2 px-3 pb-6 mb-4 border-b border-slate-700/50 rounded-lg outline-none transition-colors hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25"
           >
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt="Baterino"
               className="h-7 w-auto object-contain"
             />

@@ -282,7 +282,7 @@ export function PartnerRfqPriceJourneyModal({ onClose }: { onClose: () => void }
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:px-5">
           <img
-            src="/images/shared/baterino-pro-negru-logo.png"
+            src="/images/shared/baterino-pro-negru-logo.webp"
             alt="Baterino"
             className="h-5 w-auto shrink-0 object-contain sm:h-6"
           />

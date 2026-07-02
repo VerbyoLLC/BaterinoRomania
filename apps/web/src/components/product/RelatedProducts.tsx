@@ -186,7 +186,7 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
   const renderVerticalCard = (p: PublicProduct) => {
     const img = getProductCardImageUrl(p)
     const pImgs = Array.isArray(p.images) ? p.images : []
-    const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.png'
+    const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.webp'
     const { specLine1, specLine2 } = getCatalogProductSpecLines(p)
     const stockListingCta = getResidentialCatalogStockListingCta(p, {
       outOfStock: tr.catalogStockOutOfStock,
@@ -249,7 +249,7 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
   const renderHorizontalCard = (p: PublicProduct) => {
     const img = getProductCardImageUrl(p)
     const imgs = Array.isArray(p.images) ? p.images : []
-    const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.png'
+    const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.webp'
     const { specLine1, specLine2 } = getCatalogProductSpecLines(p)
     const stockListingCta = getResidentialCatalogStockListingCta(p, {
       outOfStock: tr.catalogStockOutOfStock,

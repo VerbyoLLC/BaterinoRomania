@@ -237,7 +237,7 @@ export default function AdminProductSheetA4({
           <span className="aps-top-bar-doc">{t.topBarDoc}</span>
           <img
             className="aps-top-logo"
-            src="/images/email/baterino-white-logo.png"
+            src="/images/email/baterino-white-logo.webp"
             alt=""
             width={110}
             height={22}

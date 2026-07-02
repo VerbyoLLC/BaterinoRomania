@@ -1325,7 +1325,7 @@ export default function PartnerProducts() {
           <option value="" disabled>
             {trProducts.catalogSectionFilterPlaceholder}
           </option>
-          {PARTNER_CATALOG_SECTION_ORDER.map((sid) => {
+          {PARTNER_CATALOG_SECTION_ORDER.filter((sid) => sectionBuckets[sid].length > 0).map((sid) => {
             const count = sectionBuckets[sid].length
             const label = catalogSectionLabels[sid]
             return (
@@ -1347,7 +1347,7 @@ export default function PartnerProducts() {
         role="navigation"
         aria-label={trProducts.catalogNavAria}
       >
-        {PARTNER_CATALOG_SECTION_ORDER.map((sid) => {
+        {PARTNER_CATALOG_SECTION_ORDER.filter((sid) => sectionBuckets[sid].length > 0).map((sid) => {
           const count = sectionBuckets[sid].length
           const label = catalogSectionLabels[sid]
           return (

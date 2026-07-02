@@ -9,35 +9,35 @@ import CTABar from '../components/CTABar'
 const CARDS = [
   {
     id: 'swap',
-    img: '/images/siguranta/serviciul-baterino-swap.jpg',
+    img: '/images/siguranta/serviciul-baterino-swap.webp',
     icon: '/images/shared/swap-icon.svg',
     titleKey: 'swapTitle' as const,
     descKey: 'swapDesc' as const,
   },
   {
     id: 'suport',
-    img: '/images/siguranta/suport-mentenanta-baterino.jpg',
+    img: '/images/siguranta/suport-mentenanta-baterino.webp',
     icon: '/images/shared/maintance-icon.svg',
     titleKey: 'suportTitle' as const,
     descKey: 'suportDesc' as const,
   },
   {
     id: 'testare',
-    img: '/images/siguranta/testare-produse-baterino.jpg',
+    img: '/images/siguranta/testare-produse-baterino.webp',
     icon: '/images/shared/testing-icon.svg',
     titleKey: 'testareTitle' as const,
     descKey: 'testareDesc' as const,
   },
   {
     id: 'garantie',
-    img: '/images/siguranta/10-ani-garantie-extinsa.jpg',
+    img: '/images/siguranta/10-ani-garantie-extinsa.webp',
     icon: '/images/shared/safety-icon.svg',
     titleKey: 'garantieTitle' as const,
     descKey: 'garantieDesc' as const,
   },
   {
     id: 'service',
-    img: '/images/siguranta/sertice-diagnoza-baterino.jpg',
+    img: '/images/siguranta/sertice-diagnoza-baterino.webp',
     icon: '/images/shared/romania-flag-icon.svg',
     titleKey: 'serviceTitle' as const,
     descKey: 'serviceDesc' as const,
@@ -223,7 +223,7 @@ export default function Siguranta() {
         title={seoTitles[language.code] ?? seoTitles.ro}
         description={seoDescriptions[language.code] ?? seoDescriptions.ro}
         canonical="/siguranta"
-        ogImage="/images/siguranta/siguranta-og.jpg"
+        ogImage="/images/siguranta/siguranta-og.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -233,7 +233,7 @@ export default function Siguranta() {
           name: 'Siguranță & Garanție',
           description: 'Baterino garantează siguranța produselor prin serviciul SWAP, suport și mentenanță în România, testare avansată cu LithTech și garanție extinsă de 10 ani.',
           url: 'https://baterino.ro/siguranta',
-          image: 'https://baterino.ro/images/siguranta/siguranta-og.jpg',
+          image: 'https://baterino.ro/images/siguranta/siguranta-og.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },

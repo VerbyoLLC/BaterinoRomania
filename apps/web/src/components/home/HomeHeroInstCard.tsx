@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { BadgePercent, Headphones, ShieldCheck, Truck, type LucideIcon } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 
-const INST_IMAGE_SRC = '/images/home/slider-apple/slide4-instalatori.jpg'
+const INST_IMAGE_SRC = '/images/home/slider-apple/slide4-instalatori.webp'
 
 type InstCardTranslations = Pick<
   HomeTranslations,

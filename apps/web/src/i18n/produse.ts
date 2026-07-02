@@ -78,6 +78,8 @@ export type ProduseTranslations = {
   catalogAddToCart: string
   catalogViewDetails: string
   catalogRequestQuote: string
+  /** Guest „Cere ofertă” WhatsApp prefill — `{title}` = product title */
+  catalogRequestQuoteWhatsappPrefill: string
   catalogPriceOnRequest: string
   catalogPriceOnRequestNote: string
   /** Catalog Produse: linie sub preț brut — `{price}` = sumă + monedă */
@@ -156,6 +158,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogAddToCart: 'Adaugă în coș',
     catalogViewDetails: 'Vezi detalii',
     catalogRequestQuote: 'Cere ofertă',
+    catalogRequestQuoteWhatsappPrefill: 'Salut, as dori sa aflu mai multe despre {title}',
     catalogPriceOnRequest: 'La cerere',
     catalogPriceOnRequestNote: 'Se stabilește pe configurație',
     catalogNetPriceLine: '{price} fără TVA',
@@ -250,6 +253,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogAddToCart: 'Add to cart',
     catalogViewDetails: 'View details',
     catalogRequestQuote: 'Request quote',
+    catalogRequestQuoteWhatsappPrefill: 'Hello, I would like to find out more about {title}',
     catalogPriceOnRequest: 'On request',
     catalogPriceOnRequestNote: 'Based on configuration',
     catalogNetPriceLine: '{price} excl. VAT',

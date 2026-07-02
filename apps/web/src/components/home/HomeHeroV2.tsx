@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import HomeHeroPromoOfferCard from './HomeHeroPromoOfferCard'
+import { HOME_PROMO_PRODUCT_LINK } from './HomePromoModal'
 import HomeHeroMedCard from './HomeHeroMedCard'
 import HomeHeroInstCard from './HomeHeroInstCard'
 import type { HomeTranslations } from '../../i18n/home'
@@ -155,8 +156,8 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         id: 'oferta',
         title: tr.promoModalTitleLine1,
         buttonLabel: tr.promoModalCtaPrimary,
-        image: '/images/home/offer-baterino.jpg',
-        to: '/produse/baterii-solare/20kwh-2-x-10kwh-ecohome-10-10kwh',
+        image: '/images/home/offer-baterino.webp',
+        to: HOME_PROMO_PRODUCT_LINK,
         promoOfferHeroOverlay: true,
         width: '800px',
         noDarkOverlay: true,
@@ -166,7 +167,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         title: tr.heroV2Card2Title,
         subtitle: tr.heroV2Card2Subtitle,
         buttonLabel: tr.heroV2Card2Cta,
-        image: '/images/slider2/slide1.jpg',
+        image: '/images/slider2/slide1.webp',
         to: '/reduceri',
         discountHeroOverlay: true,
         width: '400px',
@@ -177,7 +178,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         id: 'rezidential',
         title: tr.heroMobile0Title,
         buttonLabel: tr.heroCardCta,
-        image: '/images/slider2/slide2.jpg',
+        image: '/images/slider2/slide2.webp',
         productHeroOverlay: true,
         noDarkOverlay: true,
         width: '600px',
@@ -186,7 +187,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         id: 'bess',
         title: tr.heroV2MedProductTitle,
         buttonLabel: tr.heroV2MedCta,
-        image: '/images/slider2/slide4-261kwh-bess.jpg',
+        image: '/images/slider2/slide4-261kwh-bess.webp',
         to: '/produse/sisteme-bess/bess-cabinet-lifepo4-261kwh-racire-lichida',
         medicalHeroOverlay: true,
         width: '800px',
@@ -197,7 +198,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         title: tr.heroV2Card3Title,
         subtitle: tr.heroV2Card3Subtitle,
         buttonLabel: tr.heroV2Card3Cta,
-        image: '/images/slider2/slider3.jpg',
+        image: '/images/slider2/slider3.webp',
         to: '/studii-de-caz',
         multilineTitle: true,
         width: '400px',
@@ -208,7 +209,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
         id: 'instalatori',
         title: tr.heroV2InstTitle,
         buttonLabel: tr.heroV2InstCta,
-        image: '/images/home/slider-apple/slide4-instalatori.jpg',
+        image: '/images/home/slider-apple/slide4-instalatori.webp',
         to: '/instalatori',
         instalatoriHeroOverlay: true,
         noDarkOverlay: true,
@@ -487,7 +488,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               <HomeHeroPromoOfferCard
                 tr={tr}
                 isDragging={isDragging}
-                productLink={card.to ?? '/produse/baterii-solare/20kwh-2-x-10kwh-ecohome-10-10kwh'}
+                productLink={card.to ?? HOME_PROMO_PRODUCT_LINK}
               />
             ) : showProductHeroOverlay(card) ? (
               <>
@@ -551,7 +552,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                 <div className="absolute inset-x-[clamp(0.75rem,2vw,1rem)] bottom-[clamp(1.25rem,3vh,2rem)] flex flex-col items-center text-center gap-[clamp(0.75rem,1.5vh,1rem)] pointer-events-none">
                   <div className="flex flex-col items-center gap-1 text-center [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_2px_10px_rgba(0,0,0,0.45)]">
                     <img
-                      src="/images/shared/baterino-logo-white.png"
+                      src="/images/shared/baterino-logo-white.webp"
                       alt="Baterino"
                       draggable={false}
                       className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
@@ -585,7 +586,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
               {card.id === 'proiecte' ? (
                 <div className="flex flex-col items-center gap-1 text-center">
                   <img
-                    src="/images/lithtech/logo-baterino-pro-white.png"
+                    src="/images/lithtech/logo-baterino-pro-white.webp"
                     alt="Baterino Pro"
                     draggable={false}
                     className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"

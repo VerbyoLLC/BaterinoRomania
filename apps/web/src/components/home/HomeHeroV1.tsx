@@ -25,20 +25,20 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
 
   const heroSlides = useMemo(
     () => [
-      { label: tr.heroSliderRez, image: '/images/home/slider-apple/slide1-baterii-rezidential.jpg' },
-      { label: tr.heroSliderInd, image: '/images/home/slider-apple/slide2-baterii-industrial.jpg' },
-      { label: tr.heroSliderMed, image: '/images/home/slider-apple/slide3-baterii-medical.jpg' },
-      { label: tr.heroSliderInst, image: '/images/home/slider-apple/slide4-instalatori.jpg' },
+      { label: tr.heroSliderRez, image: '/images/home/slider-apple/slide1-baterii-rezidential.webp' },
+      { label: tr.heroSliderInd, image: '/images/home/slider-apple/slide2-baterii-industrial.webp' },
+      { label: tr.heroSliderMed, image: '/images/home/slider-apple/slide3-baterii-medical.webp' },
+      { label: tr.heroSliderInst, image: '/images/home/slider-apple/slide4-instalatori.webp' },
     ],
     [tr],
   )
 
   const heroMobileSlides = useMemo(() => {
     const base = [
-      { id: 'rezidential' as const, label: tr.heroSliderRez, image: '/images/home/slider-1-mobile.jpg' },
-      { id: 'industrial' as const, label: tr.heroSliderInd, image: '/images/home/slider-2-mobile.jpg' },
-      { id: 'medical' as const, label: tr.heroSliderMed, image: '/images/home/slider-3-mobile.jpg' },
-      { id: 'instalatori' as const, label: tr.heroSliderInst, image: '/images/home/instalatori-mobile.jpg' },
+      { id: 'rezidential' as const, label: tr.heroSliderRez, image: '/images/home/slider-1-mobile.webp' },
+      { id: 'industrial' as const, label: tr.heroSliderInd, image: '/images/home/slider-2-mobile.webp' },
+      { id: 'medical' as const, label: tr.heroSliderMed, image: '/images/home/slider-3-mobile.webp' },
+      { id: 'instalatori' as const, label: tr.heroSliderInst, image: '/images/home/instalatori-mobile.webp' },
     ]
     const instSlide = base.find((s) => s.id === 'instalatori')!
     const restSlides = base.filter((s) => s.id !== 'instalatori')
@@ -240,7 +240,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                 <div className="flex items-center gap-2 opacity-50 p-[5px]">
                   <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
                   <img
-                    src="/images/shared/lithtech-logo-white.png"
+                    src="/images/shared/lithtech-logo-white.webp"
                     alt="LithTech"
                     className="h-5 w-auto object-contain"
                   />
@@ -253,7 +253,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
             <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
               <div className="flex flex-col gap-3 items-center lg:items-start">
                 <img
-                  src="/images/divizii/industrial/baterino-pro-industrial-logo-white.png"
+                  src="/images/divizii/industrial/baterino-pro-industrial-logo-white.webp"
                   alt="Baterino Industrial"
                   className="h-6 w-auto object-contain object-center lg:object-left"
                 />
@@ -273,7 +273,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                 </Link>
                 <div className="flex items-center gap-2 opacity-50 p-[5px]">
                   <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
-                  <img src="/images/shared/lithtech-logo-white.png" alt="LithTech" className="h-5 w-auto object-contain" />
+                  <img src="/images/shared/lithtech-logo-white.webp" alt="LithTech" className="h-5 w-auto object-contain" />
                 </div>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                     {tr.heroSlideInstImportatori}
                   </span>
                   <img
-                    src="/images/shared/lithtech-logo-white.png"
+                    src="/images/shared/lithtech-logo-white.webp"
                     alt="LithTech"
                     className="h-5 w-auto object-contain"
                   />
@@ -314,7 +314,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
             <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
               <div className="flex flex-col gap-3 items-center lg:items-start">
                 <img
-                  src="/images/divizii/medical/baterino-medical-logo-white.png"
+                  src="/images/divizii/medical/baterino-medical-logo-white.webp"
                   alt="Baterino Medical"
                   className="h-6 w-auto object-contain object-center lg:object-left"
                 />
@@ -335,7 +335,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                 <div className="flex items-center gap-2 opacity-50 p-[5px]">
                   <span className="text-white text-xs font-normal font-['Inter'] leading-5">{tr.poweredBy}</span>
                   <img
-                    src="/images/shared/lithtech-logo-white.png"
+                    src="/images/shared/lithtech-logo-white.webp"
                     alt="LithTech"
                     className="h-5 w-auto object-contain"
                   />

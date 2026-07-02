@@ -222,7 +222,7 @@ export default function AdminDiscounts() {
     const draft: DraftProgram = {
       id: `draft-${Date.now()}`,
       isDraft: true,
-      photo: photoPreview ?? '/images/programe%20reduceri/tva-cum-era.jpg',
+      photo: photoPreview ?? '/images/programe%20reduceri/tva-cum-era.webp',
       programLabel: form.programLabel || '(Fără nume)',
       title: form.title || '',
       descriereScurta: form.descriereScurta || undefined,
@@ -410,7 +410,7 @@ export default function AdminDiscounts() {
                         <img src={p.photo} alt={programName} className="absolute inset-0 w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40" />
                         <img
-                          src="/images/programe reduceri/baterino-white-logo.png"
+                          src="/images/programe%20reduceri/baterino-white-logo.webp"
                           alt="Baterino"
                           className="absolute top-3 right-3 h-5 w-auto object-contain"
                         />

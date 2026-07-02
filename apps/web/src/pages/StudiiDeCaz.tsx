@@ -63,7 +63,7 @@ export default function StudiiDeCaz() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/studii-de-caz"
-        ogImage="/images/divizii/industrial/centre-de-date.jpg"
+        ogImage="/images/divizii/industrial/centre-de-date.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -73,7 +73,7 @@ export default function StudiiDeCaz() {
           name: 'Studii de caz – Baterino România',
           description: 'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
           url: 'https://baterino.ro/studii-de-caz',
-          image: 'https://baterino.ro/images/divizii/industrial/centre-de-date.jpg',
+          image: 'https://baterino.ro/images/divizii/industrial/centre-de-date.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },

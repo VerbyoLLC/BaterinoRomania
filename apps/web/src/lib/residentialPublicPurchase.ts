@@ -6,12 +6,18 @@ function num(v: string | number | null | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Residential template: show public client purchase UI (price, programme, qty, order). Never on industrial PDP. */
-export function showResidentialClientPurchaseUI(product: PublicProduct): boolean {
-  if (String(product.tipProdus || '').toLowerCase() === 'industrial') return false
+/** Public catalog (guest + client): product can be added to cart / checked out online. */
+export function publicCatalogClientPurchaseEligible(product: PublicProduct): boolean {
+  const tip = String(product.tipProdus || '').toLowerCase()
+  if (tip !== 'rezidential' && tip !== 'industrial') return false
   const vis = (product.priceVisibility as string) || 'public'
   if (vis !== 'public') return false
-  if (residentialProductStockUnavailable(product)) return false
+  if (tip === 'rezidential' && residentialProductStockUnavailable(product)) return false
   const sale = num(product.salePrice)
   return sale != null && sale > 0
+}
+
+/** @deprecated Prefer `publicCatalogClientPurchaseEligible` — name kept for existing imports. */
+export function showResidentialClientPurchaseUI(product: PublicProduct): boolean {
+  return publicCatalogClientPurchaseEligible(product)
 }

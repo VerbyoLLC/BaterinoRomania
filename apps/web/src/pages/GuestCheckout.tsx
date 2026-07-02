@@ -10,7 +10,6 @@ import {
   Package,
   Truck,
   UserCircle,
-  UserPlus,
 } from 'lucide-react'
 import SEO from '../components/SEO'
 import { CartLineProductThumbLink } from '../components/CartLineProductThumbLink'
@@ -19,8 +18,6 @@ import {
   extractCartLineSpecsFromProduct,
   type CartLineSpecs,
 } from '../components/CartLineSpecDetails'
-import GoogleSignupButton from '../components/GoogleSignupButton'
-import PasswordInput from '../components/PasswordInput'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import {
@@ -37,14 +34,11 @@ import { getGuestCheckoutTranslations } from '../i18n/guest-checkout'
 import { getProductPricingTranslations } from '../i18n/product-pricing'
 import type { LangCode } from '../i18n/menu'
 import {
-  googleAuth,
   getAuthRole,
   getClientProfile,
   getProductAsGuest,
   getProductCardImageUrl,
   putClientProfile,
-  setAuthToken,
-  signup as apiSignup,
   submitGuestResidentialOrder,
   type ClientProfilePayload,
   type PublicProduct,
@@ -244,14 +238,6 @@ export default function GuestCheckout() {
   const [coCity, setCoCity] = useState('')
   const [coPostal, setCoPostal] = useState('')
 
-  const [authEmail, setAuthEmail] = useState('')
-  const [authPassword, setAuthPassword] = useState('')
-  const [authTermsAgreed, setAuthTermsAgreed] = useState(false)
-  const [authMarketingOptIn, setAuthMarketingOptIn] = useState(false)
-  const [authTermsHighlight, setAuthTermsHighlight] = useState(false)
-  const [authError, setAuthError] = useState('')
-  const [authLoading, setAuthLoading] = useState(false)
-
   const [step2FieldErrors, setStep2FieldErrors] = useState<Step2FieldErrors>({})
   const [step2CompanyErrors, setStep2CompanyErrors] = useState<Step2CompanyErrors>({})
   const [step3FieldErrors, setStep3FieldErrors] = useState<Step3FieldErrors>({})
@@ -360,9 +346,6 @@ export default function GuestCheckout() {
     coCity,
     coPostal,
   ])
-
-  const returnToCheckout = cartMode ? '/comanda' : slug ? checkoutPath(slug, qty) : '/comanda'
-  const loginNext = encodeURIComponent(returnToCheckout)
 
   useEffect(() => {
     const role = getAuthRole()
@@ -565,57 +548,6 @@ export default function GuestCheckout() {
       cancelled = true
     }
   }, [cartMode, cartPriceIdentityKey, lang])
-
-  async function handleSidebarSignupSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setAuthError('')
-    if (authPassword.length < 8) {
-      setAuthError(tr.authPasswordTooShort)
-      return
-    }
-    setAuthLoading(true)
-    try {
-      const emailNorm = authEmail.trim().toLowerCase()
-      const signupOut = await apiSignup(emailNorm, authPassword, 'client', returnToCheckout, {
-        marketingEmailOptIn: authMarketingOptIn,
-      })
-      navigate(`/signup/clienti?tab=client&next=${loginNext}`, {
-        state: {
-          guestCheckoutSignup: true,
-          email: emailNorm,
-          verificationSent: signupOut.verificationSent !== false,
-        },
-      })
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : tr.authErrorGeneric)
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
-  async function handleGuestGoogleToken(idToken: string) {
-    setAuthError('')
-    setAuthTermsHighlight(false)
-    setAuthLoading(true)
-    try {
-      const { token, user, needsPartnerProfile, partnerSignupPath } = await googleAuth(idToken, 'client', {
-        acceptedTerms: true,
-        marketingEmailOptIn: authMarketingOptIn,
-      })
-      setAuthToken(token)
-      if (user.role === 'partener') {
-        navigate(needsPartnerProfile ? (partnerSignupPath ?? '/signup/parteneri/profil') : '/partner', {
-          replace: true,
-        })
-        return
-      }
-      navigate(returnToCheckout, { replace: true })
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : tr.authErrorGeneric)
-    } finally {
-      setAuthLoading(false)
-    }
-  }
 
   const validGuestProduct = Boolean(product && !loadError && pricing)
   const checkoutReady = cartMode
@@ -1879,10 +1811,8 @@ export default function GuestCheckout() {
             </div>
           </div>
 
-          {/* Single column so the step accordion uses full max-w-content (1200px) width */}
-          <div className="mt-2 grid grid-cols-1 gap-8 lg:mt-8">
-            <div className="min-w-0 w-full">
-              <div className="flex w-full flex-col gap-3" role="list" aria-label={tr.stepsAriaLabel}>
+          <div className="mt-2 lg:mt-8">
+            <div className="flex w-full flex-col gap-3" role="list" aria-label={tr.stepsAriaLabel}>
                 {steps.map((step) => {
                   const Icon = step.icon
                   const reachable = step.id <= maxReachedStep
@@ -1950,170 +1880,7 @@ export default function GuestCheckout() {
                     </div>
                   )
                 })}
-              </div>
             </div>
-
-            {!isClientSession ? (
-              <aside className="min-w-0 w-full">
-                <div className="mx-auto w-full max-w-xl lg:sticky lg:top-24">
-                  <div className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white">
-                    <div className="p-5 sm:p-6">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                          <UserCircle className="h-6 w-6" strokeWidth={1.75} aria-hidden />
-                        </div>
-                        <div className="min-w-0">
-                          <h2 className="m-0 font-['Inter'] text-lg font-extrabold tracking-tight text-slate-900">
-                            {tr.authTitle}
-                          </h2>
-                          <p className="mt-1 text-sm leading-relaxed text-slate-600">{tr.authSubline}</p>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`mt-5 flex flex-col gap-2 rounded-xl p-3 transition-colors ${
-                          authTermsHighlight
-                            ? 'border-2 border-red-500 bg-red-50/80'
-                            : 'border border-transparent'
-                        }`}
-                      >
-                        <label className="flex cursor-pointer items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={authTermsAgreed}
-                            onChange={(e) => {
-                              const on = e.target.checked
-                              setAuthTermsAgreed(on)
-                              if (on) {
-                                setAuthTermsHighlight(false)
-                                setAuthError('')
-                              }
-                            }}
-                            aria-invalid={authTermsHighlight}
-                            className={`mt-0.5 h-4 w-4 shrink-0 rounded text-slate-900 focus:ring-2 focus:ring-slate-900/20 ${
-                              authTermsHighlight
-                                ? 'border-red-600 ring-2 ring-red-200'
-                                : 'border-slate-300'
-                            }`}
-                          />
-                          <span className="text-sm leading-snug text-slate-700 font-['Inter']">
-                            {tr.authTermsLead}
-                            <Link
-                              to="/termeni-si-conditii"
-                              className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
-                            >
-                              {tr.authTermsLinkTerms}
-                            </Link>
-                            {tr.authTermsMiddle}
-                            <Link
-                              to="/politica-confidentialitate"
-                              className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
-                            >
-                              {tr.authTermsLinkPrivacy}
-                            </Link>
-                          </span>
-                        </label>
-
-                        <label className="flex cursor-pointer items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={authMarketingOptIn}
-                            onChange={(e) => setAuthMarketingOptIn(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900/20"
-                          />
-                          <span className="text-sm leading-snug text-slate-700 font-['Inter']">
-                            {tr.authMarketingOptInLabel}
-                          </span>
-                        </label>
-                      </div>
-
-                      <form className="mt-3 flex flex-col gap-3" onSubmit={handleSidebarSignupSubmit}>
-                        {authError ? (
-                          <div className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2.5">
-                            <p className="m-0 text-sm text-red-800 font-['Inter']">{authError}</p>
-                          </div>
-                        ) : null}
-                        <label className="block">
-                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
-                            {tr.authEmail}
-                          </span>
-                          <input
-                            type="email"
-                            required
-                            value={authEmail}
-                            onChange={(e) => setAuthEmail(e.target.value)}
-                            autoComplete="email"
-                            className={inputClass}
-                          />
-                        </label>
-                        <div>
-                          <span className="mb-1.5 block text-sm font-semibold text-slate-800 font-['Inter']">
-                            {tr.authPassword}
-                          </span>
-                          <PasswordInput
-                            value={authPassword}
-                            onChange={setAuthPassword}
-                            autoComplete="new-password"
-                            placeholder=""
-                            inputClassName="h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-['Inter'] focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={authLoading || !authTermsAgreed}
-                          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {authLoading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              {tr.authLoading}
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="h-4 w-4 opacity-90" strokeWidth={2.25} aria-hidden />
-                              {tr.authSubmit}
-                            </>
-                          )}
-                        </button>
-                      </form>
-
-                      <div className="my-4 flex items-center gap-3">
-                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
-                        <span className="text-xs font-medium text-slate-400 font-['Inter']">{tr.authDividerOr}</span>
-                        <div className="h-px flex-1 bg-slate-200" aria-hidden />
-                      </div>
-
-                      <GoogleSignupButton
-                        label={tr.authGoogleSignup}
-                        disabled={authLoading}
-                        beforePopup={() => {
-                          if (authTermsAgreed) {
-                            setAuthTermsHighlight(false)
-                            return true
-                          }
-                          setAuthTermsHighlight(true)
-                          return false
-                        }}
-                        onToken={handleGuestGoogleToken}
-                        onError={(msg) => setAuthError(msg)}
-                      />
-
-                      <div className="my-5 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" aria-hidden />
-
-                      <p className="m-0 text-center text-sm text-slate-600 font-['Inter']">
-                        {tr.authSignupPrompt}{' '}
-                        <Link
-                          to={`/login?tab=client&next=${loginNext}`}
-                          className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
-                        >
-                          {tr.authSignupLink}
-                        </Link>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-            ) : null}
           </div>
         </div>
       </div>

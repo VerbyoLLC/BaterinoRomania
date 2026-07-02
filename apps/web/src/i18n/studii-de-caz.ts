@@ -37,7 +37,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: '3 MWh UPS Cabinet Battery System',
         location: 'Skövde, Suedia',
-        image: '/images/divizii/industrial/centre-de-date.jpg',
+        image: '/images/divizii/industrial/centre-de-date.webp',
         imageAlt: 'Sistem de baterii UPS 3 MWh în cabinet industrial',
         imageCount: 3,
         specs: [
@@ -53,7 +53,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: 'BESS integrat cu parc fotovoltaic',
         location: 'Dolj, România',
-        image: '/images/divizii/industrial/ferme-solare.jpg',
+        image: '/images/divizii/industrial/ferme-solare.webp',
         imageAlt: 'Parc fotovoltaic cu sistem BESS industrial',
         imageCount: 5,
         specs: [
@@ -69,7 +69,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: 'Stocare pentru centre logistice',
         location: 'Ilfov, România',
-        image: '/images/divizii/industrial/centre-logistica.jpg',
+        image: '/images/divizii/industrial/centre-logistica.webp',
         imageAlt: 'Sistem de stocare energie pentru centru logistic',
         imageCount: 4,
         specs: [
@@ -85,7 +85,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'REZIDENTIAL',
         title: 'EcoHome 10 kWh — autoconsum rezidențial',
         location: 'Cluj-Napoca, România',
-        image: '/images/slider2/slide2.jpg',
+        image: '/images/slider2/slide2.webp',
         imageAlt: 'Baterie rezidențială EcoHome instalată la domiciliu',
         imageCount: 2,
         specs: [
@@ -101,7 +101,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'MEDICAL',
         title: 'BESS pentru clinică de imagistică',
         location: 'București, România',
-        image: '/images/slider2/slide4-261kwh-bess.jpg',
+        image: '/images/slider2/slide4-261kwh-bess.webp',
         imageAlt: 'Sistem BESS pentru infrastructură medicală critică',
         imageCount: 3,
         specs: [
@@ -117,7 +117,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'MARITIM',
         title: 'Stocare energie pentru infrastructură portuară',
         location: 'Constanța, România',
-        image: '/images/slider2/slider3.jpg',
+        image: '/images/slider2/slider3.webp',
         imageAlt: 'Sistem de stocare energie pentru aplicații maritime',
         imageCount: 2,
         specs: [
@@ -145,7 +145,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: '3 MWh UPS Cabinet Battery System',
         location: 'Skövde, Sweden',
-        image: '/images/divizii/industrial/centre-de-date.jpg',
+        image: '/images/divizii/industrial/centre-de-date.webp',
         imageAlt: '3 MWh UPS cabinet battery system in an industrial facility',
         imageCount: 3,
         specs: [
@@ -161,7 +161,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: 'BESS integrated with solar farm',
         location: 'Dolj, Romania',
-        image: '/images/divizii/industrial/ferme-solare.jpg',
+        image: '/images/divizii/industrial/ferme-solare.webp',
         imageAlt: 'Solar farm with industrial BESS system',
         imageCount: 5,
         specs: [
@@ -177,7 +177,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'INDUSTRIAL',
         title: 'Storage for logistics centres',
         location: 'Ilfov, Romania',
-        image: '/images/divizii/industrial/centre-logistica.jpg',
+        image: '/images/divizii/industrial/centre-logistica.webp',
         imageAlt: 'Energy storage system for a logistics centre',
         imageCount: 4,
         specs: [
@@ -193,7 +193,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'RESIDENTIAL',
         title: 'EcoHome 10 kWh — residential self-consumption',
         location: 'Cluj-Napoca, Romania',
-        image: '/images/slider2/slide2.jpg',
+        image: '/images/slider2/slide2.webp',
         imageAlt: 'EcoHome residential battery installed at home',
         imageCount: 2,
         specs: [
@@ -209,7 +209,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'MEDICAL',
         title: 'BESS for imaging clinic',
         location: 'Bucharest, Romania',
-        image: '/images/slider2/slide4-261kwh-bess.jpg',
+        image: '/images/slider2/slide4-261kwh-bess.webp',
         imageAlt: 'BESS system for critical medical infrastructure',
         imageCount: 3,
         specs: [
@@ -225,7 +225,7 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
         category: 'MARITIM',
         title: 'Energy storage for port infrastructure',
         location: 'Constanța, Romania',
-        image: '/images/slider2/slider3.jpg',
+        image: '/images/slider2/slider3.webp',
         imageAlt: 'Energy storage system for maritime applications',
         imageCount: 2,
         specs: [

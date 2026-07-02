@@ -13,7 +13,7 @@ export default function Cariere() {
         title={tr.seoTitle}
         description={tr.seoDesc}
         canonical="/cariere"
-        ogImage="/images/cariere/cariere-hero-card.jpg"
+        ogImage="/images/cariere/cariere-hero-card.webp"
         lang={language.code}
       />
       <SchemaOrg schema={[
@@ -23,7 +23,7 @@ export default function Cariere() {
           name: 'Cariere – Baterino România',
           description: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
           url: 'https://baterino.ro/cariere',
-          image: 'https://baterino.ro/images/cariere/cariere-hero-card.jpg',
+          image: 'https://baterino.ro/images/cariere/cariere-hero-card.webp',
           inLanguage: 'ro',
           publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
         },
@@ -48,7 +48,7 @@ export default function Cariere() {
           </p>
           <div className="w-full relative rounded-[10px] overflow-hidden bg-zinc-300">
             <img
-              src="/images/cariere/cariere-hero-card.jpg"
+              src="/images/cariere/cariere-hero-card.webp"
               alt="Echipa Baterino"
               className="w-full object-cover"
               style={{ height: '440px' }}
@@ -57,7 +57,7 @@ export default function Cariere() {
               }}
             />
             <img
-              src="/images/shared/baterino-logo-white.png"
+              src="/images/shared/baterino-logo-white.webp"
               alt="Baterino"
               className="absolute bottom-10 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-10 h-9 w-auto object-contain"
             />
