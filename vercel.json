@@ -5,7 +5,7 @@
   "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://baterinoromania-production.up.railway.app/api/$1" },
-    { "source": "/sitemap.xml", "destination": "https://baterinoromania-production.up.railway.app/sitemap.xml" },
+    { "source": "/sitemap.xml", "destination": "https://baterinoromania-production.up.railway.app/api/sitemap.xml" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
