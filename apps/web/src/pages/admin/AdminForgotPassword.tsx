@@ -40,10 +40,10 @@ export default function AdminForgotPassword() {
         <div className="px-8 py-8">
           {sent ? (
             <div className="flex flex-col gap-4">
-              <h1 className="m-0 text-xl font-bold font-['Inter'] text-slate-900">Solicitare trimisă</h1>
+              <h1 className="m-0 text-xl font-bold font-['Inter'] text-slate-900">Solicitare înregistrată</h1>
               <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">
-                Dacă există un cont de administrator cu acest email, link-ul de resetare a fost trimis către
-                administratorii desemnați — nu la adresa introdusă.
+                Dacă datele introduse corespund unui cont valid, vei primi instrucțiuni de recuperare prin
+                canalele autorizate. Verifică mesajele primite în următoarele minute.
               </p>
               <Link
                 to="/admin/login"
@@ -55,15 +55,15 @@ export default function AdminForgotPassword() {
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div>
-                <h1 className="m-0 mb-2 text-xl font-bold font-['Inter'] text-slate-900">Resetare parolă admin</h1>
+                <h1 className="m-0 mb-2 text-xl font-bold font-['Inter'] text-slate-900">Resetare parolă</h1>
                 <p className="m-0 text-sm leading-relaxed text-slate-600 font-['Inter']">
-                  Introdu emailul contului de administrator. Link-ul de resetare va fi trimis către administratorii
-                  desemnați, nu la adresa introdusă.
+                  Introdu adresa de email asociată contului. Dacă este înregistrată, vei primi instrucțiuni de
+                  recuperare prin canalele autorizate.
                 </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-black text-sm font-medium font-['Inter']">Email cont admin</label>
+                <label className="text-black text-sm font-medium font-['Inter']">Email</label>
                 <input
                   type="email"
                   value={email}

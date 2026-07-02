@@ -1232,7 +1232,7 @@ app.post('/api/auth/admin/forgot-password', forgotPasswordLimiter, async (req, r
 
     const user = await prisma.user.findUnique({ where: { email } })
     const genericMessage =
-      'Dacă există un cont de administrator cu acest email, link-ul de resetare a fost trimis către administratorii desemnați.'
+      'Dacă datele introduse corespund unui cont valid, vei primi instrucțiuni de recuperare prin canalele autorizate.'
 
     if (!user || user.role !== 'admin' || user.deletedAt) {
       return res.json({ message: genericMessage })
