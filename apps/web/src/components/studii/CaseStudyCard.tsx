@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Images, MapPin } from 'lucide-react'
-import type { MouseEventHandler, ReactNode } from 'react'
+import type { ReactNode } from 'react'
+
+export type CaseStudyCardClickHandler = () => void
 
 export type CaseStudyCardSpec = {
   label: string
@@ -20,7 +22,7 @@ export type CaseStudyCardProps = {
   imageCount?: number
   galleryLabel?: string
   to?: string
-  onClick?: MouseEventHandler<HTMLElement>
+  onClick?: CaseStudyCardClickHandler
 }
 
 function CardShell({
@@ -29,7 +31,7 @@ function CardShell({
   children,
 }: {
   to?: string
-  onClick?: MouseEventHandler<HTMLElement>
+  onClick?: CaseStudyCardClickHandler
   children: ReactNode
 }) {
   const className =
@@ -51,7 +53,7 @@ function CardShell({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            onClick(e)
+            onClick()
           }
         }}
         role="button"

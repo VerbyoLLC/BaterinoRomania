@@ -169,6 +169,7 @@ export type HomeTranslations = {
   catalogInstallBaterino: string
   catalogInstallPartner: string
   catalogReducereBadge: string
+  catalogPromotie: string
   productsComingSoon: string
   welcomeModalWelcomeTo: string
   welcomeModalTitle: string
@@ -460,6 +461,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partener',
     catalogReducereBadge: 'Programe Reduceri',
+    catalogPromotie: 'Promoție',
     productsComingSoon: 'Site-ul este în curs de actualizare. Produsele vor fi disponibile în curând.',
     welcomeModalWelcomeTo: 'BINE AI VENIT LA',
     welcomeModalTitle: 'ESTI INSTALATOR SAU DISTRIBUITOR?',
@@ -743,6 +745,7 @@ const translations: Record<LangCode, HomeTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partner',
     catalogReducereBadge: 'Discount programs',
+    catalogPromotie: 'Promotion',
     productsComingSoon: 'The site is being updated. Products will be available soon.',
     welcomeModalWelcomeTo: 'WELCOME TO',
     welcomeModalTitle: 'ARE YOU AN INSTALLER OR DISTRIBUTOR?',

@@ -6,7 +6,7 @@ const SECTOR_SORT_ORDER = ['rezidential', 'industrial', 'medical', 'maritim', 'c
 function getSectorRank(product: PublicProduct): number {
   const cat = String(product.categorie || '').toLowerCase()
   if (cat.trim()) {
-    let best = SECTOR_SORT_ORDER.length
+    let best: number = SECTOR_SORT_ORDER.length
     for (let i = 0; i < SECTOR_SORT_ORDER.length; i++) {
       if (cat.includes(SECTOR_SORT_ORDER[i])) {
         best = Math.min(best, i)
