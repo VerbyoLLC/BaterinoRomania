@@ -11201,10 +11201,10 @@ app.put('/api/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, put
 app.put('/admin/page-seo/:pageKey', authMiddleware, adminAuthMiddleware, putAdminPageSeoHandler)
 
 // ── Public: sitemap.xml ─────────────────────────────────────────────────
-const { createSitemapRouter } = require('./routes/sitemap.route.js')
-const sitemapRouter = createSitemapRouter(prisma)
-app.use(sitemapRouter)
-app.use('/api', sitemapRouter)
+const { createSitemapHandler } = require('./routes/sitemap.route.js')
+const sitemapHandler = createSitemapHandler(prisma)
+app.get('/sitemap.xml', sitemapHandler)
+app.get('/api/sitemap.xml', sitemapHandler)
 
 // ── 404 catch-all (pentru debug) ───────────────────────────────────────
 app.use((req, res) => {

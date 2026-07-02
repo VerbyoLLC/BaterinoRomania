@@ -171,17 +171,13 @@ async function buildSitemapXml(prisma) {
 }
 
 // ---------------------------------------------------------------------------
-// Router factory — pass the shared Prisma client from index.js
+// Handler factory — mount at /sitemap.xml and /api/sitemap.xml
 // ---------------------------------------------------------------------------
-function createSitemapRouter(prisma) {
-  const router = express.Router()
-
-  // In-memory cache — regenerating on every crawl hit is wasteful.
-  // 1 hour is plenty; Googlebot doesn't need real-time.
+function createSitemapHandler(prisma) {
   let cache = { xml: null, generatedAt: 0 }
   const CACHE_TTL_MS = 60 * 60 * 1000
 
-  router.get('/sitemap.xml', async (req, res) => {
+  return async function sitemapHandler(req, res) {
     try {
       const now = Date.now()
       if (!cache.xml || now - cache.generatedAt > CACHE_TTL_MS) {
@@ -193,20 +189,26 @@ function createSitemapRouter(prisma) {
         .send(cache.xml)
     } catch (err) {
       console.error('sitemap generation failed:', err)
-      // Serve the stale cached copy rather than a 500 if we have one —
-      // a temporary DB hiccup shouldn't make the sitemap disappear for crawlers.
       if (cache.xml) {
         return res.set('Content-Type', 'application/xml; charset=utf-8').send(cache.xml)
       }
       res.status(500).send('Sitemap temporarily unavailable')
     }
-  })
+  }
+}
 
+// ---------------------------------------------------------------------------
+// Router factory — pass the shared Prisma client from index.js
+// ---------------------------------------------------------------------------
+function createSitemapRouter(prisma) {
+  const router = express.Router()
+  router.get('/sitemap.xml', createSitemapHandler(prisma))
   return router
 }
 
 module.exports = {
   createSitemapRouter,
+  createSitemapHandler,
   buildSitemapXml,
   STATIC_PAGES,
   BASE_URL,
