@@ -1,6 +1,6 @@
 /** Absolute URLs for Product JSON-LD, Open Graph fallbacks, and image sitemaps. */
 
-export const SITE_BASE_URL = 'https://baterino.ro'
+export const SITE_BASE_URL = 'https://www.baterino.ro'
 
 const DEFAULT_PRODUCT_IMAGE = '/images/shared/HP2000-all-in-one.webp'
 

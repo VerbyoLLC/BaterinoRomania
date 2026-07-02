@@ -16,7 +16,7 @@ const BASE_URL = (
   process.env.SITEMAP_BASE_URL ||
   process.env.SITE_URL ||
   process.env.PUBLIC_SITE_URL ||
-  'https://baterino.ro'
+  'https://www.baterino.ro'
 ).replace(/\/$/, '')
 
 const IMAGE_SITEMAP_NS = 'http://www.google.com/schemas/sitemap-image/1.1'

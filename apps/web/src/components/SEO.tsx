@@ -19,7 +19,7 @@ interface SEOProps {
 }
 
 const SITE_NAME = 'Baterino Romania'
-const BASE_URL = 'https://baterino.ro'
+const BASE_URL = 'https://www.baterino.ro'
 const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.jpg`
 const TWITTER_SITE = '@baterino_ro'
 

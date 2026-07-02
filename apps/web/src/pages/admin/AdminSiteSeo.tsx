@@ -57,7 +57,7 @@ function sectionId(key: string) {
 function resolveImageSrc(url: string): string {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  return `https://baterino.ro${url.startsWith('/') ? '' : '/'}${url}`
+  return `https://www.baterino.ro${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 export default function AdminSiteSeo() {

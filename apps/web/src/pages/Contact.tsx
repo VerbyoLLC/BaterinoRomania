@@ -131,7 +131,7 @@ export default function Contact() {
         legalName: COMPANY_LEGAL_NAME,
         url: 'https://baterino.ro',
         logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg',
-        image: 'https://baterino.ro/images/home/og-baterino-romania.jpg',
+        image: 'https://www.baterino.ro/images/home/og-baterino-romania.jpg',
         email: CONTACT_EMAIL,
         ...(generalPhone ? { telephone: generalPhone } : {}),
         address: {
