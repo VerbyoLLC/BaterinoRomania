@@ -75,6 +75,7 @@ export type ProduseTranslations = {
   catalogInstallBaterino: string
   catalogInstallPartner: string
   catalogReducereBadge: string
+  catalogPromotie: string
   catalogAddToCart: string
   catalogViewDetails: string
   catalogRequestQuote: string
@@ -155,6 +156,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partener',
     catalogReducereBadge: 'Programe Reduceri',
+    catalogPromotie: 'Promoție',
     catalogAddToCart: 'Adaugă în coș',
     catalogViewDetails: 'Vezi detalii',
     catalogRequestQuote: 'Cere ofertă',
@@ -250,6 +252,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogInstallBaterino: 'Baterino',
     catalogInstallPartner: 'Partner',
     catalogReducereBadge: 'Discount programs',
+    catalogPromotie: 'Promotion',
     catalogAddToCart: 'Add to cart',
     catalogViewDetails: 'View details',
     catalogRequestQuote: 'Request quote',

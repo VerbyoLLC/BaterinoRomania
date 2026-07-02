@@ -45,7 +45,18 @@ function CardShell({
 
   if (onClick) {
     return (
-      <article className={`${className} cursor-pointer`} onClick={onClick}>
+      <article
+        className={`${className} cursor-pointer`}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick(e)
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         {children}
       </article>
     )

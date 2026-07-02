@@ -1,35 +1,100 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { getPublicCaseStudies, type CaseStudyRow } from '../../lib/api'
+import { getPublicCaseStudies } from '../../lib/api'
 import { getStudiiDeCazTranslations } from '../../i18n/studii-de-caz'
 import CaseStudyCard, { CaseStudyCardSkeleton } from '../studii/CaseStudyCard'
+import CaseStudyModal, { type CaseStudyModalItem } from '../studii/CaseStudyModal'
 
 const CTA_LABEL = { ro: 'Vezi toate proiectele', en: 'View all projects' }
+
+type CaseItem = CaseStudyModalItem & { slug: string; imageCount: number }
+
+function mapRowToCaseItem(row: {
+  slug: string
+  category: string
+  title: string
+  location: string
+  description: string
+  image: string
+  imageAlt: string
+  images: string[]
+  imageCount: number
+  specs: CaseStudyModalItem['specs']
+  tags: string[]
+}): CaseItem {
+  return {
+    slug: row.slug,
+    category: row.category,
+    title: row.title,
+    location: row.location,
+    description: row.description || '',
+    image: row.images?.[0] || row.image,
+    imageAlt: row.imageAlt,
+    images: row.images?.length ? row.images : [row.image],
+    imageCount: row.images?.length ?? row.imageCount,
+    specs: row.specs,
+    tags: row.tags,
+  }
+}
 
 export default function HomeCaseStudiesPreview() {
   const { language } = useLanguage()
   const tr = getStudiiDeCazTranslations(language.code)
   const cta = CTA_LABEL[language.code as 'ro' | 'en'] ?? CTA_LABEL.ro
-  const [cases, setCases] = useState<CaseStudyRow[]>([])
+  const [cases, setCases] = useState<CaseItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeCase, setActiveCase] = useState<CaseStudyModalItem | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     getPublicCaseStudies(language.code)
-      .then((rows) => { if (!cancelled) setCases(rows.slice(0, 3)) })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [language.code])
+      .then((rows) => {
+        if (cancelled) return
+        if (rows.length > 0) {
+          setCases(rows.slice(0, 3).map(mapRowToCaseItem))
+        } else {
+          setCases(
+            tr.cases.slice(0, 3).map((c) => ({
+              ...c,
+              description: '',
+              images: [c.image],
+              imageCount: c.imageCount ?? 1,
+            })),
+          )
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCases(
+            tr.cases.slice(0, 3).map((c) => ({
+              ...c,
+              description: '',
+              images: [c.image],
+              imageCount: c.imageCount ?? 1,
+            })),
+          )
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [language.code, tr.cases])
 
   return (
     <section className="mb-0">
+      <CaseStudyModal item={activeCase} onClose={() => setActiveCase(null)} />
+
       {loading ? (
         <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
           {Array.from({ length: 3 }).map((_, i) => (
-            <li key={i} className="min-w-0"><CaseStudyCardSkeleton /></li>
+            <li key={i} className="min-w-0">
+              <CaseStudyCardSkeleton />
+            </li>
           ))}
         </ul>
       ) : cases.length > 0 ? (
@@ -40,13 +105,13 @@ export default function HomeCaseStudiesPreview() {
                 category={item.category}
                 title={item.title}
                 location={item.location}
-                image={item.images?.[0] || item.image}
+                image={item.image}
                 imageAlt={item.imageAlt}
-                imageCount={item.images?.length ?? item.imageCount}
+                imageCount={item.imageCount}
                 galleryLabel={tr.galleryPhotosAria}
                 specs={item.specs}
                 tags={item.tags}
-                to={`/studii-de-caz/${item.slug}`}
+                onClick={() => setActiveCase(item)}
               />
             </li>
           ))}

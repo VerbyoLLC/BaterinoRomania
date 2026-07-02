@@ -1216,7 +1216,7 @@ export default function ProductRezidential() {
               </section>
             </div>
 
-            <div className="order-4 w-full lg:order-none">
+            <div className="order-4 w-full max-md:hidden lg:order-none">
               <ProductDetailCtaBoxes tr={tr} variant="swap" className="w-full" />
             </div>
 

@@ -665,6 +665,8 @@ export default function Home() {
                       labels={catalogBadgeLabels}
                       layout="wrap"
                       include={['stock', 'delivery']}
+                      promoted={isPromoCatalogProduct(p)}
+                      promotieLabel={tr.catalogPromotie}
                     />
                   }
                   priceAboveBadge={
@@ -698,6 +700,8 @@ export default function Home() {
                       labels={catalogBadgeLabels}
                       layout="wrap"
                       include={['stock', 'delivery']}
+                      promoted={isPromoCatalogProduct(p)}
+                      promotieLabel={tr.catalogPromotie}
                     />
                   }
                   priceAboveBadge={

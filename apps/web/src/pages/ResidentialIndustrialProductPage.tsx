@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import type { PublicProduct } from '../lib/api'
-import { getPublicProductModels } from '../lib/api'
+import { catalogProductHasRrp, getPublicProductModels } from '../lib/api'
 import { normalizeProductFaq } from '../lib/productFaq'
 import { normalizeProductCaseStudyExamples } from '../lib/productCaseStudies'
 import ProductCaseStudiesSection from '../components/product/ProductCaseStudiesSection'
@@ -121,6 +121,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
     (product as { technical_specs_models?: unknown }).technical_specs_models
   const technicalSpecs = normalizeIndustrialTechnicalSpecs(technicalSpecsRaw) ?? { entries: [] }
   const modelEntries = technicalSpecs.entries
+  const productHasRrp = catalogProductHasRrp(product)
   const isSingleModelRow = modelEntries.length === 1
   const singleModelEntry = isSingleModelRow ? modelEntries[0]! : null
   const modelsUseSlider = modelEntries.length > MODEL_SLIDER_THRESHOLD
@@ -627,6 +628,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                                     modelName={entry.modelName}
                                     tr={tr}
                                     technicalBrochureUrl={brochureUrlForModel(entry)}
+                                    showQuoteCta={productHasRrp}
                                   />
                                 </div>
                               </div>
@@ -659,6 +661,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                       modelName={singleModelEntry.modelName}
                       tr={tr}
                       technicalBrochureUrl={brochureUrlForModel(singleModelEntry)}
+                      showQuoteCta={productHasRrp}
                     />
                   </div>
                 </div>
@@ -698,6 +701,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
                         modelName={entry.modelName}
                         tr={tr}
                         technicalBrochureUrl={brochureUrlForModel(entry)}
+                        showQuoteCta={productHasRrp}
                       />
                     </div>
                   </div>

@@ -1,8 +1,18 @@
-import { Clock, Tag, Truck, Wrench } from 'lucide-react'
+import { Clock, Sparkles, Tag, Truck, Wrench } from 'lucide-react'
 
 export type CatalogProductFeatureBadgeData = {
   type: 'stock' | 'delivery' | 'transport' | 'install' | 'reduceri'
   label: string
+}
+
+/** Promo chip overlaid on the product image (admin „Promotie” SKUs). */
+export function CatalogProductPromoChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-[5px] text-[11px] font-semibold text-sky-800 shadow-[0_2px_6px_-2px_rgba(15,20,34,0.15)]">
+      <Sparkles size={12} className="shrink-0 text-sky-600" aria-hidden />
+      {label}
+    </span>
+  )
 }
 
 /** Stock / delivery chips overlaid on the product image (Produse page style). */

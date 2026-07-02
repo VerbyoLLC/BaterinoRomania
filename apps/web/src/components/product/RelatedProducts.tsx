@@ -8,6 +8,7 @@ import {
   getResidentialCatalogStockListingCta,
   residentialCatalogUsesPartnerPriceCta,
   productHasEligibleReducerePrograms,
+  isPromoCatalogProduct,
   type PublicProduct,
 } from '../../lib/api'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -229,7 +230,16 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
         ctaLabel={industrialHasPrice ? undefined : tr.disponibilPentruParteneri}
         residentialPriceHeading={industrialHasPrice ? tr.pretLabel : null}
         residentialPriceVatNote={industrialHasPrice ? (() => { const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency); return net ? tr.catalogPretFaraTva.replace('{price}', net) : null })() : null}
-        imageOverlay={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="stack" include={['stock', 'delivery']} />}
+        imageOverlay={
+          <ResidentialProductCatalogBadges
+            product={p}
+            labels={catalogBadgeLabels}
+            layout="stack"
+            include={['stock', 'delivery']}
+            promoted={isPromoCatalogProduct(p)}
+            promotieLabel={tr.catalogPromotie}
+          />
+        }
         priceAboveBadge={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="wrap" className="justify-center gap-1.5" include={['transport', 'install']} appearance="neutral" />}
       />
     ) : (
@@ -240,7 +250,16 @@ export default function RelatedProducts({ product, layout = 'horizontal' }: Prop
         residentialStockListingCta={stockListingCta}
         residentialPriceHeading={showResPriceExtras ? tr.pretLabel : null}
         residentialPriceVatNote={showResPriceExtras ? (() => { const net = formatResidentialCatalogNetPriceDisplay(p, language.code, currency); return net ? tr.catalogPretFaraTva.replace('{price}', net) : null })() : null}
-        imageOverlay={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="stack" include={['stock', 'delivery']} />}
+        imageOverlay={
+          <ResidentialProductCatalogBadges
+            product={p}
+            labels={catalogBadgeLabels}
+            layout="stack"
+            include={['stock', 'delivery']}
+            promoted={isPromoCatalogProduct(p)}
+            promotieLabel={tr.catalogPromotie}
+          />
+        }
         priceAboveBadge={<ResidentialProductCatalogBadges product={p} labels={catalogBadgeLabels} layout="wrap" className="justify-center gap-1.5" include={['transport', 'reducere']} appearance="neutral" />}
       />
     )

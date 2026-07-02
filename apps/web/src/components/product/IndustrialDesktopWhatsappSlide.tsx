@@ -46,6 +46,8 @@ export type IndustrialDesktopWhatsappSlideProps = {
   tr: IndustrialBessTemplateTranslations
   /** Public R2 URL for model technical PDF; second button only when set. */
   technicalBrochureUrl?: string | null
+  /** When false, hides the WhatsApp „Cere ofertă” button (e.g. no public RRP on product). */
+  showQuoteCta?: boolean
 }
 
 /** Absolute slide-down CTAs below an industrial model card (desktop hover). */
@@ -56,6 +58,7 @@ export function IndustrialDesktopWhatsappSlide({
   modelName,
   tr,
   technicalBrochureUrl = null,
+  showQuoteCta = true,
 }: IndustrialDesktopWhatsappSlideProps) {
   const prefill = tr.modelDesktopWhatsappPrefill
     .replace(/\{product\}/g, productTitle.trim() || '—')
@@ -64,6 +67,8 @@ export function IndustrialDesktopWhatsappSlide({
 
   const brochureTrim = technicalBrochureUrl != null ? String(technicalBrochureUrl).trim() : ''
   const hasBrochure = brochureTrim.length > 0
+
+  if (!showQuoteCta && !hasBrochure) return null
 
   const byHover =
     reveal === 'group-hover'
@@ -94,16 +99,18 @@ export function IndustrialDesktopWhatsappSlide({
       className={`absolute left-0 right-0 top-full z-20 mt-0 w-full overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.32,1)] motion-reduce:transition-none ${byHover} ${byOpen}`}
     >
       <div className="relative z-10 mt-2 flex w-full flex-col gap-2">
-        <a
-          href={whatsappHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className={`${actionBtnClass} border-slate-900 bg-slate-900 text-white hover:bg-slate-800`}
-        >
-          <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
-          {tr.modelDesktopCereOfertaCta}
-        </a>
+        {showQuoteCta ? (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`${actionBtnClass} border-slate-900 bg-slate-900 text-white hover:bg-slate-800`}
+          >
+            <WhatsappGlyph className="h-[18px] w-[18px] shrink-0 text-white" />
+            {tr.modelDesktopCereOfertaCta}
+          </a>
+        ) : null}
         {hasBrochure ? (
           <button
             type="button"

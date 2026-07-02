@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CaseStudyCardSpec } from './CaseStudyCard'
 
@@ -60,31 +61,36 @@ export default function CaseStudyModal({ item, onClose }: Props) {
   const currentImage = images[activeImg] ?? images[0]
   const hasMultiple = images.length > 1
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={item.title}
     >
       <div
-        className="relative flex w-full max-w-4xl max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl lg:flex-row"
+        className="relative flex w-full max-h-[92dvh] flex-col overflow-hidden rounded-t-[20px] bg-white shadow-2xl animate-slide-up-from-bottom sm:max-h-[90vh] sm:max-w-4xl sm:rounded-2xl lg:flex-row"
+        style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="flex shrink-0 justify-center pt-2.5 pb-0 sm:hidden" aria-hidden>
+          <span className="h-1 w-10 rounded-full bg-neutral-300" />
+        </div>
+
         {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+          className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors sm:top-3"
           aria-label="Închide"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Image panel */}
-        <div className="relative flex w-full shrink-0 flex-col bg-neutral-900 lg:w-[52%] lg:min-h-0 lg:max-h-[90vh]">
-          <div className="relative flex aspect-[4/3] w-full min-h-0 flex-1 items-center justify-center overflow-hidden p-2 lg:aspect-auto lg:min-h-[240px]">
+        <div className="relative flex w-full shrink-0 flex-col bg-neutral-900 max-sm:max-h-[42dvh] lg:w-[52%] lg:min-h-0 lg:max-h-[90vh]">
+          <div className="relative flex aspect-[4/3] w-full min-h-0 flex-1 items-center justify-center overflow-hidden p-2 max-sm:aspect-auto max-sm:max-h-[38dvh] lg:aspect-auto lg:min-h-[240px]">
             <img
               key={currentImage}
               src={currentImage}
@@ -152,7 +158,7 @@ export default function CaseStudyModal({ item, onClose }: Props) {
         </div>
 
         {/* Details panel */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 lg:p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-5 pb-6 sm:p-6 lg:p-8">
           {/* Category badge */}
           <span className="mb-4 inline-flex w-fit rounded-md bg-sky-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-sky-900 font-['Inter']">
             {item.category}
@@ -216,6 +222,7 @@ export default function CaseStudyModal({ item, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

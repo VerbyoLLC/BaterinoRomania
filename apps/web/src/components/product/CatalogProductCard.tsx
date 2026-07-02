@@ -4,6 +4,7 @@ import { Truck, Tag, Wrench, Clock, FileText } from 'lucide-react'
 import {
   CatalogProductFeatureBadge,
   CatalogProductImageChip,
+  CatalogProductPromoChip,
   type CatalogProductFeatureBadgeData,
 } from './CatalogProductTagBadges'
 import { getAuthRole } from '../../lib/api'
@@ -451,6 +452,10 @@ export function HorizontalCatalogProductCard({
   const showPrice = !showDarkChip && priceDisplay != null && priceDisplay !== ''
   const showIndustrialCta = isIndustrial && !showPrice && ctaLabel
   const subtitleLine = isIndustrial ? String(subtitle ?? '').trim() : ''
+  const specPrimary = String(specLine1 ?? '').trim()
+  const specSecondary = String(specLine2 ?? '').trim()
+  const showSpecPrimary = specPrimary !== '' && specPrimary !== '—'
+  const showSpecSecondary = specSecondary !== '' && specSecondary !== '—' && specSecondary !== specPrimary
 
   // Split badges into two rows: stock/delivery on image, transport/install/reduceri in content
   const imageBadges = featureBadges.filter(b => b.type === 'stock' || b.type === 'delivery')
@@ -507,10 +512,14 @@ export function HorizontalCatalogProductCard({
                 {subtitleLine}
               </p>
             ) : null}
-            {!isIndustrial ? (
+            {(showSpecPrimary || showSpecSecondary) ? (
               <div className="mt-1.5">
-                <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine1}</p>
-                <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specLine2}</p>
+                {showSpecPrimary ? (
+                  <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specPrimary}</p>
+                ) : null}
+                {showSpecSecondary ? (
+                  <p className="text-sm font-['Nunito_Sans'] leading-6 text-neutral-600">{specSecondary}</p>
+                ) : null}
               </div>
             ) : null}
 
@@ -562,6 +571,7 @@ export function HorizontalCatalogProductCard({
 
 export type ProduseCatalogCardLabels = {
   pretLabel: string
+  promotie: string
   requestQuote: string
   requestQuoteWhatsappPrefill: string
   priceOnRequest: string
@@ -574,7 +584,8 @@ export type ProduseCatalogProductCardProps = {
   imageAlt: string
   title: string
   /** Technical spec line (e.g. voltage · chemistry · cycles) */
-  specText?: string
+  specLine1?: string
+  specLine2?: string
   to: string
   linkState?: { tipProdus?: 'rezidential' | 'industrial' }
   priceDisplay?: string | null
@@ -586,6 +597,8 @@ export type ProduseCatalogProductCardProps = {
   fallbackImageSrc?: string
   capacityTag?: string | null
   promoted?: boolean
+  /** When false, industrial cards omit the „Cere ofertă” CTA (no public RRP). */
+  hasRrp?: boolean
   labels: ProduseCatalogCardLabels
 }
 
@@ -597,7 +610,8 @@ export function ProduseCatalogProductCard({
   imageSrc,
   imageAlt,
   title,
-  specText,
+  specLine1,
+  specLine2,
   to,
   linkState,
   priceDisplay,
@@ -609,6 +623,7 @@ export function ProduseCatalogProductCard({
   fallbackImageSrc,
   capacityTag = null,
   promoted = false,
+  hasRrp = false,
   labels,
 }: ProduseCatalogProductCardProps) {
   const navigate = useNavigate()
@@ -629,14 +644,18 @@ export function ProduseCatalogProductCard({
       : ''
   const showDarkChip = !isIndustrial && darkLabel !== ''
   const showPrice = !showDarkChip && priceDisplay != null && String(priceDisplay).trim() !== ''
-  const showQuoteState = isIndustrial && !showPrice && !showDarkChip
+  const showPriceOnRequest = isIndustrial && !showPrice && !showDarkChip
+  const showRequestQuoteButton = showPriceOnRequest && hasRrp
 
   const imageBadges = featureBadges.filter((b) => b.type === 'stock' || b.type === 'delivery')
   const featureRow = featureBadges.filter(
     (b) => b.type === 'transport' || b.type === 'install' || b.type === 'reduceri',
   )
 
-  const specLine = String(specText ?? '').trim()
+  const specPrimary = String(specLine1 ?? '').trim()
+  const specSecondary = String(specLine2 ?? '').trim()
+  const showSpecPrimary = specPrimary !== '' && specPrimary !== '—'
+  const showSpecSecondary = specSecondary !== '' && specSecondary !== '—' && specSecondary !== specPrimary
 
   const capacityParts = (() => {
     if (!capacityTag) return null
@@ -677,12 +696,13 @@ export function ProduseCatalogProductCard({
         tabIndex={0}
         onClick={openDetails}
         onKeyDown={handleCardKeyDown}
-        className={`grid h-full cursor-pointer grid-cols-1 overflow-hidden rounded-2xl border border-[#e8eaf0] bg-[#f7f7f7] shadow-none transition-shadow duration-200 hover:shadow-lg @min-[360px]:grid-cols-[minmax(0,48%)_minmax(0,1fr)] ${promoted ? 'ring-1 ring-sky-200' : ''}`}
+        className={`grid h-full cursor-pointer grid-cols-1 overflow-hidden rounded-2xl border border-[#e8eaf0] ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} shadow-none transition-shadow duration-200 hover:shadow-lg @min-[360px]:grid-cols-[minmax(0,48%)_minmax(0,1fr)]`}
       >
         {/* Left — image */}
-        <div className="relative grid min-h-[230px] place-items-center bg-[#f7f7f7] p-4 @min-[360px]:min-h-[260px] @min-[360px]:p-[18px]">
-          {imageBadges.length > 0 ? (
+        <div className={`relative grid min-h-[230px] place-items-center ${promoted ? PROMO_CARD_BG : DEFAULT_CARD_BG} p-4 @min-[360px]:min-h-[260px] @min-[360px]:p-[18px]`}>
+          {imageBadges.length > 0 || promoted ? (
             <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
+              {promoted ? <CatalogProductPromoChip label={labels.promotie} /> : null}
               {imageBadges.map((b) => (
                 <CatalogProductImageChip key={b.type} badge={b} />
               ))}
@@ -716,8 +736,11 @@ export function ProduseCatalogProductCard({
             <h3 className="text-base font-bold leading-snug tracking-tight text-[#0f1422] @min-[360px]:text-[17px]">
               {title}
             </h3>
-            {specLine ? (
-              <p className="mt-2 text-xs font-medium leading-snug text-[#4d6079]">{specLine}</p>
+            {showSpecPrimary ? (
+              <p className="mt-2 text-xs font-medium leading-snug text-[#4d6079]">{specPrimary}</p>
+            ) : null}
+            {showSpecSecondary ? (
+              <p className="mt-1 text-xs font-medium leading-snug text-[#4d6079]">{specSecondary}</p>
             ) : null}
             {featureRow.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -749,7 +772,7 @@ export function ProduseCatalogProductCard({
                   <p className="mt-0.5 text-xs text-[#6a7281]">{residentialPriceVatNote}</p>
                 ) : null}
               </>
-            ) : showQuoteState ? (
+            ) : showPriceOnRequest ? (
               <>
                 <p className="mt-0.5 text-lg font-bold leading-tight tracking-tight text-[#0f1422]">
                   {labels.priceOnRequest}
@@ -758,7 +781,7 @@ export function ProduseCatalogProductCard({
               </>
             ) : null}
 
-            {showQuoteState ? (
+            {showRequestQuoteButton ? (
               <button
                 type="button"
                 onClick={handleRequestQuote}

@@ -11,6 +11,7 @@ import {
 import {
   CatalogProductFeatureBadge,
   CatalogProductImageChip,
+  CatalogProductPromoChip,
   type CatalogProductFeatureBadgeData,
 } from './CatalogProductTagBadges'
 
@@ -139,6 +140,9 @@ type Props = {
   layout?: 'stack' | 'wrap' | 'row'
   /** When set, only render these badge types (e.g. stock+delivery on image, transport above price). */
   include?: CatalogBadgeId[]
+  /** Admin „Promotie” — chip in the stock/delivery row on the image. */
+  promoted?: boolean
+  promotieLabel?: string
   /** @deprecated Produse-style badges ignore this; kept for call-site compatibility. */
   appearance?: 'default' | 'neutral'
 }
@@ -150,11 +154,19 @@ export default function ResidentialProductCatalogBadges({
   className = '',
   layout = 'stack',
   include,
+  promoted = false,
+  promotieLabel = 'Promoție',
 }: Props) {
   const items = buildResidentialCatalogBadgeItems(product, labels).filter(
     (item) => !include || include.includes(item.id),
   )
-  if (items.length === 0) return null
+  const showPromoChip =
+    promoted &&
+    Boolean(promotieLabel?.trim()) &&
+    (!include || include.some((id) => id === 'stock' || id === 'delivery'))
+  const promoChip = showPromoChip ? <CatalogProductPromoChip label={promotieLabel.trim()} /> : null
+
+  if (items.length === 0 && !promoChip) return null
 
   const imageChips = items.filter((item) => isImageChipBadge(item.id))
   const featureBadges = items.filter((item) => !isImageChipBadge(item.id))
@@ -163,6 +175,7 @@ export default function ResidentialProductCatalogBadges({
   if (mixed) {
     return (
       <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
+        {promoChip}
         {items.map((item) => {
           const badge = badgeItemToFeatureBadge(item)
           return isImageChipBadge(item.id) ? (
@@ -175,13 +188,14 @@ export default function ResidentialProductCatalogBadges({
     )
   }
 
-  if (imageChips.length > 0) {
+  if (imageChips.length > 0 || promoChip) {
     return (
       <div
         className={`flex flex-wrap items-center gap-1.5 ${
           layout === 'stack' ? '' : layout === 'row' ? 'flex-nowrap' : ''
         } ${className}`.trim()}
       >
+        {promoChip}
         {imageChips.map((item) => (
           <CatalogProductImageChip key={item.id} badge={badgeItemToFeatureBadge(item)} />
         ))}

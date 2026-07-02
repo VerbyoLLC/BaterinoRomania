@@ -278,7 +278,25 @@ function catalogStockSortRank(catalogStockStatus, tipProdus) {
   return 0
 }
 
-/** Catalog list: sector groups, then availability (in stock first), then newest. */
+function productHasPublicRrp(product) {
+  const vis = parsePriceVisibility(product?.priceVisibility)
+  if (vis !== 'public') return false
+  const sale = parseFloat(String(product?.salePrice ?? '').replace(',', '.'))
+  if (!Number.isFinite(sale) || sale <= 0) return false
+  const tip = String(product?.tipProdus || '').toLowerCase()
+  if (tip === 'rezidential') {
+    const s = String(product?.catalogStockStatus || '').trim()
+    if (s === 'out_of_stock' || s === 'coming_soon') return false
+  }
+  return true
+}
+
+function productCategoryOrderRank(product) {
+  const order = product?.category?.order
+  return typeof order === 'number' && Number.isFinite(order) ? order : 9999
+}
+
+/** Catalog list: sector groups, then RRP before quote-on-request, then availability, then newest. */
 function parseProductCaseStudyExamples(v) {
   if (!Array.isArray(v)) return []
   return v
@@ -301,6 +319,10 @@ function sortProductsResidentialFirst(products) {
     if (byPromo !== 0) return byPromo
     const bySector = sectorSortRank(a) - sectorSortRank(b)
     if (bySector !== 0) return bySector
+    const byRrp = Number(productHasPublicRrp(b)) - Number(productHasPublicRrp(a))
+    if (byRrp !== 0) return byRrp
+    const byCategory = productCategoryOrderRank(a) - productCategoryOrderRank(b)
+    if (byCategory !== 0) return byCategory
     const byStock =
       catalogStockSortRank(a.catalogStockStatus, a.tipProdus) -
       catalogStockSortRank(b.catalogStockStatus, b.tipProdus)

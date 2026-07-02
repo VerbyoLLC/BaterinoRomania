@@ -12,6 +12,7 @@ import {
   getResidentialCatalogStockListingCta,
   residentialCatalogUsesPartnerPriceCta,
   isPromoCatalogProduct,
+  catalogProductHasRrp,
   getAuthRole,
   getCatalogProductHrefForViewer,
   type PublicProduct,
@@ -550,9 +551,11 @@ export default function Produse() {
               } else if (productHasEligibleReducerePrograms(product)) {
                 featureBadges.push({ type: 'reduceri', label: catalogBadgeLabels.reduceri })
               }
-              const specText = [specLine1, specLine2].filter((s) => s && s !== '—').join(' · ')
+              const specLine1Clean = specLine1 !== '—' ? specLine1 : undefined
+              const specLine2Clean = specLine2 !== '—' ? specLine2 : undefined
               const cardLabels = {
                 pretLabel: tr.pretLabel,
+                promotie: tr.catalogPromotie,
                 requestQuote: tr.catalogRequestQuote,
                 requestQuoteWhatsappPrefill: tr.catalogRequestQuoteWhatsappPrefill,
                 priceOnRequest: tr.catalogPriceOnRequest,
@@ -566,7 +569,8 @@ export default function Produse() {
                   fallbackImageSrc={fallbackImg}
                   imageAlt={product.title}
                   title={product.title}
-                  specText={specText || undefined}
+                  specLine1={specLine1Clean}
+                  specLine2={specLine2Clean}
                   to={to}
                   linkState={linkState}
                   priceDisplay={priceDisplay}
@@ -583,6 +587,7 @@ export default function Produse() {
                   }
                   featureBadges={featureBadges}
                   promoted={isPromoCatalogProduct(product)}
+                  hasRrp={catalogProductHasRrp(product)}
                   labels={cardLabels}
                   capacityTag={(() => {
                     const raw = product.energieNominala

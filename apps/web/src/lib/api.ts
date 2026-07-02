@@ -2,6 +2,10 @@ import type { ReducereProgram } from '../i18n/reduceri'
 import type { LangCode } from '../i18n/menu'
 export type { LangCode }
 import { isPartnerPublicProfileFullyComplete } from './partner-public-profile-complete'
+import {
+  normalizeIndustrialTechnicalSpecs,
+  type IndustrialModelSpecEntry,
+} from './industrialTechnicalSpec'
 
 /**
  * Origine pentru `${API_BASE}/admin/...` → server Express `/api/admin/...`.
@@ -466,7 +470,63 @@ export function getCatalogProductHrefForViewer(
 }
 
 /** Două linii de specificații pentru cardurile din catalog (Produse / Acasă). */
+function trimCatalogSpecPart(v: unknown): string | undefined {
+  if (v == null) return undefined
+  const s = String(v).trim()
+  return s || undefined
+}
+
+function pickIndustrialCatalogModelEntry(entries: IndustrialModelSpecEntry[]): IndustrialModelSpecEntry | undefined {
+  let best: IndustrialModelSpecEntry | undefined
+  let bestKwh = -1
+  for (const entry of entries) {
+    const hasSpecs = Object.values(entry.specs || {}).some((v) => String(v).trim())
+    if (!entry.modelName && !hasSpecs) continue
+    const energy = entry.specs?.nominalEnergy
+    const match = String(energy ?? '').match(/([\d.,]+)\s*kWh/i)
+    const kwh = match ? parseFloat(match[1].replace(',', '.')) : 0
+    if (kwh > bestKwh) {
+      bestKwh = kwh
+      best = entry
+    } else if (!best) {
+      best = entry
+    }
+  }
+  return best
+}
+
+function getIndustrialCatalogProductSpecLines(product: PublicProduct): { specLine1: string; specLine2: string } {
+  const data = normalizeIndustrialTechnicalSpecs(product.technicalSpecsModels)
+  const entry = data?.entries?.length ? pickIndustrialCatalogModelEntry(data.entries) : undefined
+
+  if (entry?.specs) {
+    const s = entry.specs
+    const line1Parts = [
+      trimCatalogSpecPart(s.nominalVoltage),
+      trimCatalogSpecPart(s.nominalCapacity),
+      trimCatalogSpecPart(s.chemistry),
+    ].filter(Boolean) as string[]
+    const line2Parts = [
+      trimCatalogSpecPart(s.maxOutputPower),
+      trimCatalogSpecPart(s.coolingMethod),
+      trimCatalogSpecPart(s.cycleLife),
+    ].filter(Boolean) as string[]
+    return {
+      specLine1: line1Parts.length > 0 ? line1Parts.join(' · ') : '—',
+      specLine2: line2Parts.length > 0 ? line2Parts.join(' · ') : '—',
+    }
+  }
+
+  const specLine1 =
+    [product.tensiuneNominala, product.capacitate, product.compozitie].filter(Boolean).join(' · ') || '—'
+  const specLine2 = [product.cicluriDescarcare, product.garantie].filter(Boolean).join(' · ') || '—'
+  return { specLine1, specLine2 }
+}
+
 export function getCatalogProductSpecLines(product: PublicProduct): { specLine1: string; specLine2: string } {
+  if (product.tipProdus === 'industrial') {
+    return getIndustrialCatalogProductSpecLines(product)
+  }
   const conectivitate = [
     product.conectivitateWifi && 'WiFi',
     product.conectivitateBluetooth && 'Bluetooth',
@@ -523,6 +583,21 @@ export function formatResidentialCatalogNetPriceDisplay(
   if (sale == null || sale <= 0) return null
   const locale = langCode === 'en' ? 'en-GB' : langCode === 'zh' ? 'zh-CN' : 'ro-RO'
   return `${Math.round(sale).toLocaleString(locale, { maximumFractionDigits: 0 })} ${currencySuffix}`
+}
+
+/** Catalog listing: product has a public RRP shown on cards (not quote-on-request / partner-only). */
+export function catalogProductHasRrp(product: PublicProduct): boolean {
+  if (residentialProductStockUnavailable(product)) return false
+  if (
+    String(product.tipProdus || '').toLowerCase() !== 'industrial' &&
+    residentialCatalogUsesPartnerPriceCta(product)
+  ) {
+    return false
+  }
+  const vis = (product.priceVisibility as string) || 'public'
+  if (vis !== 'public') return false
+  const sale = catalogNum(product.salePrice)
+  return sale != null && sale > 0
 }
 
 /** Catalog listing: product shows a numeric public price (not partner CTA, not stock-unavailable chip). */
