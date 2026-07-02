@@ -6,11 +6,11 @@ const CRAWLER_UA =
   /facebookexternalhit|meta-externalagent|facebookcatalog|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot|discordbot|pinterestbot|redditbot|skypeuripreview|applebot/i
 
 export default function middleware(request: Request) {
-  const ua = request.headers.get('user-agent') ?? ''
-  if (!CRAWLER_UA.test(ua)) return next()
-
   const { pathname } = new URL(request.url)
   if (!pathname.startsWith('/produse')) return next()
+
+  const ua = request.headers.get('user-agent') ?? ''
+  if (!CRAWLER_UA.test(ua)) return next()
 
   const og = resolveOg(pathname)
 
@@ -26,5 +26,4 @@ export default function middleware(request: Request) {
 
 export const config = {
   runtime: 'edge',
-  matcher: ['/produse/:path*'],
 }
