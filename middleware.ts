@@ -24,5 +24,5 @@ export default function middleware(request: Request): Response | undefined {
 }
 
 export const config = {
-  matcher: ['/produse/:path*'],
+  matcher: ['/produse/(.*)'],
 }
