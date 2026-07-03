@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { getAuthRole, getAuthToken } from '../../lib/api'
+import SEO from '../../components/SEO'
 
 /**
  * Auth gate for /client/*. Renders children inside the main site Layout (header/footer).
@@ -32,15 +33,21 @@ export default function ClientOutlet() {
 
   if (!getAuthToken() || getAuthRole() !== 'client') {
     return (
-      <div className="max-w-content mx-auto px-4 py-16">
-        <p className="text-sm text-slate-500 font-['Inter']">Se încarcă...</p>
-      </div>
+      <>
+        <SEO title="Cont client" description="" noIndex lang="ro" />
+        <div className="max-w-content mx-auto px-4 py-16">
+          <p className="text-sm text-slate-500 font-['Inter']">Se încarcă...</p>
+        </div>
+      </>
     )
   }
 
   return (
+    <>
+      <SEO title="Cont client" description="" noIndex lang="ro" />
     <div className="max-w-content mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <Outlet />
     </div>
+    </>
   )
 }

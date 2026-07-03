@@ -9,6 +9,7 @@ import {
   getAdminInquiriesUnreadCount,
 } from '../../lib/api'
 import { adminOfferNewFreshPath } from '../../lib/commercialOfferDraft'
+import SEO from '../../components/SEO'
 
 function formatSidebarName(
   firstName: string,
@@ -674,6 +675,8 @@ export default function AdminLayout() {
   }
 
   return (
+    <>
+      <SEO title="Admin" description="" noIndex lang="ro" />
     <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-gray-50">
 
       {/* ── Mobile overlay ── */}
@@ -830,5 +833,6 @@ export default function AdminLayout() {
         </div>
       </main>
     </div>
+    </>
   )
 }

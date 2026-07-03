@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import PasswordInput from '../../components/PasswordInput'
+import SEO from '../../components/SEO'
 import { resetPassword } from '../../lib/api'
 
 export default function AdminResetPassword() {
@@ -47,6 +48,8 @@ export default function AdminResetPassword() {
   if (!tokenFromUrl) return null
 
   return (
+    <>
+      <SEO title="Parolă nouă admin" description="" noIndex lang="ro" />
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#fce4ec' }}>
       <div className="w-full max-w-[400px] bg-white rounded-[20px] overflow-hidden shadow-lg">
         <div className="relative h-[160px] overflow-hidden">
@@ -104,5 +107,6 @@ export default function AdminResetPassword() {
         </div>
       </div>
     </div>
+    </>
   )
 }

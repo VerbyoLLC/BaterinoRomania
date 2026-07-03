@@ -19,6 +19,7 @@ import { getPartnerLayoutTranslations, getPartnerTopBarPageTitle, getPartnerTopB
 import { getPartnerChannelProfileLabel } from '../../i18n/partner/settings'
 import { ReducerePartenerBox } from './PartnerSidebarBoxes'
 import { PartnerTopBarToolbar } from './PartnerTopBarToolbar'
+import SEO from '../../components/SEO'
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 function IconProfile() {
@@ -551,6 +552,8 @@ export default function PartnerLayout() {
   }
 
   return (
+    <>
+      <SEO title="Partener" description="" noIndex lang="ro" />
     <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-gray-50">
 
       {/* ── Mobile overlay ── */}
@@ -759,5 +762,6 @@ export default function PartnerLayout() {
         }}
       />
     </div>
+    </>
   )
 }

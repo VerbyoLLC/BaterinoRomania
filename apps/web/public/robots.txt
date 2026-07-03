@@ -9,10 +9,6 @@ Allow: /
 
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /client/
-Disallow: /partner/
-Disallow: /agent/
 
 Sitemap: https://www.baterino.ro/sitemap.xml
 Sitemap: https://www.baterino.ro/api/sitemap.xml

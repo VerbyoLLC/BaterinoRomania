@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SEO from '../../components/SEO'
 import { requestAdminPasswordReset } from '../../lib/api'
 
 export default function AdminForgotPassword() {
@@ -23,6 +24,8 @@ export default function AdminForgotPassword() {
   }
 
   return (
+    <>
+      <SEO title="Resetare parolă admin" description="" noIndex lang="ro" />
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#fce4ec' }}>
       <div className="w-full max-w-[400px] bg-white rounded-[20px] overflow-hidden shadow-lg">
         <div className="relative h-[160px] overflow-hidden">
@@ -92,5 +95,6 @@ export default function AdminForgotPassword() {
         </div>
       </div>
     </div>
+    </>
   )
 }

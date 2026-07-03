@@ -18,6 +18,7 @@ import {
   type SalesAgentMeResponse,
 } from '../../lib/api'
 import { ProfileDropdownSkeleton } from './SalesAgentSkeletons'
+import SEO from '../../components/SEO'
 
 function IconDashboard() {
   return (
@@ -220,6 +221,8 @@ export default function SalesAgentLayout() {
   }
 
   return (
+    <>
+      <SEO title="Agent vânzări" description="" noIndex lang="ro" />
     <div className="flex h-screen min-h-[100dvh] overflow-hidden bg-gray-50">
       {sidebarOpen && (
         <div
@@ -443,5 +446,6 @@ export default function SalesAgentLayout() {
         </div>
       </main>
     </div>
+    </>
   )
 }

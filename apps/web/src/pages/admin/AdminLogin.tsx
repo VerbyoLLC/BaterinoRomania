@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import PasswordInput from '../../components/PasswordInput'
+import SEO from '../../components/SEO'
 import { login, setAuthToken } from '../../lib/api'
 
 export default function AdminLogin() {
@@ -30,6 +31,8 @@ export default function AdminLogin() {
   }
 
   return (
+    <>
+      <SEO title="Autentificare admin" description="" noIndex lang="ro" />
     <div
       className="min-h-screen flex items-center justify-center px-4"
       style={{ background: '#fce4ec' }}
@@ -101,5 +104,6 @@ export default function AdminLogin() {
         </form>
       </div>
     </div>
+    </>
   )
 }
