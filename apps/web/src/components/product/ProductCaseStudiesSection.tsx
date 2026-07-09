@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react'
 import type { ProductCaseStudyExample } from '../../lib/productCaseStudies'
+import { resolvePublicImageUrl } from '../../lib/productCaseStudies'
 
 type Props = {
   title?: string
@@ -26,7 +27,7 @@ export default function ProductCaseStudiesSection({ title, items, className = ''
             {item.image ? (
               <div className="aspect-[16/10] w-full overflow-hidden bg-neutral-100">
                 <img
-                  src={item.image}
+                  src={resolvePublicImageUrl(item.image)}
                   alt={item.title || ''}
                   className="h-full w-full object-cover"
                   loading="lazy"

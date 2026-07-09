@@ -7117,15 +7117,23 @@ function parseCaseStudyTags(v) {
 
 const CASE_STUDY_MAX_IMAGES = 6
 
+/** Static assets in apps/web/public use .webp; legacy DB/seed rows may still reference .jpg. */
+function resolveCaseStudyImageUrl(url) {
+  const s = String(url || '').trim()
+  if (!s.startsWith('/images/')) return s
+  if (/\.jpe?g$/i.test(s)) return s.replace(/\.jpe?g$/i, '.webp')
+  return s
+}
+
 function parseCaseStudyImages(v, fallbackImage) {
   if (Array.isArray(v)) {
     const urls = v
-      .map((u) => String(u || '').trim())
+      .map((u) => resolveCaseStudyImageUrl(String(u || '').trim()))
       .filter(Boolean)
       .slice(0, CASE_STUDY_MAX_IMAGES)
     if (urls.length > 0) return urls
   }
-  const img = String(fallbackImage || '').trim()
+  const img = resolveCaseStudyImageUrl(String(fallbackImage || '').trim())
   return img ? [img] : []
 }
 
@@ -7145,7 +7153,7 @@ function normalizeCaseStudyImageFields(body, existing) {
 function caseStudyToApi(row) {
   if (!row) return row
   const images = parseCaseStudyImages(row.images, row.image)
-  const image = images[0] || String(row.image || '').trim()
+  const image = resolveCaseStudyImageUrl(images[0] || String(row.image || '').trim())
   return {
     id: row.id,
     locale: row.locale,

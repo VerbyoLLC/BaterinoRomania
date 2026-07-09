@@ -16,7 +16,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: '3 MWh UPS Cabinet Battery System',
       location: 'Skövde, Suedia',
-      image: '/images/divizii/industrial/centre-de-date.jpg',
+      image: '/images/divizii/industrial/centre-de-date.webp',
       imageAlt: 'Sistem de baterii UPS 3 MWh în cabinet industrial',
       imageCount: 3,
       specs: [
@@ -32,7 +32,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: 'BESS integrat cu parc fotovoltaic',
       location: 'Dolj, România',
-      image: '/images/divizii/industrial/ferme-solare.jpg',
+      image: '/images/divizii/industrial/ferme-solare.webp',
       imageAlt: 'Parc fotovoltaic cu sistem BESS industrial',
       imageCount: 5,
       specs: [
@@ -48,7 +48,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: 'Stocare pentru centre logistice',
       location: 'Ilfov, România',
-      image: '/images/divizii/industrial/centre-logistica.jpg',
+      image: '/images/divizii/industrial/centre-logistica.webp',
       imageAlt: 'Sistem de stocare energie pentru centru logistic',
       imageCount: 4,
       specs: [
@@ -64,7 +64,7 @@ const casesByLocale = {
       category: 'REZIDENTIAL',
       title: 'EcoHome 10 kWh — autoconsum rezidențial',
       location: 'Cluj-Napoca, România',
-      image: '/images/slider2/slide2.jpg',
+      image: '/images/slider2/slide2.webp',
       imageAlt: 'Baterie rezidențială EcoHome instalată la domiciliu',
       imageCount: 2,
       specs: [
@@ -80,7 +80,7 @@ const casesByLocale = {
       category: 'MEDICAL',
       title: 'BESS pentru clinică de imagistică',
       location: 'București, România',
-      image: '/images/slider2/slide4-261kwh-bess.jpg',
+      image: '/images/slider2/slide4-261kwh-bess.webp',
       imageAlt: 'Sistem BESS pentru infrastructură medicală critică',
       imageCount: 3,
       specs: [
@@ -96,7 +96,7 @@ const casesByLocale = {
       category: 'MARITIM',
       title: 'Stocare energie pentru infrastructură portuară',
       location: 'Constanța, România',
-      image: '/images/slider2/slider3.jpg',
+      image: '/images/slider2/slider3.webp',
       imageAlt: 'Sistem de stocare energie pentru aplicații maritime',
       imageCount: 2,
       specs: [
@@ -114,7 +114,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: '3 MWh UPS Cabinet Battery System',
       location: 'Skövde, Sweden',
-      image: '/images/divizii/industrial/centre-de-date.jpg',
+      image: '/images/divizii/industrial/centre-de-date.webp',
       imageAlt: '3 MWh UPS cabinet battery system in an industrial facility',
       imageCount: 3,
       specs: [
@@ -130,7 +130,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: 'BESS integrated with solar farm',
       location: 'Dolj, Romania',
-      image: '/images/divizii/industrial/ferme-solare.jpg',
+      image: '/images/divizii/industrial/ferme-solare.webp',
       imageAlt: 'Solar farm with industrial BESS system',
       imageCount: 5,
       specs: [
@@ -146,7 +146,7 @@ const casesByLocale = {
       category: 'INDUSTRIAL',
       title: 'Storage for logistics centres',
       location: 'Ilfov, Romania',
-      image: '/images/divizii/industrial/centre-logistica.jpg',
+      image: '/images/divizii/industrial/centre-logistica.webp',
       imageAlt: 'Energy storage system for a logistics centre',
       imageCount: 4,
       specs: [
@@ -162,7 +162,7 @@ const casesByLocale = {
       category: 'RESIDENTIAL',
       title: 'EcoHome 10 kWh — residential self-consumption',
       location: 'Cluj-Napoca, Romania',
-      image: '/images/slider2/slide2.jpg',
+      image: '/images/slider2/slide2.webp',
       imageAlt: 'EcoHome residential battery installed at home',
       imageCount: 2,
       specs: [
@@ -178,7 +178,7 @@ const casesByLocale = {
       category: 'MEDICAL',
       title: 'BESS for imaging clinic',
       location: 'Bucharest, Romania',
-      image: '/images/slider2/slide4-261kwh-bess.jpg',
+      image: '/images/slider2/slide4-261kwh-bess.webp',
       imageAlt: 'BESS system for critical medical infrastructure',
       imageCount: 3,
       specs: [
@@ -194,7 +194,7 @@ const casesByLocale = {
       category: 'MARITIM',
       title: 'Energy storage for port infrastructure',
       location: 'Constanța, Romania',
-      image: '/images/slider2/slider3.jpg',
+      image: '/images/slider2/slider3.webp',
       imageAlt: 'Energy storage system for maritime applications',
       imageCount: 2,
       specs: [
@@ -212,7 +212,7 @@ const casesByLocale = {
       category: '工业',
       title: '3 MWh UPS机柜电池系统',
       location: '瑞典 Skövde',
-      image: '/images/divizii/industrial/centre-de-date.jpg',
+      image: '/images/divizii/industrial/centre-de-date.webp',
       imageAlt: '工业设施中的3 MWh UPS机柜电池系统',
       imageCount: 3,
       specs: [
@@ -228,7 +228,7 @@ const casesByLocale = {
       category: '工业',
       title: '与光伏电站集成的BESS',
       location: '罗马尼亚 Dolj',
-      image: '/images/divizii/industrial/ferme-solare.jpg',
+      image: '/images/divizii/industrial/ferme-solare.webp',
       imageAlt: '光伏电站与工业BESS系统',
       imageCount: 5,
       specs: [
@@ -244,7 +244,7 @@ const casesByLocale = {
       category: '工业',
       title: '物流中心储能系统',
       location: '罗马尼亚 Ilfov',
-      image: '/images/divizii/industrial/centre-logistica.jpg',
+      image: '/images/divizii/industrial/centre-logistica.webp',
       imageAlt: '物流中心储能系统',
       imageCount: 4,
       specs: [
@@ -260,7 +260,7 @@ const casesByLocale = {
       category: '住宅',
       title: 'EcoHome 10 kWh — 住宅自发自用',
       location: '罗马尼亚 克卢日-纳波卡',
-      image: '/images/slider2/slide2.jpg',
+      image: '/images/slider2/slide2.webp',
       imageAlt: '住宅安装的EcoHome电池',
       imageCount: 2,
       specs: [
@@ -276,7 +276,7 @@ const casesByLocale = {
       category: '医疗',
       title: '影像诊所BESS系统',
       location: '罗马尼亚 布加勒斯特',
-      image: '/images/slider2/slide4-261kwh-bess.jpg',
+      image: '/images/slider2/slide4-261kwh-bess.webp',
       imageAlt: '关键医疗基础设施BESS系统',
       imageCount: 3,
       specs: [
@@ -292,7 +292,7 @@ const casesByLocale = {
       category: '航海',
       title: '港口基础设施储能',
       location: '罗马尼亚 康斯坦察',
-      image: '/images/slider2/slider3.jpg',
+      image: '/images/slider2/slider3.webp',
       imageAlt: '航海应用储能系统',
       imageCount: 2,
       specs: [

@@ -2,6 +2,14 @@ export type ProductCaseStudyExample = { title: string; subtitle: string; locatio
 
 export const MAX_PRODUCT_CASE_STUDIES = 6
 
+/** Static assets in public/ use .webp; legacy API rows may still reference .jpg. */
+export function resolvePublicImageUrl(url: string): string {
+  const s = String(url || '').trim()
+  if (!s.startsWith('/images/')) return s
+  if (/\.jpe?g$/i.test(s)) return s.replace(/\.jpe?g$/i, '.webp')
+  return s
+}
+
 /** Normalize product installation case studies from API/admin. */
 export function normalizeProductCaseStudyExamples(raw: unknown): ProductCaseStudyExample[] {
   if (!Array.isArray(raw)) return []
@@ -12,7 +20,7 @@ export function normalizeProductCaseStudyExamples(raw: unknown): ProductCaseStud
       const title = String(row.title ?? '').trim()
       const subtitle = String(row.subtitle ?? row.subTitle ?? '').trim()
       const location = String(row.location ?? '').trim()
-      const image = String(row.image ?? row.picture ?? '').trim()
+      const image = resolvePublicImageUrl(String(row.image ?? row.picture ?? '').trim())
       if (!title && !subtitle && !location && !image) return null
       return { title, subtitle, location, image }
     })

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Images, MapPin } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { resolvePublicImageUrl } from '../../lib/productCaseStudies'
 
 export type CaseStudyCardClickHandler = () => void
 
@@ -81,12 +82,13 @@ export default function CaseStudyCard({
   onClick,
 }: CaseStudyCardProps) {
   const gridSpecs = specs.slice(0, 4)
+  const resolvedImage = resolvePublicImageUrl(image)
 
   return (
     <CardShell to={to} onClick={onClick}>
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
         <img
-          src={image}
+          src={resolvedImage}
           alt={imageAlt}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           loading="lazy"

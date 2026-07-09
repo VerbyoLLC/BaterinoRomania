@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { resolvePublicImageUrl } from '../../lib/productCaseStudies'
 import type { CaseStudyCardSpec } from './CaseStudyCard'
 
 export type CaseStudyModalItem = {
@@ -57,7 +58,7 @@ export default function CaseStudyModal({ item, onClose }: Props) {
 
   if (!item) return null
 
-  const images = item.images.length > 0 ? item.images : [item.image]
+  const images = (item.images.length > 0 ? item.images : [item.image]).map(resolvePublicImageUrl)
   const currentImage = images[activeImg] ?? images[0]
   const hasMultiple = images.length > 1
 
