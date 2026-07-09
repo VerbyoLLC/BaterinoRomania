@@ -37,7 +37,7 @@ export default function ContactStoreLocator({ isDesktop, fallbackEmbedUrl }: Con
   if (!MAPS_API_KEY) {
     return (
       <iframe
-        title="Baterino Romania — Otopeni"
+        title="Baterino Romania — Ilfov"
         src={fallbackEmbedUrl}
         className="block w-full grayscale-[15%]"
         style={{ height, border: 0 }}

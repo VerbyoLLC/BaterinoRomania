@@ -21,14 +21,18 @@ import SchemaOrg from '../components/SchemaOrg'
 import { digitsForWaMe, formatPhoneDisplay, telHrefFromStored } from '../lib/contactWhatsApp'
 import { departmentRow, ensurePublicDepartmentPhones } from '../lib/departmentPhones'
 import ContactStoreLocator from '../components/ContactStoreLocator'
-import { BATERINO_DIRECTIONS_URL } from '../lib/contactStoreLocatorConfig'
+import {
+  BATERINO_DIRECTIONS_URL,
+  BATERINO_MAP_EMBED_COORDS_URL,
+  BATERINO_STREET_ADDRESS,
+  BATERINO_ADDRESS_LOCALITY,
+  BATERINO_ADDRESS_REGION,
+  BATERINO_MAP_CENTER,
+} from '../lib/contactStoreLocatorConfig'
 
 const COMPANY_LEGAL_NAME = 'Baterino Energy SRL'
 const CONTACT_EMAIL = 'contact@baterino.ro'
 const CONTACT_HOURS = 'Luni - Vineri | 8AM - 8PM'
-
-const ADDRESS_QUERY = encodeURIComponent('Strada 23 August 244-43A, Otopeni 077010, Romania')
-const MAP_EMBED_URL = `https://www.google.com/maps?q=${ADDRESS_QUERY}&z=15&output=embed`
 
 const INITIAL_FORM: InquiryPayload = {
   name: '',
@@ -368,9 +372,9 @@ export default function Contact() {
           <p className="text-sm leading-relaxed text-slate-500 font-['Inter']">
             {COMPANY_LEGAL_NAME}
             <br />
-            Strada 23 August, 244-43A
+            {BATERINO_STREET_ADDRESS}
             <br />
-            Otopeni, 077010, Ilfov
+            {BATERINO_ADDRESS_LOCALITY}, {BATERINO_ADDRESS_REGION}
           </p>
         </div>
       </div>
@@ -407,11 +411,15 @@ export default function Contact() {
           ...(generalPhone ? { telephone: generalPhone } : {}),
           address: {
             '@type': 'PostalAddress',
-            streetAddress: 'Strada 23 August, 244-43A',
-            addressLocality: 'Otopeni',
-            postalCode: '077010',
+            streetAddress: BATERINO_STREET_ADDRESS,
+            addressLocality: BATERINO_ADDRESS_LOCALITY,
             addressCountry: 'RO',
-            addressRegion: 'Romania',
+            addressRegion: BATERINO_ADDRESS_REGION,
+          },
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: BATERINO_MAP_CENTER.lat,
+            longitude: BATERINO_MAP_CENTER.lng,
           },
           openingHoursSpecification: {
             '@type': 'OpeningHoursSpecification',
@@ -491,7 +499,7 @@ export default function Contact() {
 
           <div className="relative mt-6">
             <div className="overflow-hidden rounded-2xl border border-neutral-200">
-              <ContactStoreLocator isDesktop={isDesktop} fallbackEmbedUrl={MAP_EMBED_URL} />
+              <ContactStoreLocator isDesktop={isDesktop} fallbackEmbedUrl={BATERINO_MAP_EMBED_COORDS_URL} />
             </div>
             {addressCard}
           </div>
