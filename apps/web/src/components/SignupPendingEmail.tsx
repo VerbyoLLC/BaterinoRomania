@@ -126,6 +126,12 @@ export default function SignupPendingEmail({
             maxLength={6}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+              if (!pasted) return
+              e.preventDefault()
+              setCode(pasted)
+            }}
             placeholder="••••••"
             className="mt-1 w-full h-12 rounded-[10px] border border-gray-300 px-4 text-center text-2xl font-bold tracking-[0.4em] font-['Inter'] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
@@ -137,7 +143,7 @@ export default function SignupPendingEmail({
         ) : null}
         <button
           type="submit"
-          disabled={verifyLoading || code.replace(/\D/g, '').length !== 4}
+          disabled={verifyLoading || code.replace(/\D/g, '').length !== 6}
           className="w-full min-h-[44px] h-11 bg-slate-900 rounded-[10px] text-white text-sm font-bold font-['Inter'] hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {verifyLoading ? 'Se verifică…' : 'Activează contul'}
