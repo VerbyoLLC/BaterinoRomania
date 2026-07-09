@@ -4,7 +4,7 @@ export type OgRecord = {
   title: string
   description: string
   image: string
-  type: 'website' | 'product'
+  type: 'website' | 'product' | 'article'
   priceAmount?: string
   priceCurrency?: 'RON'
 }
@@ -15,6 +15,14 @@ const DEFAULT_OG: OgRecord = {
   title: 'Baterino Romania — Baterii LiFePO₄ și sisteme de stocare a energiei',
   description:
     'Baterii LiFePO₄ și sisteme de stocare a energiei pentru rezidențial, industrial, medical și maritim.',
+  image: `${SITE}/images/home/og-baterino-romania.jpg`,
+  type: 'website',
+}
+
+const BLOG_INDEX_OG: OgRecord = {
+  title: 'Noutăți - Perspective - Progres – Baterino România',
+  description:
+    'Știri și articole despre baterii LiFePO4, sisteme fotovoltaice și stocare energetică în România.',
   image: `${SITE}/images/home/og-baterino-romania.jpg`,
   type: 'website',
 }
@@ -188,6 +196,10 @@ export type ResolvedOg = OgRecord & { url: string; canonicalPath: string }
 export function resolveOg(pathname: string): ResolvedOg {
   const path = normalizePathname(pathname)
 
+  if (path === '/blog' || path.startsWith('/blog/')) {
+    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+  }
+
   const exact = PRODUCT_OG[path]
   if (exact) {
     return { ...exact, url: `${SITE}${path}`, canonicalPath: path }
@@ -222,6 +234,119 @@ export function resolveOg(pathname: string): ResolvedOg {
 /** All registered canonical product paths (for catalog cross-check). */
 export const REGISTERED_PRODUCT_PATHS = Object.keys(PRODUCT_OG)
 
+// ── Dynamic OG (live API) ────────────────────────────────────────────────
+// Fetches current product / blog data from the Railway API at request time so
+// the static snapshot above never goes stale. The snapshot remains the
+// fallback when the API is unreachable or returns 404.
+
+const API_BASE = 'https://baterinoromania-production.up.railway.app'
+const FETCH_TIMEOUT_MS = 4000
+
+async function fetchJson(url: string): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    return (await res.json()) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function str(v: unknown): string {
+  return v == null ? '' : String(v).trim()
+}
+
+function toAbsoluteUrl(url: string): string {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  if (url.startsWith('//')) return `https:${url}`
+  return url.startsWith('/') ? `${SITE}${url}` : `${SITE}/${url}`
+}
+
+/** Mirrors apps/web getProductTemplateSeo + resolveProductOgImageUrl. */
+function productToOg(p: Record<string, unknown>, path: string): ResolvedOg {
+  const title = str(p.seoTitle) || str(p.title) || DEFAULT_OG.title
+  const description =
+    str(p.seoDescription) || str(p.description) || str(p.overview) || str(p.subtitle) || DEFAULT_OG.description
+
+  const images = Array.isArray(p.images) ? p.images : []
+  const image =
+    toAbsoluteUrl(str(p.seoOgImage)) ||
+    toAbsoluteUrl(str(p.cardImage)) ||
+    toAbsoluteUrl(str(images.find((x) => str(x)))) ||
+    DEFAULT_OG.image
+
+  const salePrice = parseFloat(str(p.salePrice).replace(',', '.'))
+  const hasPublicPrice = str(p.priceVisibility) === 'public' && Number.isFinite(salePrice) && salePrice > 0
+
+  const slug = str(p.slug)
+  return {
+    title,
+    description,
+    image,
+    type: 'product',
+    ...(hasPublicPrice ? { priceAmount: String(salePrice), priceCurrency: 'RON' as const } : {}),
+    url: `${SITE}${path}`,
+    // SPA canonical is /produse/{slug} (see ResidentialIndustrialProductPage).
+    canonicalPath: slug ? `/produse/${slug}` : path,
+  }
+}
+
+function blogPostToOgRecord(b: Record<string, unknown>, path: string): ResolvedOg {
+  const title = str(b.seoTitle) || str(b.title) || BLOG_INDEX_OG.title
+  const description = str(b.seoDescription) || str(b.excerpt) || BLOG_INDEX_OG.description
+  const image = toAbsoluteUrl(str(b.coverImage)) || BLOG_INDEX_OG.image
+  const slug = str(b.slug)
+  return {
+    title,
+    description,
+    image,
+    type: 'article',
+    url: `${SITE}${path}`,
+    canonicalPath: slug ? `/blog/${slug}` : path,
+  }
+}
+
+/**
+ * Live resolution: products from /api/products/{slug}, articles from
+ * /api/blog/{slug}. Falls back to the static maps on API failure.
+ */
+export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
+  const path = normalizePathname(pathname)
+
+  if (path === '/blog') {
+    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+  }
+
+  const blogMatch = path.match(/^\/blog\/([^/]+)$/)
+  if (blogMatch) {
+    const slug = encodeURIComponent(blogMatch[1])
+    const post =
+      (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=ro`)) ??
+      (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=en`))
+    if (post) return blogPostToOgRecord(post, path)
+    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+  }
+
+  if (path.startsWith('/produse/')) {
+    const segments = path.split('/').filter(Boolean) // ['produse', ...]
+    const last = segments[segments.length - 1]
+
+    // /produse/{category} — known category pages are static, not products.
+    if (segments.length === 2 && CATEGORY_OG[path]) {
+      return { ...CATEGORY_OG[path], url: `${SITE}${path}`, canonicalPath: path }
+    }
+
+    const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
+    if (product && str(product.slug)) return productToOg(product, path)
+  }
+
+  return resolveOg(path)
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -239,6 +364,11 @@ export function buildOgHtml(og: ResolvedOg): string {
   const image = escapeHtml(og.image)
   const ogTitle = escapeHtml(og.title)
   const ogType = escapeHtml(og.type)
+  const imageType = /\.png(\?|$)/i.test(og.image)
+    ? 'image/png'
+    : /\.webp(\?|$)/i.test(og.image)
+      ? 'image/webp'
+      : 'image/jpeg'
 
   const priceTags =
     og.priceAmount && og.priceCurrency
@@ -261,7 +391,7 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta property="og:description" content="${d}" />
     <meta property="og:image" content="${image}" />
     <meta property="og:image:secure_url" content="${image}" />
-    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:type" content="${imageType}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${ogTitle}" />${priceTags}
