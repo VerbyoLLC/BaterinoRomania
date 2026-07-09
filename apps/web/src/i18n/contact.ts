@@ -33,6 +33,24 @@ export type ContactTranslations = {
   requestPartnership: string
   formSuccess: string
   formError: string
+  phoneChannelTitle: string
+  emailChannelTitle: string
+  emailSchedule: string
+  emailCta: string
+  emailModalTitle: string
+  directionsBtn: string
+  modalClose: string
+  modalSending: string
+  modalSendBtn: string
+  modalSuccessTitle: string
+  modalSuccessDesc: string
+  modalError: string
+  privacyNotice: string
+  privacyPolicyLink: string
+  formNamePlaceholder: string
+  formCompanyPlaceholder: string
+  formEmailPlaceholder: string
+  formMessagePlaceholder: string
   accessLabel: string
   baterinoGlobalLabel: string
   lithtechLabel: string
@@ -75,6 +93,24 @@ const translations: Record<LangCode, ContactTranslations> = {
     requestPartnership: 'Parteneriat',
     formSuccess: 'Solicitarea a fost trimisă. Vei primi un email de confirmare cu nr. înregistrare.',
     formError: 'A apărut o eroare. Te rugăm să încerci din nou.',
+    phoneChannelTitle: 'Telefon',
+    emailChannelTitle: 'Email',
+    emailSchedule: 'Program continuu',
+    emailCta: 'Completează formularul',
+    emailModalTitle: 'Trimite-ne un email',
+    directionsBtn: 'Obține indicații',
+    modalClose: 'Închide',
+    modalSending: 'Se trimite...',
+    modalSendBtn: 'Trimite mesajul',
+    modalSuccessTitle: 'Mesaj trimis',
+    modalSuccessDesc: 'Îți mulțumim! Echipa Baterino îți va răspunde în maxim 24 de ore la adresa {email}.',
+    modalError: 'Mesajul nu a putut fi trimis. Încearcă din nou sau scrie-ne direct la contact@baterino.ro.',
+    privacyNotice: 'Prin trimiterea formularului ești de acord cu',
+    privacyPolicyLink: 'Politica de confidențialitate',
+    formNamePlaceholder: 'Numele tău',
+    formCompanyPlaceholder: 'Opțional',
+    formEmailPlaceholder: 'adresa@email.ro',
+    formMessagePlaceholder: 'Cu ce te putem ajuta?',
     accessLabel: 'Accesează',
     baterinoGlobalLabel: 'Baterino Global',
     lithtechLabel: 'LithTech',
@@ -115,6 +151,24 @@ const translations: Record<LangCode, ContactTranslations> = {
     requestPartnership: 'Partnership',
     formSuccess: 'Your request has been sent. You will receive a confirmation email with the registration number.',
     formError: 'An error occurred. Please try again.',
+    phoneChannelTitle: 'Phone',
+    emailChannelTitle: 'Email',
+    emailSchedule: 'Available anytime',
+    emailCta: 'Fill out the form',
+    emailModalTitle: 'Send us an email',
+    directionsBtn: 'Get directions',
+    modalClose: 'Close',
+    modalSending: 'Sending...',
+    modalSendBtn: 'Send message',
+    modalSuccessTitle: 'Message sent',
+    modalSuccessDesc: 'Thank you! The Baterino team will reply within 24 hours at {email}.',
+    modalError: 'Your message could not be sent. Please try again or email us at contact@baterino.ro.',
+    privacyNotice: 'By submitting this form you agree to our',
+    privacyPolicyLink: 'Privacy policy',
+    formNamePlaceholder: 'Your name',
+    formCompanyPlaceholder: 'Optional',
+    formEmailPlaceholder: 'you@email.com',
+    formMessagePlaceholder: 'How can we help?',
     accessLabel: 'Access',
     baterinoGlobalLabel: 'Baterino Global',
     lithtechLabel: 'LithTech',

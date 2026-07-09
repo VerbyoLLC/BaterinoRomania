@@ -1,0 +1,24 @@
+.contact-store-locator-wrap {
+  width: 100%;
+}
+
+.contact-store-locator-wrap gmpx-store-locator {
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  --gmpx-color-surface: #fff;
+  --gmpx-color-on-surface: #0f172a;
+  --gmpx-color-on-surface-variant: #64748b;
+  --gmpx-color-primary: #0f172a;
+  --gmpx-color-outline: #e5e7eb;
+  --gmpx-fixed-panel-width-row-layout: 20em;
+  --gmpx-fixed-panel-height-column-layout: 42%;
+  --gmpx-font-family-base: Inter, ui-sans-serif, system-ui, sans-serif;
+  --gmpx-font-family-headings: Inter, ui-sans-serif, system-ui, sans-serif;
+  --gmpx-font-size-base: 0.875rem;
+  --gmpx-hours-color-open: #22c55e;
+  --gmpx-hours-color-closed: #dc2626;
+  --gmpx-rating-color: #f59e0b;
+  --gmpx-rating-color-empty: #e5e7eb;
+}
