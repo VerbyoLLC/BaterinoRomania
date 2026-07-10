@@ -363,20 +363,20 @@ export default function Contact() {
         isDesktop ? 'absolute bottom-6 right-6 max-w-[380px]' : 'mt-4'
       }`}
     >
-      <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
-          <MapPin size={20} aria-hidden />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
+            <MapPin size={20} aria-hidden />
+          </div>
+          <h3 className="font-bold text-slate-900 font-['Inter']">Baterino România</h3>
         </div>
-        <div>
-          <h3 className="mb-1 font-bold text-slate-900 font-['Inter']">Baterino România</h3>
-          <p className="text-sm leading-relaxed text-slate-500 font-['Inter']">
-            {COMPANY_LEGAL_NAME}
-            <br />
-            {BATERINO_STREET_ADDRESS}
-            <br />
-            {BATERINO_ADDRESS_LOCALITY}, {BATERINO_ADDRESS_REGION}
-          </p>
-        </div>
+        <p className="text-sm leading-relaxed text-slate-500 font-['Inter']">
+          {COMPANY_LEGAL_NAME}
+          <br />
+          {BATERINO_STREET_ADDRESS}
+          <br />
+          {BATERINO_ADDRESS_LOCALITY}, {BATERINO_ADDRESS_REGION}
+        </p>
       </div>
       <a
         href={BATERINO_DIRECTIONS_URL}
