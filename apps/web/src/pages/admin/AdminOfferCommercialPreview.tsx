@@ -891,9 +891,9 @@ function CommercialOfferPreviewCore({
           <div className="aco-offer-preview-sheet-break mt-8 print:mt-0">
             <div className="shadow-xl ring-1 ring-slate-900/10 print:shadow-none">
               {benefitsTemplateIsPartner ? (
-                <AdminBenefitsPartnerA4 company={company} />
+                <AdminBenefitsPartnerA4 company={company} language={previewLang} />
               ) : (
-                <AdminBenefitsClientA4 company={company} />
+                <AdminBenefitsClientA4 company={company} language={previewLang} />
               )}
             </div>
           </div>

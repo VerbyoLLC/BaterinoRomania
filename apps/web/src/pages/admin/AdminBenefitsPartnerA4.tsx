@@ -1,4 +1,6 @@
 import type { AdminCompanyData } from '../../lib/api'
+import type { CommercialOfferLanguage } from '../../lib/commercialOfferDraft'
+import { getPartnerBenefitsSheetStrings } from '../../lib/benefitsSheetI18n'
 import './admin-benefits-partner-a4.css'
 
 const SITE_WEB = 'www.baterino.ro'
@@ -82,56 +84,16 @@ const BENEFIT_ICONS = {
   ),
 } as const
 
-const PARTNER_BENEFITS = [
-  {
-    icon: 'warranty' as const,
-    title: 'Structură de preț stabilă și predictibilă',
-    desc: 'Prețuri transparente și stabile pe termen lung — fără surprize, fără fluctuații. Știi mereu cu ce marjă lucrezi.',
-    tag: 'Transparență totală',
-  },
-  {
-    icon: 'phone' as const,
-    title: 'Marje competitive și reduceri pentru volum',
-    desc: 'Structura noastră de prețuri este construită în jurul succesului partenerilor. Cu cât vinzi mai mult, cu atât marja ta crește.',
-    tag: 'Model scalabil',
-  },
-  {
-    icon: 'swap' as const,
-    title: 'Strategie de prețuri comună',
-    desc: 'Stabilim împreună strategia de prețuri pentru piața din România, astfel încât să maximizăm vânzările și să protejăm pozițiile comerciale.',
-    tag: 'Protecție teritorială',
-  },
-  {
-    icon: 'return' as const,
-    title: 'Garanție 10 ani gestionată de Baterino',
-    desc: 'Nu depinzi de producător și nu lași clientul singur. Preluăm responsabilitatea completă față de clientul final — 10 ani garanție.',
-    tag: 'Zero risc pentru tine',
-  },
-  {
-    icon: 'wifi' as const,
-    title: 'Sistem SWAP — Zero întreruperi pentru clientul tău',
-    desc: 'În cazul unei defecțiuni, înlocuim bateria imediat pe durata diagnozei. Clientul tău nu simte nicio întrerupere, iar tu îți protejezi reputația.',
-    tag: 'Fidelizare clienți',
-  },
-  {
-    icon: 'official' as const,
-    title: 'Service local și suport tehnic 24/7',
-    desc: 'Echipă de service în România, disponibilă non-stop. Niciun timp mort, nicio dependență de distanța față de producător — rezolvăm rapid, local.',
-    tag: 'Suport non-stop',
-  },
-  {
-    icon: 'verified' as const,
-    title: 'Generare activă de lead-uri și clienți',
-    desc: 'Nu ești singur pe piață — Baterino direcționează activ comenzi și clienți către partenerii din rețea, în funcție de zona ta de activitate.',
-    tag: 'Clienți din rețea',
-  },
-  {
-    icon: 'price' as const,
-    title: 'Vizibilitate în platforma și aplicația Baterino',
-    desc: 'Compania ta apare direct în ecosistemul Baterino, în fața clienților finali care caută instalatori și parteneri locali — expunere națională.',
-    tag: 'Expunere națională',
-  },
-]
+const BENEFIT_ICON_ORDER = [
+  'warranty',
+  'phone',
+  'swap',
+  'return',
+  'wifi',
+  'official',
+  'verified',
+  'price',
+] as const
 
 function IconGlobe() {
   return (
@@ -181,9 +143,11 @@ function IconBuilding() {
 
 export type AdminBenefitsPartnerA4Props = {
   company?: AdminCompanyData | null
+  language?: CommercialOfferLanguage
 }
 
-export default function AdminBenefitsPartnerA4({ company }: AdminBenefitsPartnerA4Props) {
+export default function AdminBenefitsPartnerA4({ company, language = 'ro' }: AdminBenefitsPartnerA4Props) {
+  const tr = getPartnerBenefitsSheetStrings(language)
   const companyName = company?.name?.trim() || DEFAULT_COMPANY_NAME
   const address = company?.address?.trim() || DEFAULT_ADDRESS
   const cui = company?.cui?.trim()
@@ -205,29 +169,27 @@ export default function AdminBenefitsPartnerA4({ company }: AdminBenefitsPartner
           <div className="abp-logo-sub">Energy Storage Infrastructure</div>
         </div>
         <div>
-          <div className="abp-doc-title">Beneficiile Partenerilor</div>
+          <div className="abp-doc-title">{tr.docTitle}</div>
           <div className="abp-doc-sub">
-            {SITE_LABEL} &nbsp;·&nbsp; De ce să devii partener
+            {SITE_LABEL} &nbsp;·&nbsp; {tr.docSub}
           </div>
         </div>
       </div>
 
       <div className="abp-intro">
-        <div className="abp-intro-eyebrow">De ce să devii partener Baterino</div>
+        <div className="abp-intro-eyebrow">{tr.introEyebrow}</div>
         <div className="abp-intro-title">
-          Beneficiile de a fi partener <span>Baterino</span>
+          {tr.introTitlePre}
+          <span>Baterino</span>
+          {tr.introTitlePost}
         </div>
-        <div className="abp-intro-body">
-          Mai mult decât o distribuție — un parteneriat strategic pe termen lung. Împreună construim o
-          rețea solidă, cu prețuri corecte, suport real și instrumentele necesare să îți crești afacerea
-          sustenabil.
-        </div>
+        <div className="abp-intro-body">{tr.introBody}</div>
       </div>
 
       <div className="abp-benefits">
-        {PARTNER_BENEFITS.map((b) => (
+        {tr.benefits.map((b, i) => (
           <div key={b.title} className="abp-ben">
-            <div className="abp-ben-icon">{BENEFIT_ICONS[b.icon]}</div>
+            <div className="abp-ben-icon">{BENEFIT_ICONS[BENEFIT_ICON_ORDER[i] ?? 'warranty']}</div>
             <div>
               <div className="abp-ben-title">{b.title}</div>
               <div className="abp-ben-desc">{b.desc}</div>
@@ -239,11 +201,8 @@ export default function AdminBenefitsPartnerA4({ company }: AdminBenefitsPartner
 
       <div className="abp-cta">
         <div className="abp-cta-body">
-          <div className="abp-cta-title">Creează-ți un cont de partener în platforma Baterino</div>
-          <div className="abp-cta-sub">
-            Gestionezi prețurile, comenzile și suportul de partener — totul într-un singur loc, de pe
-            orice dispozitiv.
-          </div>
+          <div className="abp-cta-title">{tr.ctaTitle}</div>
+          <div className="abp-cta-sub">{tr.ctaSub}</div>
           <div className="abp-cta-contacts">
             <div className="abp-cta-item">
               <IconGlobe />
@@ -272,7 +231,7 @@ export default function AdminBenefitsPartnerA4({ company }: AdminBenefitsPartner
       <div className="abp-sheet-end">
         <div className="abp-footer">
           <div>
-            <div className="abp-f-lbl">Companie</div>
+            <div className="abp-f-lbl">{tr.footerCompanyLabel}</div>
             <div className="abp-f-brand">
               BATER<span>I</span>NO
             </div>
@@ -291,8 +250,8 @@ export default function AdminBenefitsPartnerA4({ company }: AdminBenefitsPartner
             </div>
           </div>
           <div>
-            <div className="abp-f-lbl">Adresă</div>
-            <div className="abp-f-addr-title">Adresa Baterino România</div>
+            <div className="abp-f-lbl">{tr.footerAddressLabel}</div>
+            <div className="abp-f-addr-title">{tr.footerAddressTitle}</div>
             <div className="abp-f-addr-entity">{companyName}</div>
             <div className="abp-f-row">
               <IconPin />

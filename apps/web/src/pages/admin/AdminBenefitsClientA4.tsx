@@ -1,4 +1,6 @@
 import type { AdminCompanyData } from '../../lib/api'
+import type { CommercialOfferLanguage } from '../../lib/commercialOfferDraft'
+import { getClientBenefitsSheetStrings } from '../../lib/benefitsSheetI18n'
 import './admin-benefits-client-a4.css'
 
 const SITE_WEB = 'www.baterino.ro'
@@ -82,56 +84,16 @@ const BENEFIT_ICONS = {
   ),
 } as const
 
-const CLIENT_BENEFITS = [
-  {
-    icon: 'warranty' as const,
-    title: 'Garanție oficială 10 ani',
-    desc: 'Certificat oficial de garanție la fiecare produs. Piese și manoperă acoperite complet — verificabil oricând online.',
-    tag: 'Cea mai bună garanție din România',
-  },
-  {
-    icon: 'phone' as const,
-    title: 'Suport tehnic în România',
-    desc: 'O echipă reală, în română, disponibilă 24/7. Indiferent că ai o întrebare sau o problemă — cineva îți răspunde imediat.',
-    tag: '24/7 disponibil',
-  },
-  {
-    icon: 'swap' as const,
-    title: 'Baterino SWAP',
-    desc: 'Dacă bateria ta are o problemă în garanție, nu rămâi fără curent. Îți punem un echipament de schimb pe toată perioada reparației.',
-    tag: 'Fără întreruperi',
-  },
-  {
-    icon: 'return' as const,
-    title: 'Retur în 15 zile',
-    desc: 'Nu ești sigur? Testezi și dacă nu e ce te așteptai — returnezi în 15 zile, fără discuții complicate sau costuri ascunse.',
-    tag: 'Fără stres',
-  },
-  {
-    icon: 'wifi' as const,
-    title: '99% compatibilitate invertoare',
-    desc: 'Funcționează cu aproape orice invertor din România. Verifică marca ta pe baterino.ro — cel mai probabil ești deja acoperit.',
-    tag: 'Verificat pre-livrare',
-  },
-  {
-    icon: 'official' as const,
-    title: 'Importatori oficiali LithTech',
-    desc: 'Cumperi direct de la sursa autorizată. Fără intermediari, fără produse gri — trasabilitate completă de la fabrică până la tine.',
-    tag: 'Produs autentic',
-  },
-  {
-    icon: 'verified' as const,
-    title: 'Produse verificate înainte de livrare',
-    desc: 'Fiecare baterie trece printr-un proces de verificare tehnică înainte să ajungă la tine. Zero surprize.',
-    tag: 'Testat și certificat',
-  },
-  {
-    icon: 'price' as const,
-    title: 'Program de reduceri active',
-    desc: 'Reduceri pentru seniori, zone rurale și recomandări între clienți. Înregistrează-te pe platformă pentru ofertele active.',
-    tag: 'Economii suplimentare',
-  },
-]
+const BENEFIT_ICON_ORDER = [
+  'warranty',
+  'phone',
+  'swap',
+  'return',
+  'wifi',
+  'official',
+  'verified',
+  'price',
+] as const
 
 function IconGlobe() {
   return (
@@ -181,9 +143,11 @@ function IconBuilding() {
 
 export type AdminBenefitsClientA4Props = {
   company?: AdminCompanyData | null
+  language?: CommercialOfferLanguage
 }
 
-export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4Props) {
+export default function AdminBenefitsClientA4({ company, language = 'ro' }: AdminBenefitsClientA4Props) {
+  const tr = getClientBenefitsSheetStrings(language)
   const companyName = company?.name?.trim() || DEFAULT_COMPANY_NAME
   const address = company?.address?.trim() || DEFAULT_ADDRESS
   const cui = company?.cui?.trim()
@@ -205,29 +169,27 @@ export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4
           <div className="abb-logo-sub">Energy Storage Infrastructure</div>
         </div>
         <div>
-          <div className="abb-doc-title">Beneficiile Clienților</div>
+          <div className="abb-doc-title">{tr.docTitle}</div>
           <div className="abb-doc-sub">
-            {SITE_LABEL} &nbsp;·&nbsp; De ce să alegi Baterino
+            {SITE_LABEL} &nbsp;·&nbsp; {tr.docSub}
           </div>
         </div>
       </div>
 
       <div className="abb-intro">
-        <div className="abb-intro-eyebrow">De ce să alegi Baterino</div>
+        <div className="abb-intro-eyebrow">{tr.introEyebrow}</div>
         <div className="abb-intro-title">
-          Beneficiile de a fi client <span>Baterino</span>
+          {tr.introTitlePre}
+          <span>Baterino</span>
+          {tr.introTitlePost}
         </div>
-        <div className="abb-intro-body">
-          Mai mult decât o baterie — o relație pe termen lung. Cumperi o dată și ai acoperire completă,
-          suport real și o echipă locală care răspunde mereu. Fiecare client Baterino beneficiază de
-          servicii și garanții care nu se regăsesc la alți distribuitori.
-        </div>
+        <div className="abb-intro-body">{tr.introBody}</div>
       </div>
 
       <div className="abb-benefits">
-        {CLIENT_BENEFITS.map((b) => (
+        {tr.benefits.map((b, i) => (
           <div key={b.title} className="abb-ben">
-            <div className="abb-ben-icon">{BENEFIT_ICONS[b.icon]}</div>
+            <div className="abb-ben-icon">{BENEFIT_ICONS[BENEFIT_ICON_ORDER[i] ?? 'warranty']}</div>
             <div>
               <div className="abb-ben-title">{b.title}</div>
               <div className="abb-ben-desc">{b.desc}</div>
@@ -239,11 +201,8 @@ export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4
 
       <div className="abb-cta">
         <div className="abb-cta-body">
-          <div className="abb-cta-title">Creează-ți un cont pe platforma Baterino</div>
-          <div className="abb-cta-sub">
-            Gestionezi garanțiile, comenzile și programele de reduceri — totul într-un singur loc, de pe
-            orice dispozitiv.
-          </div>
+          <div className="abb-cta-title">{tr.ctaTitle}</div>
+          <div className="abb-cta-sub">{tr.ctaSub}</div>
           <div className="abb-cta-contacts">
             <div className="abb-cta-item">
               <IconGlobe />
@@ -272,7 +231,7 @@ export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4
       <div className="abb-sheet-end">
         <div className="abb-footer">
           <div>
-            <div className="abb-f-lbl">Companie</div>
+            <div className="abb-f-lbl">{tr.footerCompanyLabel}</div>
             <div className="abb-f-brand">
               BATER<span>I</span>NO
             </div>
@@ -291,8 +250,8 @@ export default function AdminBenefitsClientA4({ company }: AdminBenefitsClientA4
             </div>
           </div>
           <div>
-            <div className="abb-f-lbl">Adresă</div>
-            <div className="abb-f-addr-title">Adresa Baterino România</div>
+            <div className="abb-f-lbl">{tr.footerAddressLabel}</div>
+            <div className="abb-f-addr-title">{tr.footerAddressTitle}</div>
             <div className="abb-f-addr-entity">{companyName}</div>
             <div className="abb-f-row">
               <IconPin />
