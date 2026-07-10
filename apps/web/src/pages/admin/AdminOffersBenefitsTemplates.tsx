@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getAdminCompanyData, getAuthToken, type AdminCompanyData } from '../../lib/api'
+import type { CommercialOfferLanguage } from '../../lib/commercialOfferDraft'
 import AdminBenefitsClientA4 from './AdminBenefitsClientA4'
 import AdminBenefitsPartnerA4 from './AdminBenefitsPartnerA4'
 
@@ -23,9 +24,16 @@ const TEMPLATE_OPTIONS: { id: BenefitsTemplateId; label: string; description: st
   },
 ]
 
+const LANGUAGE_OPTIONS: { id: CommercialOfferLanguage; label: string }[] = [
+  { id: 'ro', label: 'Română' },
+  { id: 'en', label: 'Engleză' },
+  { id: 'de', label: 'Germană' },
+]
+
 export default function AdminOffersBenefitsTemplates() {
   const navigate = useNavigate()
   const [selectedTemplate, setSelectedTemplate] = useState<BenefitsTemplateId>('client')
+  const [selectedLanguage, setSelectedLanguage] = useState<CommercialOfferLanguage>('ro')
   const [company, setCompany] = useState<AdminCompanyData | null>(null)
   const [companyLoading, setCompanyLoading] = useState(true)
 
@@ -69,27 +77,50 @@ export default function AdminOffersBenefitsTemplates() {
       </p>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-        <div className="max-w-2xl">
-          <label htmlFor="benefits-template-select" className={labelClass}>
-            Șablon
-          </label>
-          <select
-            id="benefits-template-select"
-            value={selectedTemplate}
-            onChange={(e) => setSelectedTemplate(e.target.value as BenefitsTemplateId)}
-            className={selectClass}
-          >
-            {TEMPLATE_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="benefits-template-select" className={labelClass}>
+              Șablon
+            </label>
+            <select
+              id="benefits-template-select"
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value as BenefitsTemplateId)}
+              className={selectClass}
+            >
+              {TEMPLATE_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="benefits-language-select" className={labelClass}>
+              Limbă
+            </label>
+            <select
+              id="benefits-language-select"
+              value={selectedLanguage}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === 'ro' || v === 'en' || v === 'de') setSelectedLanguage(v)
+              }}
+              className={selectClass}
+            >
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-8 border-t border-slate-100 pt-8">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 font-['Inter'] mb-4">
-            Previzualizare — {active.label}
+            Previzualizare — {active.label} ·{' '}
+            {LANGUAGE_OPTIONS.find((l) => l.id === selectedLanguage)?.label ?? 'Română'}
           </p>
 
           {companyLoading ? (
@@ -97,9 +128,9 @@ export default function AdminOffersBenefitsTemplates() {
           ) : (
             <div className="-mx-2 overflow-x-auto px-2 pb-2 sm:mx-0 sm:overflow-x-visible sm:px-0">
               {selectedTemplate === 'client' ? (
-                <AdminBenefitsClientA4 company={company} />
+                <AdminBenefitsClientA4 company={company} language={selectedLanguage} />
               ) : (
-                <AdminBenefitsPartnerA4 company={company} />
+                <AdminBenefitsPartnerA4 company={company} language={selectedLanguage} />
               )}
             </div>
           )}
