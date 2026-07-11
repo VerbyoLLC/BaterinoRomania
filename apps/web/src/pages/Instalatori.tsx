@@ -134,12 +134,13 @@ export default function Instalatori() {
                 >
                   {tr.btn1}
                 </Link>
-                <button
-                  type="button"
+                <a
+                  href="/documents/brosura-baterino-partener-ro.pdf"
+                  download="Brosura Baterino - Partener - RO.pdf"
                   className="hidden lg:inline-flex h-12 px-8 items-center justify-center gap-2 border border-white/25 text-white text-sm font-bold font-['Inter'] uppercase tracking-wide rounded-[10px] hover:bg-white/10 transition-colors"
                 >
                   {tr.btn2}
-                </button>
+                </a>
               </div>
             </div>
 
