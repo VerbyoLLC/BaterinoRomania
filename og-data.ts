@@ -185,6 +185,165 @@ const PRODUCT_BY_SLUG: Record<string, string> = {
     '/produse/sisteme-bess/bess-container-20ft-lifepo4-3340kwh-5015kwh-racire-lichida',
 }
 
+/** Public marketing/content pages outside /produse and /blog — title/description mirror each page's <SEO> props. */
+const STATIC_PAGE_OG: Record<string, OgRecord> = {
+  '/': {
+    title:
+      'Baterino - Baterii LiFePO4 pentru sisteme fotovoltaice. Soluții stocare pentru sectorul rezidențial, industrial, medical și maritim.',
+    description:
+      'Importator și distribuitor LithTech pentru baterii LiFePO4 și sisteme fotovoltaice pentru sectorul rezidențial, industrial, medical și maritim. Servicii complete, garanție 10 ani.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/produse': {
+    title: 'Baterii LiFePO4',
+    description:
+      'Sisteme de stocare a energiei LiFePO4 pentru uz rezidential, industrial, medical și maritim. Importator oficial LithTech în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/rezidential': {
+    title: 'Stocare Energie Rezidențial',
+    description:
+      'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/industrial': {
+    title: 'Stocare Energie Industrial',
+    description:
+      'Sisteme BESS LiFePo4 High Voltage pentru industrie, ferme solare și micro-griduri complexe. Soluții scalabile cu garanție 10 ani și monitorizare remotă.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/medical': {
+    title: 'Stocare Energie Medical',
+    description:
+      'Sisteme LiFePo4 de stocare a energiei dedicate exclusiv infrastructurii medicale din România. Soluții certificate pentru clinici, spitale și laboratoare, cu suport tehnic specializat.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/maritim': {
+    title: 'Stocare Energie Maritim',
+    description:
+      'Sisteme de stocare a energiei LiFePo4 pentru nave comerciale, remorchere, ferry-boat și infrastructură portuară. Soluții Full-Electric și Hibride certificate pentru sectorul naval.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/instalatori': {
+    title: 'Distribuitori & Instalatori',
+    description:
+      'Devino partener Baterino și beneficiază de prețuri stabile, suport tehnic 24/7, garanție 10 ani și generare de lead-uri. Importator oficial LithTech în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/reduceri': {
+    title: 'Reduceri & Oferte',
+    description:
+      "Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu' și Viața la Țară. Reduceri reale pentru oameni reali.",
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/intrebari-frecvente': {
+    title: 'Întrebări frecvente',
+    description:
+      'Răspunsuri la cele mai frecvente întrebări despre produsele Baterino, comenzi, garanție, retururi și programul de parteneri.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/cariere': {
+    title: 'Cariere',
+    description: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/studii-de-caz': {
+    title: 'Studii de caz',
+    description:
+      'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/parteneriat-strategic-lithtech-baterino': {
+    title: 'Parteneriat Strategic LithTech',
+    description:
+      'Baterino, importator unic pentru tehnologie avansată de stocare LiFePo4, în parteneriat strategic cu LithTech: sisteme BMS/EMS, baterii solid-state și implementare completă în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/service-baterii-lithtech-romania': {
+    title: 'Service Oficial LithTech România – Centru Autorizat de Reparații Baterii',
+    description:
+      'Baterino este centrul oficial de service și reparații LithTech în România. Diagnosticăm și reparăm baterii rezidențiale EcoHome, sisteme BESS industriale și sisteme all-in-one LithTech.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/contact': {
+    title: 'Contact',
+    description:
+      'Contactează echipa Baterino Romania pentru informații despre sisteme de stocare a energiei LiFePO4, parteneriate și suport tehnic.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/siguranta': {
+    title: 'Siguranță & Garanție',
+    description:
+      'Baterino garantează siguranța produselor prin serviciul SWAP, suport și mentenanță în România, testare avansată cu LithTech și garanție extinsă de 10 ani.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/companie/viziune': {
+    title: 'Viziune, Misiune & Echipă',
+    description:
+      'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/politica-confidentialitate': {
+    title: 'Politica de Confidențialitate',
+    description:
+      'Politica de confidențialitate baterino.ro — cum colectăm, utilizăm și protejăm datele personale conform GDPR.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/politica-de-retur': {
+    title: 'Politica de Retur',
+    description:
+      'Politica de retur Baterino: dreptul de retragere, termen de 15 zile, condiții de returnare, rambursare și pașii pentru inițierea returului.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/termeni-si-conditii': {
+    title: 'Termeni și Condiții',
+    description: 'Termenii și condițiile generale de utilizare a site-ului baterino.ro și serviciilor Baterino Energy SRL.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/termeni-si-conditii-programe-de-reducere': {
+    title: 'Termeni și Condiții – Programe de Reducere',
+    description:
+      'Termenii și condițiile pentru programele de reducere Baterino: TVA 9%, Energie pentru părinți, Știu de la vecinu, Viața la țară.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/returnare-produse': {
+    title: 'Returnare produse',
+    description:
+      'Retururi fără bătăi de cap: 15 zile de la primire, în conformitate cu legea și politica comercială.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/verificare-garantie': {
+    title: 'Verificare garanție',
+    description: 'Introdu numărul de serie (SN) al bateriei pentru a verifica garanția.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+}
+
+/** Exact paths handled by STATIC_PAGE_OG — used by the middleware to decide whether to intercept. */
+export const STATIC_PAGE_PATHS = Object.keys(STATIC_PAGE_OG)
+
 export function normalizePathname(pathname: string): string {
   let path = pathname.toLowerCase()
   if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
@@ -195,6 +354,11 @@ export type ResolvedOg = OgRecord & { url: string; canonicalPath: string }
 
 export function resolveOg(pathname: string): ResolvedOg {
   const path = normalizePathname(pathname)
+
+  const staticPage = STATIC_PAGE_OG[path]
+  if (staticPage) {
+    return { ...staticPage, url: `${SITE}${path}`, canonicalPath: path }
+  }
 
   if (path === '/blog' || path.startsWith('/blog/')) {
     return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
@@ -375,6 +539,12 @@ export function buildOgHtml(og: ResolvedOg): string {
       ? `\n    <meta property="product:price:amount" content="${escapeHtml(og.priceAmount)}" />\n    <meta property="product:price:currency" content="${escapeHtml(og.priceCurrency)}" />`
       : ''
 
+  const bodyDescription = escapeHtml(og.description)
+  const priceParagraph =
+    og.priceAmount && og.priceCurrency
+      ? `\n    <p>Preț: ${escapeHtml(og.priceAmount)} ${escapeHtml(og.priceCurrency)}</p>`
+      : ''
+
   return `<!doctype html>
 <html lang="ro">
   <head>
@@ -400,6 +570,10 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="twitter:description" content="${d}" />
     <meta name="twitter:image" content="${image}" />
   </head>
-  <body></body>
+  <body>
+    <h1>${ogTitle}</h1>
+    <p>${bodyDescription}</p>${priceParagraph}
+    <p><a href="${canonical}">${canonical}</a></p>
+  </body>
 </html>`
 }
