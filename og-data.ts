@@ -350,7 +350,27 @@ export function normalizePathname(pathname: string): string {
   return path
 }
 
-export type ResolvedOg = OgRecord & { url: string; canonicalPath: string }
+export type RelatedLink = { href: string; label: string }
+
+export type ResolvedOg = OgRecord & {
+  url: string
+  canonicalPath: string
+  relatedLinks?: RelatedLink[]
+  relatedLinksHeading?: string
+}
+
+/** Always-present site nav so every crawler-served page links to the rest of the site. */
+const SITE_NAV: RelatedLink[] = [
+  { href: `${SITE}/`, label: 'Acasă' },
+  { href: `${SITE}/produse`, label: 'Produse' },
+  { href: `${SITE}/produse/baterii-solare`, label: 'Baterii Solare' },
+  { href: `${SITE}/produse/sisteme-bess`, label: 'Sisteme BESS Industrial' },
+  { href: `${SITE}/blog`, label: 'Blog' },
+  { href: `${SITE}/studii-de-caz`, label: 'Studii de caz' },
+  { href: `${SITE}/instalatori`, label: 'Distribuitori & Instalatori' },
+  { href: `${SITE}/reduceri`, label: 'Reduceri & Oferte' },
+  { href: `${SITE}/contact`, label: 'Contact' },
+]
 
 export function resolveOg(pathname: string): ResolvedOg {
   const path = normalizePathname(pathname)
@@ -474,6 +494,39 @@ function blogPostToOgRecord(b: Record<string, unknown>, path: string): ResolvedO
   }
 }
 
+/** tipProdus → canonical category path, used to link a category page to its products. */
+const CATEGORY_TIP_PRODUS: Record<string, string> = {
+  '/produse/baterii-solare': 'rezidential',
+  '/produse/sisteme-bess': 'industrial',
+}
+
+async function fetchCategoryProductLinks(categoryPath: string): Promise<RelatedLink[]> {
+  const tipProdus = CATEGORY_TIP_PRODUS[categoryPath]
+  if (!tipProdus) return []
+  const products = await fetchJson(`${API_BASE}/api/products`)
+  const list = Array.isArray(products) ? products : []
+  return list
+    .filter((p) => str((p as Record<string, unknown>).tipProdus) === tipProdus)
+    .map((p) => {
+      const rec = p as Record<string, unknown>
+      const slug = str(rec.slug)
+      return { href: `${SITE}${categoryPath}/${slug}`, label: str(rec.title) || slug }
+    })
+    .filter((link) => link.label)
+}
+
+async function fetchBlogIndexLinks(): Promise<RelatedLink[]> {
+  const posts = await fetchJson(`${API_BASE}/api/blog?locale=ro`)
+  const list = Array.isArray(posts) ? posts : []
+  return list
+    .map((b) => {
+      const rec = b as Record<string, unknown>
+      const slug = str(rec.slug)
+      return { href: `${SITE}/blog/${slug}`, label: str(rec.title) || slug }
+    })
+    .filter((link) => link.label)
+}
+
 /**
  * Live resolution: products from /api/products/{slug}, articles from
  * /api/blog/{slug}. Falls back to the static maps on API failure.
@@ -482,7 +535,14 @@ export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
   const path = normalizePathname(pathname)
 
   if (path === '/blog') {
-    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+    const relatedLinks = await fetchBlogIndexLinks()
+    return {
+      ...BLOG_INDEX_OG,
+      url: `${SITE}${path}`,
+      canonicalPath: path,
+      relatedLinks,
+      relatedLinksHeading: 'Articole recente',
+    }
   }
 
   const blogMatch = path.match(/^\/blog\/([^/]+)$/)
@@ -501,7 +561,14 @@ export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
 
     // /produse/{category} — known category pages are static, not products.
     if (segments.length === 2 && CATEGORY_OG[path]) {
-      return { ...CATEGORY_OG[path], url: `${SITE}${path}`, canonicalPath: path }
+      const relatedLinks = await fetchCategoryProductLinks(path)
+      return {
+        ...CATEGORY_OG[path],
+        url: `${SITE}${path}`,
+        canonicalPath: path,
+        relatedLinks,
+        relatedLinksHeading: 'Produse din această categorie',
+      }
     }
 
     const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
@@ -545,6 +612,18 @@ export function buildOgHtml(og: ResolvedOg): string {
       ? `\n    <p>Preț: ${escapeHtml(og.priceAmount)} ${escapeHtml(og.priceCurrency)}</p>`
       : ''
 
+  const navList = SITE_NAV.map(
+    (link) => `\n        <li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`
+  ).join('')
+  const navHtml = `\n    <nav>\n      <ul>${navList}\n      </ul>\n    </nav>`
+
+  const related = og.relatedLinks ?? []
+  const relatedHtml = related.length
+    ? `\n    <section>\n      <h2>${escapeHtml(og.relatedLinksHeading || 'Vezi și')}</h2>\n      <ul>${related
+        .map((link) => `\n        <li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
+        .join('')}\n      </ul>\n    </section>`
+    : ''
+
   return `<!doctype html>
 <html lang="ro">
   <head>
@@ -570,10 +649,10 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="twitter:description" content="${d}" />
     <meta name="twitter:image" content="${image}" />
   </head>
-  <body>
+  <body>${navHtml}
     <h1>${ogTitle}</h1>
     <p>${bodyDescription}</p>${priceParagraph}
-    <p><a href="${canonical}">${canonical}</a></p>
+    <p><a href="${canonical}">${canonical}</a></p>${relatedHtml}
   </body>
 </html>`
 }
