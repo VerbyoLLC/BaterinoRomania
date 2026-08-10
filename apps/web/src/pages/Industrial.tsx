@@ -160,17 +160,17 @@ export default function Industrial() {
           '@type': 'CollectionPage',
           name: 'Stocare Energie Industrial',
           description: 'Sisteme BESS LiFePo4 High Voltage pentru industrie, ferme solare și micro-griduri complexe. Soluții scalabile cu garanție 10 ani și monitorizare remotă.',
-          url: 'https://baterino.ro/divizii/industrial',
-          image: 'https://baterino.ro/images/divizii/industrial/baterii-stocare-industrial-og.webp',
+          url: 'https://www.baterino.ro/divizii/industrial',
+          image: 'https://www.baterino.ro/images/divizii/industrial/baterii-stocare-industrial-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Industrial', item: 'https://baterino.ro/divizii/industrial' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Industrial', item: 'https://www.baterino.ro/divizii/industrial' },
           ],
         },
       ]} />

@@ -278,16 +278,16 @@ export default function VerificareGarantie() {
           '@type': 'WebPage',
           name: seo.title || tr.pageTitle,
           description: seo.description || tr.pageDescription,
-          url: 'https://baterino.ro/verificare-garantie',
+          url: 'https://www.baterino.ro/verificare-garantie',
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Verificare Garanție', item: 'https://baterino.ro/verificare-garantie' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Verificare Garanție', item: 'https://www.baterino.ro/verificare-garantie' },
           ],
         },
       ]} />

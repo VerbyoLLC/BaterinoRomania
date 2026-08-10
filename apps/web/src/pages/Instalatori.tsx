@@ -91,16 +91,16 @@ export default function Instalatori() {
           '@type': 'WebPage',
           name: tr.seoTitle,
           description: tr.seoDesc,
-          url: 'https://baterino.ro/instalatori',
+          url: 'https://www.baterino.ro/instalatori',
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Instalatori', item: 'https://baterino.ro/instalatori' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Instalatori', item: 'https://www.baterino.ro/instalatori' },
           ],
         },
       ]} />

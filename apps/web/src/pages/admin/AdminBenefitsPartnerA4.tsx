@@ -17,7 +17,7 @@ function partnerSignupUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return `${window.location.origin}/signup/clienti?tab=partener`
   }
-  return 'https://baterino.ro/signup/clienti?tab=partener'
+  return 'https://www.baterino.ro/signup/clienti?tab=partener'
 }
 
 function qrDataUrl(payload: string, sizePx = 120): string {

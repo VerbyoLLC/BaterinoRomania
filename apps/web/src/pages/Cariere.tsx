@@ -22,17 +22,17 @@ export default function Cariere() {
           '@type': 'WebPage',
           name: 'Cariere – Baterino România',
           description: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
-          url: 'https://baterino.ro/cariere',
-          image: 'https://baterino.ro/images/cariere/cariere-hero-card.webp',
+          url: 'https://www.baterino.ro/cariere',
+          image: 'https://www.baterino.ro/images/cariere/cariere-hero-card.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Cariere', item: 'https://baterino.ro/cariere' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Cariere', item: 'https://www.baterino.ro/cariere' },
           ],
         },
       ]} />

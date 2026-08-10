@@ -1,23 +1,14 @@
 // routes/sitemap.route.js
-// Dynamic sitemap for baterino.ro — served from the Express backend (Railway).
+// Dynamic sitemap for https://www.baterino.ro — served from the Express backend (Railway).
 // lastmod comes from real data: Prisma updatedAt for products/posts/partners,
 // pinned dates for static pages (bump manually only when content actually changes).
-//
-// Mount in your app:  app.use(createSitemapRouter(prisma));
-//                     app.use('/api', createSitemapRouter(prisma));
-// Then add a Vercel rewrite so https://baterino.ro/sitemap.xml hits this route
-// (see vercel.json snippet in the notes).
 
 const express = require('express')
 const { isPartnerPublicProfileFullyComplete } = require('../lib/partner-public-profile-complete.js')
 const { collectProductImageUrls } = require('../lib/product-seo-images.js')
 
-const BASE_URL = (
-  process.env.SITEMAP_BASE_URL ||
-  process.env.SITE_URL ||
-  process.env.PUBLIC_SITE_URL ||
-  'https://www.baterino.ro'
-).replace(/\/$/, '')
+/** Always canonical www — never emit bare baterino.ro (301 target). */
+const BASE_URL = 'https://www.baterino.ro'
 
 const IMAGE_SITEMAP_NS = 'http://www.google.com/schemas/sitemap-image/1.1'
 
@@ -28,6 +19,8 @@ const IMAGE_SITEMAP_NS = 'http://www.google.com/schemas/sitemap-image/1.1'
 const STATIC_PAGES = [
   { path: '/', lastmod: '2026-06-24' },
   { path: '/produse', lastmod: '2026-06-24' },
+  { path: '/produse/baterii-solare', lastmod: '2026-06-24' },
+  { path: '/produse/sisteme-bess', lastmod: '2026-06-24' },
   { path: '/blog', lastmod: null }, // filled from newest post
   { path: '/instalatori', lastmod: '2026-06-09' },
   { path: '/reduceri', lastmod: '2026-06-23' },
@@ -73,6 +66,15 @@ function productPath(product) {
   return `/produse/${segments.map(encodePathSegment).join('/')}`
 }
 
+/** Match SPA canonical: /companii-instalatori-fotovoltaice/@slug */
+function partnerPublicPath(publicSlug) {
+  const slug = String(publicSlug || '')
+    .trim()
+    .replace(/^@/, '')
+    .toLowerCase()
+  return `/companii-instalatori-fotovoltaice/@${encodePathSegment(slug)}`
+}
+
 const imageEntry = (url) =>
   `\n    <image:image>\n      <image:loc>${escapeXml(url)}</image:loc>\n    </image:image>`
 
@@ -83,56 +85,80 @@ const urlEntry = ({ path, lastmod, images = [] }) => {
   return `  <url>\n    <loc>${loc}</loc>${lm}${imageBlock}\n  </url>`
 }
 
+async function safeQuery(label, fn, fallback) {
+  try {
+    return await fn()
+  } catch (err) {
+    console.error(`sitemap: ${label} query failed:`, err?.message || err)
+    return fallback
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Build XML (also used by scripts/generate-sitemap.cjs)
+// Build XML
 // ---------------------------------------------------------------------------
 async function buildSitemapXml(prisma) {
   const [products, posts, partners] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: 'published' },
-      select: {
-        slug: true,
-        id: true,
-        title: true,
-        updatedAt: true,
-        cardImage: true,
-        images: true,
-        category: { select: { slug: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    prisma.blogPost.findMany({
-      where: { status: 'published', locale: 'ro' },
-      select: { slug: true, updatedAt: true, publishedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    prisma.partner.findMany({
-      where: {
-        publicSlug: { not: null },
-        isPublic: true,
-        isApproved: true,
-        isSuspended: false,
-        user: { deletedAt: null },
-      },
-      select: {
-        publicSlug: true,
-        updatedAt: true,
-        logoUrl: true,
-        publicName: true,
-        street: true,
-        county: true,
-        city: true,
-        description: true,
-        services: true,
-        publicPhone: true,
-        website: true,
-        facebookUrl: true,
-        linkedinUrl: true,
-        instagramUrl: true,
-        tiktokUrl: true,
-        workPhotos: true,
-      },
-    }),
+    safeQuery(
+      'products',
+      () =>
+        prisma.product.findMany({
+          where: { status: 'published' },
+          select: {
+            slug: true,
+            id: true,
+            title: true,
+            updatedAt: true,
+            cardImage: true,
+            images: true,
+            category: { select: { slug: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
+        }),
+      [],
+    ),
+    safeQuery(
+      'blog',
+      () =>
+        prisma.blogPost.findMany({
+          where: { status: 'published', locale: 'ro' },
+          select: { slug: true, updatedAt: true, publishedAt: true },
+          orderBy: { updatedAt: 'desc' },
+        }),
+      [],
+    ),
+    safeQuery(
+      'partners',
+      () =>
+        prisma.partner.findMany({
+          where: {
+            publicSlug: { not: null },
+            isPublic: true,
+            isApproved: true,
+            isSuspended: false,
+            user: { deletedAt: null },
+          },
+          select: {
+            publicSlug: true,
+            updatedAt: true,
+            logoUrl: true,
+            publicName: true,
+            street: true,
+            county: true,
+            city: true,
+            description: true,
+            services: true,
+            publicPhone: true,
+            website: true,
+            facebookUrl: true,
+            linkedinUrl: true,
+            instagramUrl: true,
+            tiktokUrl: true,
+            workPhotos: true,
+          },
+        }),
+      [],
+    ),
   ])
 
   const productEntries = products.map((p) => ({
@@ -149,14 +175,14 @@ async function buildSitemapXml(prisma) {
   const partnerEntries = partners
     .filter((p) => p.publicSlug && isPartnerPublicProfileFullyComplete(p))
     .map((p) => ({
-      path: `/companii-instalatori-fotovoltaice/${encodePathSegment(p.publicSlug)}`,
+      path: partnerPublicPath(p.publicSlug),
       lastmod: toW3CDate(p.updatedAt),
     }))
 
   const staticEntries = STATIC_PAGES.map((page) =>
     page.path === '/blog' && posts.length > 0
       ? { ...page, lastmod: toW3CDate(posts[0].updatedAt ?? posts[0].publishedAt) }
-      : page
+      : page,
   )
 
   const all = [...staticEntries, ...productEntries, ...postEntries, ...partnerEntries]
@@ -192,14 +218,25 @@ function createSitemapHandler(prisma) {
       if (cache.xml) {
         return res.set('Content-Type', 'application/xml; charset=utf-8').send(cache.xml)
       }
-      res.status(500).send('Sitemap temporarily unavailable')
+      // Minimal fallback so Search Console never gets a hard 500 with empty body.
+      const fallback = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...STATIC_PAGES.filter((p) => p.lastmod).map((p) =>
+          urlEntry({ path: p.path, lastmod: p.lastmod }),
+        ),
+        '</urlset>',
+        '',
+      ].join('\n')
+      res
+        .status(200)
+        .set('Content-Type', 'application/xml; charset=utf-8')
+        .set('Cache-Control', 'public, max-age=300')
+        .send(fallback)
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Router factory — pass the shared Prisma client from index.js
-// ---------------------------------------------------------------------------
 function createSitemapRouter(prisma) {
   const router = express.Router()
   router.get('/sitemap.xml', createSitemapHandler(prisma))

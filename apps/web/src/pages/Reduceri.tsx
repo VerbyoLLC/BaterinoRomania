@@ -61,17 +61,17 @@ export default function Reduceri() {
           '@type': 'WebPage',
           name: 'Reduceri & Oferte',
           description: 'Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu\' și Viața la Țară. Reduceri reale pentru oameni reali.',
-          url: 'https://baterino.ro/reduceri',
-          image: 'https://baterino.ro/images/instalatori/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.webp',
+          url: 'https://www.baterino.ro/reduceri',
+          image: 'https://www.baterino.ro/images/instalatori/programe-reduceri-baterii-sisteme-fotovoltaice-baterino-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Reduceri', item: 'https://baterino.ro/reduceri' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Reduceri', item: 'https://www.baterino.ro/reduceri' },
           ],
         },
       ]} />

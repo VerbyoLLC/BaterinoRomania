@@ -232,17 +232,17 @@ export default function Siguranta() {
           '@type': 'WebPage',
           name: 'Siguranță & Garanție',
           description: 'Baterino garantează siguranța produselor prin serviciul SWAP, suport și mentenanță în România, testare avansată cu LithTech și garanție extinsă de 10 ani.',
-          url: 'https://baterino.ro/siguranta',
-          image: 'https://baterino.ro/images/siguranta/siguranta-og.webp',
+          url: 'https://www.baterino.ro/siguranta',
+          image: 'https://www.baterino.ro/images/siguranta/siguranta-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Siguranță', item: 'https://baterino.ro/siguranta' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Siguranță', item: 'https://www.baterino.ro/siguranta' },
           ],
         },
       ]} />

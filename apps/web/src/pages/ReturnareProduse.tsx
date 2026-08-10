@@ -958,16 +958,16 @@ export default function ReturnareProduse() {
           '@type': 'WebPage',
           name: seo.title || tr.seoTitle,
           description: seo.description || tr.seoDesc,
-          url: 'https://baterino.ro/returnare-produse',
+          url: 'https://www.baterino.ro/returnare-produse',
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Returnare Produse', item: 'https://baterino.ro/returnare-produse' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Returnare Produse', item: 'https://www.baterino.ro/returnare-produse' },
           ],
         },
       ]} />

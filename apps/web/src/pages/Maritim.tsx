@@ -145,17 +145,17 @@ export default function Maritim() {
           '@type': 'CollectionPage',
           name: 'Stocare Energie Maritim',
           description: 'Sisteme de stocare a energiei LiFePo4 pentru nave comerciale, remorchere, ferry-boat și infrastructură portuară. Soluții Full-Electric și Hibride certificate pentru sectorul naval.',
-          url: 'https://baterino.ro/divizii/maritim',
-          image: 'https://baterino.ro/images/divizii/maritim/sisteme-stocare-sector-maritim-og.webp',
+          url: 'https://www.baterino.ro/divizii/maritim',
+          image: 'https://www.baterino.ro/images/divizii/maritim/sisteme-stocare-sector-maritim-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Maritim', item: 'https://baterino.ro/divizii/maritim' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Maritim', item: 'https://www.baterino.ro/divizii/maritim' },
           ],
         },
       ]} />

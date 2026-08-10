@@ -865,7 +865,7 @@ export default function ProductRezidential() {
 
   const rezProductQrUrl = (() => {
     const path = `/produse/${[product.category?.slug || categorySlug, product.slug || product.id].filter(Boolean).join('/')}`
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://baterino.ro'
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.baterino.ro'
     const url = encodeURIComponent(`${origin}${path}`)
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
   })()

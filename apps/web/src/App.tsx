@@ -235,6 +235,8 @@ export default function App() {
             <>
               <Route index element={<HomeEntry />} />
               <Route path="produse" element={<Produse />} />
+              <Route path="produse/baterii-solare" element={<Produse categorySlug="baterii-solare" />} />
+              <Route path="produse/sisteme-bess" element={<Produse categorySlug="sisteme-bess" />} />
               <Route path="companii/:handle" element={<LegacyCompaniiInstallerRedirect />} />
               <Route
                 path="companii-instalatori-fotovoltaice/:handle"

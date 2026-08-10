@@ -112,14 +112,14 @@ export default function Blog() {
           '@type': 'Blog',
           name: pageTitle,
           description: pageDesc,
-          url: 'https://baterino.ro/blog',
+          url: 'https://www.baterino.ro/blog',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
           ...(posts.length > 0 ? {
             blogPost: posts.map((p) => ({
               '@type': 'BlogPosting',
               headline: p.title,
-              url: `https://baterino.ro/blog/${p.slug}`,
+              url: `https://www.baterino.ro/blog/${p.slug}`,
               datePublished: p.publishedAt ?? p.createdAt,
               image: p.coverImage || undefined,
             })),
@@ -129,8 +129,8 @@ export default function Blog() {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Noutăți - Perspective - Progres', item: 'https://baterino.ro/blog' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Noutăți - Perspective - Progres', item: 'https://www.baterino.ro/blog' },
           ],
         },
       ]} />

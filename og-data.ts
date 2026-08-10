@@ -357,6 +357,9 @@ export type ResolvedOg = OgRecord & {
   canonicalPath: string
   relatedLinks?: RelatedLink[]
   relatedLinksHeading?: string
+  /** True → middleware must respond with HTTP 404 + noindex. */
+  notFound?: boolean
+  noIndex?: boolean
 }
 
 /** Always-present site nav so every crawler-served page links to the rest of the site. */
@@ -380,8 +383,11 @@ export function resolveOg(pathname: string): ResolvedOg {
     return { ...staticPage, url: `${SITE}${path}`, canonicalPath: path }
   }
 
-  if (path === '/blog' || path.startsWith('/blog/')) {
+  if (path === '/blog') {
     return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+  }
+  if (path.startsWith('/blog/')) {
+    return notFoundOg(path)
   }
 
   const exact = PRODUCT_OG[path]
@@ -395,13 +401,12 @@ export function resolveOg(pathname: string): ResolvedOg {
   }
 
   if (path.startsWith('/produse/baterii-solare/')) {
-    const cat = CATEGORY_OG['/produse/baterii-solare']
-    return { ...cat, url: `${SITE}${path}`, canonicalPath: path }
+    // Unknown product under category — do not soft-404 with category meta.
+    return notFoundOg(path)
   }
 
   if (path.startsWith('/produse/sisteme-bess/')) {
-    const cat = CATEGORY_OG['/produse/sisteme-bess']
-    return { ...cat, url: `${SITE}${path}`, canonicalPath: path }
+    return notFoundOg(path)
   }
 
   const legacyMatch = path.match(/^\/produse\/([^/]+)$/)
@@ -410,9 +415,29 @@ export function resolveOg(pathname: string): ResolvedOg {
     if (canonical && PRODUCT_OG[canonical]) {
       return { ...PRODUCT_OG[canonical], url: `${SITE}${path}`, canonicalPath: canonical }
     }
+    if (CATEGORY_OG[path]) {
+      return { ...CATEGORY_OG[path], url: `${SITE}${path}`, canonicalPath: path }
+    }
   }
 
-  return { ...DEFAULT_OG, url: `${SITE}${path}`, canonicalPath: path }
+  return notFoundOg(path)
+}
+
+export function notFoundOg(pathname: string): ResolvedOg {
+  const path = normalizePathname(pathname)
+  return {
+    title: 'Pagina nu a fost găsită',
+    description:
+      'Ne pare rău, pagina pe care o cauți nu există sau a fost mutată. Continuă pe Baterino Romania.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+    url: `${SITE}${path}`,
+    canonicalPath: path,
+    notFound: true,
+    noIndex: true,
+    relatedLinks: SITE_NAV.slice(0, 6),
+    relatedLinksHeading: 'Pagini utile',
+  }
 }
 
 /** All registered canonical product paths (for catalog cross-check). */
@@ -467,15 +492,22 @@ function productToOg(p: Record<string, unknown>, path: string): ResolvedOg {
   const hasPublicPrice = str(p.priceVisibility) === 'public' && Number.isFinite(salePrice) && salePrice > 0
 
   const slug = str(p.slug)
+  const fromCategory = str((p.category as { slug?: string } | undefined)?.slug)
+  const mapped = slug ? PRODUCT_BY_SLUG[slug] : ''
+  const pathMatch = path.match(/^\/produse\/([^/]+)\/([^/]+)$/)
+  const canonicalPath = fromCategory && slug
+    ? `/produse/${fromCategory}/${slug}`
+    : mapped ||
+      (pathMatch && slug && pathMatch[2] === slug ? `/produse/${pathMatch[1]}/${slug}` : '') ||
+      (slug ? `/produse/${slug}` : path)
   return {
     title,
     description,
     image,
     type: 'product',
     ...(hasPublicPrice ? { priceAmount: String(salePrice), priceCurrency: 'RON' as const } : {}),
-    url: `${SITE}${path}`,
-    // SPA canonical is /produse/{slug} (see ResidentialIndustrialProductPage).
-    canonicalPath: slug ? `/produse/${slug}` : path,
+    url: `${SITE}${canonicalPath}`,
+    canonicalPath,
   }
 }
 
@@ -529,7 +561,7 @@ async function fetchBlogIndexLinks(): Promise<RelatedLink[]> {
 
 /**
  * Live resolution: products from /api/products/{slug}, articles from
- * /api/blog/{slug}. Falls back to the static maps on API failure.
+ * /api/blog/{slug}. Missing entities return notFound (HTTP 404 for crawlers).
  */
 export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
   const path = normalizePathname(pathname)
@@ -551,15 +583,38 @@ export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
     const post =
       (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=ro`)) ??
       (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=en`))
-    if (post) return blogPostToOgRecord(post, path)
-    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+    if (post && str(post.slug)) return blogPostToOgRecord(post, path)
+    return notFoundOg(path)
+  }
+
+  const partnerMatch = path.match(/^\/companii-instalatori-fotovoltaice\/@?([^/]+)$/)
+  if (partnerMatch) {
+    const handle = encodeURIComponent(partnerMatch[1].replace(/^@/, ''))
+    const partner = await fetchJson(`${API_BASE}/api/public/companii/${handle}`)
+    if (partner && str(partner.publicSlug || partner.publicName)) {
+      const slug = str(partner.publicSlug).replace(/^@/, '').toLowerCase()
+      const name = str(partner.publicName) || str(partner.companyName) || slug
+      const description =
+        str(partner.description).slice(0, 160) ||
+        `${name} — instalator partener în rețeaua Baterino Romania.`
+      const canonicalPath = `/companii-instalatori-fotovoltaice/@${slug}`
+      return {
+        title: `${name} — Instalatori Baterino`,
+        description,
+        image: toAbsoluteUrl(str(partner.logoUrl)) || DEFAULT_OG.image,
+        type: 'website',
+        url: `${SITE}${canonicalPath}`,
+        canonicalPath,
+      }
+    }
+    return notFoundOg(path)
   }
 
   if (path.startsWith('/produse/')) {
     const segments = path.split('/').filter(Boolean) // ['produse', ...]
     const last = segments[segments.length - 1]
 
-    // /produse/{category} — known category pages are static, not products.
+    // /produse/{category} — known category pages are real SPA routes.
     if (segments.length === 2 && CATEGORY_OG[path]) {
       const relatedLinks = await fetchCategoryProductLinks(path)
       return {
@@ -571,8 +626,17 @@ export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
       }
     }
 
-    const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
-    if (product && str(product.slug)) return productToOg(product, path)
+    if (segments.length >= 2) {
+      const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
+      if (product && str(product.slug)) return productToOg(product, path)
+
+      const exact = PRODUCT_OG[path] || (PRODUCT_BY_SLUG[last] ? PRODUCT_OG[PRODUCT_BY_SLUG[last]] : undefined)
+      if (exact) {
+        const canonicalPath = PRODUCT_BY_SLUG[last] || path
+        return { ...exact, url: `${SITE}${canonicalPath}`, canonicalPath }
+      }
+      return notFoundOg(path)
+    }
   }
 
   return resolveOg(path)
@@ -591,7 +655,7 @@ export function buildOgHtml(og: ResolvedOg): string {
   const t = escapeHtml(title)
   const d = escapeHtml(og.description.slice(0, 160))
   const url = escapeHtml(og.url)
-  const canonical = escapeHtml(`${SITE}${og.canonicalPath}`)
+  const canonical = escapeHtml(`${SITE}${og.canonicalPath === '/' ? '/' : og.canonicalPath}`)
   const image = escapeHtml(og.image)
   const ogTitle = escapeHtml(og.title)
   const ogType = escapeHtml(og.type)
@@ -600,6 +664,10 @@ export function buildOgHtml(og: ResolvedOg): string {
     : /\.webp(\?|$)/i.test(og.image)
       ? 'image/webp'
       : 'image/jpeg'
+  const robots =
+    og.notFound || og.noIndex
+      ? 'noindex, nofollow'
+      : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 
   const priceTags =
     og.priceAmount && og.priceCurrency
@@ -615,7 +683,7 @@ export function buildOgHtml(og: ResolvedOg): string {
   const navList = SITE_NAV.map(
     (link) => `\n        <li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`
   ).join('')
-  const navHtml = `\n    <nav>\n      <ul>${navList}\n      </ul>\n    </nav>`
+  const navHtml = `\n    <nav aria-label="Navigare principală">\n      <ul>${navList}\n      </ul>\n    </nav>`
 
   const related = og.relatedLinks ?? []
   const relatedHtml = related.length
@@ -624,6 +692,8 @@ export function buildOgHtml(og: ResolvedOg): string {
         .join('')}\n      </ul>\n    </section>`
     : ''
 
+  const canonicalTag = og.notFound ? '' : `\n    <link rel="canonical" href="${canonical}" />`
+
   return `<!doctype html>
 <html lang="ro">
   <head>
@@ -631,9 +701,10 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${t}</title>
     <meta name="description" content="${d}" />
-    <link rel="canonical" href="${canonical}" />
+    <meta name="robots" content="${robots}" />
+    <meta name="googlebot" content="${robots}" />${canonicalTag}
     <meta property="og:type" content="${ogType}" />
-    <meta property="og:site_name" content="Baterino" />
+    <meta property="og:site_name" content="Baterino Romania" />
     <meta property="og:locale" content="ro_RO" />
     <meta property="og:url" content="${url}" />
     <meta property="og:title" content="${ogTitle}" />
@@ -649,10 +720,13 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="twitter:description" content="${d}" />
     <meta name="twitter:image" content="${image}" />
   </head>
-  <body>${navHtml}
-    <h1>${ogTitle}</h1>
-    <p>${bodyDescription}</p>${priceParagraph}
-    <p><a href="${canonical}">${canonical}</a></p>${relatedHtml}
+  <body>
+    <header>${navHtml}</header>
+    <main>
+      <h1>${ogTitle}</h1>
+      <p>${bodyDescription}</p>${priceParagraph}
+      ${og.notFound ? `<p><a href="${SITE}/">Înapoi la pagina principală</a> · <a href="${SITE}/produse">Produse</a> · <a href="${SITE}/contact">Contact</a></p>` : `<p><a href="${canonical}">${canonical}</a></p>`}${relatedHtml}
+    </main>
   </body>
 </html>`
 }

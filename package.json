@@ -13,11 +13,11 @@
     "deploy:staging": "vercel --prod"
   },
   "devDependencies": {
+    "@vercel/functions": "^3.9.1",
     "concurrently": "^9.2.1",
     "vercel": "^54.17.1"
   },
   "dependencies": {
-    "@vercel/functions": "^2.2.4",
     "nodemailer": "^9.0.1"
   },
   "engines": {

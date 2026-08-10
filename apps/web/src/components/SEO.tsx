@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async'
+import { SITE_NAME, SITE_ORIGIN, absoluteUrl } from '../lib/siteUrl'
 
 interface SEOProps {
   title: string
@@ -18,9 +19,7 @@ interface SEOProps {
   preloadImage?: string
 }
 
-const SITE_NAME = 'Baterino Romania'
-const BASE_URL = 'https://www.baterino.ro'
-const DEFAULT_OG_IMAGE = `${BASE_URL}/images/home/og-baterino-romania.jpg`
+const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/images/home/og-baterino-romania.jpg`
 const TWITTER_SITE = '@baterino_ro'
 
 function ogImageMimeType(url: string): string {
@@ -48,29 +47,41 @@ export default function SEO({
   noIndex = false,
   preloadImage,
 }: SEOProps) {
-  const fullTitle = `${title} | ${SITE_NAME}`
+  // Avoid "Title | Site | Site" when title already includes the brand suffix.
+  const fullTitle =
+    !title || title === SITE_NAME
+      ? SITE_NAME
+      : title.includes(SITE_NAME) || title.includes('Baterino')
+        ? title
+        : `${title} | ${SITE_NAME}`
   const resolvedOgTitle = ogTitle ?? title
   const resolvedOgDesc = ogDescription ?? description
   const resolvedOgImage = ogImage
     ? ogImage.startsWith('/')
-      ? `${BASE_URL}${ogImage}`
+      ? `${SITE_ORIGIN}${ogImage}`
       : ogImage
     : DEFAULT_OG_IMAGE
-  const resolvedCanonical = canonical ? `${BASE_URL}${canonical}` : undefined
+  const resolvedCanonical = canonical ? absoluteUrl(canonical) : undefined
   const ogLocale = lang === 'ro' ? 'ro_RO' : 'en_US'
+  const robotsContent = noIndex
+    ? 'noindex, nofollow'
+    : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 
   return (
     <Helmet>
       <html lang={lang} />
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
-      {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      <meta name="robots" content={robotsContent} />
+      <meta name="googlebot" content={robotsContent} />
       {resolvedCanonical && <link rel="canonical" href={resolvedCanonical} />}
       {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
 
-      {/* Hreflang — same URL serves both languages (client-side switcher) */}
+      {/*
+        Language is switched client-side on the same URL (no /en/ paths).
+        Advertise Romanian as primary + x-default only — do not claim a separate en alternate.
+      */}
       {resolvedCanonical && <link rel="alternate" hrefLang="ro" href={resolvedCanonical} />}
-      {resolvedCanonical && <link rel="alternate" hrefLang="en" href={resolvedCanonical} />}
       {resolvedCanonical && <link rel="alternate" hrefLang="x-default" href={resolvedCanonical} />}
 
       {/* Open Graph */}

@@ -72,17 +72,17 @@ export default function StudiiDeCaz() {
           '@type': 'CollectionPage',
           name: 'Studii de caz – Baterino România',
           description: 'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
-          url: 'https://baterino.ro/studii-de-caz',
-          image: 'https://baterino.ro/images/divizii/industrial/centre-de-date.webp',
+          url: 'https://www.baterino.ro/studii-de-caz',
+          image: 'https://www.baterino.ro/images/divizii/industrial/centre-de-date.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Studii de Caz', item: 'https://baterino.ro/studii-de-caz' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Studii de Caz', item: 'https://www.baterino.ro/studii-de-caz' },
           ],
         },
       ]} />
