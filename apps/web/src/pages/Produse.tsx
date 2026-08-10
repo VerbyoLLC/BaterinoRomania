@@ -41,11 +41,19 @@ import {
   produseCatalogProductMatchesSector,
   type PublicCatalogSectorKey,
 } from '../lib/catalog-sector'
+import { getCatalogCategoryRoute } from '../lib/catalogCategoryRoutes'
+import { absoluteUrl } from '../lib/siteUrl'
 
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
 
-export default function Produse() {
+type ProduseProps = {
+  /** When set (e.g. /produse/baterii-solare), lock sector filter + unique SEO/canonical. */
+  categorySlug?: string
+}
+
+export default function Produse({ categorySlug }: ProduseProps = {}) {
+  const categoryRoute = getCatalogCategoryRoute(categorySlug)
   const { language } = useLanguage()
   const seo = useSeoPage('produse')
   const { currency } = useCatalogCurrency()
@@ -53,12 +61,17 @@ export default function Produse() {
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [loading, setLoading] = useState(true)
-  const [sector, setSector] = useState('')
+  const [sector, setSector] = useState(categoryRoute?.sector ?? '')
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [mobileSectorOpen, setMobileSectorOpen] = useState(false)
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
+  const lockedSector = Boolean(categoryRoute)
+  const pageCanonical = categoryRoute ? `/produse/${categoryRoute.slug}` : '/produse'
+  const pageTitle = categoryRoute?.seoTitle || seo.title || tr.seoTitle
+  const pageDescription = categoryRoute?.seoDescription || seo.description || tr.seoDesc
+  const pageOgImage = categoryRoute?.ogImage || seo.ogImage || undefined
 
   useEffect(() => {
     getProducts()
@@ -90,6 +103,10 @@ export default function Produse() {
   )
 
   useEffect(() => {
+    if (categoryRoute) {
+      setSector(categoryRoute.sector)
+      return
+    }
     if (loading) return
     const sectorParam = searchParams.get('sector')
     if (
@@ -99,14 +116,14 @@ export default function Produse() {
     ) {
       setSector(sectorParam)
     }
-  }, [searchParams, loading, sectorsWithProducts])
+  }, [searchParams, loading, sectorsWithProducts, categoryRoute])
 
   useEffect(() => {
-    if (loading) return
+    if (loading || lockedSector) return
     if (sector && !sectorsWithProducts.includes(sector as PublicCatalogSectorKey)) {
       setSector('')
     }
-  }, [sector, sectorsWithProducts, loading])
+  }, [sector, sectorsWithProducts, loading, lockedSector])
 
   const filtered = useMemo(() => {
     let list = products
@@ -136,28 +153,28 @@ export default function Produse() {
   return (
     <>
       <SEO
-        title={seo.title || tr.seoTitle}
-        description={seo.description || tr.seoDesc}
-        canonical="/produse"
-        ogTitle={seo.ogTitle || undefined}
-        ogDescription={seo.ogDescription || undefined}
-        ogImage={seo.ogImage || undefined}
+        title={pageTitle}
+        description={pageDescription}
+        canonical={pageCanonical}
+        ogTitle={categoryRoute ? categoryRoute.seoTitle : seo.ogTitle || undefined}
+        ogDescription={categoryRoute ? categoryRoute.seoDescription : seo.ogDescription || undefined}
+        ogImage={pageOgImage}
         lang={language.code}
       />
-      {products.length > 0 && (
+      {(categoryRoute ? filtered : products).length > 0 && (
         <SchemaOrg schema={[
           {
             '@context': 'https://schema.org',
             '@type': 'ItemList',
-            name: seo.title || tr.seoTitle,
-            description: seo.description || tr.seoDesc,
-            url: 'https://baterino.ro/produse',
-            numberOfItems: products.length,
-            itemListElement: products.map((p, i) => ({
+            name: pageTitle,
+            description: pageDescription,
+            url: absoluteUrl(pageCanonical),
+            numberOfItems: (categoryRoute ? filtered : products).length,
+            itemListElement: (categoryRoute ? filtered : products).map((p, i) => ({
               '@type': 'ListItem',
               position: i + 1,
               name: p.title,
-              url: `https://baterino.ro/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`,
+              url: absoluteUrl(`/produse/${[p.category?.slug, p.slug || p.id].filter(Boolean).join('/')}`),
               image: getPrimaryProductImageUrl(p),
             })),
           },
@@ -165,8 +182,11 @@ export default function Produse() {
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-              { '@type': 'ListItem', position: 2, name: 'Produse', item: 'https://baterino.ro/produse' },
+              { '@type': 'ListItem', position: 1, name: 'Acasă', item: absoluteUrl('/') },
+              { '@type': 'ListItem', position: 2, name: 'Produse', item: absoluteUrl('/produse') },
+              ...(categoryRoute
+                ? [{ '@type': 'ListItem', position: 3, name: categoryRoute.seoTitle, item: absoluteUrl(pageCanonical) }]
+                : []),
             ],
           },
         ]} />
@@ -177,10 +197,10 @@ export default function Produse() {
         {/* ── HERO ── */}
         <header className="text-center mb-10">
           <h1 className="text-black text-3xl lg:text-5xl font-extrabold font-['Inter'] leading-tight mb-4">
-            {tr.heroTitle}
+            {categoryRoute?.seoTitle || tr.heroTitle}
           </h1>
           <p className="text-gray-600 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[520px] mx-auto">
-            {tr.heroSubtitle}
+            {categoryRoute?.seoDescription || tr.heroSubtitle}
           </p>
         </header>
 

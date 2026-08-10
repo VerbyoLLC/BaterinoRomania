@@ -91,16 +91,16 @@ export default function Instalatori() {
           '@type': 'WebPage',
           name: tr.seoTitle,
           description: tr.seoDesc,
-          url: 'https://baterino.ro/instalatori',
+          url: 'https://www.baterino.ro/instalatori',
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Instalatori', item: 'https://baterino.ro/instalatori' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Instalatori', item: 'https://www.baterino.ro/instalatori' },
           ],
         },
       ]} />
@@ -134,12 +134,13 @@ export default function Instalatori() {
                 >
                   {tr.btn1}
                 </Link>
-                <button
-                  type="button"
+                <a
+                  href="/documents/brosura-baterino-partener-ro.pdf"
+                  download="Brosura Baterino - Partener - RO.pdf"
                   className="hidden lg:inline-flex h-12 px-8 items-center justify-center gap-2 border border-white/25 text-white text-sm font-bold font-['Inter'] uppercase tracking-wide rounded-[10px] hover:bg-white/10 transition-colors"
                 >
                   {tr.btn2}
-                </button>
+                </a>
               </div>
             </div>
 

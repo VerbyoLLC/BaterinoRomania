@@ -110,7 +110,7 @@ export default function PartnerCompanyPublicPage() {
     '@type': 'LocalBusiness',
     name: displayName,
     description: seoDesc,
-    url: `https://baterino.ro${canonicalPath}`,
+    url: `https://www.baterino.ro${canonicalPath}`,
     ...(data.publicPhone ? { telephone: data.publicPhone } : {}),
     ...(data.logoUrl && !String(data.logoUrl).startsWith('data:') ? { image: data.logoUrl } : {}),
     address: {
@@ -126,7 +126,7 @@ export default function PartnerCompanyPublicPage() {
     parentOrganization: {
       '@type': 'Organization',
       name: 'Baterino Romania',
-      url: 'https://baterino.ro',
+      url: 'https://www.baterino.ro',
     },
   }
 

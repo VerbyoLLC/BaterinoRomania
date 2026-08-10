@@ -274,7 +274,7 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
     setHeroIsDragging(false)
   }
 
-  const canonical = `/produse/${product.slug || product.id}`
+  const canonical = `/produse/${[product.category?.slug, product.slug || product.id].filter(Boolean).join('/')}`
 
 
   const tabLabel = (id: TabId) => {
@@ -323,7 +323,12 @@ export default function ResidentialIndustrialProductPage({ product, breadcrumbHo
           { '@type': 'ListItem', position: 2, name: breadcrumbProducts, item: `${BASE}/produse` },
         ]
         if (product.category) {
-          breadcrumbItems.push({ '@type': 'ListItem', position: 3, name: product.category.name, item: `${BASE}/produse?sector=${product.category.slug}` })
+          breadcrumbItems.push({
+            '@type': 'ListItem',
+            position: 3,
+            name: product.category.name,
+            item: `${BASE}/produse/${product.category.slug}`,
+          })
           breadcrumbItems.push({ '@type': 'ListItem', position: 4, name: product.title, item: productUrl })
         } else {
           breadcrumbItems.push({ '@type': 'ListItem', position: 3, name: product.title, item: productUrl })

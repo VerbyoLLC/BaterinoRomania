@@ -185,19 +185,209 @@ const PRODUCT_BY_SLUG: Record<string, string> = {
     '/produse/sisteme-bess/bess-container-20ft-lifepo4-3340kwh-5015kwh-racire-lichida',
 }
 
+/** Public marketing/content pages outside /produse and /blog — title/description mirror each page's <SEO> props. */
+const STATIC_PAGE_OG: Record<string, OgRecord> = {
+  '/': {
+    title:
+      'Baterino - Baterii LiFePO4 pentru sisteme fotovoltaice. Soluții stocare pentru sectorul rezidențial, industrial, medical și maritim.',
+    description:
+      'Importator și distribuitor LithTech pentru baterii LiFePO4 și sisteme fotovoltaice pentru sectorul rezidențial, industrial, medical și maritim. Servicii complete, garanție 10 ani.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/produse': {
+    title: 'Baterii LiFePO4',
+    description:
+      'Sisteme de stocare a energiei LiFePO4 pentru uz rezidential, industrial, medical și maritim. Importator oficial LithTech în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/rezidential': {
+    title: 'Stocare Energie Rezidențial',
+    description:
+      'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/industrial': {
+    title: 'Stocare Energie Industrial',
+    description:
+      'Sisteme BESS LiFePo4 High Voltage pentru industrie, ferme solare și micro-griduri complexe. Soluții scalabile cu garanție 10 ani și monitorizare remotă.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/medical': {
+    title: 'Stocare Energie Medical',
+    description:
+      'Sisteme LiFePo4 de stocare a energiei dedicate exclusiv infrastructurii medicale din România. Soluții certificate pentru clinici, spitale și laboratoare, cu suport tehnic specializat.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/divizii/maritim': {
+    title: 'Stocare Energie Maritim',
+    description:
+      'Sisteme de stocare a energiei LiFePo4 pentru nave comerciale, remorchere, ferry-boat și infrastructură portuară. Soluții Full-Electric și Hibride certificate pentru sectorul naval.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/instalatori': {
+    title: 'Distribuitori & Instalatori',
+    description:
+      'Devino partener Baterino și beneficiază de prețuri stabile, suport tehnic 24/7, garanție 10 ani și generare de lead-uri. Importator oficial LithTech în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/reduceri': {
+    title: 'Reduceri & Oferte',
+    description:
+      "Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu' și Viața la Țară. Reduceri reale pentru oameni reali.",
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/intrebari-frecvente': {
+    title: 'Întrebări frecvente',
+    description:
+      'Răspunsuri la cele mai frecvente întrebări despre produsele Baterino, comenzi, garanție, retururi și programul de parteneri.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/cariere': {
+    title: 'Cariere',
+    description: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/studii-de-caz': {
+    title: 'Studii de caz',
+    description:
+      'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/parteneriat-strategic-lithtech-baterino': {
+    title: 'Parteneriat Strategic LithTech',
+    description:
+      'Baterino, importator unic pentru tehnologie avansată de stocare LiFePo4, în parteneriat strategic cu LithTech: sisteme BMS/EMS, baterii solid-state și implementare completă în România.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/service-baterii-lithtech-romania': {
+    title: 'Service Oficial LithTech România – Centru Autorizat de Reparații Baterii',
+    description:
+      'Baterino este centrul oficial de service și reparații LithTech în România. Diagnosticăm și reparăm baterii rezidențiale EcoHome, sisteme BESS industriale și sisteme all-in-one LithTech.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/contact': {
+    title: 'Contact',
+    description:
+      'Contactează echipa Baterino Romania pentru informații despre sisteme de stocare a energiei LiFePO4, parteneriate și suport tehnic.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/siguranta': {
+    title: 'Siguranță & Garanție',
+    description:
+      'Baterino garantează siguranța produselor prin serviciul SWAP, suport și mentenanță în România, testare avansată cu LithTech și garanție extinsă de 10 ani.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/companie/viziune': {
+    title: 'Viziune, Misiune & Echipă',
+    description:
+      'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/politica-confidentialitate': {
+    title: 'Politica de Confidențialitate',
+    description:
+      'Politica de confidențialitate baterino.ro — cum colectăm, utilizăm și protejăm datele personale conform GDPR.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/politica-de-retur': {
+    title: 'Politica de Retur',
+    description:
+      'Politica de retur Baterino: dreptul de retragere, termen de 15 zile, condiții de returnare, rambursare și pașii pentru inițierea returului.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/termeni-si-conditii': {
+    title: 'Termeni și Condiții',
+    description: 'Termenii și condițiile generale de utilizare a site-ului baterino.ro și serviciilor Baterino Energy SRL.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/termeni-si-conditii-programe-de-reducere': {
+    title: 'Termeni și Condiții – Programe de Reducere',
+    description:
+      'Termenii și condițiile pentru programele de reducere Baterino: TVA 9%, Energie pentru părinți, Știu de la vecinu, Viața la țară.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/returnare-produse': {
+    title: 'Returnare produse',
+    description:
+      'Retururi fără bătăi de cap: 15 zile de la primire, în conformitate cu legea și politica comercială.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+  '/verificare-garantie': {
+    title: 'Verificare garanție',
+    description: 'Introdu numărul de serie (SN) al bateriei pentru a verifica garanția.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+  },
+}
+
+/** Exact paths handled by STATIC_PAGE_OG — used by the middleware to decide whether to intercept. */
+export const STATIC_PAGE_PATHS = Object.keys(STATIC_PAGE_OG)
+
 export function normalizePathname(pathname: string): string {
   let path = pathname.toLowerCase()
   if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
   return path
 }
 
-export type ResolvedOg = OgRecord & { url: string; canonicalPath: string }
+export type RelatedLink = { href: string; label: string }
+
+export type ResolvedOg = OgRecord & {
+  url: string
+  canonicalPath: string
+  relatedLinks?: RelatedLink[]
+  relatedLinksHeading?: string
+  /** True → middleware must respond with HTTP 404 + noindex. */
+  notFound?: boolean
+  noIndex?: boolean
+}
+
+/** Always-present site nav so every crawler-served page links to the rest of the site. */
+const SITE_NAV: RelatedLink[] = [
+  { href: `${SITE}/`, label: 'Acasă' },
+  { href: `${SITE}/produse`, label: 'Produse' },
+  { href: `${SITE}/produse/baterii-solare`, label: 'Baterii Solare' },
+  { href: `${SITE}/produse/sisteme-bess`, label: 'Sisteme BESS Industrial' },
+  { href: `${SITE}/blog`, label: 'Blog' },
+  { href: `${SITE}/studii-de-caz`, label: 'Studii de caz' },
+  { href: `${SITE}/instalatori`, label: 'Distribuitori & Instalatori' },
+  { href: `${SITE}/reduceri`, label: 'Reduceri & Oferte' },
+  { href: `${SITE}/contact`, label: 'Contact' },
+]
 
 export function resolveOg(pathname: string): ResolvedOg {
   const path = normalizePathname(pathname)
 
-  if (path === '/blog' || path.startsWith('/blog/')) {
+  const staticPage = STATIC_PAGE_OG[path]
+  if (staticPage) {
+    return { ...staticPage, url: `${SITE}${path}`, canonicalPath: path }
+  }
+
+  if (path === '/blog') {
     return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+  }
+  if (path.startsWith('/blog/')) {
+    return notFoundOg(path)
   }
 
   const exact = PRODUCT_OG[path]
@@ -211,13 +401,12 @@ export function resolveOg(pathname: string): ResolvedOg {
   }
 
   if (path.startsWith('/produse/baterii-solare/')) {
-    const cat = CATEGORY_OG['/produse/baterii-solare']
-    return { ...cat, url: `${SITE}${path}`, canonicalPath: path }
+    // Unknown product under category — do not soft-404 with category meta.
+    return notFoundOg(path)
   }
 
   if (path.startsWith('/produse/sisteme-bess/')) {
-    const cat = CATEGORY_OG['/produse/sisteme-bess']
-    return { ...cat, url: `${SITE}${path}`, canonicalPath: path }
+    return notFoundOg(path)
   }
 
   const legacyMatch = path.match(/^\/produse\/([^/]+)$/)
@@ -226,9 +415,29 @@ export function resolveOg(pathname: string): ResolvedOg {
     if (canonical && PRODUCT_OG[canonical]) {
       return { ...PRODUCT_OG[canonical], url: `${SITE}${path}`, canonicalPath: canonical }
     }
+    if (CATEGORY_OG[path]) {
+      return { ...CATEGORY_OG[path], url: `${SITE}${path}`, canonicalPath: path }
+    }
   }
 
-  return { ...DEFAULT_OG, url: `${SITE}${path}`, canonicalPath: path }
+  return notFoundOg(path)
+}
+
+export function notFoundOg(pathname: string): ResolvedOg {
+  const path = normalizePathname(pathname)
+  return {
+    title: 'Pagina nu a fost găsită',
+    description:
+      'Ne pare rău, pagina pe care o cauți nu există sau a fost mutată. Continuă pe Baterino Romania.',
+    image: DEFAULT_OG.image,
+    type: 'website',
+    url: `${SITE}${path}`,
+    canonicalPath: path,
+    notFound: true,
+    noIndex: true,
+    relatedLinks: SITE_NAV.slice(0, 6),
+    relatedLinksHeading: 'Pagini utile',
+  }
 }
 
 /** All registered canonical product paths (for catalog cross-check). */
@@ -283,15 +492,22 @@ function productToOg(p: Record<string, unknown>, path: string): ResolvedOg {
   const hasPublicPrice = str(p.priceVisibility) === 'public' && Number.isFinite(salePrice) && salePrice > 0
 
   const slug = str(p.slug)
+  const fromCategory = str((p.category as { slug?: string } | undefined)?.slug)
+  const mapped = slug ? PRODUCT_BY_SLUG[slug] : ''
+  const pathMatch = path.match(/^\/produse\/([^/]+)\/([^/]+)$/)
+  const canonicalPath = fromCategory && slug
+    ? `/produse/${fromCategory}/${slug}`
+    : mapped ||
+      (pathMatch && slug && pathMatch[2] === slug ? `/produse/${pathMatch[1]}/${slug}` : '') ||
+      (slug ? `/produse/${slug}` : path)
   return {
     title,
     description,
     image,
     type: 'product',
     ...(hasPublicPrice ? { priceAmount: String(salePrice), priceCurrency: 'RON' as const } : {}),
-    url: `${SITE}${path}`,
-    // SPA canonical is /produse/{slug} (see ResidentialIndustrialProductPage).
-    canonicalPath: slug ? `/produse/${slug}` : path,
+    url: `${SITE}${canonicalPath}`,
+    canonicalPath,
   }
 }
 
@@ -310,15 +526,55 @@ function blogPostToOgRecord(b: Record<string, unknown>, path: string): ResolvedO
   }
 }
 
+/** tipProdus → canonical category path, used to link a category page to its products. */
+const CATEGORY_TIP_PRODUS: Record<string, string> = {
+  '/produse/baterii-solare': 'rezidential',
+  '/produse/sisteme-bess': 'industrial',
+}
+
+async function fetchCategoryProductLinks(categoryPath: string): Promise<RelatedLink[]> {
+  const tipProdus = CATEGORY_TIP_PRODUS[categoryPath]
+  if (!tipProdus) return []
+  const products = await fetchJson(`${API_BASE}/api/products`)
+  const list = Array.isArray(products) ? products : []
+  return list
+    .filter((p) => str((p as Record<string, unknown>).tipProdus) === tipProdus)
+    .map((p) => {
+      const rec = p as Record<string, unknown>
+      const slug = str(rec.slug)
+      return { href: `${SITE}${categoryPath}/${slug}`, label: str(rec.title) || slug }
+    })
+    .filter((link) => link.label)
+}
+
+async function fetchBlogIndexLinks(): Promise<RelatedLink[]> {
+  const posts = await fetchJson(`${API_BASE}/api/blog?locale=ro`)
+  const list = Array.isArray(posts) ? posts : []
+  return list
+    .map((b) => {
+      const rec = b as Record<string, unknown>
+      const slug = str(rec.slug)
+      return { href: `${SITE}/blog/${slug}`, label: str(rec.title) || slug }
+    })
+    .filter((link) => link.label)
+}
+
 /**
  * Live resolution: products from /api/products/{slug}, articles from
- * /api/blog/{slug}. Falls back to the static maps on API failure.
+ * /api/blog/{slug}. Missing entities return notFound (HTTP 404 for crawlers).
  */
 export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
   const path = normalizePathname(pathname)
 
   if (path === '/blog') {
-    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+    const relatedLinks = await fetchBlogIndexLinks()
+    return {
+      ...BLOG_INDEX_OG,
+      url: `${SITE}${path}`,
+      canonicalPath: path,
+      relatedLinks,
+      relatedLinksHeading: 'Articole recente',
+    }
   }
 
   const blogMatch = path.match(/^\/blog\/([^/]+)$/)
@@ -327,21 +583,60 @@ export async function resolveOgDynamic(pathname: string): Promise<ResolvedOg> {
     const post =
       (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=ro`)) ??
       (await fetchJson(`${API_BASE}/api/blog/${slug}?locale=en`))
-    if (post) return blogPostToOgRecord(post, path)
-    return { ...BLOG_INDEX_OG, url: `${SITE}${path}`, canonicalPath: path }
+    if (post && str(post.slug)) return blogPostToOgRecord(post, path)
+    return notFoundOg(path)
+  }
+
+  const partnerMatch = path.match(/^\/companii-instalatori-fotovoltaice\/@?([^/]+)$/)
+  if (partnerMatch) {
+    const handle = encodeURIComponent(partnerMatch[1].replace(/^@/, ''))
+    const partner = await fetchJson(`${API_BASE}/api/public/companii/${handle}`)
+    if (partner && str(partner.publicSlug || partner.publicName)) {
+      const slug = str(partner.publicSlug).replace(/^@/, '').toLowerCase()
+      const name = str(partner.publicName) || str(partner.companyName) || slug
+      const description =
+        str(partner.description).slice(0, 160) ||
+        `${name} — instalator partener în rețeaua Baterino Romania.`
+      const canonicalPath = `/companii-instalatori-fotovoltaice/@${slug}`
+      return {
+        title: `${name} — Instalatori Baterino`,
+        description,
+        image: toAbsoluteUrl(str(partner.logoUrl)) || DEFAULT_OG.image,
+        type: 'website',
+        url: `${SITE}${canonicalPath}`,
+        canonicalPath,
+      }
+    }
+    return notFoundOg(path)
   }
 
   if (path.startsWith('/produse/')) {
     const segments = path.split('/').filter(Boolean) // ['produse', ...]
     const last = segments[segments.length - 1]
 
-    // /produse/{category} — known category pages are static, not products.
+    // /produse/{category} — known category pages are real SPA routes.
     if (segments.length === 2 && CATEGORY_OG[path]) {
-      return { ...CATEGORY_OG[path], url: `${SITE}${path}`, canonicalPath: path }
+      const relatedLinks = await fetchCategoryProductLinks(path)
+      return {
+        ...CATEGORY_OG[path],
+        url: `${SITE}${path}`,
+        canonicalPath: path,
+        relatedLinks,
+        relatedLinksHeading: 'Produse din această categorie',
+      }
     }
 
-    const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
-    if (product && str(product.slug)) return productToOg(product, path)
+    if (segments.length >= 2) {
+      const product = await fetchJson(`${API_BASE}/api/products/${encodeURIComponent(last)}`)
+      if (product && str(product.slug)) return productToOg(product, path)
+
+      const exact = PRODUCT_OG[path] || (PRODUCT_BY_SLUG[last] ? PRODUCT_OG[PRODUCT_BY_SLUG[last]] : undefined)
+      if (exact) {
+        const canonicalPath = PRODUCT_BY_SLUG[last] || path
+        return { ...exact, url: `${SITE}${canonicalPath}`, canonicalPath }
+      }
+      return notFoundOg(path)
+    }
   }
 
   return resolveOg(path)
@@ -360,7 +655,7 @@ export function buildOgHtml(og: ResolvedOg): string {
   const t = escapeHtml(title)
   const d = escapeHtml(og.description.slice(0, 160))
   const url = escapeHtml(og.url)
-  const canonical = escapeHtml(`${SITE}${og.canonicalPath}`)
+  const canonical = escapeHtml(`${SITE}${og.canonicalPath === '/' ? '/' : og.canonicalPath}`)
   const image = escapeHtml(og.image)
   const ogTitle = escapeHtml(og.title)
   const ogType = escapeHtml(og.type)
@@ -369,11 +664,35 @@ export function buildOgHtml(og: ResolvedOg): string {
     : /\.webp(\?|$)/i.test(og.image)
       ? 'image/webp'
       : 'image/jpeg'
+  const robots =
+    og.notFound || og.noIndex
+      ? 'noindex, nofollow'
+      : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 
   const priceTags =
     og.priceAmount && og.priceCurrency
       ? `\n    <meta property="product:price:amount" content="${escapeHtml(og.priceAmount)}" />\n    <meta property="product:price:currency" content="${escapeHtml(og.priceCurrency)}" />`
       : ''
+
+  const bodyDescription = escapeHtml(og.description)
+  const priceParagraph =
+    og.priceAmount && og.priceCurrency
+      ? `\n    <p>Preț: ${escapeHtml(og.priceAmount)} ${escapeHtml(og.priceCurrency)}</p>`
+      : ''
+
+  const navList = SITE_NAV.map(
+    (link) => `\n        <li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`
+  ).join('')
+  const navHtml = `\n    <nav aria-label="Navigare principală">\n      <ul>${navList}\n      </ul>\n    </nav>`
+
+  const related = og.relatedLinks ?? []
+  const relatedHtml = related.length
+    ? `\n    <section>\n      <h2>${escapeHtml(og.relatedLinksHeading || 'Vezi și')}</h2>\n      <ul>${related
+        .map((link) => `\n        <li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
+        .join('')}\n      </ul>\n    </section>`
+    : ''
+
+  const canonicalTag = og.notFound ? '' : `\n    <link rel="canonical" href="${canonical}" />`
 
   return `<!doctype html>
 <html lang="ro">
@@ -382,9 +701,10 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${t}</title>
     <meta name="description" content="${d}" />
-    <link rel="canonical" href="${canonical}" />
+    <meta name="robots" content="${robots}" />
+    <meta name="googlebot" content="${robots}" />${canonicalTag}
     <meta property="og:type" content="${ogType}" />
-    <meta property="og:site_name" content="Baterino" />
+    <meta property="og:site_name" content="Baterino Romania" />
     <meta property="og:locale" content="ro_RO" />
     <meta property="og:url" content="${url}" />
     <meta property="og:title" content="${ogTitle}" />
@@ -400,6 +720,13 @@ export function buildOgHtml(og: ResolvedOg): string {
     <meta name="twitter:description" content="${d}" />
     <meta name="twitter:image" content="${image}" />
   </head>
-  <body></body>
+  <body>
+    <header>${navHtml}</header>
+    <main>
+      <h1>${ogTitle}</h1>
+      <p>${bodyDescription}</p>${priceParagraph}
+      ${og.notFound ? `<p><a href="${SITE}/">Înapoi la pagina principală</a> · <a href="${SITE}/produse">Produse</a> · <a href="${SITE}/contact">Contact</a></p>` : `<p><a href="${canonical}">${canonical}</a></p>`}${relatedHtml}
+    </main>
+  </body>
 </html>`
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Truck } from 'lucide-react'
+import SEO from '../components/SEO'
 import { useCatalogCurrency } from '../contexts/CatalogCurrencyContext'
 import {
   cartLineDiscountPercent,
@@ -304,6 +305,13 @@ export default function CartPage() {
   if (itemCount === 0) {
     return (
       <div className="max-w-content mx-auto px-4 py-16 sm:py-20">
+        <SEO
+          title="Coș"
+          description="Coșul tău de cumpărături Baterino."
+          canonical="/cos"
+          noIndex
+          lang={lang}
+        />
         <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-6">Coșul tău</h1>
         <section className="max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div
@@ -337,6 +345,13 @@ export default function CartPage() {
 
   return (
     <div className="max-w-content mx-auto px-4 py-10 sm:py-12">
+      <SEO
+        title="Coș"
+        description="Coșul tău de cumpărături Baterino."
+        canonical="/cos"
+        noIndex
+        lang={lang}
+      />
       <h1 className="text-2xl font-extrabold font-['Inter'] text-slate-900 mb-2">Coșul tău ({itemCount})</h1>
 
       <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">

@@ -17,7 +17,7 @@ function clientSignupUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return `${window.location.origin}/signup/clienti`
   }
-  return 'https://baterino.ro/signup/clienti'
+  return 'https://www.baterino.ro/signup/clienti'
 }
 
 function qrDataUrl(payload: string, sizePx = 120): string {

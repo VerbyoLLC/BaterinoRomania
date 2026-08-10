@@ -310,23 +310,33 @@ export default function Home() {
         lang={language.code}
       />
 
-      <SchemaOrg schema={{
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        name: 'Baterino Romania',
-        url: 'https://baterino.ro',
-        logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg',
-        description: tr.seoDesc,
-        contactPoint: {
-          '@type': 'ContactPoint',
-          contactType: 'customer service',
-          url: 'https://baterino.ro/contact',
-          availableLanguage: ['Romanian', 'English'],
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'Baterino Romania',
+          url: 'https://www.baterino.ro',
+          logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg',
+          description: tr.seoDesc,
+          contactPoint: {
+            '@type': 'ContactPoint',
+            contactType: 'customer service',
+            url: 'https://www.baterino.ro/contact',
+            availableLanguage: ['Romanian', 'English'],
+          },
+          areaServed: 'RO',
+          knowsLanguage: ['ro', 'en'],
+          sameAs: ['https://www.facebook.com/baterino.ro/', 'https://www.linkedin.com/company/baterino-romania', 'https://www.google.com/maps?cid=15926825830058361764'],
         },
-        areaServed: 'RO',
-        knowsLanguage: ['ro', 'en'],
-        sameAs: ['https://www.facebook.com/baterino.ro/', 'https://www.linkedin.com/company/baterino-romania', 'https://www.google.com/maps?cid=15926825830058361764'],
-      }} />
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Baterino Romania',
+          url: 'https://www.baterino.ro',
+          inLanguage: 'ro-RO',
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
+        },
+      ]} />
 
       <h1 className="sr-only">{tr.heroV2Title}</h1>
 

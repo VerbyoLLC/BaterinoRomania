@@ -180,17 +180,17 @@ export default function LithTech() {
           '@type': 'WebPage',
           name: 'Parteneriat Strategic LithTech',
           description: 'Baterino, importator unic pentru tehnologie avansată de stocare LiFePo4, în parteneriat strategic cu LithTech: sisteme BMS/EMS, baterii solid-state și implementare completă în România.',
-          url: 'https://baterino.ro/parteneriat-strategic-lithtech-baterino',
-          image: 'https://baterino.ro/images/lithtech/importator-lithtech-og.webp',
+          url: 'https://www.baterino.ro/parteneriat-strategic-lithtech-baterino',
+          image: 'https://www.baterino.ro/images/lithtech/importator-lithtech-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Parteneriat LithTech', item: 'https://baterino.ro/parteneriat-strategic-lithtech-baterino' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Parteneriat LithTech', item: 'https://www.baterino.ro/parteneriat-strategic-lithtech-baterino' },
           ],
         },
       ]} />

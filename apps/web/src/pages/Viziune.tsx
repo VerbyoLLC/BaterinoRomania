@@ -132,17 +132,17 @@ export default function Viziune() {
         '@type': 'AboutPage',
         name: 'Viziune, Misiune & Echipă',
         description: 'Descoperă viziunea și misiunea Baterino Romania — distribuitor de sisteme de stocare a energiei LiFePo4, dedicat siguranței, calității și suportului tehnic pe termen lung.',
-        url: 'https://baterino.ro/companie/viziune',
-        image: 'https://baterino.ro/images/companie/viziune-og.webp',
+        url: 'https://www.baterino.ro/companie/viziune',
+        image: 'https://www.baterino.ro/images/companie/viziune-og.webp',
         inLanguage: 'ro',
-        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
       },
       {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-          { '@type': 'ListItem', position: 2, name: 'Viziune', item: 'https://baterino.ro/companie/viziune' },
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+          { '@type': 'ListItem', position: 2, name: 'Viziune', item: 'https://www.baterino.ro/companie/viziune' },
         ],
       },
     ]} />

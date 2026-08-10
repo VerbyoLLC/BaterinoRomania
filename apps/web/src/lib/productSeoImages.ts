@@ -1,6 +1,8 @@
 /** Absolute URLs for Product JSON-LD, Open Graph fallbacks, and image sitemaps. */
 
-export const SITE_BASE_URL = 'https://www.baterino.ro'
+import { SITE_ORIGIN } from './siteUrl'
+
+export const SITE_BASE_URL = SITE_ORIGIN
 
 const DEFAULT_PRODUCT_IMAGE = '/images/shared/HP2000-all-in-one.webp'
 
@@ -10,7 +12,7 @@ export type ProductImageSource = {
   images?: string[] | null
 }
 
-export function toAbsoluteSiteUrl(url: string, base = SITE_BASE_URL): string {
+export function toAbsoluteSiteUrl(url: string, base: string = SITE_BASE_URL): string {
   const t = String(url ?? '').trim()
   if (!t) return ''
   if (/^https?:\/\//i.test(t)) return t
@@ -51,7 +53,7 @@ export function collectProductImageUrls(
 
 export function getPrimaryProductImageUrl(
   product: ProductImageSource,
-  base = SITE_BASE_URL,
+  base: string = SITE_BASE_URL,
 ): string {
   const urls = collectProductImageUrls(product, { base })
   return urls[0] ?? toAbsoluteSiteUrl(DEFAULT_PRODUCT_IMAGE, base)
@@ -60,7 +62,7 @@ export function getPrimaryProductImageUrl(
 /** Social / OG image: custom SEO crop, else primary product photo. */
 export function resolveProductOgImageUrl(
   product: ProductImageSource,
-  base = SITE_BASE_URL,
+  base: string = SITE_BASE_URL,
 ): string {
   const custom = String(product.seoOgImage ?? '').trim()
   if (custom) return toAbsoluteSiteUrl(custom, base)

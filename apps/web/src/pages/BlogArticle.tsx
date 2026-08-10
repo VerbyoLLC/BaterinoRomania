@@ -132,7 +132,7 @@ export default function BlogArticle() {
   const toc = post.body ? extractToc(post.body) : []
   const hasToc = toc.length >= 3
 
-  const canonicalUrl = `https://baterino.ro/blog/${post.slug}`
+  const canonicalUrl = `https://www.baterino.ro/blog/${post.slug}`
   const seoTitle = post.seoTitle || post.title
   const seoDesc = post.seoDescription || post.excerpt
   const ogImage = post.coverImage || '/images/home/og-baterino-romania.jpg'
@@ -145,12 +145,12 @@ export default function BlogArticle() {
     image: post.coverImage || undefined,
     url: canonicalUrl,
     inLanguage: post.locale,
-    author: { '@type': 'Person', name: post.author || 'Baterino Romania', url: 'https://baterino.ro', sameAs: ['https://baterino.ro'] },
+    author: { '@type': 'Person', name: post.author || 'Baterino Romania', url: 'https://www.baterino.ro', sameAs: ['https://www.baterino.ro'] },
     publisher: {
       '@type': 'Organization',
       name: 'Baterino Romania',
-      url: 'https://baterino.ro',
-      logo: { '@type': 'ImageObject', url: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+      url: 'https://www.baterino.ro',
+      logo: { '@type': 'ImageObject', url: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
     },
     datePublished: post.publishedAt ?? post.createdAt,
     dateModified: post.updatedAt,
@@ -163,8 +163,8 @@ export default function BlogArticle() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-      { '@type': 'ListItem', position: 2, name: 'Noutăți', item: 'https://baterino.ro/blog' },
+      { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+      { '@type': 'ListItem', position: 2, name: 'Noutăți', item: 'https://www.baterino.ro/blog' },
       { '@type': 'ListItem', position: 3, name: post.title, item: canonicalUrl },
     ],
   }

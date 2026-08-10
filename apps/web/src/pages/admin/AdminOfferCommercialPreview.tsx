@@ -57,7 +57,7 @@ import './admin-benefits-client-a4.css'
 import './admin-benefits-partner-a4.css'
 
 const SITE_WEB = 'www.baterino.ro'
-const SITE_URL = 'https://baterino.ro'
+const SITE_URL = 'https://www.baterino.ro'
 const DEFAULT_CONTACT_EMAIL = 'vanzari@baterino.ro'
 const DEFAULT_CONTACT_PHONE = '+40 770 106 374'
 

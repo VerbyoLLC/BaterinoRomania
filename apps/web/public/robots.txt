@@ -1,3 +1,28 @@
+# https://www.baterino.ro/robots.txt
+# Allow crawling of public marketing pages and required assets (CSS/JS/images).
+# Private account areas are disallowed and also send X-Robots-Tag: noindex.
+
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /client
+Disallow: /client/
+Disallow: /partner
+Disallow: /partner/
+Disallow: /sales-agent
+Disallow: /sales-agent/
+Disallow: /login
+Disallow: /signup/
+Disallow: /reset-password
+Disallow: /comanda
+Disallow: /cos
+Disallow: /api/
+
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /
+
 User-agent: facebookexternalhit
 Allow: /
 
@@ -9,6 +34,20 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /client
+Disallow: /client/
+Disallow: /partner
+Disallow: /partner/
+Disallow: /sales-agent
+Disallow: /sales-agent/
+Disallow: /login
+Disallow: /signup/
+Disallow: /reset-password
+Disallow: /comanda
+Disallow: /cos
+Disallow: /api/
 
+# Single canonical sitemap (Vercel rewrites /sitemap.xml to the API).
 Sitemap: https://www.baterino.ro/sitemap.xml
-Sitemap: https://www.baterino.ro/api/sitemap.xml

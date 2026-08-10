@@ -49,17 +49,27 @@ export default function IntrebariFrecvente() {
         ogImage={seo.ogImage || undefined}
         lang={language.code}
       />
-      <SchemaOrg schema={{
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: tr.sections.flatMap((section) =>
-          section.items.map(({ q, a }) => ({
-            '@type': 'Question',
-            name: q,
-            acceptedAnswer: { '@type': 'Answer', text: a },
-          }))
-        ),
-      }} />
+      <SchemaOrg schema={[
+        {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: tr.sections.flatMap((section) =>
+            section.items.map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+          ),
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro/' },
+            { '@type': 'ListItem', position: 2, name: 'Întrebări frecvente', item: 'https://www.baterino.ro/intrebari-frecvente' },
+          ],
+        },
+      ]} />
 
       <article className="max-w-content mx-auto px-5 lg:px-3 pt-16 pb-24">
         <header className="text-center mb-10 lg:mb-12 max-w-3xl mx-auto">

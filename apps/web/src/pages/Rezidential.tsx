@@ -152,17 +152,17 @@ export default function Rezidential() {
         '@type': 'CollectionPage',
         name: 'Stocare Energie Rezidențial',
         description: 'Sisteme de stocare a energiei LiFePo4 Low Voltage și High Voltage pentru locuințe individuale și micro-griduri rezidențiale. Garanție 10 ani, suport tehnic dedicat și service local în România.',
-        url: 'https://baterino.ro/divizii/rezidential',
-        image: 'https://baterino.ro/images/divizii/rezidential/stocare-energie-rezidential-og.webp',
+        url: 'https://www.baterino.ro/divizii/rezidential',
+        image: 'https://www.baterino.ro/images/divizii/rezidential/stocare-energie-rezidential-og.webp',
         inLanguage: 'ro',
-        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+        publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
       },
       {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-          { '@type': 'ListItem', position: 2, name: 'Rezidential', item: 'https://baterino.ro/divizii/rezidential' },
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+          { '@type': 'ListItem', position: 2, name: 'Rezidential', item: 'https://www.baterino.ro/divizii/rezidential' },
         ],
       },
     ]} />

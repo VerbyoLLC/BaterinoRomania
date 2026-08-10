@@ -126,7 +126,7 @@ export default function Divizii() {
     )
   }
 
-  const canonicalUrl = `https://baterino.ro/divizii/${slug ?? ''}`
+  const canonicalUrl = `https://www.baterino.ro/divizii/${slug ?? ''}`
   return (
     <>
       <SEO
@@ -142,14 +142,14 @@ export default function Divizii() {
           name: title,
           url: canonicalUrl,
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Divizii', item: 'https://baterino.ro/divizii' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Divizii', item: 'https://www.baterino.ro/divizii' },
             { '@type': 'ListItem', position: 3, name: title, item: canonicalUrl },
           ],
         },

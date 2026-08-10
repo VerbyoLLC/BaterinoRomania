@@ -57,16 +57,16 @@ export default function ServiceLithtech() {
           '@type': 'WebPage',
           name: seo.title || tr.seoTitle,
           description: seo.description || tr.seoDesc,
-          url: 'https://baterino.ro/service-baterii-lithtech-romania',
+          url: 'https://www.baterino.ro/service-baterii-lithtech-romania',
           inLanguage: language.code,
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Service Baterii LithTech', item: 'https://baterino.ro/service-baterii-lithtech-romania' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Service Baterii LithTech', item: 'https://www.baterino.ro/service-baterii-lithtech-romania' },
           ],
         },
       ]} />

@@ -322,7 +322,7 @@ export default function AdminProductSheetA4({
               const productId = matchedProduct?.id
               const path = slug ? `/produse/${slug}` : productId ? `/produse/${productId}` : null
               if (!path) return null
-              const url = encodeURIComponent(`https://baterino.ro${path}`)
+              const url = encodeURIComponent(`https://www.baterino.ro${path}`)
               const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=60x60&ecc=H&color=0a0e1a&bgcolor=ffffff&data=${url}`
               return (
                 <div style={{ position: 'absolute', bottom: 8, right: 8, background: '#fff', borderRadius: 8, padding: 4, border: '2px solid #999' }}>

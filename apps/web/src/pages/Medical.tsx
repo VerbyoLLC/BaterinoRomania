@@ -156,17 +156,17 @@ export default function Medical() {
           '@type': 'CollectionPage',
           name: 'Stocare Energie Medical',
           description: 'Sisteme LiFePo4 de stocare a energiei dedicate exclusiv infrastructurii medicale din România. Soluții certificate pentru clinici, spitale și laboratoare, cu suport tehnic specializat.',
-          url: 'https://baterino.ro/divizii/medical',
-          image: 'https://baterino.ro/images/divizii/medical/baterii-stocare-sector-medical-og.webp',
+          url: 'https://www.baterino.ro/divizii/medical',
+          image: 'https://www.baterino.ro/images/divizii/medical/baterii-stocare-sector-medical-og.webp',
           inLanguage: 'ro',
-          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://baterino.ro', logo: 'https://baterino.ro/images/shared/baterino-logo-black.svg' },
+          publisher: { '@type': 'Organization', name: 'Baterino Romania', url: 'https://www.baterino.ro', logo: 'https://www.baterino.ro/images/shared/baterino-logo-black.svg' },
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://baterino.ro' },
-            { '@type': 'ListItem', position: 2, name: 'Medical', item: 'https://baterino.ro/divizii/medical' },
+            { '@type': 'ListItem', position: 1, name: 'Acasă', item: 'https://www.baterino.ro' },
+            { '@type': 'ListItem', position: 2, name: 'Medical', item: 'https://www.baterino.ro/divizii/medical' },
           ],
         },
       ]} />
