@@ -96,6 +96,7 @@ type HeroV2CardId = 'oferta' | 'rezidential' | 'reduceri' | 'bess' | 'proiecte' 
 type HomeHeroV2Props = {
   tr: HomeTranslations
   userType: 'profesionist' | 'client' | null
+  promoPriceLoading?: boolean
 }
 
 function HeroListDot({ light = false }: { light?: boolean }) {
@@ -111,7 +112,7 @@ function HeroListDot({ light = false }: { light?: boolean }) {
 const CARD_ORDER: HeroV2CardId[] = ['oferta', 'reduceri', 'bess', 'proiecte', 'instalatori']
 
 /** Homepage hero v2 — fluid card slider; sizes scale with viewport (clamp). */
-export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
+export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: HomeHeroV2Props) {
   const navigate = useNavigate()
   const [activeIndex, setActiveIndex] = useState(0)
   const sliderRef = useRef<HTMLDivElement>(null)
@@ -489,6 +490,7 @@ export default function HomeHeroV2({ tr, userType }: HomeHeroV2Props) {
                 tr={tr}
                 isDragging={isDragging}
                 productLink={card.to ?? HOME_PROMO_PRODUCT_LINK}
+                promoPriceLoading={promoPriceLoading}
               />
             ) : showProductHeroOverlay(card) ? (
               <>

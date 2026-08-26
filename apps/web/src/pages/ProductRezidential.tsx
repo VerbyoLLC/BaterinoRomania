@@ -1263,8 +1263,6 @@ export default function ProductRezidential() {
                 </div>
               )}
 
-              <ProductDetailCtaBoxes tr={tr} variant="reduceri" className="w-full" />
-
               {faqItems.length > 0 ? (
                 <section aria-labelledby="res-product-faq-heading">
                   <h2

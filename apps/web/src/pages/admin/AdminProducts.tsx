@@ -31,6 +31,12 @@ import {
   parsePriceInput,
   sanitizePriceInputTyping,
 } from '../../lib/formInputSanitize'
+import {
+  formatAdminSalePriceInclVatFromNet,
+  formatAdminSalePriceNetDisplay,
+  formatClientPriceFromNet,
+  parseAdminSalePriceNetFromInclVat,
+} from '../../lib/adminProductPricing'
 import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
 import { MAX_PRODUCT_CASE_STUDIES } from '../../lib/productCaseStudies'
 
@@ -398,7 +404,7 @@ export default function AdminProducts() {
     setUmiditateMax(umid.max.replace('%', ''))
     const sale = row.salePrice
     const v = (row as { vat?: string | number }).vat
-    setSalePrice(sale != null && String(sale).trim() ? formatPriceInputDisplay(String(sale)) : '')
+    setSalePrice(formatAdminSalePriceInclVatFromNet(sale, v))
     const map = (row as { mapPrice?: string | number }).mapPrice
     setMapPrice(map != null && String(map).trim() && Number(map) > 0 ? formatPriceInputDisplay(String(map)) : '')
     setVat(v != null ? String(v).replace('.', ',') : '')
@@ -779,6 +785,11 @@ export default function AdminProducts() {
     setter(formatPriceInputDisplay(value))
   }
 
+  const salePriceNetDisplay = useMemo(
+    () => formatAdminSalePriceNetDisplay(salePrice, vat),
+    [salePrice, vat],
+  )
+
   /** Numbers only (no decimals) - for Wh, Ah, A fields */
   const handleIntegerOnly = (value: string, setter: (v: string) => void) => {
     const filtered = value.replace(/\D/g, '')
@@ -1135,7 +1146,7 @@ export default function AdminProducts() {
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
       seoOgImage: seoOgImageOut,
-      salePrice: String(parsePriceInput(salePrice) || 0),
+      salePrice: String(parseAdminSalePriceNetFromInclVat(salePrice, vat) || 0),
       mapPrice: String(parsePriceInput(mapPrice) || 0),
       vat: parseFormattedNumber(vat) || '19',
       energieNominala: carouselTemplate ? undefined : energieNominala ? `${parseFormattedNumber(energieNominala)} Wh` : undefined,
@@ -1342,8 +1353,11 @@ export default function AdminProducts() {
                     p.conectivitateWifi && 'WiFi',
                     p.conectivitateBluetooth && 'Bluetooth',
                   ].filter(Boolean).join(', ') || '—'
-                  const priceVal = p.salePrice
-                  const priceStr = priceVal != null ? String(priceVal) : null
+                  const priceStr = formatClientPriceFromNet(
+                    p.salePrice,
+                    (p as { vat?: string | number }).vat,
+                    currency,
+                  )
                   return (
                     <div key={p.id} className="flex flex-col gap-3">
                       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
@@ -1373,9 +1387,10 @@ export default function AdminProducts() {
                             {p.cicluriDescarcare ? <span>Cicluri: {p.cicluriDescarcare}</span> : null}
                             <span>Conectivitate: {conectivitate}</span>
                           </div>
-                          {priceStr && !Number.isNaN(Number(priceStr)) ? (
+                          {priceStr ? (
                             <p className="text-sm font-semibold text-gray-800 mt-auto font-['Inter']">
-                              {Number(priceStr).toLocaleString('ro-RO')} {currency}
+                              {priceStr}
+                              <span className="ml-1 text-xs font-normal text-gray-500">(cu TVA)</span>
                             </p>
                           ) : null}
                         </div>
@@ -2201,11 +2216,11 @@ export default function AdminProducts() {
                   <div>
                     <div className="mb-2 flex items-center gap-2">
                       <label htmlFor="product-sale-price" className="text-sm font-semibold font-['Inter'] text-gray-700 m-0">
-                        Pret Vanzare (PRP) RON
+                        Pret Vanzare (PRP) RON — cu TVA
                       </label>
                       <AdminInfoTooltip
-                        label="Informații PRP"
-                        text="PRP (pretul recomandat de producator pentru vanzare)"
+                        label="Informații preț client"
+                        text="Prețul afișat clienților pe site (TVA inclus). Prețul fără TVA se calculează automat din câmpul TVA (%)."
                       />
                     </div>
                     <input
@@ -2215,10 +2230,52 @@ export default function AdminProducts() {
                       value={salePrice}
                       onChange={(e) => handlePriceInput(e.target.value, setSalePrice)}
                       onBlur={() => handlePriceBlur(salePrice, setSalePrice)}
-                      placeholder="20,000.00"
+                      placeholder="13,314.84"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>
+                  <div>
+                    <div className="mb-2 flex items-center gap-2">
+                      <label htmlFor="product-sale-price-net" className="text-sm font-semibold font-['Inter'] text-gray-700 m-0">
+                        Pret fara TVA (calculat)
+                      </label>
+                      <AdminInfoTooltip
+                        label="Informații preț net"
+                        text="Valoarea fără TVA salvată în baza de date și folosită la facturare. Se actualizează automat când modifici prețul cu TVA sau procentul de TVA."
+                      />
+                    </div>
+                    <input
+                      id="product-sale-price-net"
+                      type="text"
+                      readOnly
+                      tabIndex={-1}
+                      value={salePriceNetDisplay}
+                      placeholder="—"
+                      aria-readonly="true"
+                      className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm font-['Inter'] text-gray-600 bg-neutral-50 placeholder-gray-400 cursor-default"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 sm:max-w-[calc(50%-0.5rem)]">
+                    <label htmlFor="product-vat" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
+                      TVA (%)
+                    </label>
+                    <input
+                      id="product-vat"
+                      type="text"
+                      inputMode="decimal"
+                      value={vat}
+                      onChange={(e) => handleNumericInput(e.target.value, setVat)}
+                      placeholder="Ex: 19"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Partner price */}
+              <div className="pt-2 border-t border-gray-200">
+                <h3 className="text-sm font-bold font-['Inter'] text-gray-900 mb-4">Pret Partener</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
                       <label htmlFor="product-map-price" className="text-sm font-semibold font-['Inter'] text-gray-700 m-0">
@@ -2237,20 +2294,6 @@ export default function AdminProducts() {
                       onChange={(e) => handlePriceInput(e.target.value, setMapPrice)}
                       onBlur={() => handlePriceBlur(mapPrice, setMapPrice)}
                       placeholder="18,000.00"
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
-                    />
-                  </div>
-                  <div className="sm:col-span-2 sm:max-w-[calc(50%-0.5rem)]">
-                    <label htmlFor="product-vat" className="block text-sm font-semibold font-['Inter'] text-gray-700 mb-2">
-                      TVA (%)
-                    </label>
-                    <input
-                      id="product-vat"
-                      type="text"
-                      inputMode="decimal"
-                      value={vat}
-                      onChange={(e) => handleNumericInput(e.target.value, setVat)}
-                      placeholder="Ex: 19"
                       className="w-full h-11 px-4 border border-gray-300 rounded-xl text-sm font-['Inter'] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
                   </div>

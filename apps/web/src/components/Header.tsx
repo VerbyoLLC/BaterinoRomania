@@ -191,7 +191,6 @@ export default function Header() {
             ) : (
               <>
                 <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.produse}</Link>
-                <Link to="/reduceri" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.reduceri}</Link>
                 <Link to="/studii-de-caz" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.studiiDeCaz}</Link>
                 {!hideInstalatoriNav ? (
                   <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.instalatori}</Link>

@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { HomePromoModalTranslations } from './HomePromoModal'
+import HomePromoPriceLine from './HomePromoPriceLine'
 
 const PROMO_IMAGE_SRC = '/images/home/offer-baterino.webp'
 
@@ -26,6 +27,7 @@ type Props = {
   tr: HeroPromoOfferCardTranslations
   isDragging: boolean
   productLink: string
+  promoPriceLoading?: boolean
 }
 
 function GreySpecCell({
@@ -70,7 +72,12 @@ function BenefitRow({
 }
 
 /** Promo offer layout for the homepage hero slider. */
-export default function HomeHeroPromoOfferCard({ tr, isDragging, productLink }: Props) {
+export default function HomeHeroPromoOfferCard({
+  tr,
+  isDragging,
+  productLink,
+  promoPriceLoading = false,
+}: Props) {
   const pointerClass = isDragging ? 'pointer-events-none' : 'pointer-events-auto'
 
   const specs: { label: string; value: string }[] = [
@@ -103,7 +110,12 @@ export default function HomeHeroPromoOfferCard({ tr, isDragging, productLink }: 
           <h3 className="m-0 text-[clamp(1.5rem,3vw,2rem)] font-extrabold leading-tight text-white font-['Inter']">
             {tr.promoModalTitleLine1}
             <br />
-            <span>{tr.promoModalTitleLine2}</span>
+            <HomePromoPriceLine
+              priceLine={tr.promoModalTitleLine2}
+              pricePrefix={tr.promoModalPricePrefix}
+              loading={promoPriceLoading}
+              tone="dark"
+            />
           </h3>
           <p className="m-0 mt-0.5 text-sm font-medium text-white/60 font-['Inter']">{tr.promoModalVatNote}</p>
         </div>

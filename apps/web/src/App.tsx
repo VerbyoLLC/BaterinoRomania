@@ -16,7 +16,6 @@ import Rezidential from './pages/Rezidential'
 import Industrial from './pages/Industrial'
 import Medical from './pages/Medical'
 import Maritim from './pages/Maritim'
-import Reduceri from './pages/Reduceri'
 import LithTech from './pages/LithTech'
 import Instalatori from './pages/Instalatori'
 import Viziune from './pages/Viziune'
@@ -259,7 +258,7 @@ export default function App() {
                 <Route path="comenzi" element={<ClientOrders />} />
                 <Route path="setari" element={<ClientSettings />} />
               </Route>
-              <Route path="reduceri" element={<Reduceri />} />
+              <Route path="reduceri" element={<Navigate to="/produse" replace />} />
               <Route path="termeni-si-conditii" element={<TermeniSiConditii />} />
               <Route path="termeni-si-conditii-programe-de-reducere" element={<TermeniSiConditiiProgrameReducere />} />
               <Route path="politica-confidentialitate" element={<PoliticaConfidentialitate />} />

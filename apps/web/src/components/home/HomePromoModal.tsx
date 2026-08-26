@@ -1,10 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Battery, Home, Layers2, RefreshCw, Shield, Truck, Wifi, X, type LucideIcon } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { useCatalogCurrency } from '../../contexts/CatalogCurrencyContext'
+import {
+  HOME_PROMO_PRODUCT_LINK,
+  buildHomePromoTitleLine2,
+  hasHomePromoLivePrice,
+} from '../../lib/homePromoPrice'
+import { useHomePromoProduct } from '../../lib/useHomePromoProduct'
+import HomePromoPriceLine from './HomePromoPriceLine'
+
+export { HOME_PROMO_PRODUCT_LINK }
 
 const PROMO_IMAGE_SRC = '/images/home/offer-baterino.webp'
-export const HOME_PROMO_PRODUCT_LINK = '/produse/baterii-solare/pachet-baterii-lifepo4-20kwh'
 const PROMO_PRODUCT_LINK = HOME_PROMO_PRODUCT_LINK
 
 export type HomePromoModalTranslations = Pick<
@@ -13,6 +23,7 @@ export type HomePromoModalTranslations = Pick<
   | 'promoModalImageTitle'
   | 'promoModalTitleLine1'
   | 'promoModalTitleLine2'
+  | 'promoModalPricePrefix'
   | 'promoModalVatNote'
   | 'promoModalDescription'
   | 'promoModalSpecCapacityLabel'
@@ -136,8 +147,19 @@ function PanelBenefitCard({
 }
 
 export default function HomePromoModal({ open, onClose, tr }: Props) {
-  useEffect(() => {
-    if (!open) return
+  const { language } = useLanguage()
+  const { currency } = useCatalogCurrency()
+  const { product: promoProduct, loading: promoProductLoading } = useHomePromoProduct(open)
+
+  const promoPriceLine = useMemo(
+    () => buildHomePromoTitleLine2(tr, promoProduct, language.code, currency),
+    [tr, promoProduct, language.code, currency],
+  )
+
+  const promoPriceLoading =
+    promoProductLoading && !hasHomePromoLivePrice(promoProduct, language.code, currency)
+
+  useEffect(() => {    if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -241,8 +263,13 @@ export default function HomePromoModal({ open, onClose, tr }: Props) {
             {tr.promoModalTitleLine1}
             <br />
             <span className="inline-flex flex-wrap items-baseline gap-x-2">
-              <span className="text-sky-900">{tr.promoModalTitleLine2}</span>
-              <span className="text-xs font-medium text-neutral-500">{tr.promoModalVatNote}</span>
+              <HomePromoPriceLine
+                priceLine={promoPriceLine}
+                pricePrefix={tr.promoModalPricePrefix}
+                loading={promoPriceLoading}
+                tone="light"
+                className="text-sky-900"
+              />              <span className="text-xs font-medium text-neutral-500">{tr.promoModalVatNote}</span>
             </span>
           </h2>
 

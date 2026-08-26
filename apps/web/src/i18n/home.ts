@@ -190,6 +190,8 @@ export type HomeTranslations = {
   heroPromoPackageDescription: string
   promoModalTitleLine1: string
   promoModalTitleLine2: string
+  /** Prefix for the live-price line, e.g. 'la' / 'at' — combined with the fetched product price */
+  promoModalPricePrefix: string
   promoModalVatNote: string
   promoModalDescription: string
   promoModalSpecCapacityLabel: string
@@ -480,7 +482,8 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroPromoBenefitCareSubtitle: 'monitorizare inclusă',
     heroPromoPackageDescription: 'Un pachet de 2 baterii de 10kWh LithTech fiecare, pentru o stocare dublă și o gestionare mai bună a energiei stocate.',
     promoModalTitleLine1: '20 kWh de stocare,',
-    promoModalTitleLine2: 'la 14.300 RON',
+    promoModalTitleLine2: 'la …',
+    promoModalPricePrefix: 'la',
     promoModalVatNote: 'TVA inclus (21%)',
     promoModalDescription: '2 baterii LithTech de 10 kWh fiecare.',
     promoModalSpecCapacityLabel: 'CAPACITATE TOTALĂ',
@@ -764,7 +767,8 @@ const translations: Record<LangCode, HomeTranslations> = {
     heroPromoBenefitCareSubtitle: 'monitoring included',
     heroPromoPackageDescription: 'A package of 2 LithTech 10kWh batteries each, for double storage and better management of stored energy.',
     promoModalTitleLine1: '20 kWh storage,',
-    promoModalTitleLine2: 'at 14,300 RON',
+    promoModalTitleLine2: 'at …',
+    promoModalPricePrefix: 'at',
     promoModalVatNote: 'VAT included (21%)',
     promoModalDescription: '2 LithTech 10 kWh batteries each.',
     promoModalSpecCapacityLabel: 'TOTAL CAPACITY',

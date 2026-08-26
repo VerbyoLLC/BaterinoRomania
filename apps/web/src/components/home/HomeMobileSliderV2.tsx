@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { HomeTranslations } from '../../i18n/home'
 import { HOME_PROMO_PRODUCT_LINK } from './HomePromoModal'
+import HomePromoPriceLine from './HomePromoPriceLine'
 
 /** Card dimensions — shorter than desktop, wider to fill more of the viewport. */
 const CARD_H = 450
@@ -48,9 +49,11 @@ function getSlideEls(el: HTMLDivElement): HTMLElement[] {
 function OfertaDetailsModal({
   tr,
   onClose,
+  promoPriceLoading = false,
 }: {
   tr: HomeTranslations
   onClose: () => void
+  promoPriceLoading?: boolean
 }) {
   const specs = [
     { label: tr.promoModalSpecCapacityLabel, value: tr.promoModalSpecCapacityValue },
@@ -128,7 +131,12 @@ function OfertaDetailsModal({
             <h3 className="m-0 text-2xl font-extrabold leading-tight text-white font-['Inter']">
               {tr.promoModalTitleLine1}
               <br />
-              {tr.promoModalTitleLine2}
+              <HomePromoPriceLine
+                priceLine={tr.promoModalTitleLine2}
+                pricePrefix={tr.promoModalPricePrefix}
+                loading={promoPriceLoading}
+                tone="dark"
+              />
             </h3>
             <p className="m-0 mt-1 text-xs font-medium text-white/55 font-['Inter']">
               {tr.promoModalVatNote}
@@ -201,9 +209,11 @@ function OfertaDetailsModal({
 function SlideOfertaImage({
   tr,
   onOpenDetails,
+  promoPriceLoading = false,
 }: {
   tr: HomeTranslations
   onOpenDetails: () => void
+  promoPriceLoading?: boolean
 }) {
   return (
     <div className="absolute inset-0 bg-neutral-100">
@@ -235,7 +245,12 @@ function SlideOfertaImage({
         <h3 className="m-0 text-[1.75rem] font-extrabold leading-tight text-white font-['Inter']">
           {tr.promoModalTitleLine1}
           <br />
-          <span>{tr.promoModalTitleLine2}</span>
+          <HomePromoPriceLine
+            priceLine={tr.promoModalTitleLine2}
+            pricePrefix={tr.promoModalPricePrefix}
+            loading={promoPriceLoading}
+            tone="dark"
+          />
         </h3>
         <p className="m-0 mt-1 text-sm font-medium text-white/60 font-['Inter']">
           {tr.promoModalVatNote}
@@ -694,9 +709,9 @@ function InstalatoriDetailsModal({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-type Props = { tr: HomeTranslations; jumpTo?: number }
+type Props = { tr: HomeTranslations; jumpTo?: number; promoPriceLoading?: boolean }
 
-export default function HomeMobileSliderV2({ tr, jumpTo }: Props) {
+export default function HomeMobileSliderV2({ tr, jumpTo, promoPriceLoading = false }: Props) {
   const [current, setCurrent] = useState(jumpTo ?? 0)
   const [ofertaModalOpen, setOfertaModalOpen] = useState(false)
   const [bessModalOpen, setBessModalOpen] = useState(false)
@@ -752,7 +767,12 @@ export default function HomeMobileSliderV2({ tr, jumpTo }: Props) {
   }, [])
 
   const slides = [
-    <SlideOfertaImage tr={tr} key="oferta-img" onOpenDetails={() => setOfertaModalOpen(true)} />,
+    <SlideOfertaImage
+      tr={tr}
+      key="oferta-img"
+      onOpenDetails={() => setOfertaModalOpen(true)}
+      promoPriceLoading={promoPriceLoading}
+    />,
     <SlideReduceri tr={tr} key="reduceri" />,
     <SlideBessImage tr={tr} key="bess-img" onOpenDetails={() => setBessModalOpen(true)} />,
     <SlideProiecte tr={tr} key="proiecte" />,
@@ -814,7 +834,11 @@ export default function HomeMobileSliderV2({ tr, jumpTo }: Props) {
       </p>
 
       {ofertaModalOpen && (
-        <OfertaDetailsModal tr={tr} onClose={() => setOfertaModalOpen(false)} />
+        <OfertaDetailsModal
+          tr={tr}
+          onClose={() => setOfertaModalOpen(false)}
+          promoPriceLoading={promoPriceLoading}
+        />
       )}
       {bessModalOpen && (
         <BessDetailsModal tr={tr} onClose={() => setBessModalOpen(false)} />

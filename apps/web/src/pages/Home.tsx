@@ -20,6 +20,12 @@ import {
   type PublicProduct,
 } from '../lib/api'
 import HomePromoModal from '../components/home/HomePromoModal'
+import {
+  HOME_PROMO_PRODUCT_SLUG,
+  hasHomePromoLivePrice,
+  mergeHomePromoTranslations,
+} from '../lib/homePromoPrice'
+import { useHomePromoProduct } from '../lib/useHomePromoProduct'
 import { syncProductTipsFromList } from '../lib/productTipCache'
 import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
@@ -155,6 +161,7 @@ export default function Home() {
 
   const [products, setProducts] = useState<PublicProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
+  const { product: promoProduct, loading: promoProductLoading } = useHomePromoProduct(true)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const [showPromoModal, setShowPromoModal] = useState(false)
   const [userType, setUserType] = useState<'profesionist' | 'client' | null>(() => {
@@ -177,6 +184,19 @@ export default function Home() {
       products.map((p) => ({ slug: p.slug, id: p.id, tipProdus: p.tipProdus })),
     )
   }, [products])
+
+  const promoTr = useMemo(() => {
+    const product =
+      promoProduct ?? products.find((p) => p.slug === HOME_PROMO_PRODUCT_SLUG) ?? null
+    return mergeHomePromoTranslations(tr, product, language.code, currency)
+  }, [tr, promoProduct, products, language.code, currency])
+
+  const promoPriceLoading = useMemo(() => {
+    const product =
+      promoProduct ?? products.find((p) => p.slug === HOME_PROMO_PRODUCT_SLUG) ?? null
+    if (hasHomePromoLivePrice(product, language.code, currency)) return false
+    return promoProductLoading || productsLoading
+  }, [promoProduct, products, language.code, currency, promoProductLoading, productsLoading])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)
@@ -342,12 +362,16 @@ export default function Home() {
 
       {/* Mobile: card slider built from desktop cards, split in two */}
       <div className="md:hidden">
-        <HomeMobileSliderV2 tr={tr} jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_V2_COUNT - 1 : 0} />
+        <HomeMobileSliderV2
+          tr={promoTr}
+          promoPriceLoading={promoPriceLoading}
+          jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_V2_COUNT - 1 : 0}
+        />
       </div>
 
       {/* Desktop: card slider hero */}
       <div className="hidden md:block pt-6 lg:pt-10">
-        <HomeHeroV2 tr={tr} userType={userType} />
+        <HomeHeroV2 tr={promoTr} promoPriceLoading={promoPriceLoading} userType={userType} />
       </div>
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
@@ -1075,7 +1099,7 @@ export default function Home() {
           }
           setShowPromoModal(false)
         }}
-        tr={tr}
+        tr={promoTr}
       />
     </>
   )
