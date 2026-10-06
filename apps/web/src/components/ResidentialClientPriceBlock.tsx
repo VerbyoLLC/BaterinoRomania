@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Loader2, Minus, Plus } from 'lucide-react'
+import { WhatsAppGlyph } from './WhatsAppGlyph'
+import { CONTACT_WHATSAPP_WAME } from '../lib/contactWhatsApp'
 import {
   getAuthRole,
   getProductCardImageUrl,
@@ -50,7 +52,7 @@ const ADD_TO_CART_BTN_CLS =
   "w-full min-h-[3rem] rounded-xl border-2 border-slate-900 bg-white py-3 text-base font-bold uppercase tracking-wide text-slate-900 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-50 font-['Inter']"
 
 const ORDER_BTN_CLS =
-  "w-full min-h-[3.25rem] rounded-xl bg-gray-900 py-3.5 text-base font-bold uppercase tracking-wide text-white transition-colors hover:bg-gray-800 disabled:cursor-wait disabled:opacity-50 sm:min-h-[3.5rem] sm:py-4 font-['Inter']"
+  "inline-flex w-full min-h-[3.25rem] items-center justify-center gap-2 rounded-xl bg-[#15803d] py-3.5 text-base font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#166534] disabled:cursor-wait disabled:opacity-50 sm:min-h-[3.5rem] sm:py-4 font-['Inter']"
 
 export default function ResidentialClientPriceBlock({ product, tr, lang }: Props) {
   const navigate = useNavigate()
@@ -188,6 +190,14 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
     RESIDENTIAL_DISCOUNT_GUEST_NOTICE_FALLBACK_RO ||
     'Trebuie să îți creezi un cont pe platforma Baterino pentru a plasa o comandă cu reducere, deoarece sunt necesare mai multe informații.'
   ).trim()
+
+  const whatsappOrderHref = useMemo(() => {
+    const prefill = tr.comandaWhatsappPrefill.replace(
+      /\{product\}/g,
+      String(product.title || '').trim() || '—',
+    )
+    return `https://wa.me/${CONTACT_WHATSAPP_WAME}?text=${encodeURIComponent(prefill)}`
+  }, [tr.comandaWhatsappPrefill, product.title])
 
   return (
     <div className="space-y-2 font-['Inter']">
@@ -404,44 +414,27 @@ export default function ResidentialClientPriceBlock({ product, tr, lang }: Props
         {/* Pentru clienții autentificați ascundem „COMANDĂ” direct — checkout-ul se face din coș,
             ca să se aplice corect reducerile, codurile și fluxul standard de plată. */}
         {!isClientUser ? (
-          <button
-            type="button"
-            disabled={discountProgramsLoading && !guestWithDiscount}
-            onClick={() => {
-              if (guestWithDiscount) {
-                navigate('/signup/clienti')
-                return
-              }
-              if (!hasProgramDiscount) {
-                const s = String(product.slug || product.id || '').trim()
-                if (s) {
-                  navigate(`/comanda?slug=${encodeURIComponent(s)}&qty=${qty}`)
-                  return
-                }
-              }
-              const lines = [
-                product.title,
-                `${tr.cantitateLabel}: ${qty}`,
-                selectedDiscount
-                  ? formatResidentialDiscountOption(
-                      tr,
-                      selectedDiscount.programLabel,
-                      selectedDiscount.discountPercent,
-                    )
-                  : tr.faraReducere,
-              ]
-              if (hasProgramDiscount) {
-                lines.push(`${tr.economisestiLabel}: ${fmtMoney(totalSavings)} ${p.currencySuffix}`)
-              }
-              lines.push(`${fmtMoney(lineTotal)} ${p.currencySuffix}`)
-              window.alert(`${lines.join('\n')}\n\n${tr.clientOrderNotice}`)
-            }}
-            className={`${ORDER_BTN_CLS} ${
-              hasProgramDiscount ? 'bg-green-600 hover:bg-green-700' : ''
-            }`}
-          >
-            {guestWithDiscount ? tr.comandaCuContBtn || 'COMANDĂ CU CONT' : tr.comandaBtn}
-          </button>
+          guestWithDiscount ? (
+            <button
+              type="button"
+              disabled={discountProgramsLoading}
+              onClick={() => navigate('/signup/clienti')}
+              className={`${ORDER_BTN_CLS} bg-green-600 hover:bg-green-700`}
+            >
+              {tr.comandaCuContBtn || 'COMANDĂ CU CONT'}
+            </button>
+          ) : (
+            <a
+              href={whatsappOrderHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={discountProgramsLoading}
+              className={`${ORDER_BTN_CLS} ${discountProgramsLoading ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              <WhatsAppGlyph className="h-5 w-5 shrink-0" />
+              {tr.comandaBtn}
+            </a>
+          )
         ) : null}
         {guestWithDiscount ? (
           <p

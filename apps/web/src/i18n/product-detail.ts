@@ -92,6 +92,8 @@ export type ProductDetailTranslations = {
   /** Mobile: opens discount programme picker (replaces native select) */
   mobileApplyDiscountBtn: string
   comandaBtn: string
+  /** WhatsApp prefill when ordering a residential product */
+  comandaWhatsappPrefill: string
   /** Guest user + discount programme: CTA prompts account */
   comandaCuContBtn: string
   /** Guest + discount: explanation under CTA */
@@ -246,7 +248,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriProgramTermsHeading: 'Termeni și condiții ale programului de reducere',
     reduceriHoverApplyBtn: 'APLICĂ REDUCEREA',
     mobileApplyDiscountBtn: 'APLICĂ REDUCERE',
-    comandaBtn: 'COMANDĂ',
+    comandaBtn: 'COMANDĂ PE WHATSAPP',
+    comandaWhatsappPrefill: 'Buna ziua, as vrea sa comand bateria {product}.',
     comandaCuContBtn: 'COMANDĂ CU CONT',
     residentialDiscountGuestNotice:
       'Trebuie să îți creezi un cont pe platforma Baterino pentru a plasa o comandă cu reducere, deoarece sunt necesare mai multe informații.',
@@ -385,7 +388,8 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     reduceriProgramTermsHeading: 'Terms and conditions of the discount programme',
     reduceriHoverApplyBtn: 'APPLY DISCOUNT',
     mobileApplyDiscountBtn: 'APPLY DISCOUNT',
-    comandaBtn: 'ORDER',
+    comandaBtn: 'ORDER ON WHATSAPP',
+    comandaWhatsappPrefill: 'Hello, I would like to order the battery {product}.',
     comandaCuContBtn: 'ORDER WITH ACCOUNT',
     residentialDiscountGuestNotice:
       'You need a Baterino account to place an order with a discount programme—we need a few more details to validate and apply your discount.',
