@@ -150,7 +150,6 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
-  const [reduceriVisibleCount, setReduceriVisibleCount] = useState(2)
   const [isMobile, setIsMobile] = useState(true)
 
   const [divisionsActiveIndex, setDivisionsActiveIndex] = useState(0)
@@ -309,14 +308,6 @@ export default function Home() {
       setActiveTab('')
     }
   }, [activeTab, tabs])
-
-  const reduceriCards = [
-    { img: '/images/programe%20reduceri/energie-pentru-parinti-campenie-reduceri-baterino.webp', pct: '15%', title: tr.reduceriCard1Title, desc: tr.reduceriCard1Desc },
-    { img: '/images/programe%20reduceri/tva-ul-cum-era-campanie-reducere-baterino.webp', pct: '12%', title: tr.reduceriCard2Title, desc: tr.reduceriCard2Desc },
-    { img: '/images/programe%20reduceri/cum-e-viata-la-tara-campanie-reduceri-baterino.webp', pct: '7%', title: tr.reduceriCard3Title, desc: tr.reduceriCard3Desc },
-    { img: '/images/programe%20reduceri/stiu-de-la-vecinu-program-reducere-baterino.webp', pct: '5%', title: tr.reduceriCard4Title, desc: tr.reduceriCard4Desc },
-  ]
-  const reduceriVisibleCards = reduceriCards.slice(0, isMobile ? reduceriVisibleCount : 4)
 
   return (
     <>
@@ -759,61 +750,6 @@ export default function Home() {
         </div>
 
       </div>
-
-      {/* ── REDUCERI – Programe de reduceri ── */}
-      <section className="mb-16 lg:mb-24 max-w-content mx-auto px-5 lg:px-3">
-        <div className="my-6 flex flex-col items-center gap-4 text-center sm:my-8">
-          <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
-            {tr.reduceriGridTitle}
-          </h2>
-          <p className="max-w-[846px] text-base font-normal font-['Inter'] leading-5 text-black sm:text-lg sm:leading-6">
-            {tr.reduceriGridSubtitle}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {reduceriVisibleCards.map((card, i) => (
-            <Link key={i} to="/reduceri" className="group block">
-              <div className="w-full h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
-                <img
-                  src={card.img}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover rounded-[10px] transition-transform duration-300 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/40 rounded-[10px] transition-colors duration-300 group-hover:bg-black/55" />
-                <div className="absolute top-3 left-3 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-900/80 rounded-[5px] z-10">
-                  <span className="text-white text-xs font-semibold font-['Inter'] uppercase tracking-wide">Pentru Clienți</span>
-                </div>
-                <div className="absolute top-3 right-3 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/95 rounded-[5px] z-10">
-                  <span className="text-slate-900 text-xs sm:text-sm font-bold font-['Inter']">{card.pct} {tr.reduceriDiscountSuffix}</span>
-                </div>
-                <div className="absolute left-[20px] sm:left-[26px] right-[20px] sm:right-[26px] bottom-[20px] sm:bottom-[24px] z-10 flex flex-col gap-2 sm:gap-3">
-                  <div className="flex flex-col">
-                    <p className="m-0 text-white text-sm sm:text-base font-medium font-['Nunito_Sans'] leading-none">{tr.reduceriProgramLabel}</p>
-                    <h3 className="m-0 text-white text-xl sm:text-2xl font-bold font-['Inter'] leading-tight whitespace-pre-line">
-                      {card.title}
-                    </h3>
-                  </div>
-                  <p className="text-white text-sm sm:text-base font-medium font-['Inter'] leading-4 sm:leading-5">
-                    {card.desc}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-        {isMobile && reduceriVisibleCount < 4 && (
-          <div className="mt-6 flex justify-center sm:hidden">
-            <button
-              type="button"
-              onClick={() => setReduceriVisibleCount(4)}
-              className="h-11 sm:h-12 px-6 sm:px-8 rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-black text-sm sm:text-base font-semibold font-['Inter'] hover:bg-neutral-100 transition-colors"
-            >
-              {tr.reduceriLoadMore}
-            </button>
-          </div>
-        )}
-      </section>
 
       <HomeFeaturesGrid tr={tr} />
 

@@ -172,7 +172,6 @@ function Footer() {
             <div className={headingClass}>{t.media}</div>
             <nav className="flex flex-col gap-2.5">
               <Link to="/termeni-si-conditii" className={linkClass}>{t.termeniConditii}</Link>
-              <Link to="/termeni-si-conditii-programe-de-reducere" className={linkClass}>{t.termeniReduceri}</Link>
               <Link to="/politica-confidentialitate" className={linkClass}>{t.politicaConfidentialitate}</Link>
               <Link to="/politica-de-retur" className={linkClass}>{t.politicaRetur}</Link>
             </nav>

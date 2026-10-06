@@ -191,6 +191,9 @@ export default function Header() {
             ) : (
               <>
                 <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.produse}</Link>
+                {authRole == null || authRole === 'client' || authRole === 'admin' ? (
+                  <Link to="/oferte" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.oferte}</Link>
+                ) : null}
                 <Link to="/studii-de-caz" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.studiiDeCaz}</Link>
                 {!hideInstalatoriNav ? (
                   <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.instalatori}</Link>

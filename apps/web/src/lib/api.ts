@@ -9,7 +9,7 @@ import {
 
 /**
  * Origine pentru `${API_BASE}/admin/...` → server Express `/api/admin/...`.
- * - Fără env: dev → localhost:3005/api; prod (Vercel) → `/api` (rewrite către Railway).
+ * - Fără env: `/api` (Vite proxy în dev, rewrite Vercel în prod).
  * - VITE_API_URL: trebuie să fie rădăcina cu `/api`, ex. `https://xxx.up.railway.app/api`.
  *   Dacă lipsește `/api` pe un URL absolut, îl adăugăm automat. Dacă env se termină în `/admin`, îl tăiem (altfel URL-urile devin `/api/admin/admin/...`).
  */
@@ -24,13 +24,6 @@ function resolveApiBase(): string {
       base = `${base}/api`
     }
     return base
-  }
-  if (
-    import.meta.env.DEV &&
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ) {
-    return 'http://localhost:3005/api'
   }
   return '/api'
 }

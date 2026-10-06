@@ -10,6 +10,8 @@ import AuthWrapper from './components/AuthWrapper'
 import HomeEntry from './pages/HomeEntry'
 import InstalatoriOnlyIndex from './pages/InstalatoriOnlyIndex'
 import Produse from './pages/Produse'
+import Oferte from './pages/Oferte'
+import OfertaTemplate from './pages/OfertaTemplate'
 import Siguranta from './pages/Siguranta'
 import Divizii from './pages/Divizii'
 import Rezidential from './pages/Rezidential'
@@ -236,6 +238,8 @@ export default function App() {
               <Route path="produse" element={<Produse />} />
               <Route path="produse/baterii-solare" element={<Produse categorySlug="baterii-solare" />} />
               <Route path="produse/sisteme-bess" element={<Produse categorySlug="sisteme-bess" />} />
+              <Route path="oferte" element={<Oferte />} />
+              <Route path="oferte/:slug" element={<OfertaTemplate />} />
               <Route path="companii/:handle" element={<LegacyCompaniiInstallerRedirect />} />
               <Route
                 path="companii-instalatori-fotovoltaice/:handle"

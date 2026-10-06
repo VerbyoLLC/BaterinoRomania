@@ -109,7 +109,7 @@ function HeroListDot({ light = false }: { light?: boolean }) {
 }
 
 
-const CARD_ORDER: HeroV2CardId[] = ['oferta', 'reduceri', 'bess', 'proiecte', 'instalatori']
+const CARD_ORDER: HeroV2CardId[] = ['oferta', 'bess', 'proiecte', 'instalatori']
 
 /** Homepage hero v2 — fluid card slider; sizes scale with viewport (clamp). */
 export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: HomeHeroV2Props) {

@@ -27,8 +27,8 @@ const CARD_W = 'calc(100vw - 3.5rem)' // leaves ~24 px of next card peeking on 3
 /** 20 px = pl-5 — must match the container's padding-left. */
 const SCROLL_PAD = 20
 
-/** 5 slides: oferta + bess + instalatori details moved into modals. */
-export const MOBILE_SLIDE_V2_COUNT = 5
+/** 4 slides: oferta + bess + instalatori details moved into modals. */
+export const MOBILE_SLIDE_V2_COUNT = 4
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -262,47 +262,6 @@ function SlideOfertaImage({
         >
           Vezi detalii
         </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Slide 3: Reduceri ─────────────────────────────────────────────────────────
-
-function SlideReduceri({ tr }: { tr: HomeTranslations }) {
-  return (
-    <div className="absolute inset-0">
-      <img src="/images/slider2/slide1.webp" alt="" className="h-full w-full object-cover" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.12) 70%, transparent 85%)',
-        }}
-        aria-hidden
-      />
-      <div
-        className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3"
-        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.5)' }}
-      >
-        <img
-          src="/images/shared/baterino-logo-white.webp"
-          alt="Baterino"
-          draggable={false}
-          className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))] pointer-events-none"
-        />
-        <h3 className="text-xl font-bold leading-tight uppercase text-white font-['Inter'] pointer-events-none">
-          {tr.heroV2Card2Title}
-        </h3>
-        <p className="text-sm font-normal leading-snug normal-case text-white font-['Inter'] pointer-events-none">
-          {tr.heroV2Card2Subtitle}
-        </p>
-        <Link
-          to="/reduceri"
-          className="w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
-        >
-          {tr.heroV2Card2Cta}
-        </Link>
       </div>
     </div>
   )
@@ -773,7 +732,6 @@ export default function HomeMobileSliderV2({ tr, jumpTo, promoPriceLoading = fal
       onOpenDetails={() => setOfertaModalOpen(true)}
       promoPriceLoading={promoPriceLoading}
     />,
-    <SlideReduceri tr={tr} key="reduceri" />,
     <SlideBessImage tr={tr} key="bess-img" onOpenDetails={() => setBessModalOpen(true)} />,
     <SlideProiecte tr={tr} key="proiecte" />,
     <SlideInstalatoriImage tr={tr} key="inst-img" onOpenDetails={() => setInstalatoriModalOpen(true)} />,
