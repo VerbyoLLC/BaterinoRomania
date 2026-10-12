@@ -11,6 +11,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import type { LangCode } from '../../i18n/menu'
 import { getPartnerProfileCardTranslations } from '../../i18n/partner/profile-card'
 import { getPartnerServiciiOptions } from '../../i18n/partner/servicii'
+import { safeExternalHref } from '../../lib/safeExternalHref'
 
 function IconFacebook({ className }: { className?: string }) {
   return (
@@ -46,10 +47,7 @@ function IconTiktok({ className }: { className?: string }) {
 }
 
 function webHref(raw: string) {
-  const t = raw.trim()
-  if (!t) return '#'
-  if (/^https?:\/\//i.test(t)) return t
-  return `https://${t}`
+  return safeExternalHref(raw) ?? '#'
 }
 
 export type PartnerPublicProfileCardProps = {

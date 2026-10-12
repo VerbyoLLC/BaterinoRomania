@@ -19,6 +19,7 @@ import {
   type AdminSalesAgent,
   isAdminAgentAssignable,
 } from '../../lib/api'
+import { safeExternalHref } from '../../lib/safeExternalHref'
 
 function formatAssignedAgentLabel(agents: AdminSalesAgent[], id: string | null | undefined): string {
   if (!id) return '—'
@@ -869,7 +870,7 @@ export default function AdminCompanies() {
                       <dt className="text-gray-500 font-medium mb-0.5">Website</dt>
                       <dd className="text-gray-900">
                         {detailCompany.website ? (
-                          <a href={detailCompany.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                          <a href={safeExternalHref(detailCompany.website) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
                             {detailCompany.website}
                           </a>
                         ) : (
@@ -881,7 +882,7 @@ export default function AdminCompanies() {
                       <dt className="text-gray-500 font-medium mb-0.5">Facebook</dt>
                       <dd className="text-gray-900 break-all">
                         {detailCompany.facebookUrl ? (
-                          <a href={detailCompany.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          <a href={safeExternalHref(detailCompany.facebookUrl) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                             {detailCompany.facebookUrl}
                           </a>
                         ) : (
@@ -893,7 +894,7 @@ export default function AdminCompanies() {
                       <dt className="text-gray-500 font-medium mb-0.5">LinkedIn</dt>
                       <dd className="text-gray-900 break-all">
                         {detailCompany.linkedinUrl ? (
-                          <a href={detailCompany.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          <a href={safeExternalHref(detailCompany.linkedinUrl) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                             {detailCompany.linkedinUrl}
                           </a>
                         ) : (

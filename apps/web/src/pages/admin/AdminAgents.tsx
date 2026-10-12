@@ -18,6 +18,7 @@ import {
 } from '../../lib/api'
 import { ROMANIAN_COUNTIES, getCitiesForCounty } from '../../lib/romanian-counties-cities'
 import { loadPhoneE164 } from '../../lib/formInputSanitize'
+import { safeExternalHref } from '../../lib/safeExternalHref'
 import PhoneInput from '../../components/PhoneInput'
 
 const AGENT_SECTORS = ['Toate', 'Industrial', 'Medical', 'Rezidential', 'Maritim'] as const
@@ -829,7 +830,7 @@ export default function AdminAgents() {
                       <dd className="text-gray-900">
                         {partnerDetail.website ? (
                           <a
-                            href={partnerDetail.website}
+                            href={safeExternalHref(partnerDetail.website) ?? undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -846,7 +847,7 @@ export default function AdminAgents() {
                       <dd className="text-gray-900">
                         {partnerDetail.facebookUrl ? (
                           <a
-                            href={partnerDetail.facebookUrl}
+                            href={safeExternalHref(partnerDetail.facebookUrl) ?? undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -863,7 +864,7 @@ export default function AdminAgents() {
                       <dd className="text-gray-900">
                         {partnerDetail.linkedinUrl ? (
                           <a
-                            href={partnerDetail.linkedinUrl}
+                            href={safeExternalHref(partnerDetail.linkedinUrl) ?? undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"

@@ -37,6 +37,7 @@ const {
   eraseUserAccount,
   SOFT_DELETE_RETENTION_DAYS,
 } = require('./lib/account-erasure.js')
+const { sanitizeExternalUrl } = require('./lib/safe-external-url.js')
 const {
   CONSENT_TYPES,
   recordConsentLog,
@@ -1185,6 +1186,14 @@ app.post('/api/auth/verify', verifyIpLimiter, async (req, res) => {
   }
 })
 
+/** Public site origin for email links. Production never falls back to localhost. */
+function publicFrontendUrl() {
+  const configured = String(process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '')
+  if (configured) return configured
+  if (process.env.NODE_ENV === 'production') return 'https://www.baterino.ro'
+  return 'http://localhost:5173'
+}
+
 // ── Auth: Forgot password (request reset link) ──────────────────────────
 app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
@@ -1209,7 +1218,7 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
       data: { passwordResetToken: token, passwordResetExpiresAt: expiresAt },
     })
 
-    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
+    const frontendUrl = publicFrontendUrl()
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`
 
     await sendPasswordResetEmail(email, resetUrl)
@@ -1249,7 +1258,7 @@ app.post('/api/auth/admin/forgot-password', forgotPasswordLimiter, async (req, r
       data: { passwordResetToken: token, passwordResetExpiresAt: expiresAt },
     })
 
-    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
+    const frontendUrl = publicFrontendUrl()
     const resetUrl = `${frontendUrl}/admin/reset-password?token=${token}`
 
     await sendAdminPasswordResetNotificationEmail({ adminEmail: user.email, resetUrl })
@@ -4795,11 +4804,11 @@ app.put('/api/partner/profile', authMiddleware, async (req, res) => {
       services: Array.isArray(body.services) ? body.services.join(',') : body.services,
       publicPhone: body.publicPhone,
       whatsapp: body.whatsapp,
-      website: body.website,
-      facebookUrl: body.facebookUrl,
-      linkedinUrl: body.linkedinUrl,
-      instagramUrl: body.instagramUrl,
-      tiktokUrl: body.tiktokUrl,
+      website: sanitizeExternalUrl(body.website),
+      facebookUrl: sanitizeExternalUrl(body.facebookUrl),
+      linkedinUrl: sanitizeExternalUrl(body.linkedinUrl),
+      instagramUrl: sanitizeExternalUrl(body.instagramUrl),
+      tiktokUrl: sanitizeExternalUrl(body.tiktokUrl),
       isPublic: body.isPublic,
       workPhotos: Array.isArray(body.workPhotos)
         ? sanitizeWorkPhotosForDb(body.workPhotos)
