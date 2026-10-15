@@ -105,7 +105,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                   <div className="absolute inset-0 bg-black/40" />
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[280px] sm:w-72 text-center flex flex-col items-center">
                     <h1
-                      className={`text-white text-2xl sm:text-3xl font-bold font-['Inter'] uppercase leading-8 sm:leading-9 mb-2 ${isInstalatori ? 'whitespace-pre-line' : ''}`}
+                      className={`text-white text-2xl sm:text-3xl font-bold font-['Inter'] leading-8 sm:leading-9 mb-2 ${isInstalatori ? 'whitespace-pre-line' : ''}`}
                     >
                       {title}
                     </h1>
@@ -220,7 +220,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
           {heroSlide === 0 && (
             <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 text-center lg:text-left w-full">
               <div className="flex flex-col gap-3 items-center lg:items-start">
-                <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[510px] whitespace-pre-line">
+                <h1 className="text-white text-3xl font-bold font-['Inter'] leading-10 max-w-[510px] whitespace-pre-line">
                   {tr.heroSlideRezTitle}
                 </h1>
                 <p className="text-white text-lg font-normal font-['Inter'] leading-7 max-w-[612px]">
@@ -257,7 +257,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                   alt="Baterino Industrial"
                   className="h-6 w-auto object-contain object-center lg:object-left"
                 />
-                <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[612px]">
+                <h1 className="text-white text-3xl font-bold font-['Inter'] leading-10 max-w-[612px]">
                   {tr.heroSlideIndTitle}
                 </h1>
                 <p className="text-white text-xl font-['Inter'] leading-8 max-w-[612px]">
@@ -318,7 +318,7 @@ export default function HomeHeroV1({ tr, userType }: HomeHeroV1Props) {
                   alt="Baterino Medical"
                   className="h-6 w-auto object-contain object-center lg:object-left"
                 />
-                <h1 className="text-white text-3xl font-bold font-['Inter'] uppercase leading-10 max-w-[510px]">
+                <h1 className="text-white text-3xl font-bold font-['Inter'] leading-10 max-w-[510px]">
                   {tr.heroSlideMedTitle}
                 </h1>
                 <p className="text-white text-lg font-normal font-['Inter'] leading-7 max-w-[612px]">

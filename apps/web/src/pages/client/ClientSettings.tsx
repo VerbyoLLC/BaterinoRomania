@@ -812,7 +812,7 @@ export default function ClientSettings() {
           <p className="text-sm text-slate-600 font-['Inter'] -mt-1">
             Adresa de facturare este folosită implicit pentru livrare. Bifează mai jos dacă livrarea este în altă locație.
           </p>
-          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 font-['Inter']">Facturare / livrare implicită</h3>
+          <h3 className="text-xs font-bold tracking-wide text-slate-500 font-['Inter']">Facturare / livrare implicită</h3>
           <label className="block">
             <span className="text-sm font-semibold text-slate-800 font-['Inter']">Adresă</span>
             <input
@@ -933,7 +933,7 @@ export default function ClientSettings() {
 
           {deliveryDifferent ? (
             <div className="space-y-4 pl-1 border-l-2 border-slate-200">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 font-['Inter']">Livrare</h3>
+              <h3 className="text-xs font-bold tracking-wide text-slate-500 font-['Inter']">Livrare</h3>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-800 font-['Inter']">Adresă livrare</span>
                 <input

@@ -1078,7 +1078,7 @@ export default function GuestCheckout() {
           </div>
 
           {checkoutBuyerIsPj ? (
-            <p className="mb-6 mt-0.5 text-sm font-bold uppercase tracking-wide text-slate-700 font-['Inter'] sm:text-base">
+            <p className="mb-6 mt-0.5 text-sm font-bold text-slate-700 font-['Inter'] sm:text-base">
               {tr.contactPersonSectionTitle}
             </p>
           ) : null}
@@ -1175,7 +1175,7 @@ export default function GuestCheckout() {
 
           {checkoutBuyerIsPj ? (
             <div className="space-y-4 border-t border-slate-200 pt-5">
-              <p className="mb-6 mt-0.5 text-sm font-bold uppercase tracking-wide text-slate-700 font-['Inter'] sm:text-base">
+              <p className="mb-6 mt-0.5 text-sm font-bold text-slate-700 font-['Inter'] sm:text-base">
                 {tr.companyInvoiceSectionTitle}
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">

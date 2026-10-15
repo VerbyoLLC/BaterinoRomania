@@ -167,7 +167,7 @@ export default function FloatingStickyButtons() {
               />
               <h2
                 id="warning-modal-title"
-                className="w-full text-center text-black text-2xl font-extrabold font-['Inter'] uppercase leading-[48px] mt-2"
+                className="w-full text-center text-black text-2xl font-extrabold font-['Inter'] leading-[48px] mt-2"
               >
                 Riscuri și realități în piața bateriilor
               </h2>

@@ -78,6 +78,7 @@ export type ProduseTranslations = {
   catalogPromotie: string
   catalogAddToCart: string
   catalogViewDetails: string
+  catalogShowMore: string
   catalogRequestQuote: string
   /** Guest „Cere ofertă” WhatsApp prefill — `{title}` = product title */
   catalogRequestQuoteWhatsappPrefill: string
@@ -102,7 +103,7 @@ export const PRODUCTS: Product[] = []
 
 const translations: Record<LangCode, ProduseTranslations> = {
   ro: {
-    heroTitle: 'BATERII LIFEPO4',
+    heroTitle: 'Baterii LiFePO4',
     heroSubtitle: 'Sisteme LiFePO4 scalabile, integrate cu panouri fotovoltaice și optimizate pentru autonomie reală.',
     filterSector: 'Sector',
     filterCapacitate: 'Capacitate',
@@ -159,6 +160,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogPromotie: 'Promoție',
     catalogAddToCart: 'Adaugă în coș',
     catalogViewDetails: 'Vezi detalii',
+    catalogShowMore: 'Arată mai multe',
     catalogRequestQuote: 'Cere ofertă',
     catalogRequestQuoteWhatsappPrefill: 'Salut, as dori sa aflu mai multe despre {title}',
     catalogPriceOnRequest: 'La cerere',
@@ -198,7 +200,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     ],
   },
   en: {
-    heroTitle: 'LIFEPO4 BATTERIES',
+    heroTitle: 'LiFePO4 batteries',
     heroSubtitle: 'Scalable LiFePO4 systems, integrated with solar panels and optimised for real energy autonomy.',
     filterSector: 'Sector',
     filterCapacitate: 'Capacity',
@@ -255,6 +257,7 @@ const translations: Record<LangCode, ProduseTranslations> = {
     catalogPromotie: 'Promotion',
     catalogAddToCart: 'Add to cart',
     catalogViewDetails: 'View details',
+    catalogShowMore: 'Show more',
     catalogRequestQuote: 'Request quote',
     catalogRequestQuoteWhatsappPrefill: 'Hello, I would like to find out more about {title}',
     catalogPriceOnRequest: 'On request',

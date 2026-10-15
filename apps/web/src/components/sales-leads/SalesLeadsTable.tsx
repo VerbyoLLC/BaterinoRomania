@@ -159,7 +159,7 @@ function DetailField({ label, value, empty }: { label: string; value: string; em
 function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3 border-b border-slate-100 pb-4 last:border-b-0 last:pb-0">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 font-['Inter']">{title}</h3>
+      <h3 className="text-xs font-semibold tracking-wide text-slate-400 font-['Inter']">{title}</h3>
       <dl className="space-y-3">{children}</dl>
     </section>
   )

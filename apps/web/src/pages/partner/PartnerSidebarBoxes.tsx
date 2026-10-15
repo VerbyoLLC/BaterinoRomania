@@ -222,7 +222,7 @@ export function AvantajePartenerDashboardBox() {
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 shadow-[0_4px_12px_-6px_rgba(245,158,11,0.25)]">
         <Handshake className="h-4 w-4 text-amber-800" strokeWidth={1.9} aria-hidden />
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-amber-900/90 font-['Inter']">
+      <h2 className="m-0 text-sm font-bold tracking-wider text-amber-900/90 font-['Inter']">
         {tr.partnerAdvantagesTitle}
       </h2>
     </div>
@@ -345,7 +345,7 @@ export function SigurantaClientuluiBox({
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-slate-700 font-['Inter']">{sidebarTr.sigurantaTitle}</h2>
+      <h2 className="m-0 text-sm font-bold tracking-wider text-slate-700 font-['Inter']">{sidebarTr.sigurantaTitle}</h2>
     </div>
   )
 
@@ -427,7 +427,7 @@ export function SuportTehnicBox({
           <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       </span>
-      <h2 className="m-0 text-sm font-bold uppercase tracking-wider text-sky-800 font-['Inter']">{tr.suportTitle}</h2>
+      <h2 className="m-0 text-sm font-bold tracking-wider text-sky-800 font-['Inter']">{tr.suportTitle}</h2>
     </div>
   )
 

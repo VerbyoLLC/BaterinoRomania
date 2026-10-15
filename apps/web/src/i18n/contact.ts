@@ -63,8 +63,8 @@ const translations: Record<LangCode, ContactTranslations> = {
   ro: {
     seoTitle: 'Contact – Baterino Romania',
     seoDesc: 'Contactează echipa Baterino Romania pentru informații despre sisteme de stocare a energiei LiFePO4, parteneriate și suport tehnic.',
-    subtitle: 'SUNTEM ALATURI DE TINE',
-    heroTitle: 'CENTRU DE SUPORT INTEGRAT',
+    subtitle: 'Suntem alături de tine',
+    heroTitle: 'Centru de suport integrat',
     heroDesc: 'Am creat un punct unic de contact pentru suport tehnic, vânzări şi consultanţă, dedicat clienţilor din sectorul rezidenţial, industrial, medical şi maritim.',
     contactDirectLabel: 'Contact direct',
     chooseMethodLabel: 'ALEGE MODALITATEA DE CONTACT',
@@ -121,8 +121,8 @@ const translations: Record<LangCode, ContactTranslations> = {
   en: {
     seoTitle: 'Contact – Baterino Romania',
     seoDesc: 'Contact the Baterino Romania team for information on LiFePO4 energy storage systems, partnerships and technical support.',
-    subtitle: 'WE ARE WITH YOU',
-    heroTitle: 'INTEGRATED SUPPORT CENTER',
+    subtitle: 'We are with you',
+    heroTitle: 'Integrated support center',
     heroDesc: 'We have created a single contact point for technical support, sales and consulting, dedicated to clients in the residential, industrial, medical and maritime sectors.',
     contactDirectLabel: 'Direct contact',
     chooseMethodLabel: 'CHOOSE CONTACT METHOD',

@@ -453,7 +453,7 @@ export default function Contact() {
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 font-['Inter']">
               {tr.subtitle}
             </p>
-            <h1 className="mb-6 text-[clamp(2.4rem,6vw,4rem)] font-extrabold uppercase leading-none text-slate-900 font-['Inter']">
+            <h1 className="mb-6 text-[clamp(2.4rem,6vw,4rem)] font-extrabold leading-none text-slate-900 font-['Inter']">
               {tr.heroTitle}
             </h1>
             <p className="text-base leading-relaxed text-slate-600 font-['Inter']">{tr.heroDesc}</p>

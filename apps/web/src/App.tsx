@@ -10,8 +10,6 @@ import AuthWrapper from './components/AuthWrapper'
 import HomeEntry from './pages/HomeEntry'
 import InstalatoriOnlyIndex from './pages/InstalatoriOnlyIndex'
 import Produse from './pages/Produse'
-import Oferte from './pages/Oferte'
-import OfertaTemplate from './pages/OfertaTemplate'
 import Siguranta from './pages/Siguranta'
 import Divizii from './pages/Divizii'
 import Rezidential from './pages/Rezidential'
@@ -71,6 +69,7 @@ import PoliticaConfidentialitate from './pages/PoliticaConfidentialitate'
 import PoliticaDeRetur from './pages/PoliticaDeRetur'
 import Cariere from './pages/Cariere'
 import StudiiDeCaz from './pages/StudiiDeCaz'
+import BessIndustrial from './pages/BessIndustrial'
 import Contact from './pages/Contact'
 import IntrebariFrecvente from './pages/IntrebariFrecvente'
 import PartnerLayout from './pages/partner/PartnerLayout'
@@ -238,8 +237,7 @@ export default function App() {
               <Route path="produse" element={<Produse />} />
               <Route path="produse/baterii-solare" element={<Produse categorySlug="baterii-solare" />} />
               <Route path="produse/sisteme-bess" element={<Produse categorySlug="sisteme-bess" />} />
-              <Route path="oferte" element={<Oferte />} />
-              <Route path="oferte/:slug" element={<OfertaTemplate />} />
+              <Route path="oferte/*" element={<Navigate to="/produse" replace />} />
               <Route path="companii/:handle" element={<LegacyCompaniiInstallerRedirect />} />
               <Route
                 path="companii-instalatori-fotovoltaice/:handle"
@@ -280,6 +278,8 @@ export default function App() {
               <Route path="companie/contact" element={<Navigate to="/companie/viziune" replace />} />
               <Route path="companie/:slug" element={<Navigate to="/companie/viziune" replace />} />
               <Route path="cariere" element={<Cariere />} />
+              <Route path="bess-industrial" element={<BessIndustrial />} />
+              <Route path="bess-industril" element={<Navigate to="/bess-industrial" replace />} />
               <Route path="studii-de-caz" element={<StudiiDeCaz />} />
               <Route path="contact" element={<Contact />} />
               <Route path="blog" element={<Blog />} />

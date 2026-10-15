@@ -44,6 +44,8 @@ import {
 import { getCatalogCategoryRoute } from '../lib/catalogCategoryRoutes'
 import { absoluteUrl } from '../lib/siteUrl'
 
+const MOBILE_PRODUCTS_INITIAL = 3
+
 /* ── Page ─────────────────────────────────────────────────────── */
 const VALID_SECTORS = ['rezidential', 'industrial', 'medical', 'maritim']
 
@@ -66,12 +68,17 @@ export default function Produse({ categorySlug }: ProduseProps = {}) {
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [mobileSectorOpen, setMobileSectorOpen] = useState(false)
+  const [mobileProductsShowAll, setMobileProductsShowAll] = useState(false)
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
   const lockedSector = Boolean(categoryRoute)
   const pageCanonical = categoryRoute ? `/produse/${categoryRoute.slug}` : '/produse'
   const pageTitle = categoryRoute?.seoTitle || seo.title || tr.seoTitle
   const pageDescription = categoryRoute?.seoDescription || seo.description || tr.seoDesc
   const pageOgImage = categoryRoute?.ogImage || seo.ogImage || undefined
+
+  useEffect(() => {
+    setMobileProductsShowAll(false)
+  }, [sector, voltageFilter, locationFilter])
 
   useEffect(() => {
     getProducts()
@@ -517,8 +524,9 @@ export default function Produse({ categorySlug }: ProduseProps = {}) {
             ))}
           </div>
         ) : filtered.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2">
-            {filtered.map((product) => {
+            {filtered.map((product, index) => {
               const img = getProductCardImageUrl(product)
               const imgs = Array.isArray(product.images) ? product.images : []
               const fallbackImg = imgs[0] && imgs[0] !== img ? imgs[0] : '/images/shared/HP2000-all-in-one.webp'
@@ -581,9 +589,10 @@ export default function Produse({ categorySlug }: ProduseProps = {}) {
                 priceOnRequest: tr.catalogPriceOnRequest,
                 priceOnRequestNote: tr.catalogPriceOnRequestNote,
               }
+              const hiddenOnMobile = !mobileProductsShowAll && index >= MOBILE_PRODUCTS_INITIAL
               return (
+                <div key={product.id} className={hiddenOnMobile ? 'hidden sm:contents' : 'contents'}>
                 <ProduseCatalogProductCard
-                  key={product.id}
                   variant={product.tipProdus === 'industrial' ? 'industrial' : 'residential'}
                   imageSrc={img}
                   fallbackImageSrc={fallbackImg}
@@ -630,9 +639,22 @@ export default function Produse({ categorySlug }: ProduseProps = {}) {
                     return null
                   })()}
                 />
+                </div>
               )
             })}
           </div>
+          {!loading && !mobileProductsShowAll && filtered.length > MOBILE_PRODUCTS_INITIAL ? (
+            <div className="mt-4 flex justify-center sm:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileProductsShowAll(true)}
+                className="h-11 w-full max-w-xs rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-sm font-semibold font-['Inter'] text-black transition-colors hover:bg-neutral-100"
+              >
+                {tr.catalogShowMore}
+              </button>
+            </div>
+          ) : null}
+          </>
         ) : (
           <div className="text-center py-24 text-gray-600 font-['Inter'] text-base">
             {(sector === 'medical' || sector === 'industrial') ? tr.productsComingSoon : tr.noResults}

@@ -93,7 +93,7 @@ function SigurantaCard({
         <div className="absolute left-4 top-4 flex size-11 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm sm:size-12">
           <img src={icon} alt="" aria-hidden className="size-6 object-contain sm:size-7" />
         </div>
-        <h2 className="absolute bottom-3 left-4 right-4 m-0 text-base font-extrabold font-['Inter'] uppercase leading-snug text-white sm:text-lg">
+        <h2 className="absolute bottom-3 left-4 right-4 m-0 text-base font-extrabold font-['Inter'] leading-snug text-white sm:text-lg">
           {title}
         </h2>
       </div>
@@ -163,7 +163,7 @@ function DetailModal({
         <div className="overflow-y-auto px-5 py-6 sm:px-8 sm:py-7">
           <h2
             id="siguranta-modal-title"
-            className="m-0 text-xl font-extrabold font-['Inter'] uppercase leading-snug text-black sm:text-2xl"
+            className="m-0 text-xl font-extrabold font-['Inter'] leading-snug text-black sm:text-2xl"
           >
             {title}
           </h2>

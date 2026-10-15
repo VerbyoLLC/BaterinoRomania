@@ -421,7 +421,7 @@ export default function BlogArticle() {
       {/* ── Related articles — mobile only (desktop shows 1 in sidebar) ── */}
       {related.length > 0 && (
         <section className="lg:hidden max-w-[780px] mx-auto px-5 pb-24">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.18em] text-gray-400 mb-6">Articole similare</h2>
+          <h2 className="text-[13px] font-semibold tracking-[0.18em] text-gray-400 mb-6">Articole similare</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {related.map((r) => (
               <Link

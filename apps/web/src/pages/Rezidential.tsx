@@ -301,7 +301,7 @@ export default function Rezidential() {
 
         {/* Right – cols 7–12, col 6 left empty */}
         <div className="col-span-4 lg:col-span-6 lg:col-start-7 lg:pt-[70px]">
-          <p className="text-black text-sm lg:text-lg font-bold font-['Inter'] uppercase tracking-wider leading-8 lg:leading-10 mb-3">
+          <p className="text-black text-sm lg:text-lg font-bold font-['Inter'] leading-8 lg:leading-10 mb-3">
             {tr.ctaSuport}
           </p>
           {/* Feature cards: 2 per row on mobile, 3 per row on desktop */}

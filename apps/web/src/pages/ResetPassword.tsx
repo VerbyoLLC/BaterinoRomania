@@ -63,8 +63,8 @@ export default function ResetPassword() {
     return (
       <AuthLayout
         image={PLACEHOLDER_IMG}
-        supertitle="RESETARE"
-        title="PAROLĂ CONT"
+        supertitle="Resetare"
+        title="Parolă cont"
       >
         <h2 className="text-black text-2xl font-extrabold font-['Inter'] mb-1">
           Parolă nouă
@@ -122,8 +122,8 @@ export default function ResetPassword() {
     return (
       <AuthLayout
         image={PLACEHOLDER_IMG}
-        supertitle="RESETARE"
-        title="PAROLĂ CONT"
+        supertitle="Resetare"
+        title="Parolă cont"
       >
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-6">
@@ -151,8 +151,8 @@ export default function ResetPassword() {
   return (
     <AuthLayout
       image={PLACEHOLDER_IMG}
-      supertitle="RESETARE"
-      title="PAROLĂ CONT"
+      supertitle="Resetare"
+      title="Parolă cont"
     >
       {step === 'email' ? (
         <>

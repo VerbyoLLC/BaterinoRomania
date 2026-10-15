@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, Gift, LogOut, Package, ReceiptText, Settings, ShieldCheck, UserRound, BadgePercent, Tag } from 'lucide-react'
+import { Bell, Gift, LogOut, Package, ReceiptText, Settings, ShieldCheck, UserRound, BadgePercent } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getMenuTranslations } from '../i18n/menu'
 import { LANGUAGES } from '../i18n/menu'
@@ -153,11 +153,13 @@ export default function MobileMenu({
   }
 
   const handleDiviziiClick = () => {
+    setShowCompaniePage(false)
     setShowDiviziiPage(true)
   }
 
   const handleDiviziiBack = () => {
     setShowDiviziiPage(false)
+    setShowCompaniePage(true)
   }
 
   const handleLangClick = () => {
@@ -321,6 +323,17 @@ export default function MobileMenu({
                     <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                   </Link>
                 ))}
+                <button
+                  type="button"
+                  onClick={handleDiviziiClick}
+                  className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.divizii}</p>
+                    <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainDiviziiSubtitle}</p>
+                  </div>
+                  <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                </button>
               </div>
             </div>
           ) : showDiviziiPage ? (
@@ -502,17 +515,6 @@ export default function MobileMenu({
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>
                       <Link
-                        to="/oferte"
-                        className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                        onClick={handleLinkClick}
-                      >
-                        <span className="flex items-center gap-3 text-black text-xl font-bold font-['Inter'] leading-8">
-                          <Tag className="size-6 text-gray-700" aria-hidden />
-                          {t.oferte}
-                        </span>
-                        <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                      </Link>
-                      <Link
                         to="/verificare-garantie"
                         className="flex items-center justify-between w-full py-3 border-b border-gray-100"
                         onClick={handleLinkClick}
@@ -570,19 +572,17 @@ export default function MobileMenu({
                         </div>
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </button>
-                      {authRole == null || authRole === 'admin' ? (
-                        <Link
-                          to="/oferte"
-                          className="flex items-center justify-between w-full py-3 border-b border-gray-100"
-                          onClick={handleLinkClick}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.oferte}</p>
-                            <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainOferteSubtitle}</p>
-                          </div>
-                          <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                        </Link>
-                      ) : null}
+                      <Link
+                        to="/bess-industrial"
+                        className="flex items-center justify-between w-full py-3 border-b border-gray-100"
+                        onClick={handleLinkClick}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.produseCi}</p>
+                          <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainProduseCiSubtitle}</p>
+                        </div>
+                        <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
+                      </Link>
                       <Link
                         to="/studii-de-caz"
                         className="flex items-center justify-between w-full py-3 border-b border-gray-100"
@@ -607,17 +607,6 @@ export default function MobileMenu({
                         </div>
                         <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
                       </Link>
-                      <button
-                        type="button"
-                        onClick={handleDiviziiClick}
-                        className="flex items-center justify-between w-full py-3 border-b border-gray-100 text-left"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-black text-xl font-bold font-['Inter'] leading-8">{t.divizii}</p>
-                          <p className="text-black text-base font-medium font-['Inter'] leading-8 text-gray-600">{t.mainDiviziiSubtitle}</p>
-                        </div>
-                        <img src="/images/menu/Chevron%20Right.svg" alt="" className="size-6 flex-shrink-0" />
-                      </button>
                       <Link
                         to="/instalatori"
                         className="flex items-center justify-between w-full py-3 border-b border-gray-100"

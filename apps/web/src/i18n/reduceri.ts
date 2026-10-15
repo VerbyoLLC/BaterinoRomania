@@ -33,13 +33,13 @@ const CTA = '/login'
 
 const translations: Record<LangCode, ReduceriTranslations> = {
   ro: {
-    heroTitle: 'REDUCERILE BATERINO',
+    heroTitle: 'Reducerile Baterino',
     heroSubtitle: 'Reduceri create pentru oameni, pentru comunitate și pentru independența energetică a fiecăruia dintre noi.',
     programs: [
       {
         photo: IMG('tva-cum-era.webp'),
-        programLabel: 'PROGRAMUL TVA-UL DE 9%',
-        title: '12% REDUCERE LA ORICE PRODUS',
+        programLabel: 'Programul TVA-ul de 9%',
+        title: '12% reducere la orice produs',
         descriereScurta: 'Beneficiezi de 12% reducere din prețul fără TVA, la orice produs.',
         description: 'Eliminarea TVA-ului de 9% a generat scumpiri în lanț, inclusiv în piața bateriilor.\n\nNoi am ales să protejăm clienții, nu marja de profit: **beneficiezi de 12% reducere din prețul fără TVA, la orice produs.**',
         ctaLabel: 'CREEAZĂ CONT',
@@ -50,8 +50,8 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('energie-pentru-parinti.webp'),
-        programLabel: 'PROGRAMUL ENERGIE PENTRU PĂRINȚI',
-        title: '15% REDUCERE PENTRU PENSIONARI',
+        programLabel: 'Programul energie pentru părinți',
+        title: '15% reducere pentru pensionari',
         descriereScurta: '15% reducere din prețul fără TVA la orice produs Baterino pentru pensionari.',
         description: 'Pentru că fiecare leu din pensie contează pentru seniorii noștri, am creat un program dedicat lor.\n\n**Beneficiezi de 15% reducere din prețul fără TVA la orice produs Baterino**, dacă faci dovada pensionării și ești beneficiarul produsului.',
         ctaLabel: 'CREEAZĂ CONT',
@@ -67,8 +67,8 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('prietenie-cu-energie.webp'),
-        programLabel: 'PROGRAMUL ȘTIU DE LA VECINU\'',
-        title: '5% REDUCERE PENTRU PRIETENI ȘI VECINI',
+        programLabel: 'Programul știu de la vecinu\'',
+        title: '5% reducere pentru prieteni și vecini',
         descriereScurta: 'Primești 5% reducere cu un cod oferit de un client Baterino.',
         description: 'Mereu îi sunai pe vecinu\' să îți dea borma șina. Acum sună-l să îți dea un cod de reducere Baterino.\n\n**Primești 5% reducere** atunci când folosești un cod oferit de un client Baterino. Codul este disponibil în contul fiecărui client și poate fi oferit unui client nou, la prima comandă.',
         ctaLabel: 'CREEAZĂ CONT',
@@ -84,8 +84,8 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('viata-la-tara-campanie-baterino.webp'),
-        programLabel: 'PROGRAMUL VIAȚA LA ȚARĂ',
-        title: '7% REDUCERE DACĂ LOCUIEȘTI LA ȚARĂ',
+        programLabel: 'Programul viața la țară',
+        title: '7% reducere dacă locuiești la țară',
         descriereScurta: '7% reducere din prețul fără TVA dacă locuiești într-o comună sau sat.',
         description: 'Viața la țară înseamnă tradiție și grijă pentru casă. Suntem alături de cei care investesc în siguranța și confortul gospodăriei lor.\n\n**Beneficiezi de 7% reducere din prețul fără TVA** dacă factura este emisă pe numele beneficiarului final, iar în buletinul acestuia este trecut domiciliul într-o comună sau sat.',
         ctaLabel: 'CREEAZĂ CONT',
@@ -95,7 +95,7 @@ const translations: Record<LangCode, ReduceriTranslations> = {
         discountPercent: 7,
       },
     ],
-    howTitle: 'CUM APLIC REDUCERILE BATERINO?',
+    howTitle: 'Cum aplic reducerile Baterino?',
     howSteps: [
       'Creează cont și alege produsul.',
       'Selectează programul de reducere din pagina produsului.',
@@ -108,13 +108,13 @@ const translations: Record<LangCode, ReduceriTranslations> = {
     seoDesc: 'Programe de reducere Baterino: TVA-ul de 9%, Energie pentru Părinți, Știu de la Vecinu\' și Viața la Țară. Reduceri reale pentru oameni reali.',
   },
   en: {
-    heroTitle: 'BATERINO DISCOUNTS',
+    heroTitle: 'Baterino discounts',
     heroSubtitle: 'Discounts created for people, for community and for the energy independence of each of us.',
     programs: [
       {
         photo: IMG('tva-cum-era.webp'),
-        programLabel: 'THE 9% VAT PROGRAMME',
-        title: '12% DISCOUNT ON ANY PRODUCT',
+        programLabel: 'The 9% VAT programme',
+        title: '12% discount on any product',
         description: 'The removal of the 9% VAT generated a chain of price increases, including in the battery market.\n\nWe chose to protect our clients, not our profit margin: you benefit from a 12% discount off the VAT-exclusive price on any product.',
         ctaLabel: 'CREATE ACCOUNT',
         ctaTo: CTA,
@@ -122,8 +122,8 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('energie-pentru-parinti.webp'),
-        programLabel: 'ENERGY FOR PARENTS PROGRAMME',
-        title: '15% DISCOUNT FOR PENSIONERS',
+        programLabel: 'Energy for parents programme',
+        title: '15% discount for pensioners',
         description: 'Because every penny of a pension counts for our seniors, we created a dedicated programme for them.\n\nYou benefit from a 15% discount off the VAT-exclusive price on any Baterino product, if you provide proof of retirement and you are the product beneficiary.',
         ctaLabel: 'CREATE ACCOUNT',
         ctaTo: CTA,
@@ -137,8 +137,8 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('prietenie-cu-energie.webp'),
-        programLabel: 'I HEARD IT FROM THE NEIGHBOUR',
-        title: '5% DISCOUNT FOR FRIENDS & NEIGHBOURS',
+        programLabel: 'I heard it from the neighbour',
+        title: '5% discount for friends & neighbours',
         description: 'You used to call your neighbour for a hand. Now call them for a Baterino discount code.\n\nGet 5% off when you use a code shared by a Baterino client. The code is available in every client\'s account and can be given to a new customer on their first order.',
         ctaLabel: 'CREATE ACCOUNT',
         ctaTo: CTA,
@@ -151,15 +151,15 @@ const translations: Record<LangCode, ReduceriTranslations> = {
       },
       {
         photo: IMG('viata-la-tara-campanie-baterino.webp'),
-        programLabel: 'RURAL LIFE PROGRAMME',
-        title: '7% DISCOUNT IF YOU LIVE IN A VILLAGE',
+        programLabel: 'Rural life programme',
+        title: '7% discount if you live in a village',
         description: 'Rural life means tradition and care for home. We support those who invest in the safety and comfort of their household.\n\nYou benefit from a 7% discount off the VAT-exclusive price if the invoice is issued in the name of the end beneficiary whose registered address is in a commune or village.',
         ctaLabel: 'CREATE ACCOUNT',
         ctaTo: CTA,
         termsLabel: 'Discount Terms & Conditions',
       },
     ],
-    howTitle: 'HOW DO I APPLY BATERINO DISCOUNTS?',
+    howTitle: 'How do I apply Baterino discounts?',
     howSteps: [
       'Create an account and choose your product.',
       'Select the discount programme on the product page.',

@@ -40,42 +40,15 @@ export default function HomeInverterSearch({ placeholder, compact }: HomeInverte
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [focused])
 
-  const searchBarContent = (
-    <>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
-        <img
-          src="/images/shared/compatibility-icon.svg"
-          alt=""
-          aria-hidden
-          className="h-6 w-6 object-contain"
-        />
-      </span>
-      <span className="min-w-0 flex-1 text-base font-semibold font-['Inter'] text-gray-500 text-left truncate">
-        {placeholder}
-      </span>
-      <svg
-        className="h-5 w-5 shrink-0 text-gray-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
-      </svg>
-    </>
-  )
-
   return (
     <>
-      {/* ── Mobile: tap to open bottom-sheet modal ── */}
       <button
         type="button"
         onClick={() => setMobileModalOpen(true)}
-        aria-label={productTr.verificareCompatibilitate}
-        className="md:hidden flex min-h-12 w-full max-w-xl items-center gap-3 rounded-full border-2 border-gray-200 bg-white px-4 py-2 text-left transition-colors hover:border-gray-300 active:bg-gray-50"
+        className="md:hidden flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-slate-900 px-4 text-sm font-bold font-['Inter'] text-white shadow-sm transition-colors hover:bg-slate-800 active:bg-slate-950"
       >
-        {searchBarContent}
+        <img src="/images/shared/compatibility-icon.svg" alt="" aria-hidden className="size-4 shrink-0 object-contain brightness-0 invert" />
+        {productTr.verificareCompatibilitate}
       </button>
 
       {/* ── Desktop: inline dropdown ── */}

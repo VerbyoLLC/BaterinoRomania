@@ -286,7 +286,7 @@ export default function Medical() {
 
           {/* Right – feature cards */}
           <div className="col-span-4 lg:col-span-6 lg:col-start-7 pt-8 lg:pt-[70px]">
-            <p className="text-black text-base lg:text-lg font-bold font-['Inter'] uppercase tracking-wider leading-6 lg:leading-8 mb-4 text-center lg:text-left">
+            <p className="text-black text-base lg:text-lg font-bold font-['Inter'] leading-6 lg:leading-8 mb-4 text-center lg:text-left">
               {tr.ctaSuport}
             </p>
             <div className="grid-12">

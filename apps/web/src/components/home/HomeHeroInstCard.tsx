@@ -74,7 +74,7 @@ export default function HomeHeroInstCard({ tr, isDragging, productLink }: Props)
           <p className="m-0 mb-1.5 text-sm font-medium text-white/65 font-['Inter']">
             {tr.heroV2InstLead}
           </p>
-          <h3 className="m-0 text-[clamp(1.5rem,3vw,2rem)] font-extrabold leading-tight uppercase text-white font-['Inter']">
+          <h3 className="m-0 text-[clamp(1.5rem,3vw,2rem)] font-extrabold leading-tight text-white font-['Inter']">
             {tr.heroV2InstTitle}
           </h3>
         </div>

@@ -18,6 +18,10 @@ export type StudiiDeCazTranslations = {
   seoDesc: string
   heroTitle: string
   heroDesc: string
+  filterAll: string
+  viewProject: string
+  projectOne: string
+  projectMany: string
   galleryPhotosAria: string
   cases: CaseStudyEntry[]
 }
@@ -27,9 +31,13 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
     seoTitle: 'Studii de caz – Baterino România',
     seoDesc:
       'Proiecte reale de stocare a energiei implementate cu sisteme LithTech — industrial, rezidențial, medical și maritim.',
-    heroTitle: 'Proiecte Industriale',
+    heroTitle: 'Studii de Caz',
     heroDesc:
-      'Importăm, furnizăm și instalăm sistemele de stocare a energiei cu baterii LiFePo4 pentru mediul industrial în România și Europa.',
+      'Proiecte reale de stocare a energiei, implementate cu sisteme LithTech în România și Europa.',
+    filterAll: 'Toate',
+    viewProject: 'Vezi proiectul',
+    projectOne: 'proiect',
+    projectMany: 'proiecte',
     galleryPhotosAria: 'Număr de fotografii în galerie',
     cases: [
       {
@@ -137,7 +145,11 @@ const translations: Record<LangCode, StudiiDeCazTranslations> = {
       'Real energy storage projects delivered with LithTech systems — industrial, residential, medical and maritime.',
     heroTitle: 'Case studies',
     heroDesc:
-      'Real-world projects where Baterino and LithTech storage systems deliver autonomy, safety and operational efficiency.',
+      'Real energy storage projects delivered with LithTech systems in Romania and Europe.',
+    filterAll: 'All',
+    viewProject: 'View project',
+    projectOne: 'project',
+    projectMany: 'projects',
     galleryPhotosAria: 'Number of gallery photos',
     cases: [
       {

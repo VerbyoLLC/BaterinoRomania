@@ -481,7 +481,7 @@ function SlideProiecte({ tr }: { tr: HomeTranslations }) {
           draggable={false}
           className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
         />
-        <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">
+        <h3 className="text-xl font-bold leading-tight text-white whitespace-pre-line font-['Inter']">
           {tr.heroV2Card3Title}
         </h3>
         <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter']">
@@ -532,7 +532,7 @@ function SlideInstalatoriImage({
         <p className="m-0 mb-1.5 text-sm font-medium text-white/65 font-['Inter']">
           {tr.heroV2InstLead}
         </p>
-        <h3 className="m-0 text-[1.75rem] font-extrabold leading-tight uppercase text-white font-['Inter']">
+        <h3 className="m-0 text-[1.75rem] font-extrabold leading-tight text-white font-['Inter']">
           {tr.heroV2InstTitle}
         </h3>
         <button
@@ -619,7 +619,7 @@ function InstalatoriDetailsModal({
             <p className="m-0 mb-1 text-sm font-medium text-white/65 font-['Inter']">
               {tr.heroV2InstLead}
             </p>
-            <h3 className="m-0 text-2xl font-extrabold leading-tight uppercase text-white font-['Inter']">
+            <h3 className="m-0 text-2xl font-extrabold leading-tight text-white font-['Inter']">
               {tr.heroV2InstTitle}
             </h3>
           </div>
@@ -740,7 +740,7 @@ export default function HomeMobileSliderV2({ tr, jumpTo, promoPriceLoading = fal
   return (
     <section className="mb-10 w-full" aria-label="Hero">
       <header className="mb-6 px-5 text-center">
-        <h1 className="text-black text-2xl font-extrabold font-['Inter'] leading-tight uppercase mb-2 whitespace-pre-line pt-3">
+        <h1 className="text-black text-2xl font-extrabold font-['Inter'] leading-tight mb-2 whitespace-pre-line pt-3">
           {tr.heroV2Title}
         </h1>
       </header>

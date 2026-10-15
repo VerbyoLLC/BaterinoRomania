@@ -278,7 +278,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     swapCtaDesc:
       'Cât timp bateria ta e la noi în service, îți dăm una la schimb pentru toată perioada. Sistemul tău funcționează în continuare, fără pauze.',
     swapBannerCta: 'VEZI TOATE SERVICIILE',
-    reduceriTitle: 'REDUCERI ÎNTRE 5% ȘI 15%',
+    reduceriTitle: 'Reduceri între 5% și 15%',
     reduceriDesc:
       'La Baterino, bateriile LiFePO4 au prețuri reduse prin programele noastre de reduceri dedicate. Vezi care ți se potrivește.',
     reduceriCtaEyebrow: 'Programe de reduceri',
@@ -418,7 +418,7 @@ const translations: Record<LangCode, ProductDetailTranslations> = {
     swapCtaDesc:
       'While your battery is with us for service, we provide a replacement for the entire period. Your system keeps running without downtime.',
     swapBannerCta: 'VIEW ALL SERVICES',
-    reduceriTitle: 'DISCOUNTS FROM 5% TO 15%',
+    reduceriTitle: 'Discounts from 5% to 15%',
     reduceriDesc:
       'At Baterino, LiFePO4 batteries are available at reduced prices through our dedicated discount programmes. See which one suits you.',
     reduceriCtaEyebrow: 'Discount programmes',

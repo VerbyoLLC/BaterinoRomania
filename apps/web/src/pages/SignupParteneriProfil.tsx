@@ -253,8 +253,8 @@ export default function SignupParteneriProfil() {
   return (
     <AuthLayout
       image="/images/login/login-partner.webp"
-      supertitle="APROAPE GATA"
-      title="DATE COMPANIE"
+      supertitle="Aproape gata"
+      title="Date companie"
     >
       <button
         type="button"

@@ -135,10 +135,10 @@ export default function Login() {
       </div>
       <div className="w-[520px] min-h-[168px] left-0 top-[63px] absolute flex flex-col items-start justify-center text-left">
         <span>
-          <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">INSTALATORI </span>
+          <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">Instalatori </span>
           <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">SI</span>
         </span>
-        <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">DISTRIBUITORI</span>
+        <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">Distribuitori</span>
       </div>
     </div>
   )
@@ -146,8 +146,8 @@ export default function Login() {
   return (
     <AuthLayout
       image={image}
-      supertitle="BINE AI REVENIT"
-      title="CONT BATERINO"
+      supertitle="Bine ai revenit"
+      title="Cont Baterino"
       leftContent={INSTALATORI_ONLY ? partnerLeftContent : clientLeftContent}
     >
       <h2 className="text-black text-xl sm:text-2xl font-extrabold font-['Inter'] mb-4 sm:mb-6">

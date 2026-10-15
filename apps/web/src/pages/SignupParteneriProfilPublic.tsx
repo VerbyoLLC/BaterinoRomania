@@ -237,8 +237,8 @@ export default function SignupParteneriProfilPublic() {
   return (
     <AuthLayout
       image="/images/login/login-partner.webp"
-      supertitle="ÎNREGISTRARE PARTENER"
-      title="ACTIVITATE ȘI CONTACT"
+      supertitle="Înregistrare partener"
+      title="Activitate și contact"
     >
       <div className="flex items-center justify-between mb-6">
         <button

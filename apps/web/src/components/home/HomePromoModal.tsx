@@ -252,7 +252,7 @@ export default function HomePromoModal({ open, onClose, tr }: Props) {
             {tr.promoModalStatus}
           </p>
 
-          <p className="m-0 mb-2 text-xl font-extrabold uppercase tracking-wide text-sky-900 font-['Inter'] sm:text-2xl">
+          <p className="m-0 mb-2 text-xl font-extrabold text-sky-900 font-['Inter'] sm:text-2xl">
             {tr.promoModalImageTitle}
           </p>
 

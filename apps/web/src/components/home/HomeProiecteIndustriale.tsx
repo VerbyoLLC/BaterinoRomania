@@ -1,6 +1,4 @@
 import { useLanguage } from '../../contexts/LanguageContext'
-import { getHomeTranslations } from '../../i18n/home'
-import HomeInstalledCapacityCounters from './HomeInstalledCapacityCounters'
 import HomeCaseStudiesPreview from './HomeCaseStudiesPreview'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -75,12 +73,11 @@ function BatteryChargingIcon() {
 const TEXT = {
   ro: {
     eyebrow: 'Industrial',
-    title: 'EPC PROIECTE INDUSTRIALE\nÎN ROMÂNIA',
-    subtitle: 'Importăm și implementăm sisteme de stocare BESS industriale în România, în toate sectoarele.',
+    audienceTitle: 'Pentru cine instalăm?',
     cta: 'Vezi toate proiectele',
     sectors: [
       {
-        label: 'Parcuri Fotovoltaice',
+        label: 'Parcuri fotovoltaice',
         desc: 'Sisteme BESS la scară MW pentru stocare și echilibrare în parcuri solare.',
         Icon: SolarIcon,
       },
@@ -90,7 +87,7 @@ const TEXT = {
         Icon: ZapIcon,
       },
       {
-        label: 'Facilități Medicale',
+        label: 'Facilități medicale',
         desc: 'Backup de lungă durată pentru echipamente și infrastructuri medicale critice.',
         Icon: MedicalIcon,
       },
@@ -113,37 +110,36 @@ const TEXT = {
   },
   en: {
     eyebrow: 'Industrial',
-    title: 'EPC INDUSTRIAL PROJECTS\nIN ROMANIA',
-    subtitle: 'We import and implement industrial BESS energy storage systems in Romania, across all sectors.',
+    audienceTitle: 'Who do we install for?',
     cta: 'View all projects',
     sectors: [
       {
-        label: 'Solar Parks',
+        label: 'Solar parks',
         desc: 'MW-scale BESS for storage and grid balancing in photovoltaic parks.',
         Icon: SolarIcon,
       },
       {
-        label: 'EV Stations',
+        label: 'EV stations',
         desc: 'Buffer storage for fast-charging stations, eliminating peak demand from the grid.',
         Icon: ZapIcon,
       },
       {
-        label: 'Medical Facilities',
+        label: 'Medical facilities',
         desc: 'Long-duration backup for critical medical equipment and infrastructure.',
         Icon: MedicalIcon,
       },
       {
-        label: 'Production Units',
+        label: 'Production units',
         desc: 'Operational continuity and energy optimization in industrial processes.',
         Icon: FactoryIcon,
       },
       {
-        label: 'Residential Microgrids',
+        label: 'Residential microgrids',
         desc: 'Storage systems for residential communities with solar panels, ensuring energy autonomy and cost reduction.',
         Icon: HomeGridIcon,
       },
       {
-        label: 'Energy Storage Parks',
+        label: 'Energy storage parks',
         desc: 'Utility-scale solutions for power grid stabilization and renewable energy storage.',
         Icon: BatteryChargingIcon,
       },
@@ -187,22 +183,14 @@ export default function HomeProiecteIndustriale() {
   return (
     <section id="proiecte-industriale" className="mb-16 lg:mb-24 scroll-mt-24">
 
-      {/* ── Header ── */}
-      <div className="flex flex-col items-center text-center mb-10 lg:mb-12">
-        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase whitespace-pre-line">
-          {t.title}
-        </h2>
-        <p className="text-gray-600 text-base lg:text-lg font-normal font-['Inter'] leading-7 max-w-[580px]">
-          {t.subtitle}
-        </p>
-      </div>
-
       {/* ── 6 sector boxes ── */}
-      <div className="mb-10 lg:mb-12">
+      <div className="mb-16 lg:mb-24">
+        <h3 className="m-0 mb-6 text-center text-2xl font-extrabold font-['Inter'] leading-tight text-black sm:mb-8 sm:text-3xl">
+          {t.audienceTitle}
+        </h3>
         <SectorCardsGrid />
       </div>
 
-      <HomeInstalledCapacityCounters tr={getHomeTranslations(language.code)} />
       <HomeCaseStudiesPreview />
 
     </section>

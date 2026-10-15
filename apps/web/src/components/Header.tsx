@@ -42,7 +42,7 @@ function NavDropdown({
   onToggle,
 }: {
   label: string
-  items: { label: string; path: string }[]
+  items: { label: string; path: string; heading?: boolean }[]
   isOpen: boolean
   onToggle: () => void
 }) {
@@ -60,17 +60,23 @@ function NavDropdown({
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
-          {items.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => onToggle()}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+          {items.map((item) =>
+            item.heading ? (
+              <p key={item.label} className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {item.label}
+              </p>
+            ) : (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                onClick={() => onToggle()}
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
         </div>
       )}
     </div>
@@ -83,7 +89,6 @@ export default function Header() {
   const { replaceMainHeader } = useViziuneHeader()
   const location = useLocation()
   const isViziuneReplaced = location.pathname === '/companie/viziune' && replaceMainHeader
-  const [diviziiOpen, setDiviziiOpen] = useState(false)
   const [companieOpen, setCompanieOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
@@ -111,8 +116,11 @@ export default function Header() {
     }
   }, [])
   const t = getMenuTranslations(language.code)
-  const diviziiItems = DIVIZII_PATHS.map(({ key, path }) => ({ label: t[key], path }))
-  const companieItems = COMPANIE_PATHS.map(({ key, path }) => ({ label: t[key], path }))
+  const companieItems = [
+    ...COMPANIE_PATHS.map(({ key, path }) => ({ label: t[key], path })),
+    { label: t.divizii, path: '', heading: true },
+    ...DIVIZII_PATHS.map(({ key, path }) => ({ label: t[key], path })),
+  ]
   const cartAria =
     language.code === 'en' ? 'Shopping cart' : 'Coș'
   const notificationsAria =
@@ -120,7 +128,6 @@ export default function Header() {
   const hideInstalatoriNav = authRole === 'client'
 
   const closeDropdowns = () => {
-    setDiviziiOpen(false)
     setCompanieOpen(false)
     setAccountOpen(false)
     setLangOpen(false)
@@ -191,15 +198,12 @@ export default function Header() {
             ) : (
               <>
                 <Link to="/produse" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.produse}</Link>
-                {authRole == null || authRole === 'client' || authRole === 'admin' ? (
-                  <Link to="/oferte" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.oferte}</Link>
-                ) : null}
+                <Link to="/bess-industrial" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.produseCi}</Link>
                 <Link to="/studii-de-caz" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.studiiDeCaz}</Link>
                 {!hideInstalatoriNav ? (
                   <Link to="/instalatori" className="text-gray-700 hover:text-gray-900 font-medium whitespace-nowrap" onClick={closeDropdowns}>{t.instalatori}</Link>
                 ) : null}
-                <NavDropdown label={t.divizii} items={diviziiItems} isOpen={diviziiOpen} onToggle={() => { setDiviziiOpen(!diviziiOpen); setCompanieOpen(false); setAccountOpen(false); setLangOpen(false); }} />
-                <NavDropdown label={t.companie} items={companieItems} isOpen={companieOpen} onToggle={() => { setCompanieOpen(!companieOpen); setDiviziiOpen(false); setAccountOpen(false); setLangOpen(false); }} />
+                <NavDropdown label={t.companie} items={companieItems} isOpen={companieOpen} onToggle={() => { setCompanieOpen(!companieOpen); setAccountOpen(false); setLangOpen(false); }} />
               </>
             )}
           </nav>
@@ -243,7 +247,6 @@ export default function Header() {
                   type="button"
                   onClick={() => {
                     setAccountOpen(!accountOpen)
-                    setDiviziiOpen(false)
                     setCompanieOpen(false)
                     setLangOpen(false)
                   }}
@@ -344,7 +347,7 @@ export default function Header() {
                 {t.login}
               </Link>
             )}
-            <LanguageDropdown current={language} isOpen={langOpen} onToggle={() => { setLangOpen(!langOpen); setDiviziiOpen(false); setCompanieOpen(false); setAccountOpen(false); }} onSelect={setLanguage} />
+            <LanguageDropdown current={language} isOpen={langOpen} onToggle={() => { setLangOpen(!langOpen); setCompanieOpen(false); setAccountOpen(false); }} onSelect={setLanguage} />
           </div>
           <div className="flex items-center gap-1 md:hidden ml-auto">
             {!INSTALATORI_ONLY ? (

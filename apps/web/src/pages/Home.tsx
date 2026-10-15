@@ -31,11 +31,14 @@ import SEO from '../components/SEO'
 import SchemaOrg from '../components/SchemaOrg'
 import { useSeoPage } from '../contexts/SeoConfigContext'
 import CTABar from '../components/CTABar'
-import HomeHeroV2 from '../components/home/HomeHeroV2'
-import HomeMobileSliderV2, { MOBILE_SLIDE_V2_COUNT } from '../components/home/HomeMobileSliderV2'
-import HomeWarrantyCta from '../components/home/HomeWarrantyCta'
+import HomeHeroLegacy from '../components/home/HomeHeroLegacy'
+import HomeProductSlider from '../components/home/HomeProductSlider'
+
+const USE_LEGACY_HOME_HERO = false as boolean
+import HomeInstallerCta from '../components/home/HomeInstallerCta'
 import HomeInverterSearch from '../components/home/HomeInverterSearch'
 import HomeFeaturesGrid from '../components/home/HomeFeaturesGrid'
+import HomeBessBand from '../components/home/HomeBessBand'
 import HomeProiecteIndustriale from '../components/home/HomeProiecteIndustriale'
 import {
   CatalogProductCardSkeleton,
@@ -65,6 +68,8 @@ function renderBaterinoGlobalLink(text: string) {
     )
   )
 }
+
+const MOBILE_PRODUCTS_INITIAL = 3
 
 /* ── Page ────────────────────────────────────────────────────── */
 const WELCOME_MODAL_STORAGE_KEY = 'baterino-welcome-modal-chosen'
@@ -149,6 +154,7 @@ export default function Home() {
   const [voltageFilter, setVoltageFilter] = useState<'low' | 'high' | ''>('')
   const [locationFilter, setLocationFilter] = useState<'indoor' | 'outdoor' | ''>('')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [mobileProductsShowAll, setMobileProductsShowAll] = useState(false)
   const advancedFilterCount = (voltageFilter ? 1 : 0) + (locationFilter ? 1 : 0)
   const [isMobile, setIsMobile] = useState(true)
 
@@ -168,6 +174,10 @@ export default function Home() {
     const stored = sessionStorage.getItem(USER_TYPE_STORAGE_KEY)
     return stored === 'profesionist' || stored === 'client' ? stored : null
   })
+
+  useEffect(() => {
+    setMobileProductsShowAll(false)
+  }, [activeTab, voltageFilter, locationFilter])
 
   useEffect(() => {
     setProductsLoading(true)
@@ -202,12 +212,6 @@ export default function Home() {
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
-  }, [])
-
-  useEffect(() => {
-    if (window.innerWidth >= 640) return
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(WELCOME_MODAL_STORAGE_KEY)) return
-    setShowWelcomeModal(true)
   }, [])
 
   useEffect(() => {
@@ -349,26 +353,16 @@ export default function Home() {
         },
       ]} />
 
-      <h1 className="sr-only">{tr.heroV2Title}</h1>
-
-      {/* Mobile: card slider built from desktop cards, split in two */}
-      <div className="md:hidden">
-        <HomeMobileSliderV2
-          tr={promoTr}
-          promoPriceLoading={promoPriceLoading}
-          jumpTo={userType === 'profesionist' ? MOBILE_SLIDE_V2_COUNT - 1 : 0}
-        />
-      </div>
-
-      {/* Desktop: card slider hero */}
-      <div className="hidden md:block pt-6 lg:pt-10">
-        <HomeHeroV2 tr={promoTr} promoPriceLoading={promoPriceLoading} userType={userType} />
-      </div>
+      {USE_LEGACY_HOME_HERO ? (
+        <HomeHeroLegacy tr={promoTr} promoPriceLoading={promoPriceLoading} userType={userType} />
+      ) : (
+        <HomeProductSlider />
+      )}
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
         {/* ── PRODUCTS ── */}
         <section id="produse-section" className="mb-0">
-          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mt-6 sm:mt-8 lg:mt-10 mb-6 sm:mb-8 lg:mb-10 uppercase">
+          <h2 className="text-center text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mt-6 sm:mt-8 lg:mt-10 mb-6 sm:mb-8 lg:mb-10">
             {tr.productsSectionTitle}
           </h2>
 
@@ -608,7 +602,7 @@ export default function Home() {
                 {tr.productsComingSoon}
               </div>
             ) : (
-            featuredProducts.map((p) => {
+            featuredProducts.map((p, index) => {
               const img = getProductCardImageUrl(p)
               const pImgs = Array.isArray(p.images) ? p.images : []
               const fallbackImg = pImgs[0] && pImgs[0] !== img ? pImgs[0] : '/images/shared/HP2000-all-in-one.webp'
@@ -673,7 +667,8 @@ export default function Home() {
                 priceDisplay !== '' &&
                 (residentialPartnerPriceCta == null || String(residentialPartnerPriceCta).trim() === '')
               const catalogBadgeLabels = catalogBadgeLabelsFromProduseTr(tr)
-              return p.tipProdus === 'industrial' ? (
+              const hiddenOnMobile = !mobileProductsShowAll && index >= MOBILE_PRODUCTS_INITIAL
+              const card = p.tipProdus === 'industrial' ? (
                 <IndustrialCatalogProductCard
                   key={p.id}
                   {...common}
@@ -740,126 +735,36 @@ export default function Home() {
                   }
                 />
               )
+              return (
+                <div key={p.id} className={hiddenOnMobile ? 'hidden sm:contents' : 'contents'}>
+                  {card}
+                </div>
+              )
             })
             )}
           </div>
+          {!productsLoading && !mobileProductsShowAll && featuredProducts.length > MOBILE_PRODUCTS_INITIAL ? (
+            <div className="mb-6 flex justify-center sm:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileProductsShowAll(true)}
+                className="h-11 w-full max-w-xs rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 text-sm font-semibold font-['Inter'] text-black transition-colors hover:bg-neutral-100"
+              >
+                {tr.featuresShowMore}
+              </button>
+            </div>
+          ) : null}
         </section>
 
-        <div className="mt-8 lg:mt-10">
-          <HomeWarrantyCta tr={tr} />
-        </div>
+        <HomeInstallerCta tr={tr} />
 
       </div>
 
       <HomeFeaturesGrid tr={tr} />
 
-      <hr className="border-gray-200 my-16 lg:my-24 w-full lg:max-w-[1100px] lg:mx-auto" />
+      <HomeBessBand />
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pb-24">
-
-        {/* ── DIVIZIILE BATERINO ── */}
-        <section className="mb-16 lg:mb-24">
-          <div className="flex flex-col items-center text-center">
-            <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3 uppercase">
-              {tr.diviziileNoastreTitle}
-            </h2>
-            <p className="mb-6 max-w-[894px] text-base font-medium font-['Inter'] leading-6 text-gray-700 sm:mb-8 sm:text-lg sm:leading-8">
-              {tr.diviziileNoastreSubtitle}
-            </p>
-
-            {/* Desktop: 4 cards in grid */}
-            <div className="hidden w-full lg:grid lg:grid-cols-4 lg:gap-6">
-              <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/rezidential-baterii-lifepo4.webp" alt={tr.divRezTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-logo-white.webp" alt="Baterino" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[21px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/industrial" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/industrial-baterii-lifepo4.webp" alt={tr.divIndTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-pro-industrial-logo.webp" alt="Baterino Industrial" loading="lazy" className="absolute top-5 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[22px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/medical" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/medical-baterii-lifepo4.webp" alt={tr.divMedTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-medical-logo-white.webp" alt="Baterino Medical" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 left-[18px]">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
-                </div>
-              </Link>
-              <Link to="/divizii/maritim" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
-                <img src="/images/home/maritim-baterii-lifepo4.webp" alt={tr.divMarTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-black/40" />
-                <img src="/images/shared/baterino-maritim-logo-white.webp" alt="Baterino Maritim" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
-                <div className="absolute bottom-6 inset-x-0 px-4 text-center">
-                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
-                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px] mx-auto">{tr.divMarDesc}</p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Mobile: slider */}
-            <div className="w-full lg:hidden">
-              <div className="-mx-5 w-[calc(100%+2.5rem)]">
-                <div
-                  ref={divisionsSliderRef}
-                  className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 pr-5"
-                  style={{
-                    scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
-                    scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
-                  }}
-                >
-                  {[
-                    { img: '/images/home/rezidential-baterii-lifepo4.webp', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.webp' },
-                    { img: '/images/home/industrial-baterii-lifepo4.webp', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.webp' },
-                    { img: '/images/home/medical-baterii-lifepo4.webp', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.webp' },
-                    { img: '/images/home/maritim-baterii-lifepo4.webp', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.webp' },
-                  ].map((d, i) => (
-                    <Link
-                      key={i}
-                      to={d.to}
-                      className="relative flex-shrink-0 w-[324px] h-[450px] rounded-[10px] overflow-hidden bg-zinc-300 group block snap-center"
-                    >
-                      <img src={d.img} alt={d.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-black/40" />
-                      <img src={d.logo} alt="" loading="lazy" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
-                      <div className="absolute bottom-5 sm:bottom-6 inset-x-0 px-4 text-center">
-                        <h3 className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-2 uppercase">{d.title}</h3>
-                        <p className="text-white text-base font-medium font-['Inter'] leading-6 max-w-[280px] mx-auto">{d.desc}</p>
-                      </div>
-                    </Link>
-                  ))}
-                  <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
-                </div>
-              </div>
-              {/* Dot indicators – mobile only */}
-              <div className="flex justify-center gap-2 mt-5">
-                {Array.from({ length: DIVISIONS_COUNT }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      const el = divisionsSliderRef.current
-                      if (el) el.scrollTo({ left: i * (DIVISIONS_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
-                    }}
-                    aria-label={`Division ${i + 1}`}
-                    className={`size-2.5 rounded-full transition-colors ${i === divisionsActiveIndex ? 'bg-black' : 'bg-black/30'}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-        </section>
 
         <HomeProiecteIndustriale />
 
@@ -868,7 +773,7 @@ export default function Home() {
           <div className="flex flex-col lg:grid lg:grid-cols-12 gap-y-8 gap-x-6 lg:gap-x-4 lg:gap-y-10 items-start lg:items-center">
             {/* Left: text – 6 cols (on mobile: centered, gap-4 like reduceri) */}
             <div className="flex flex-col gap-4 order-1 lg:order-1 lg:col-span-6 text-center lg:text-left items-center lg:items-stretch w-full">
-              <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 max-w-96 my-6 sm:my-8">
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight max-w-xl my-6 sm:my-8">
                 {tr.lithtechTitle}
               </h2>
               <p className="text-black text-base sm:text-lg font-normal font-['Inter'] leading-5 sm:leading-6 max-w-[482px] whitespace-pre-line">
@@ -967,10 +872,114 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── DIVIZIILE BATERINO ── */}
+        <section className="mb-16 lg:mb-24">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-3">
+              {tr.diviziileNoastreTitle}
+            </h2>
+            <p className="mb-6 max-w-[894px] text-base font-medium font-['Inter'] leading-6 text-gray-700 sm:mb-8 sm:text-lg sm:leading-8">
+              {tr.diviziileNoastreSubtitle}
+            </p>
+
+            {/* Desktop: 4 cards in grid */}
+            <div className="hidden w-full lg:grid lg:grid-cols-4 lg:gap-6">
+              <Link to="/divizii/rezidential" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/rezidential-baterii-lifepo4.webp" alt={tr.divRezTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-logo-white.webp" alt="Baterino" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[21px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divRezTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divRezDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/industrial" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/industrial-baterii-lifepo4.webp" alt={tr.divIndTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-pro-industrial-logo.webp" alt="Baterino Industrial" loading="lazy" className="absolute top-5 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[22px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divIndTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[224px]">{tr.divIndDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/medical" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/medical-baterii-lifepo4.webp" alt={tr.divMedTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-medical-logo-white.webp" alt="Baterino Medical" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 left-[18px]">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMedTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[240px]">{tr.divMedDesc}</p>
+                </div>
+              </Link>
+              <Link to="/divizii/maritim" className="h-[450px] relative rounded-[10px] overflow-hidden bg-zinc-300 group block">
+                <img src="/images/home/maritim-baterii-lifepo4.webp" alt={tr.divMarTitle} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40" />
+                <img src="/images/shared/baterino-maritim-logo-white.webp" alt="Baterino Maritim" loading="lazy" className="absolute top-6 right-6 h-6 w-auto object-contain" />
+                <div className="absolute bottom-6 inset-x-0 px-4 text-center">
+                  <p className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-1">{tr.divMarTitle}</p>
+                  <p className="text-white text-base font-medium font-['Inter'] leading-5 max-w-[256px] mx-auto">{tr.divMarDesc}</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Mobile: slider */}
+            <div className="w-full lg:hidden">
+              <div className="-mx-5 w-[calc(100%+2.5rem)]">
+                <div
+                  ref={divisionsSliderRef}
+                  className="flex gap-[10px] overflow-x-auto scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pl-5 pr-5"
+                  style={{
+                    scrollPaddingLeft: 'max(10px, calc(50vw - 162px))',
+                    scrollPaddingRight: 'max(10px, calc(50vw - 162px))',
+                  }}
+                >
+                  {[
+                    { img: '/images/home/rezidential-baterii-lifepo4.webp', title: tr.divRezTitle, desc: tr.divRezDesc, to: '/divizii/rezidential', logo: '/images/shared/baterino-logo-white.webp' },
+                    { img: '/images/home/industrial-baterii-lifepo4.webp', title: tr.divIndTitle, desc: tr.divIndDesc, to: '/divizii/industrial', logo: '/images/shared/baterino-pro-industrial-logo.webp' },
+                    { img: '/images/home/medical-baterii-lifepo4.webp', title: tr.divMedTitle, desc: tr.divMedDesc, to: '/divizii/medical', logo: '/images/shared/baterino-medical-logo-white.webp' },
+                    { img: '/images/home/maritim-baterii-lifepo4.webp', title: tr.divMarTitle, desc: tr.divMarDesc, to: '/divizii/maritim', logo: '/images/shared/baterino-maritim-logo-white.webp' },
+                  ].map((d, i) => (
+                    <Link
+                      key={i}
+                      to={d.to}
+                      className="relative flex-shrink-0 w-[324px] h-[450px] rounded-[10px] overflow-hidden bg-zinc-300 group block snap-center"
+                    >
+                      <img src={d.img} alt={d.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-black/40" />
+                      <img src={d.logo} alt="" loading="lazy" className="absolute top-5 sm:top-6 right-5 sm:right-6 h-5 sm:h-6 w-auto object-contain" />
+                      <div className="absolute bottom-5 sm:bottom-6 inset-x-0 px-4 text-center">
+                        <h3 className="text-white text-3xl font-bold font-['Inter'] leading-9 mb-2">{d.title}</h3>
+                        <p className="text-white text-base font-medium font-['Inter'] leading-6 max-w-[280px] mx-auto">{d.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                  <div aria-hidden style={{ flexShrink: 0, width: 'var(--grid-edge)' }} />
+                </div>
+              </div>
+              {/* Dot indicators – mobile only */}
+              <div className="flex justify-center gap-2 mt-5">
+                {Array.from({ length: DIVISIONS_COUNT }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      const el = divisionsSliderRef.current
+                      if (el) el.scrollTo({ left: i * (DIVISIONS_CARD_WIDTH + CARD_GAP), behavior: 'smooth' })
+                    }}
+                    aria-label={`Division ${i + 1}`}
+                    className={`size-2.5 rounded-full transition-colors ${i === divisionsActiveIndex ? 'bg-black' : 'bg-black/30'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </section>
+
         {/* ── RESPONSABILITATE & COMUNITATE ── */}
         <section className="mb-16 lg:mb-24">
           <section className="lg:hidden flex flex-col items-center text-center mb-8">
-            <h2 className="text-black text-2xl sm:text-3xl font-bold font-['Inter'] leading-9 sm:leading-10 my-4">
+            <h2 className="text-black text-2xl sm:text-3xl font-extrabold font-['Inter'] leading-tight my-4">
               {tr.divisionsSectionTitle}
             </h2>
             <p className="text-gray-700 text-sm sm:text-base font-medium font-['Inter'] leading-6 sm:leading-7 mb-6">
@@ -986,7 +995,7 @@ export default function Home() {
           </section>
           <div className="hidden lg:grid grid-cols-12 gap-x-4 gap-y-10">
             <div className="col-span-6 flex flex-col pt-5 pb-4">
-              <h2 className="text-black text-3xl font-bold font-['Inter'] leading-10 my-5 max-w-[513px]">{tr.divisionsSectionTitle}</h2>
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight my-5 max-w-[513px]">{tr.divisionsSectionTitle}</h2>
               <p className="text-gray-700 text-lg font-medium font-['Inter'] leading-8 mb-8 max-w-[483px]">{renderBaterinoGlobalLink(tr.divisionsSectionBody)}</p>
               <Link to="/companie/viziune" className="w-fit h-12 px-5 py-[5px] rounded-[10px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex justify-center items-center whitespace-nowrap hover:bg-neutral-100 transition-colors">
                 <span className="text-black text-base font-semibold font-['Inter']">{tr.divisionsSectionBtn}</span>

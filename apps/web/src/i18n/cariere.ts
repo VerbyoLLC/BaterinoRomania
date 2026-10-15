@@ -22,9 +22,9 @@ const translations: Record<LangCode, CariereTranslations> = {
   ro: {
     seoTitle: 'Cariere – Baterino România',
     seoDesc: 'Vino să lucrezi cu noi. Caută job-uri pe platforma Baterino.',
-    heroTitle: 'VINO SĂ LUCREZI CU NOI',
+    heroTitle: 'Vino să lucrezi cu noi',
     heroDesc: 'Punem accent pe inițiativă și responsabilitate individuală. Suntem o echipă mică, dar eficientă, și ne dorim să rămânem agili și orientați spre performanță.',
-    searchTitle: 'CAUTĂ JOB-URI PE PLATFORMĂ',
+    searchTitle: 'Caută job-uri pe platformă',
     searchSubtitle: 'Selectează după Departament, Județ și Oraș',
     departament: 'Departament',
     judet: 'Județ',
@@ -39,9 +39,9 @@ const translations: Record<LangCode, CariereTranslations> = {
   en: {
     seoTitle: 'Careers – Baterino Romania',
     seoDesc: 'Come work with us. Search for jobs on the Baterino platform.',
-    heroTitle: 'COME WORK WITH US',
+    heroTitle: 'Come work with us',
     heroDesc: 'We emphasize initiative and individual responsibility. We are a small but efficient team, and we want to remain agile and performance-oriented.',
-    searchTitle: 'SEARCH JOBS ON THE PLATFORM',
+    searchTitle: 'Search jobs on the platform',
     searchSubtitle: 'Select by Department, County and City',
     departament: 'Department',
     judet: 'County',

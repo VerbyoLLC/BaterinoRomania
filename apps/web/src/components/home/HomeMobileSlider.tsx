@@ -24,7 +24,7 @@ function SlideReduceri({ tr }: { tr: HomeTranslations }) {
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.12) 70%, transparent 85%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
         <img src="/images/shared/baterino-logo-white.webp" alt="Baterino" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
-        <h3 className="text-xl font-bold leading-tight uppercase text-white font-['Inter']">{tr.heroV2Card2Title}</h3>
+        <h3 className="text-xl font-bold leading-tight text-white font-['Inter']">{tr.heroV2Card2Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white font-['Inter']">{tr.heroV2Card2Subtitle}</p>
         <Link to="/reduceri" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2Card2Cta}
@@ -72,7 +72,7 @@ function SlideMaritim({ tr }: { tr: HomeTranslations }) {
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.10) 66%, transparent 82%)' }} aria-hidden />
       <div className="absolute inset-x-4 bottom-5 z-10 flex flex-col items-center text-center gap-3 pointer-events-none" style={textShadow}>
         <img src="/images/lithtech/logo-baterino-pro-white.webp" alt="Baterino Pro" draggable={false} className="h-5 w-auto object-contain [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]" />
-        <h3 className="text-xl font-bold leading-tight uppercase text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Title}</h3>
+        <h3 className="text-xl font-bold leading-tight text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Title}</h3>
         <p className="text-sm font-normal leading-snug normal-case text-white whitespace-pre-line font-['Inter']">{tr.heroV2Card3Subtitle}</p>
         <Link to="/studii-de-caz" className="pointer-events-auto w-full h-10 bg-white rounded-[8px] inline-flex justify-center items-center text-black text-sm font-bold font-['Inter'] uppercase [text-shadow:none] hover:bg-neutral-100 active:bg-neutral-200 transition-colors">
           {tr.heroV2Card3Cta}
@@ -91,7 +91,7 @@ function SlideInstalatori({ tr }: { tr: HomeTranslations }) {
         <span className="text-white/60 text-[11px] font-semibold uppercase tracking-[0.2em] font-['Inter'] mb-2">
           {tr.heroV2InstLead}
         </span>
-        <h3 className="text-2xl font-extrabold leading-tight uppercase text-white font-['Inter'] mb-4">
+        <h3 className="text-2xl font-extrabold leading-tight text-white font-['Inter'] mb-4">
           {tr.heroV2InstTitle}
         </h3>
         <div className="w-10 h-px bg-white/30 mb-4" />
@@ -149,7 +149,7 @@ export default function HomeMobileSlider({ tr, jumpTo }: Props) {
     <section className="mb-10 w-full" aria-label="Hero">
       {/* Title — same as HomeHeroV2 */}
       <header className="mb-6 px-5 text-center">
-        <h1 className="text-black text-2xl font-extrabold font-['Inter'] leading-tight uppercase mb-2 whitespace-pre-line">
+        <h1 className="text-black text-2xl font-extrabold font-['Inter'] leading-tight mb-2 whitespace-pre-line">
           {tr.heroV2Title}
         </h1>
         <p className="text-gray-500 text-sm font-normal font-['Inter'] leading-6">

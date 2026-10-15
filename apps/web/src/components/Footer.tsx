@@ -11,7 +11,7 @@ const linkClass =
   'text-gray-600 text-base md:text-sm font-medium leading-6 transition-colors hover:text-black hover:underline focus:outline-none focus:text-black'
 /* 14px on mobile so headings stay readable */
 const headingClass =
-  'text-black text-sm md:text-xs font-bold uppercase tracking-wider mb-3'
+  'text-black text-sm md:text-xs font-bold mb-3'
 
 function FooterSocialLinks() {
   return (

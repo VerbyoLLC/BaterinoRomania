@@ -28,15 +28,15 @@ export type ViziuneTranslations = {
 
 const translations: Record<LangCode, ViziuneTranslations> = {
   ro: {
-    heroTitle: 'DESPRE NOI',
-    capitolu1: 'CAPITOLUL 1',
-    capitolu2: 'CAPITOLUL 2',
-    capitolu3: 'CAPITOLUL 3',
-    capitolu4: 'CAPITOLUL 4',
-    viziune: 'VIZIUNE',
-    misiune: 'MISIUNE',
-    implementare: 'IMPLEMENTARE',
-    echipa: 'ECHIPĂ',
+    heroTitle: 'Despre noi',
+    capitolu1: 'Capitolul 1',
+    capitolu2: 'Capitolul 2',
+    capitolu3: 'Capitolul 3',
+    capitolu4: 'Capitolul 4',
+    viziune: 'Viziune',
+    misiune: 'Misiune',
+    implementare: 'Implementare',
+    echipa: 'Echipă',
     viziuneP1:
       'Imaginează-ți o locuință complet independentă energetic — o casă care nu depinde de rețelele tradiționale, ci produce energie prin panouri solare, o stochează și o folosește inteligent pentru viața de zi cu zi. Îți încarci mașina acasă. Copiii studiază online fără întreruperi. Gătești, te încălzești iarna și reduci drastic dependența de gaz. Îți poți cultiva hrana în propria micro-fermă alimentată cu energie curată. Ai acces la internet prin infrastructuri alternative, inclusiv prin satelit.',
     viziuneP2:
@@ -66,15 +66,15 @@ const translations: Record<LangCode, ViziuneTranslations> = {
     discutaCuNoi: 'DISCUTĂ CU NOI',
   },
   en: {
-    heroTitle: 'ABOUT US',
-    capitolu1: 'CHAPTER 1',
-    capitolu2: 'CHAPTER 2',
-    capitolu3: 'CHAPTER 3',
-    capitolu4: 'CHAPTER 4',
-    viziune: 'VISION',
-    misiune: 'MISSION',
-    implementare: 'IMPLEMENTATION',
-    echipa: 'TEAM',
+    heroTitle: 'About us',
+    capitolu1: 'Chapter 1',
+    capitolu2: 'Chapter 2',
+    capitolu3: 'Chapter 3',
+    capitolu4: 'Chapter 4',
+    viziune: 'Vision',
+    misiune: 'Mission',
+    implementare: 'Implementation',
+    echipa: 'Team',
     viziuneP1:
       'Imagine a home that is fully energy independent — a house that does not depend on traditional grids but produces energy through solar panels, stores it and uses it intelligently for everyday life. You charge your car at home. Children study online without interruption. You cook, heat in winter and drastically reduce dependence on gas. You can grow your food in your own micro-farm powered by clean energy. You have access to the internet through alternative infrastructure, including satellite.',
     viziuneP2:

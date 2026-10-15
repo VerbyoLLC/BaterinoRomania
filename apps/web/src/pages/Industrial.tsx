@@ -277,7 +277,7 @@ export default function Industrial() {
 
           {/* Right – feature cards: 6 cols, pushed to col 7 leaving col 6 empty */}
           <div className="col-span-4 lg:col-span-6 lg:col-start-7 pt-8 lg:pt-[70px]">
-            <p className="text-black text-base lg:text-lg font-bold font-['Inter'] uppercase tracking-wider leading-6 lg:leading-8 mb-4 whitespace-pre-line text-center lg:text-left">
+            <p className="text-black text-base lg:text-lg font-bold font-['Inter'] leading-6 lg:leading-8 mb-4 whitespace-pre-line text-center lg:text-left">
               {tr.ctaSuport}
             </p>
             <div className="grid-12">

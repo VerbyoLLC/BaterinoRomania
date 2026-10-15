@@ -85,10 +85,10 @@ export default function SignupClienti() {
       </div>
       <div className="w-[520px] min-h-[168px] left-0 top-[63px] absolute flex flex-col items-start justify-center text-left">
         <span>
-          <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">INSTALATORI </span>
+          <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">Instalatori </span>
           <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">SI</span>
         </span>
-        <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">DISTRIBUITORI</span>
+        <span className="text-white text-[60px] font-bold font-['Inter'] leading-[84px]">Distribuitori</span>
       </div>
     </div>
   )
@@ -145,8 +145,8 @@ export default function SignupClienti() {
   return (
     <AuthLayout
       image={image}
-      supertitle="BINE AI VENIT"
-      title={tab === 'client' ? 'CLIENTI' : 'INSTALATORI SI DISTRIBUITORI'}
+      supertitle="Bine ai venit"
+      title={tab === 'client' ? 'Clienți' : 'Instalatori și distribuitori'}
       leftContent={tab === 'client' ? clientLeftContent : partnerLeftContent}
     >
       {step === 1 ? (

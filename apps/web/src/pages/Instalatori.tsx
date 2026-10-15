@@ -162,7 +162,7 @@ export default function Instalatori() {
       </div>
 
       <div className="max-w-content mx-auto px-5 lg:px-3 pt-16 lg:pt-20">
-        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight uppercase text-center">
+        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight text-center">
           {tr.featuresTitle}
         </h2>
       </div>
@@ -200,7 +200,7 @@ export default function Instalatori() {
               <p className="text-gray-400 text-base sm:text-lg font-semibold uppercase tracking-[0.2em] mb-1 font-['Inter']">
                 {language.code === 'en' ? 'For partners' : 'Pentru parteneri'}
               </p>
-              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight uppercase mb-4">
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-4">
                 {tr.feat1Title}
               </h2>
               <p className="text-gray-500 text-base font-normal font-['Inter'] leading-7">
@@ -260,7 +260,7 @@ export default function Instalatori() {
               <p className="text-gray-400 text-base sm:text-lg font-semibold uppercase tracking-[0.2em] mb-1 font-['Inter']">
                 {language.code === 'en' ? 'After-sales support' : 'Suport post-vânzare'}
               </p>
-              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight uppercase mb-4">
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-4">
                 {tr.feat2Title}
               </h2>
               <p className="text-gray-500 text-base font-normal font-['Inter'] leading-7">
@@ -328,7 +328,7 @@ export default function Instalatori() {
               <span className="text-white text-sm font-semibold uppercase tracking-[0.2em] font-['Inter'] mb-2">
                 {language.code === 'en' ? 'For installers' : 'Pentru instalatori'}
               </span>
-              <p className="text-white text-2xl sm:text-3xl font-extrabold font-['Inter'] leading-tight uppercase">
+              <p className="text-white text-2xl sm:text-3xl font-extrabold font-['Inter'] leading-tight">
                 {language.code === 'en' ? 'Did you know?' : 'Știai că?'}
               </p>
             </div>
@@ -365,7 +365,7 @@ export default function Instalatori() {
 
             {/* Left */}
             <div className="lg:w-[38%] shrink-0 mb-10 lg:mb-0 lg:sticky lg:top-24">
-              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight uppercase mb-4">
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-4">
                 {tr.feat3Title}
               </h2>
               <p className="text-gray-500 text-base font-normal font-['Inter'] leading-7">
@@ -418,7 +418,7 @@ export default function Instalatori() {
 
             {/* Left */}
             <div className="lg:w-[38%] shrink-0 mb-10 lg:mb-0 lg:sticky lg:top-24">
-              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight uppercase mb-4">
+              <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight mb-4">
                 {tr.feat4Title}
               </h2>
               <p className="text-gray-500 text-base font-normal font-['Inter'] leading-7">

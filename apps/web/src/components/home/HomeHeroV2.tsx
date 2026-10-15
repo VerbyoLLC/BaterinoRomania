@@ -417,7 +417,7 @@ export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: 
   return (
     <section className="mb-16 lg:mb-24 w-full" aria-label="Hero" style={HERO_CARD_CSS_VARS}>
       <header className="mb-8 lg:mb-10 px-5 lg:px-0 text-center max-w-content mx-auto">
-        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto uppercase mb-3 whitespace-pre-line">
+        <h2 className="text-black text-2xl sm:text-3xl lg:text-4xl font-extrabold font-['Inter'] leading-tight max-w-4xl mx-auto mb-3 whitespace-pre-line">
           {tr.heroV2Title}
         </h2>
         <p className="text-gray-500 text-base sm:text-lg font-normal font-['Inter'] leading-7">
@@ -559,7 +559,7 @@ export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: 
                       draggable={false}
                       className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
                     />
-                    <h3 className="m-0 text-[clamp(1rem,3.2vw,1.375rem)] font-bold leading-tight uppercase text-white font-['Inter']">
+                    <h3 className="m-0 text-[clamp(1rem,3.2vw,1.375rem)] font-bold leading-tight text-white font-['Inter']">
                       {tr.heroV2Card2Title}
                     </h3>
                   </div>
@@ -594,7 +594,7 @@ export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: 
                     className="h-5 w-auto max-w-[72%] object-contain pointer-events-none [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.85))]"
                   />
                   <h3
-                    className={`m-0 text-white font-bold font-['Inter'] leading-tight uppercase whitespace-pre-line ${
+                    className={`m-0 text-white font-bold font-['Inter'] leading-tight whitespace-pre-line ${
                       card.subtitle
                         ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
                         : 'text-[clamp(0.6875rem,2.2vw,0.9375rem)]'
@@ -605,7 +605,7 @@ export default function HomeHeroV2({ tr, userType, promoPriceLoading = false }: 
                 </div>
               ) : (
                 <h3
-                  className={`text-white font-bold font-['Inter'] leading-tight uppercase ${
+                  className={`text-white font-bold font-['Inter'] leading-tight ${
                     card.subtitle
                       ? 'text-[clamp(1rem,3.2vw,1.375rem)]'
                       : 'text-[clamp(0.6875rem,2.2vw,0.9375rem)]'

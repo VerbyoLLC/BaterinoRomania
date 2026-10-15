@@ -43,7 +43,7 @@ export default function AuthLayout({ image, supertitle, title, leftContent, chil
         <div className="relative z-10 mt-auto px-10 pb-[6px]">
           {leftContent ?? (
             <>
-              <p className="text-white/80 text-sm font-medium font-['Inter'] tracking-widest uppercase mb-2">
+              <p className="text-white/80 text-sm font-medium font-['Inter'] mb-2">
                 {supertitle}
               </p>
               <h1 className="text-white text-4xl font-extrabold font-['Inter'] leading-tight">

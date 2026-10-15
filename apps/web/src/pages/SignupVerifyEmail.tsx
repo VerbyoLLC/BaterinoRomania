@@ -57,7 +57,7 @@ export default function SignupVerifyEmail() {
       title="Confirmare cont"
       leftContent={
         <div className="w-[384px] h-[120px] relative">
-          <p className="text-white/80 text-sm font-medium font-['Inter'] tracking-widest uppercase mb-2">
+          <p className="text-white/80 text-sm font-medium font-['Inter'] mb-2">
             Un moment
           </p>
           <h1 className="text-white text-3xl font-extrabold font-['Inter'] leading-tight">Activăm contul</h1>

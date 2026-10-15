@@ -204,7 +204,7 @@ export default function HomeFeaturesGrid({ tr }: HomeFeaturesGridProps) {
   return (
     <section className="mb-16 lg:mb-24">
       <div className="px-5 my-8 sm:my-10 lg:px-[var(--grid-edge)]">
-        <h2 className="mx-auto max-w-[676px] text-center text-2xl font-bold font-['Inter'] leading-9 text-black sm:text-3xl sm:leading-10 lg:text-left">
+        <h2 className="mx-auto max-w-4xl text-center text-2xl font-extrabold font-['Inter'] leading-tight text-black sm:text-3xl lg:text-4xl">
           {tr.featuresSectionTitle}
         </h2>
       </div>

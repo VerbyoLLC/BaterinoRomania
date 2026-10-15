@@ -239,8 +239,8 @@ export default function ClientDiscountCodes() {
               >
                 <BadgePercent className="h-7 w-7" strokeWidth={1.75} />
               </div>
-              <h3 className="text-center text-[15px] font-bold uppercase leading-snug tracking-tight text-slate-900 font-['Inter'] sm:text-base">
-                5% REDUCERE PENTRU PRIETENI ȘI VECINI
+              <h3 className="text-center text-[15px] font-bold leading-snug tracking-tight text-slate-900 font-['Inter'] sm:text-base">
+                5% reducere pentru prieteni și vecini
               </h3>
               <p className="mt-3 text-center text-sm leading-relaxed text-slate-600 font-['Nunito_Sans']">
                 Orice persoană care folosește codul tău primește 5% reducere la prima comandă — aplicat automat, fără
