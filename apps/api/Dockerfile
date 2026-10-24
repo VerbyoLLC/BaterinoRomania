@@ -37,6 +37,7 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 COPY index.js ./
 COPY lib ./lib/
+COPY routes ./routes/
 COPY templates ./templates/
 
 EXPOSE 3000
