@@ -10099,16 +10099,31 @@ const createWarehouseStockUnitHandler = async (req, res) => {
     if (!productId && productModelId) {
       const pm = await prisma.productModel.findUnique({
         where: { id: productModelId },
-        select: { modelNumber: true },
+        select: { modelNumber: true, sku: true, brand: true, productType: true },
       })
       if (!pm) return res.status(404).json({ error: 'Model negăsit în tabelul Modele.' })
-      const sku = String(pm.modelNumber || '').trim()
-      if (!sku) return res.status(400).json({ error: 'Modelul selectat nu are număr de model (SKU) setat.' })
-      resolvedModelNumber = sku
-      const prod = await prisma.product.findUnique({ where: { sku }, select: { id: true } })
+      const modelNumber = String(pm.modelNumber || '').trim()
+      if (!modelNumber) return res.status(400).json({ error: 'Modelul selectat nu are număr de model setat.' })
+      resolvedModelNumber = modelNumber
+      // Catalog SKUs were migrated to Brand-Type-ModelNumber (model.sku). Older rows used the bare model number.
+      const catalogSku = String(pm.sku || '').trim() || buildModelSku(pm.brand, pm.productType, modelNumber)
+      const skuCandidates = [...new Set([catalogSku, modelNumber].map((s) => String(s || '').trim()).filter(Boolean))]
+      let prod = null
+      for (const sku of skuCandidates) {
+        prod = await prisma.product.findUnique({ where: { sku }, select: { id: true } })
+        if (prod) break
+      }
+      if (!prod && skuCandidates.length > 0) {
+        prod = await prisma.product.findFirst({
+          where: {
+            OR: skuCandidates.map((sku) => ({ sku: { equals: sku, mode: 'insensitive' } })),
+          },
+          select: { id: true },
+        })
+      }
       if (!prod) {
         return res.status(400).json({
-          error: `Nu există produs în catalog cu SKU „${sku}”. În Inventar → Produse, creează un produs cu SKU identic cu numărul modelului din Modele (ex. ${sku}).`,
+          error: `Nu există produs în catalog cu SKU „${catalogSku}”. În Inventar → Produse, creează un produs cu SKU identic cu SKU-ul modelului din Modele (ex. ${catalogSku}).`,
         })
       }
       productId = prod.id
