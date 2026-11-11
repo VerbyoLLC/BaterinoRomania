@@ -76,6 +76,14 @@ function getSpec(m: Map<string, string>, ...keys: string[]): string {
   return ''
 }
 
+/** KPI tiles show at most one decimal (261.248 → 261.2, 215.04 → 215); full precision stays in the spec table. */
+function roundKpiNumber(num: string): string {
+  const m = num.match(/^([≈~≤]*)(\d+)\.(\d{2,})$/u)
+  if (!m) return num
+  const rounded = Math.round(parseFloat(`${m[2]}.${m[3]}`) * 10) / 10
+  return `${m[1]}${String(rounded)}`
+}
+
 function splitKpiDisplay(raw: string, lang: CommercialOfferLanguage): { val: string; unit: string } {
   if (!raw.trim()) return { val: '—', unit: '' }
   const s = raw.trim()
@@ -84,7 +92,7 @@ function splitKpiDisplay(raw: string, lang: CommercialOfferLanguage): { val: str
   const tail = match[2]?.trim() ?? ''
   const unit = tail ? translateProductSheetSpecValue(` ${tail}`, lang).trimStart() : ''
   return {
-    val: formatProductSheetDecimalPart(match[1], lang) || '—',
+    val: formatProductSheetDecimalPart(roundKpiNumber(match[1]), lang) || '—',
     unit: unit ? ` ${unit}` : '',
   }
 }
@@ -248,7 +256,7 @@ export default function AdminProductSheetA4({
       <div className="aps-hero">
         <div className="aps-hero-left">
           <div className="aps-brand-tag">{brandTag}</div>
-          <div className="aps-product-kind">{t.productKind}</div>
+          {model.usageType === 'residential' ? <div className="aps-product-kind">{t.productKind}</div> : null}
           <div className="aps-title-row">
             <span className="aps-product-name">{title}</span>
             {model.brand.trim() ? (
