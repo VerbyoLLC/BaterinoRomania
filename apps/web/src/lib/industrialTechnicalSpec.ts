@@ -2,7 +2,8 @@
  * Fields match the industrial template technical spec table (one row per label; values are per model).
  * Stable `key` for JSON; `label` for UI / public table.
  */
-export const INDUSTRIAL_SPEC_FIELDS: readonly { key: string; label: string }[] = [
+/** `optional` rows are hidden on public tables when every model leaves them empty. */
+export const INDUSTRIAL_SPEC_FIELDS: readonly { key: string; label: string; optional?: boolean }[] = [
   { key: 'energySystem',          label: 'Energy System' },
   { key: 'nominalVoltage',        label: 'Nominal Voltage' },
   { key: 'nominalCapacity',       label: 'Nominal Capacity' },
@@ -14,12 +15,18 @@ export const INDUSTRIAL_SPEC_FIELDS: readonly { key: string; label: string }[] =
   { key: 'batteryModule',         label: 'Battery Module' },
   { key: 'batteryCluster',        label: 'Battery Cluster' },
   { key: 'batteryRack',           label: 'Battery Rack' },
+  { key: 'maxContinuousCurrent',  label: 'Max Continuous Operating DC Current', optional: true },
   { key: 'maxOutputPower',        label: 'Max Output Power' },
   { key: 'ratedOutputVoltage',    label: 'Rated Output Voltage' },
   { key: 'acAccessMethod',        label: 'AC Access Method' },
   { key: 'ratedGridFrequency',    label: 'Rated Grid Frequency' },
   { key: 'pcsCabinetCount',       label: 'Number of PCS Cabinets' },
   { key: 'conversionEfficiency',  label: 'Conversion Efficiency' },
+  { key: 'pvMaxInputPower',       label: 'Max. PV Input Power', optional: true },
+  { key: 'mpptVoltageRange',      label: 'MPPT Voltage Range', optional: true },
+  { key: 'pvMaxInputCurrent',     label: 'Max. PV Input Current', optional: true },
+  { key: 'pvMaxInputVoltage',     label: 'Max. PV Input Voltage', optional: true },
+  { key: 'mpptCount',             label: 'MPPT Number / Max. Inputs', optional: true },
   { key: 'coolingMethod',         label: 'Cooling Method' },
   { key: 'communication',         label: 'Communication' },
   { key: 'waterproof',            label: 'Waterproof' },

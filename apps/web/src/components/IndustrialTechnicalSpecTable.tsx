@@ -68,7 +68,7 @@ export default function IndustrialTechnicalSpecTable({
           {INDUSTRIAL_SPEC_FIELDS.map((field, i) => {
             const rowIdx = i + 1
             const values = entries.map((e) => e.specs[field.key] ?? '')
-            if (hideEmptyRows && values.every((v) => !String(v).trim())) return null
+            if ((hideEmptyRows || field.optional) && values.every((v) => !String(v).trim())) return null
             const strip = (i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/80') as string
             return (
               <tr

@@ -814,8 +814,8 @@ export default function AdminStocuriAddItem() {
             )}
             {!loading && productModels.length > 0 && (
               <p className="mt-2 text-xs text-slate-500 font-['Inter'] leading-relaxed">
-                Înregistrarea în depozit folosește produsul din catalog cu același <span className="font-medium">SKU</span> ca{' '}
-                <span className="font-medium">numărul modelului</span> din Modele (ex. SKU produs = TR4000WX).
+                Înregistrarea în depozit leagă modelul de produsul din catalog cu același{' '}
+                <span className="font-medium">SKU</span> (ex. LTC-ESS-TR8500WX).
               </p>
             )}
           </div>
