@@ -118,9 +118,65 @@ function warrantyParts(
 }
 
 function isHighlightLabel(label: string): boolean {
-  return /^(energy|nominal voltage|rated output power|energie|tensiune nominal(ă|a)|putere nominal)/i.test(
+  return /^(energy$|nominal energy|nominal voltage|rated output power|max output power|energie|tensiune nominal(ă|a)|putere nominal)/i.test(
     label.trim(),
   )
+}
+
+/** Industrial sheets: rows grouped from headline values down to physical data. Unlisted labels keep their order at the end. */
+const INDUSTRIAL_SPEC_ORDER: readonly string[][] = [
+  ['nominal energy', 'energy'],
+  ['max output power', 'rated output power', 'rated input power', 'nominal power'],
+  ['nominal voltage'],
+  ['nominal capacity'],
+  ['energy system'],
+  ['max continuous operating dc current'],
+  ['chemistry'],
+  ['cell type'],
+  ['system configuration'],
+  ['battery module'],
+  ['battery cluster'],
+  ['battery rack'],
+  ['cycle life'],
+  ['rated output voltage'],
+  ['ac access method', 'wiring'],
+  ['rated grid frequency'],
+  ['conversion efficiency'],
+  ['number of pcs cabinets'],
+  ['max. pv input power'],
+  ['mppt voltage range'],
+  ['max. pv input current'],
+  ['max. pv input voltage'],
+  ['mppt number / max. inputs'],
+  ['cooling method'],
+  ['fire protection system', 'fire protection'],
+  ['waterproof'],
+  ['corrosion level'],
+  ['noise level'],
+  ['impedance'],
+  ['insulation resistance'],
+  ['humidity'],
+  ['charge temperature'],
+  ['discharge temperature'],
+  ['storage temperature'],
+  ['altitude'],
+  ['communication'],
+  ['certification'],
+  ['warranty'],
+  ['dimensions (w×d×h)', 'dimensions (l×w×h)', 'dimensions [l×w×h]', 'dimensions'],
+  ['weight'],
+]
+
+const INDUSTRIAL_SPEC_RANK = new Map(
+  INDUSTRIAL_SPEC_ORDER.flatMap((aliases, rank) => aliases.map((a) => [a, rank] as const)),
+)
+
+function orderIndustrialSpecRows(rows: SheetTechnicalRow[]): SheetTechnicalRow[] {
+  return rows
+    .filter((r) => r.kind === 'pair')
+    .map((row, i) => ({ row, rank: INDUSTRIAL_SPEC_RANK.get(row.label.trim().toLowerCase()) ?? INDUSTRIAL_SPEC_ORDER.length + i }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((x) => x.row)
 }
 
 function ShieldIcon() {
@@ -235,6 +291,57 @@ export default function AdminProductSheetA4({
     [selfHeat, wifiBt, communication, chargeDischarge, t, language],
   )
 
+  const isIndustrial = model.usageType !== 'residential'
+  const industrialRows = useMemo(
+    () => (isIndustrial ? orderIndustrialSpecRows(technicalRows) : []),
+    [isIndustrial, technicalRows],
+  )
+  const industrialSplit = Math.ceil(industrialRows.length / 2)
+
+  const renderSpecRow = (row: SheetTechnicalRow, key: string) =>
+    row.kind === 'section' ? (
+      <tr key={`sec-${key}`} className="aps-spec-section">
+        <td colSpan={2}>{translateProductSheetSpecLabel(row.label, language)}</td>
+      </tr>
+    ) : (
+      <tr key={`pair-${key}`}>
+        <td>{translateProductSheetSpecLabel(row.label, language)}</td>
+        <td className={isHighlightLabel(row.label) ? 'aps-hl' : undefined}>
+          {translateProductSheetSpecValue(row.value, language)}
+        </td>
+      </tr>
+    )
+
+  const statTiles = (
+    <>
+      <div className="aps-feat">
+        <div className="aps-feat-title">
+          {formatCycleLifeMain(cycleLife, language)}
+          {cycleLife.trim() ? ` ${t.valueCycles}` : ''}
+        </div>
+        <div className="aps-feat-desc">{t.statCycleLife}</div>
+      </div>
+      <div className="aps-feat">
+        <div className="aps-feat-title">
+          {dischargeTemp ? translateProductSheetSpecValue(dischargeTemp, language) : '—'}
+        </div>
+        <div className="aps-feat-desc">{t.statDischargeTemp}</div>
+      </div>
+      <div className="aps-feat">
+        <div className="aps-feat-title">
+          {altitude ? translateProductSheetSpecValue(altitude, language) : '—'}
+        </div>
+        <div className="aps-feat-desc">{t.statAltitude}</div>
+      </div>
+      <div className="aps-feat">
+        <div className="aps-feat-title">
+          {waterproof.trim() ? translateProductSheetSpecValue(waterproof, language) : '—'}
+        </div>
+        <div className="aps-feat-desc">{t.statWaterproof}</div>
+      </div>
+    </>
+  )
+
   return (
     <div className="admin-product-sheet">
       <div className="aps-top-bar">
@@ -342,37 +449,41 @@ export default function AdminProductSheetA4({
         </div>
       </div>
 
-      <div className="aps-body-grid">
+      <div className={`aps-body-grid${isIndustrial ? ' aps-body-grid--industrial' : ''}`}>
         <div className="aps-spec-panel">
           <div className="aps-panel-title">{t.specsSection}</div>
-          <div className="aps-spec-scroll">
-            <table className="aps-spec-table">
-              <tbody>
-                {technicalRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={2}>{t.specsEmpty}</td>
-                  </tr>
-                ) : (
-                  technicalRows.map((row, i) =>
-                    row.kind === 'section' ? (
-                      <tr key={`sec-${i}`} className="aps-spec-section">
-                        <td colSpan={2}>{translateProductSheetSpecLabel(row.label, language)}</td>
-                      </tr>
-                    ) : (
-                      <tr key={`pair-${i}`}>
-                        <td>{translateProductSheetSpecLabel(row.label, language)}</td>
-                        <td className={isHighlightLabel(row.label) ? 'aps-hl' : undefined}>
-                          {translateProductSheetSpecValue(row.value, language)}
-                        </td>
-                      </tr>
-                    ),
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
+          {isIndustrial && industrialRows.length > 0 ? (
+            <div className="aps-spec-cols">
+              {[industrialRows.slice(0, industrialSplit), industrialRows.slice(industrialSplit)].map((col, c) => (
+                <table key={c} className="aps-spec-table">
+                  <tbody>{col.map((row, i) => renderSpecRow(row, `${c}-${i}`))}</tbody>
+                </table>
+              ))}
+            </div>
+          ) : (
+            <div className="aps-spec-scroll">
+              <table className="aps-spec-table">
+                <tbody>
+                  {technicalRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={2}>{t.specsEmpty}</td>
+                    </tr>
+                  ) : (
+                    technicalRows.map((row, i) => renderSpecRow(row, String(i)))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isIndustrial ? (
+            <>
+              <div className="aps-panel-title aps-stats-section-title">{t.statsSection}</div>
+              <div className="aps-feat-grid aps-stats-grid aps-stats-grid--row">{statTiles}</div>
+            </>
+          ) : null}
         </div>
 
+        {isIndustrial ? null : (
         <div className="aps-feats-panel">
           <div className="aps-panel-title">{t.featuresSection}</div>
           <div className="aps-feat-grid">
@@ -385,34 +496,9 @@ export default function AdminProductSheetA4({
             ))}
           </div>
           <div className="aps-panel-title aps-stats-section-title">{t.statsSection}</div>
-          <div className="aps-feat-grid aps-stats-grid">
-            <div className="aps-feat">
-              <div className="aps-feat-title">
-                {formatCycleLifeMain(cycleLife, language)}
-                {cycleLife.trim() ? ` ${t.valueCycles}` : ''}
-              </div>
-              <div className="aps-feat-desc">{t.statCycleLife}</div>
-            </div>
-            <div className="aps-feat">
-              <div className="aps-feat-title">
-                {dischargeTemp ? translateProductSheetSpecValue(dischargeTemp, language) : '—'}
-              </div>
-              <div className="aps-feat-desc">{t.statDischargeTemp}</div>
-            </div>
-            <div className="aps-feat">
-              <div className="aps-feat-title">
-                {altitude ? translateProductSheetSpecValue(altitude, language) : '—'}
-              </div>
-              <div className="aps-feat-desc">{t.statAltitude}</div>
-            </div>
-            <div className="aps-feat">
-              <div className="aps-feat-title">
-                {waterproof.trim() ? translateProductSheetSpecValue(waterproof, language) : '—'}
-              </div>
-              <div className="aps-feat-desc">{t.statWaterproof}</div>
-            </div>
-          </div>
+          <div className="aps-feat-grid aps-stats-grid">{statTiles}</div>
         </div>
+        )}
       </div>
 
       <div className="aps-footer">

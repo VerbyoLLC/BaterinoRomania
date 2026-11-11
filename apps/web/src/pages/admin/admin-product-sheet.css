@@ -444,6 +444,25 @@
   grid-template-rows: repeat(2, auto);
 }
 
+.admin-product-sheet .aps-body-grid--industrial .aps-spec-panel {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 28px 12px 28px;
+}
+
+.admin-product-sheet .aps-spec-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.admin-product-sheet .aps-stats-grid--row {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto;
+}
+
 .admin-product-sheet .aps-stats-grid .aps-feat-title {
   font-size: 12px;
   text-transform: none;

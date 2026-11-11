@@ -261,6 +261,15 @@ body .admin-product-sheet .aps-feats-panel {
   padding: 0 20px 8px 16px;
 }
 
+body .admin-product-sheet .aps-body-grid--industrial .aps-spec-panel {
+  width: auto;
+  padding: 0 24px 8px 24px;
+}
+
+body .admin-product-sheet .aps-spec-cols {
+  gap: 10px;
+}
+
 body .admin-product-sheet .aps-panel-title {
   margin-bottom: 6px;
   padding-bottom: 4px;
