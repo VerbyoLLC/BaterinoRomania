@@ -556,6 +556,8 @@ model WarehouseSavedItem {
   client               String?
   /** Nume client introdus din admin (Stocuri → Remove); `client` rămâne rezervat contului care revendică produsul. */
   clientName           String?
+  /** Proprietarul unității: lithtech | baterino; null = nesetat. */
+  ownership            String?
   /** URL public R2 către PDF-ul certificatului de garanţie generat (null = neg generat încă). */
   warrantyCertificateUrl String?                  @db.Text
   /** Timestamp-ul ultimei generări a certificatului. */

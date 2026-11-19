@@ -9980,6 +9980,7 @@ function warehouseSavedItemToJson(row) {
     distributor: row.distributor || null,
     client: row.client || null,
     clientName: row.clientName || null,
+    ownership: row.ownership || null,
     /* Status certificat de garanţie client (afişat în „Garanţie client” din admin Stocuri). */
     warrantyCertificateAvailable: Boolean(row.warrantyCertificateUrl),
     warrantyCertificateGeneratedAt:
@@ -10130,6 +10131,49 @@ const moveWarehouseSavedItemsBatchHandler = async (req, res) => {
     }
     console.error('Move warehouse batch error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la salvarea batch-ului.' })
+  }
+}
+
+const WAREHOUSE_OWNERSHIP_VALUES = ['lithtech', 'baterino']
+
+/** Stocuri → Lista: setează proprietarul (LithTech / Baterino) pentru una sau mai multe unități. */
+const setWarehouseSavedItemsOwnershipHandler = async (req, res) => {
+  try {
+    const body = req.body || {}
+    const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map((id) => String(id || '').trim()).filter(Boolean))]
+    const raw = body.ownership == null ? '' : String(body.ownership).trim().toLowerCase()
+    const ownership = raw || null
+    if (ids.length === 0) return res.status(400).json({ error: 'Nicio unitate selectată.' })
+    if (ids.length > 1000) return res.status(400).json({ error: 'Maximum 1000 de unități odată.' })
+    if (ownership && !WAREHOUSE_OWNERSHIP_VALUES.includes(ownership)) {
+      return res.status(400).json({ error: 'Ownership invalid. Alege LithTech sau Baterino.' })
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      const current = await tx.warehouseSavedItem.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, ownership: true },
+      })
+      const toUpdate = current.filter((r) => (r.ownership || null) !== ownership)
+      if (toUpdate.length === 0) return { count: 0 }
+      const updated = await tx.warehouseSavedItem.updateMany({
+        where: { id: { in: toUpdate.map((r) => r.id) } },
+        data: { ownership },
+      })
+      await tx.warehouseItemEvent.createMany({
+        data: toUpdate.map((r) => ({
+          warehouseSavedItemId: r.id,
+          type: 'ownership_changed',
+          name: ownership,
+          actorUserId: req.userId || null,
+        })),
+      })
+      return updated
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json({ updated: result.count, ownership })
+  } catch (err) {
+    console.error('Set warehouse ownership error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea ownership.' })
   }
 }
 
@@ -10340,6 +10384,8 @@ app.get('/api/admin/warehouse-saved-items/by-serial', authMiddleware, adminAuthM
 app.get('/admin/warehouse-saved-items/by-serial', authMiddleware, adminAuthMiddleware, getWarehouseSavedItemBySerialHandler)
 app.post('/api/admin/warehouse-saved-items/batch-move', authMiddleware, adminAuthMiddleware, moveWarehouseSavedItemsBatchHandler)
 app.post('/admin/warehouse-saved-items/batch-move', authMiddleware, adminAuthMiddleware, moveWarehouseSavedItemsBatchHandler)
+app.post('/api/admin/warehouse-saved-items/ownership', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemsOwnershipHandler)
+app.post('/admin/warehouse-saved-items/ownership', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemsOwnershipHandler)
 app.delete('/api/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 app.delete('/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 

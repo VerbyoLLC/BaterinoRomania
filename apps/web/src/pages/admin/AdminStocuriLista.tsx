@@ -7,6 +7,9 @@ import {
   getAdminWarehouseSavedItems,
   getAuthRole,
   getAuthToken,
+  setAdminWarehouseSavedItemsOwnership,
+  WAREHOUSE_OWNERSHIP_LABELS,
+  type WarehouseOwnership,
   type WarehouseSavedItemLocation,
   type WarehouseSavedItemRow,
 } from '../../lib/api'
@@ -79,6 +82,12 @@ function formatWarehouseItemNumber(value: number | null | undefined) {
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500] as const
 
+const OWNERSHIP_OPTIONS = Object.entries(WAREHOUSE_OWNERSHIP_LABELS) as [WarehouseOwnership, string][]
+
+function parseOwnership(value: string): WarehouseOwnership | null {
+  return value === 'lithtech' || value === 'baterino' ? value : null
+}
+
 export default function AdminStocuriLista() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<WarehouseSavedItemRow[]>([])
@@ -86,6 +95,7 @@ export default function AdminStocuriLista() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [ownershipSavingIds, setOwnershipSavingIds] = useState<Set<string>>(() => new Set())
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const [filterModelNumber, setFilterModelNumber] = useState('')
@@ -206,11 +216,24 @@ export default function AdminStocuriLista() {
     if (el) el.indeterminate = somePageSelected
   }, [somePageSelected])
 
-  const toggleRowSelected = (id: string) => {
+  const selectionAnchorRef = useRef<string | null>(null)
+
+  const toggleRowSelected = (id: string, shiftKey = false) => {
+    const anchor = selectionAnchorRef.current
+    const anchorIndex = anchor ? pageRowIds.indexOf(anchor) : -1
+    const index = pageRowIds.indexOf(id)
+    selectionAnchorRef.current = id
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const select = !prev.has(id)
+      const range =
+        shiftKey && anchorIndex >= 0 && index >= 0
+          ? pageRowIds.slice(Math.min(anchorIndex, index), Math.max(anchorIndex, index) + 1)
+          : [id]
+      for (const rowId of range) {
+        if (select) next.add(rowId)
+        else next.delete(rowId)
+      }
       return next
     })
   }
@@ -228,6 +251,27 @@ export default function AdminStocuriLista() {
   }
 
   const clearSelection = () => setSelectedIds(new Set())
+
+  const saveOwnership = async (ids: string[], ownership: WarehouseOwnership | null) => {
+    if (!isAdmin || ids.length === 0) return
+    const idSet = new Set(ids)
+    const previous = new Map(rows.filter((r) => idSet.has(r.id)).map((r) => [r.id, r.ownership ?? null]))
+    setRows((prev) => prev.map((r) => (idSet.has(r.id) ? { ...r, ownership } : r)))
+    setOwnershipSavingIds((prev) => new Set([...prev, ...ids]))
+    setError(null)
+    try {
+      await setAdminWarehouseSavedItemsOwnership({ ids, ownership })
+    } catch (e) {
+      setRows((prev) => prev.map((r) => (previous.has(r.id) ? { ...r, ownership: previous.get(r.id) } : r)))
+      setError(e instanceof Error ? e.message : 'Eroare la salvarea ownership.')
+    } finally {
+      setOwnershipSavingIds((prev) => {
+        const next = new Set(prev)
+        for (const id of ids) next.delete(id)
+        return next
+      })
+    }
+  }
 
   const handleBulkDelete = async () => {
     if (!isAdmin || selectedIds.size === 0 || bulkDeleting) return
@@ -471,6 +515,29 @@ export default function AdminStocuriLista() {
             {selectedIds.size === 1 ? 'rând selectat' : 'rânduri selectate'}
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700 font-['Inter']">
+              <span className="whitespace-nowrap">Ownership</span>
+              <select
+                value=""
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (!value) return
+                  void saveOwnership([...selectedIds], value === 'none' ? null : parseOwnership(value))
+                }}
+                disabled={bulkDeleting || ownershipSavingIds.size > 0}
+                className="h-9 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400/50 disabled:opacity-50"
+                aria-label="Setează ownership pentru rândurile selectate"
+              >
+                <option value="">Setează pentru selectate…</option>
+                {OWNERSHIP_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+                <option value="none">Fără ownership</option>
+              </select>
+            </label>
+            {ownershipSavingIds.size > 0 && <Loader2 className="h-4 w-4 animate-spin text-slate-500" aria-label="Se salvează" />}
             <button
               type="button"
               onClick={clearSelection}
@@ -557,7 +624,7 @@ export default function AdminStocuriLista() {
         )}
         <div className="overflow-x-auto">
         <table
-          className={`w-full border-collapse text-left text-sm font-['Inter'] ${isAdmin ? 'min-w-[1700px]' : 'min-w-[1640px]'}`}
+          className={`w-full border-collapse text-left text-sm font-['Inter'] ${isAdmin ? 'min-w-[1840px]' : 'min-w-[1760px]'}`}
         >
           <thead className="sticky top-0 z-10 bg-slate-100/95 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] backdrop-blur-sm">
             <tr className="text-slate-700">
@@ -587,6 +654,7 @@ export default function AdminStocuriLista() {
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Warehouse in</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Warehouse out</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Locație</th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Ownership</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Distributor</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
                 Garanție distribuitor
@@ -606,19 +674,19 @@ export default function AdminStocuriLista() {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 16 : 15} className="px-4 py-8 text-center text-slate-500">
                   Se încarcă...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 16 : 15} className="px-4 py-8 text-center text-slate-500">
                   Nu există iteme salvate încă.
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
+                <td colSpan={isAdmin ? 16 : 15} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
                   Niciun rezultat pentru filtrele curente.{' '}
                   <button
                     type="button"
@@ -640,7 +708,10 @@ export default function AdminStocuriLista() {
                       <input
                         type="checkbox"
                         checked={selectedIds.has(row.id)}
-                        onChange={() => toggleRowSelected(row.id)}
+                        onChange={(e) => toggleRowSelected(row.id, (e.nativeEvent as MouseEvent).shiftKey === true)}
+                        onMouseDown={(e) => {
+                          if (e.shiftKey) e.preventDefault()
+                        }}
                         disabled={bulkDeleting}
                         className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-400"
                         aria-label={`Selectează rândul ${formatWarehouseItemNumber(row.itemNumber)}`}
@@ -659,6 +730,28 @@ export default function AdminStocuriLista() {
                     {row.warehouseOut ? formatRoDate(row.warehouseOut) : <span className="text-slate-400">—</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatWarehouseLocation(row.location)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    {isAdmin ? (
+                      <select
+                        value={row.ownership ?? ''}
+                        onChange={(e) => void saveOwnership([row.id], parseOwnership(e.target.value))}
+                        disabled={ownershipSavingIds.has(row.id) || bulkDeleting}
+                        className={`rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400/50 disabled:opacity-50 ${row.ownership ? 'text-slate-900' : 'text-slate-400'}`}
+                        aria-label={`Ownership pentru rândul ${formatWarehouseItemNumber(row.itemNumber)}`}
+                      >
+                        <option value="">—</option>
+                        {OWNERSHIP_OPTIONS.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : row.ownership ? (
+                      WAREHOUSE_OWNERSHIP_LABELS[row.ownership] ?? row.ownership
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{row.distributor || '—'}</td>
                   <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                     {row.distributor ? (

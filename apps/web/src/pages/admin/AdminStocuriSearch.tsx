@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Building2,
   Download,
   Loader2,
   PackagePlus,
@@ -16,7 +17,9 @@ import {
   WAREHOUSE_SN_FACTORY_PREFIX,
   downloadAdminWarehouseWarrantyCertificate,
   getAuthToken,
+  WAREHOUSE_OWNERSHIP_LABELS,
   type WarehouseItemHistoryEvent,
+  type WarehouseOwnership,
   type WarehouseSavedItemBySerial,
 } from '../../lib/api'
 import { formatWarehouseSerialDisplay, useWarehouseSerialLookup } from './warehouseQrScan'
@@ -89,9 +92,22 @@ function describeHistoryEvent(ev: WarehouseItemHistoryEvent): { title: string; i
       return { title: 'Înregistrat de client în cont', icon: UserCheck, tone: 'bg-violet-100 text-violet-700' }
     case 'warranty_generated':
       return { title: 'Certificat de garanție generat', icon: ShieldCheck, tone: 'bg-teal-100 text-teal-700' }
+    case 'ownership_changed':
+      return {
+        title: ev.name ? 'Ownership setat' : 'Ownership eliminat',
+        icon: Building2,
+        tone: 'bg-slate-100 text-slate-700',
+      }
     default:
       return { title: ev.type, icon: PackagePlus, tone: 'bg-slate-100 text-slate-600' }
   }
+}
+
+function formatEventName(ev: WarehouseItemHistoryEvent) {
+  if (ev.type === 'ownership_changed' && ev.name) {
+    return WAREHOUSE_OWNERSHIP_LABELS[ev.name as WarehouseOwnership] ?? ev.name
+  }
+  return ev.name
 }
 
 function HistoryTimeline({ events }: { events: WarehouseItemHistoryEvent[] }) {
@@ -114,7 +130,7 @@ function HistoryTimeline({ events }: { events: WarehouseItemHistoryEvent[] }) {
                 <div className="min-w-0 pt-1">
                   <p className="text-sm font-semibold text-slate-900 font-['Inter']">
                     {title}
-                    {ev.name && <span className="font-normal text-slate-600"> — {ev.name}</span>}
+                    {ev.name && <span className="font-normal text-slate-600"> — {formatEventName(ev)}</span>}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500 font-['Inter']">
                     <time dateTime={ev.createdAt}>{formatDate(ev.createdAt, true)}</time>
@@ -182,6 +198,9 @@ function ItemDetails({ item }: { item: WarehouseSavedItemBySerial }) {
 
       <Section title="Depozit">
         <Field label="Locație">{warehouseItemLocationLabel(item)}</Field>
+        <Field label="Ownership">
+          {item.ownership ? WAREHOUSE_OWNERSHIP_LABELS[item.ownership] ?? item.ownership : '—'}
+        </Field>
         <Field label="Mod de înregistrare">
           {item.entryMethod ? ENTRY_METHOD_LABELS[item.entryMethod] ?? item.entryMethod : '—'}
         </Field>

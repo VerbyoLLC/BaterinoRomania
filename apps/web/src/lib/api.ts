@@ -3195,6 +3195,8 @@ export type WarehouseSavedItemRow = {
   client?: string | null
   /** Nume client introdus din Stocuri → Remove (separat de contul care revendică produsul). */
   clientName?: string | null
+  /** Proprietarul unității (Stocuri → Lista). */
+  ownership?: WarehouseOwnership | null
   /** Set when `client` matches a User id (înregistrare din cont). */
   clientAccount?: { email: string; firstName: string; lastName: string }
   /** Există un certificat PDF generat (descărcabil prin endpoint autentificat). */
@@ -3294,6 +3296,31 @@ export async function moveAdminWarehouseSavedItemsBatch(payload: {
     throw new Error((json as { error?: string }).error || 'Eroare la salvarea batch-ului.')
   }
   return json as { updated: number }
+}
+
+export type WarehouseOwnership = 'lithtech' | 'baterino'
+
+export const WAREHOUSE_OWNERSHIP_LABELS: Record<WarehouseOwnership, string> = {
+  lithtech: 'LithTech',
+  baterino: 'Baterino',
+}
+
+export async function setAdminWarehouseSavedItemsOwnership(payload: {
+  ids: string[]
+  ownership: WarehouseOwnership | null
+}): Promise<{ updated: number; ownership: WarehouseOwnership | null }> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-saved-items/ownership`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvarea ownership.')
+  }
+  return json as { updated: number; ownership: WarehouseOwnership | null }
 }
 
 export async function deleteAdminWarehouseSavedItem(id: string): Promise<void> {
