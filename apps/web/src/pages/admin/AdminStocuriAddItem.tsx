@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import jsQR from 'jsqr'
 import { Camera, CameraOff, Keyboard, Loader2, QrCode } from 'lucide-react'
 import {
   WAREHOUSE_SN_BODY_DIGITS,
@@ -13,56 +12,13 @@ import {
   warehouseSerialToBodyDigits,
   type AdminProductModelRow,
 } from '../../lib/api'
-
-type BarcodeDetectorLike = {
-  detect: (source: HTMLVideoElement) => Promise<{ rawValue?: string }[]>
-}
-
-function getBarcodeDetectorCtor(): (new (opts: { formats: string[] }) => BarcodeDetectorLike) | null {
-  if (typeof window === 'undefined') return null
-  const C = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => BarcodeDetectorLike })
-    .BarcodeDetector
-  return C ?? null
-}
-
-/** Camera + QR decode works in most modern browsers; native BarcodeDetector is optional (Chrome/Edge). */
-function canUseBrowserCamera(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return Boolean(navigator.mediaDevices?.getUserMedia)
-}
-
-const JSQR_MAX_FRAME_EDGE = 640
-const JSQR_FRAME_SKIP = 2
-
-function decodeQrFromVideoWithJsQR(video: HTMLVideoElement, canvas: HTMLCanvasElement): string | null {
-  const vw = video.videoWidth
-  const vh = video.videoHeight
-  if (vw < 16 || vh < 16) return null
-  let cw = vw
-  let ch = vh
-  const maxEdge = Math.max(vw, vh)
-  if (maxEdge > JSQR_MAX_FRAME_EDGE) {
-    const scale = JSQR_MAX_FRAME_EDGE / maxEdge
-    cw = Math.round(vw * scale)
-    ch = Math.round(vh * scale)
-  }
-  canvas.width = cw
-  canvas.height = ch
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) return null
-  ctx.drawImage(video, 0, 0, cw, ch)
-  const imageData = ctx.getImageData(0, 0, cw, ch)
-  const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' })
-  const data = result?.data?.trim()
-  return data || null
-}
-
-function formatWarehouseSerialDisplay(prefix: string, serialBody: string) {
-  const digits = String(serialBody ?? '').replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS)
-  if (!digits) return ''
-  const groups = digits.match(/.{1,4}/g) ?? []
-  return `${prefix} - ${groups.join(' - ')}`
-}
+import {
+  JSQR_FRAME_SKIP,
+  canUseBrowserCamera,
+  decodeQrFromVideoWithJsQR,
+  formatWarehouseSerialDisplay,
+  getBarcodeDetectorCtor,
+} from './warehouseQrScan'
 
 function useMediaQueryMdUp() {
   const [mdUp, setMdUp] = useState(() =>

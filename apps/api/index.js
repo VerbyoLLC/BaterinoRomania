@@ -724,7 +724,12 @@ function slugify(title) {
     .slice(0, 100) || 'produs'
 }
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  // The remote DB proxy drops idle sockets; recycle them before it does.
+  idleTimeoutMillis: 30_000,
+  keepAlive: true,
+})
 const prisma = new PrismaClient({ adapter })
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -9964,9 +9969,11 @@ function warehouseSavedItemToJson(row) {
     serialNumber: row.serialNumber,
     producedOn: row.producedOn || '',
     warehouseIn: row.warehouseIn instanceof Date ? row.warehouseIn.toISOString() : row.warehouseIn,
+    warehouseOut: row.warehouseOut instanceof Date ? row.warehouseOut.toISOString() : row.warehouseOut || null,
     location: row.location || 'depozit',
     distributor: row.distributor || null,
     client: row.client || null,
+    clientName: row.clientName || null,
     /* Status certificat de garanţie client (afişat în „Garanţie client” din admin Stocuri). */
     warrantyCertificateAvailable: Boolean(row.warrantyCertificateUrl),
     warrantyCertificateGeneratedAt:
@@ -10064,6 +10071,77 @@ const deleteWarehouseSavedItemHandler = async (req, res) => {
   } catch (err) {
     console.error('Delete warehouse saved item error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la ștergere.' })
+  }
+}
+
+const WAREHOUSE_BATCH_DESTINATIONS = ['distribuitor', 'client_final', 'service']
+
+/** Stocuri → Remove: mută un batch de unități la distribuitor / client final / service. */
+const moveWarehouseSavedItemsBatchHandler = async (req, res) => {
+  try {
+    const body = req.body || {}
+    const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map((id) => String(id || '').trim()).filter(Boolean))]
+    const location = String(body.location || '').trim()
+    const name = String(body.name || '').trim().slice(0, 200)
+    if (ids.length === 0) return res.status(400).json({ error: 'Batch-ul este gol.' })
+    if (ids.length > 500) return res.status(400).json({ error: 'Maximum 500 de unități într-un batch.' })
+    if (!WAREHOUSE_BATCH_DESTINATIONS.includes(location)) {
+      return res.status(400).json({ error: 'Alege destinația: Distribuitor, Client final sau Service.' })
+    }
+    if (!name && location !== 'service') {
+      return res.status(400).json({ error: 'Introdu numele clientului.' })
+    }
+    const warehouseOut = new Date()
+    const data =
+      location === 'distribuitor'
+        ? { location, distributor: name, warehouseOut }
+        : { location, clientName: name || null, warehouseOut }
+    const result = await prisma.$transaction(async (tx) => {
+      const found = await tx.warehouseSavedItem.count({ where: { id: { in: ids } } })
+      if (found !== ids.length) {
+        const e = new Error('MISSING_ITEMS')
+        e.code = 'MISSING_ITEMS'
+        throw e
+      }
+      return tx.warehouseSavedItem.updateMany({ where: { id: { in: ids } }, data })
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json({ updated: result.count, location, name: name || null, warehouseOut: warehouseOut.toISOString() })
+  } catch (err) {
+    if (err?.code === 'MISSING_ITEMS') {
+      return res.status(409).json({ error: 'Unele unități din batch nu mai există în stocuri. Reîncarcă pagina și scanează din nou.' })
+    }
+    console.error('Move warehouse batch error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la salvarea batch-ului.' })
+  }
+}
+
+const getWarehouseSavedItemBySerialHandler = async (req, res) => {
+  try {
+    const serialNumber = normalizeWarehouseSerialNumber(parseSerialFromQrPayload(String(req.query.sn || '')))
+    if (!isValidWarehouseSerialNumber(serialNumber)) {
+      return res.status(400).json({ error: SN_INVALID_MESSAGE })
+    }
+    const row = await prisma.warehouseSavedItem.findUnique({
+      where: { serialNumber },
+      include: {
+        warehouseStockUnit: {
+          select: { product: { select: { brand: true } } },
+        },
+      },
+    })
+    res.set('Cache-Control', 'no-store')
+    if (!row) {
+      return res.status(404).json({ error: `Numărul de serie ${serialNumber} nu există în stocuri.` })
+    }
+    const model = await prisma.productModel.findFirst({
+      where: { modelNumber: { equals: row.modelNumber, mode: 'insensitive' } },
+      select: { name: true },
+    })
+    return res.json({ ...warehouseSavedItemToJson(row), modelName: model?.name || null })
+  } catch (err) {
+    console.error('Get warehouse saved item by serial error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la căutarea numărului de serie.' })
   }
 }
 
@@ -10178,6 +10256,10 @@ app.post('/api/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware
 app.post('/admin/warehouse-stock-units', authMiddleware, adminAuthMiddleware, createWarehouseStockUnitHandler)
 app.get('/api/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
 app.get('/admin/warehouse-saved-items', authMiddleware, adminAuthMiddleware, listWarehouseSavedItemsHandler)
+app.get('/api/admin/warehouse-saved-items/by-serial', authMiddleware, adminAuthMiddleware, getWarehouseSavedItemBySerialHandler)
+app.get('/admin/warehouse-saved-items/by-serial', authMiddleware, adminAuthMiddleware, getWarehouseSavedItemBySerialHandler)
+app.post('/api/admin/warehouse-saved-items/batch-move', authMiddleware, adminAuthMiddleware, moveWarehouseSavedItemsBatchHandler)
+app.post('/admin/warehouse-saved-items/batch-move', authMiddleware, adminAuthMiddleware, moveWarehouseSavedItemsBatchHandler)
 app.delete('/api/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 app.delete('/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 

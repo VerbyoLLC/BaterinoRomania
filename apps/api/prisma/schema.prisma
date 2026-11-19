@@ -548,10 +548,14 @@ model WarehouseSavedItem {
   /** Formatted as MM/YYYY; derived from SN (cifrele 9–10 = an YY, 11–12 = lună în cele 16 cifre după LJC). */
   producedOn           String                     @default("")
   warehouseIn          DateTime                   @default(now())
+  /** Ieșirea din depozit (Stocuri → Remove); null cât timp unitatea e în depozit. */
+  warehouseOut         DateTime?
   /** La intrare în depozit se setează automat `depozit`; poate fi actualizat ulterior. */
   location             WarehouseSavedItemLocation @default(depozit)
   distributor          String?
   client               String?
+  /** Nume client introdus din admin (Stocuri → Remove); `client` rămâne rezervat contului care revendică produsul. */
+  clientName           String?
   /** URL public R2 către PDF-ul certificatului de garanţie generat (null = neg generat încă). */
   warrantyCertificateUrl String?                  @db.Text
   /** Timestamp-ul ultimei generări a certificatului. */

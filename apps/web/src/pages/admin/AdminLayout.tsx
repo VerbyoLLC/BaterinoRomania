@@ -117,6 +117,13 @@ function IconAddItem() {
     </svg>
   )
 }
+function IconRemoveItem() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+    </svg>
+  )
+}
 function IconLista() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -395,6 +402,7 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
     icon: <IconStocks />,
     children: [
       { to: '/admin/stocuri/add-item', label: 'Add Item', icon: <IconAddItem /> },
+      { to: '/admin/stocuri/remove', label: 'Remove', icon: <IconRemoveItem /> },
       { to: '/admin/stocuri/lista', label: 'Lista', icon: <IconLista /> },
     ],
   },

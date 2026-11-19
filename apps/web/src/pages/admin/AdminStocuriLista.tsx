@@ -156,7 +156,7 @@ export default function AdminStocuriLista() {
         if (loc !== filterLocation) return false
       }
       if (distQ && !String(row.distributor ?? '').toLowerCase().includes(distQ)) return false
-      if (clientQ && !String(row.client ?? '').toLowerCase().includes(clientQ)) return false
+      if (clientQ && !`${row.client ?? ''} ${row.clientName ?? ''}`.toLowerCase().includes(clientQ)) return false
       return true
     })
   }, [rows, filterModelNumber, filterLocation, searchDistributor, searchClient])
@@ -585,6 +585,7 @@ export default function AdminStocuriLista() {
               </th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Produced on</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Warehouse in</th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Warehouse out</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Locație</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Distributor</th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
@@ -605,19 +606,19 @@ export default function AdminStocuriLista() {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-8 text-center text-slate-500">
                   Se încarcă...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-8 text-center text-slate-500">
                   Nu există iteme salvate încă.
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 14 : 13} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
+                <td colSpan={isAdmin ? 15 : 14} className="px-4 py-10 text-center text-slate-500 font-['Inter']">
                   Niciun rezultat pentru filtrele curente.{' '}
                   <button
                     type="button"
@@ -654,6 +655,9 @@ export default function AdminStocuriLista() {
                   </td>
                   <td className="px-4 py-3">{row.producedOn || '—'}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatRoDate(row.warehouseIn)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {row.warehouseOut ? formatRoDate(row.warehouseOut) : <span className="text-slate-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatWarehouseLocation(row.location)}</td>
                   <td className="px-4 py-3">{row.distributor || '—'}</td>
                   <td className="px-4 py-3 whitespace-nowrap tabular-nums">
@@ -685,7 +689,7 @@ export default function AdminStocuriLista() {
                         })()}
                       </span>
                     ) : (
-                      row.client || '—'
+                      row.clientName || row.client || '—'
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap tabular-nums">

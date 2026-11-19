@@ -3188,9 +3188,13 @@ export type WarehouseSavedItemRow = {
   serialNumber: string
   producedOn: string
   warehouseIn: string
+  /** Setat la confirmarea unui batch în Stocuri → Remove; null cât timp unitatea e în depozit. */
+  warehouseOut?: string | null
   location?: WarehouseSavedItemLocation | string | null
   distributor?: string | null
   client?: string | null
+  /** Nume client introdus din Stocuri → Remove (separat de contul care revendică produsul). */
+  clientName?: string | null
   /** Set when `client` matches a User id (înregistrare din cont). */
   clientAccount?: { email: string; firstName: string; lastName: string }
   /** Există un certificat PDF generat (descărcabil prin endpoint autentificat). */
@@ -3231,6 +3235,47 @@ export async function getAdminWarehouseSavedItems(limit = 200): Promise<Warehous
     throw new Error((json as { error?: string }).error || 'Eroare la încărcarea listei de stocuri.')
   }
   return Array.isArray(json) ? (json as WarehouseSavedItemRow[]) : []
+}
+
+export type WarehouseSavedItemBySerial = WarehouseSavedItemRow & { modelName?: string | null }
+
+/** Caută o unitate din depozit după SN; `null` dacă SN-ul nu există în stocuri. */
+export async function getAdminWarehouseSavedItemBySerial(
+  serialNumber: string,
+): Promise<WarehouseSavedItemBySerial | null> {
+  const res = await fetch(
+    `${API_BASE}/admin/warehouse-saved-items/by-serial?sn=${encodeURIComponent(serialNumber)}`,
+    { headers: authHeaders(), cache: 'no-store' },
+  )
+  if (res.status === 404) return null
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la căutarea numărului de serie.')
+  }
+  return json as WarehouseSavedItemBySerial
+}
+
+export type WarehouseBatchDestination = 'distribuitor' | 'client_final' | 'service'
+
+export async function moveAdminWarehouseSavedItemsBatch(payload: {
+  ids: string[]
+  location: WarehouseBatchDestination
+  name: string
+}): Promise<{ updated: number }> {
+  const res = await fetch(`${API_BASE}/admin/warehouse-saved-items/batch-move`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Sesiune expirată.')
+    if (res.status === 403) throw new Error('Acces restricționat.')
+    throw new Error((json as { error?: string }).error || 'Eroare la salvarea batch-ului.')
+  }
+  return json as { updated: number }
 }
 
 export async function deleteAdminWarehouseSavedItem(id: string): Promise<void> {
