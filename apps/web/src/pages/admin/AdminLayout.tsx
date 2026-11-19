@@ -125,6 +125,14 @@ function IconSearchItem() {
     </svg>
   )
 }
+function IconValidateItem() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.5l2 2 4-4.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7.5L12 4l8 3.5V12c0 4.2-3.4 7.4-8 8-4.6-.6-8-3.8-8-8V7.5z" />
+    </svg>
+  )
+}
 function IconRemoveItem() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -413,6 +421,7 @@ const NAV_ITEMS: (NavLinkItem | NavGroupItem)[] = [
       { to: '/admin/stocuri/add-item', label: 'Add Item', icon: <IconAddItem /> },
       { to: '/admin/stocuri/remove', label: 'Remove', icon: <IconRemoveItem /> },
       { to: '/admin/stocuri/lista', label: 'Lista', icon: <IconLista /> },
+      { to: '/admin/stocuri/validate', label: 'Validate', icon: <IconValidateItem /> },
     ],
   },
   {

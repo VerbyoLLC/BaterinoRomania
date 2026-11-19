@@ -558,6 +558,9 @@ model WarehouseSavedItem {
   clientName           String?
   /** Proprietarul unității: lithtech | baterino; null = nesetat. */
   ownership            String?
+  /** Depozitul fizic alocat din Stocuri → Validate (ex. ploiesti); null = nealocat. */
+  warehouseSite        String?
+  warehouseSiteAt      DateTime?
   /** URL public R2 către PDF-ul certificatului de garanţie generat (null = neg generat încă). */
   warrantyCertificateUrl String?                  @db.Text
   /** Timestamp-ul ultimei generări a certificatului. */

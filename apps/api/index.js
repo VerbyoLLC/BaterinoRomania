@@ -9981,6 +9981,8 @@ function warehouseSavedItemToJson(row) {
     client: row.client || null,
     clientName: row.clientName || null,
     ownership: row.ownership || null,
+    warehouseSite: row.warehouseSite || null,
+    warehouseSiteAt: row.warehouseSiteAt ? row.warehouseSiteAt.toISOString() : null,
     /* Status certificat de garanţie client (afişat în „Garanţie client” din admin Stocuri). */
     warrantyCertificateAvailable: Boolean(row.warrantyCertificateUrl),
     warrantyCertificateGeneratedAt:
@@ -10174,6 +10176,36 @@ const setWarehouseSavedItemsOwnershipHandler = async (req, res) => {
   } catch (err) {
     console.error('Set warehouse ownership error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la salvarea ownership.' })
+  }
+}
+
+const WAREHOUSE_SITE_VALUES = ['ploiesti']
+
+/** Stocuri → Validate: alocă depozitul fizic al unei unități scanate. */
+const setWarehouseSavedItemSiteHandler = async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim()
+    const site = String(req.body?.site || '').trim().toLowerCase()
+    if (!id) return res.status(400).json({ error: 'ID lipsă.' })
+    if (!WAREHOUSE_SITE_VALUES.includes(site)) {
+      return res.status(400).json({ error: 'Alege depozitul.' })
+    }
+    const existing = await prisma.warehouseSavedItem.findUnique({ where: { id }, select: { id: true } })
+    if (!existing) return res.status(404).json({ error: 'Unitatea nu mai există în stocuri.' })
+    const warehouseSiteAt = new Date()
+    const row = await prisma.warehouseSavedItem.update({
+      where: { id },
+      data: {
+        warehouseSite: site,
+        warehouseSiteAt,
+        events: { create: { type: 'site_assigned', name: site, actorUserId: req.userId || null, createdAt: warehouseSiteAt } },
+      },
+    })
+    res.set('Cache-Control', 'no-store')
+    return res.json({ warehouseSite: row.warehouseSite, warehouseSiteAt: warehouseSiteAt.toISOString() })
+  } catch (err) {
+    console.error('Set warehouse site error:', err)
+    return res.status(500).json({ error: err?.message || 'Eroare la alocarea depozitului.' })
   }
 }
 
@@ -10386,6 +10418,8 @@ app.post('/api/admin/warehouse-saved-items/batch-move', authMiddleware, adminAut
 app.post('/admin/warehouse-saved-items/batch-move', authMiddleware, adminAuthMiddleware, moveWarehouseSavedItemsBatchHandler)
 app.post('/api/admin/warehouse-saved-items/ownership', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemsOwnershipHandler)
 app.post('/admin/warehouse-saved-items/ownership', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemsOwnershipHandler)
+app.post('/api/admin/warehouse-saved-items/:id/site', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemSiteHandler)
+app.post('/admin/warehouse-saved-items/:id/site', authMiddleware, adminAuthMiddleware, setWarehouseSavedItemSiteHandler)
 app.delete('/api/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 app.delete('/admin/warehouse-saved-items/:id', authMiddleware, adminAuthMiddleware, deleteWarehouseSavedItemHandler)
 

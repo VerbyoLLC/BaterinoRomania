@@ -9,6 +9,7 @@ import {
   Truck,
   UserCheck,
   UserRound,
+  Warehouse,
   Wrench,
   X,
   type LucideIcon,
@@ -18,8 +19,10 @@ import {
   downloadAdminWarehouseWarrantyCertificate,
   getAuthToken,
   WAREHOUSE_OWNERSHIP_LABELS,
+  WAREHOUSE_SITE_LABELS,
   type WarehouseItemHistoryEvent,
   type WarehouseOwnership,
+  type WarehouseSite,
   type WarehouseSavedItemBySerial,
 } from '../../lib/api'
 import { formatWarehouseSerialDisplay, useWarehouseSerialLookup } from './warehouseQrScan'
@@ -92,6 +95,8 @@ function describeHistoryEvent(ev: WarehouseItemHistoryEvent): { title: string; i
       return { title: 'Înregistrat de client în cont', icon: UserCheck, tone: 'bg-violet-100 text-violet-700' }
     case 'warranty_generated':
       return { title: 'Certificat de garanție generat', icon: ShieldCheck, tone: 'bg-teal-100 text-teal-700' }
+    case 'site_assigned':
+      return { title: 'Alocat în depozit', icon: Warehouse, tone: 'bg-orange-100 text-orange-700' }
     case 'ownership_changed':
       return {
         title: ev.name ? 'Ownership setat' : 'Ownership eliminat',
@@ -106,6 +111,9 @@ function describeHistoryEvent(ev: WarehouseItemHistoryEvent): { title: string; i
 function formatEventName(ev: WarehouseItemHistoryEvent) {
   if (ev.type === 'ownership_changed' && ev.name) {
     return WAREHOUSE_OWNERSHIP_LABELS[ev.name as WarehouseOwnership] ?? ev.name
+  }
+  if (ev.type === 'site_assigned' && ev.name) {
+    return WAREHOUSE_SITE_LABELS[ev.name as WarehouseSite] ?? ev.name
   }
   return ev.name
 }
@@ -198,6 +206,9 @@ function ItemDetails({ item }: { item: WarehouseSavedItemBySerial }) {
 
       <Section title="Depozit">
         <Field label="Locație">{warehouseItemLocationLabel(item)}</Field>
+        <Field label="Depozit alocat">
+          {item.warehouseSite ? WAREHOUSE_SITE_LABELS[item.warehouseSite] ?? item.warehouseSite : '—'}
+        </Field>
         <Field label="Ownership">
           {item.ownership ? WAREHOUSE_OWNERSHIP_LABELS[item.ownership] ?? item.ownership : '—'}
         </Field>
