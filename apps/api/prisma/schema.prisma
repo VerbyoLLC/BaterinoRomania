@@ -564,9 +564,28 @@ model WarehouseSavedItem {
   clientReceiptDate    String?
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @updatedAt
+  events               WarehouseItemEvent[]
 
   @@index([warehouseIn])
   @@index([location])
+}
+
+/** Istoric unitate (Stocuri → Search): intrare depozit, ieșiri, înregistrare client, certificat. */
+model WarehouseItemEvent {
+  id                   String             @id @default(cuid())
+  warehouseSavedItemId String
+  warehouseSavedItem   WarehouseSavedItem @relation(fields: [warehouseSavedItemId], references: [id], onDelete: Cascade)
+  /** warehouse_in | moved | client_registered | warranty_generated */
+  type                 String
+  /** Destinația la `moved` (distribuitor | client_final | service). */
+  location             String?
+  /** Distribuitor / nume client introdus la mutare. */
+  name                 String?
+  /** Userul care a declanșat evenimentul (admin sau client); null la evenimentele reconstituite. */
+  actorUserId          String?
+  createdAt            DateTime           @default(now())
+
+  @@index([warehouseSavedItemId, createdAt])
 }
 
 /**

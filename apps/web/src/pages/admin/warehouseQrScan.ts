@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import jsQR from 'jsqr'
-import { WAREHOUSE_SN_BODY_DIGITS } from '../../lib/api'
+import {
+  WAREHOUSE_SN_BODY_DIGITS,
+  WAREHOUSE_SN_FACTORY_PREFIX,
+  getAdminWarehouseSavedItemBySerial,
+  type WarehouseSavedItemBySerial,
+} from '../../lib/api'
 
 type BarcodeDetectorLike = {
   detect: (source: HTMLVideoElement) => Promise<{ rawValue?: string }[]>
@@ -50,6 +55,45 @@ export function formatWarehouseSerialDisplay(prefix: string, serialBody: string)
   if (!digits) return ''
   const groups = digits.match(/.{1,4}/g) ?? []
   return `${prefix} - ${groups.join(' - ')}`
+}
+
+/** Looks up a stock unit by the 16 SN digits after LJC (Stocuri → Search / Remove). */
+export function useWarehouseSerialLookup() {
+  const [serialBody, setSerialBody] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [item, setItem] = useState<WarehouseSavedItemBySerial | null>(null)
+  const [notFound, setNotFound] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const clear = useCallback(() => {
+    setSerialBody('')
+    setItem(null)
+    setNotFound(false)
+    setError(null)
+  }, [])
+
+  const lookup = useCallback(async (digits: string) => {
+    setSerialBody(digits)
+    setItem(null)
+    setNotFound(false)
+    setError(null)
+    if (digits.length !== WAREHOUSE_SN_BODY_DIGITS) {
+      setError(`Codul citit nu conține un SN valid (${WAREHOUSE_SN_FACTORY_PREFIX} + ${WAREHOUSE_SN_BODY_DIGITS} cifre).`)
+      return
+    }
+    setSearching(true)
+    try {
+      const found = await getAdminWarehouseSavedItemBySerial(`${WAREHOUSE_SN_FACTORY_PREFIX}${digits}`)
+      if (found) setItem(found)
+      else setNotFound(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Eroare la căutarea numărului de serie.')
+    } finally {
+      setSearching(false)
+    }
+  }, [])
+
+  return { serialBody, searching, item, notFound, error, lookup, clear }
 }
 
 /** Camera QR scanner: mount `videoRef` on a `<video>` while `scanning` is true; stops after the first decode. */

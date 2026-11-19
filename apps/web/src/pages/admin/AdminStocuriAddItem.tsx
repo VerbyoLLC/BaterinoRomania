@@ -19,6 +19,7 @@ import {
   formatWarehouseSerialDisplay,
   getBarcodeDetectorCtor,
 } from './warehouseQrScan'
+import WarehouseSerialGroupsInput, { EMPTY_SN_GROUPS, serialDigitsToGroups } from './WarehouseSerialGroupsInput'
 
 function useMediaQueryMdUp() {
   const [mdUp, setMdUp] = useState(() =>
@@ -58,10 +59,9 @@ export default function AdminStocuriAddItem() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [manualSnModalOpen, setManualSnModalOpen] = useState(false)
   const [qrSaveModalOpen, setQrSaveModalOpen] = useState(false)
-  const [modalSnBody, setModalSnBody] = useState('')
+  const [modalSnGroups, setModalSnGroups] = useState<string[]>(EMPTY_SN_GROUPS)
+  const modalSnBody = modalSnGroups.join('')
   const [modalError, setModalError] = useState<string | null>(null)
-  const modalSnInputRef = useRef<HTMLInputElement>(null)
-  const manualMobileSnInputRef = useRef<HTMLInputElement>(null)
   const [submitting, setSubmitting] = useState(false)
   const isMdUp = useMediaQueryMdUp()
   const [formError, setFormError] = useState<string | null>(null)
@@ -112,19 +112,15 @@ export default function AdminStocuriAddItem() {
   useEffect(() => () => stopScanner(), [stopScanner])
 
   const openManualSnModal = useCallback(() => {
-    setModalSnBody(serialBody.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS))
+    setModalSnGroups(serialDigitsToGroups(serialBody))
     setModalError(null)
     setManualSnModalOpen(true)
   }, [serialBody])
 
-  useEffect(() => {
-    if (!manualSnModalOpen) return
-    const id = window.setTimeout(() => {
-      if (isMdUp) modalSnInputRef.current?.focus()
-      else manualMobileSnInputRef.current?.focus()
-    }, 50)
-    return () => window.clearTimeout(id)
-  }, [manualSnModalOpen, isMdUp])
+  const changeModalSnGroups = (next: string[]) => {
+    setModalSnGroups(next)
+    setModalError(null)
+  }
 
   useEffect(() => {
     if (!manualSnModalOpen) return
@@ -325,7 +321,7 @@ export default function AdminStocuriAddItem() {
     })
     if (ok) {
       setManualSnModalOpen(false)
-      setModalSnBody('')
+      setModalSnGroups(EMPTY_SN_GROUPS)
     }
   }
 
@@ -366,34 +362,9 @@ export default function AdminStocuriAddItem() {
             </p>
             <div className="mt-5">
               <span className="mb-1.5 block text-xs font-medium text-slate-600 font-['Inter']">Număr serie</span>
-              <label htmlFor="modal-sn-digits-mobile" className="sr-only">
-                Cifre după {WAREHOUSE_SN_FACTORY_PREFIX}
-              </label>
-              <div className="flex rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-slate-400">
-                <span
-                  className="flex items-center px-3 py-2.5 bg-slate-100 text-slate-700 font-mono text-sm font-semibold border-r border-gray-300 shrink-0"
-                  aria-hidden
-                >
-                  {WAREHOUSE_SN_FACTORY_PREFIX}
-                </span>
-                <input
-                  ref={manualMobileSnInputRef}
-                  id="modal-sn-digits-mobile"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={modalSnBody}
-                  maxLength={WAREHOUSE_SN_BODY_DIGITS}
-                  onChange={(e) => {
-                    setModalSnBody(e.target.value.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS))
-                    setModalError(null)
-                  }}
-                  placeholder="5131400325070001"
-                  className="min-w-0 flex-1 border-0 px-3 py-2.5 text-sm font-mono text-slate-900 focus:outline-none focus:ring-0"
-                />
-              </div>
+              <WarehouseSerialGroupsInput groups={modalSnGroups} onChange={changeModalSnGroups} autoFocus />
               <p className="mt-1.5 text-xs text-slate-400 font-mono font-['Inter']">
-                {modalSnBody.replace(/\D/g, '').length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
+                {modalSnBody.length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
               </p>
             </div>
 
@@ -488,34 +459,9 @@ export default function AdminStocuriAddItem() {
               fix. Introdu doar cele {WAREHOUSE_SN_BODY_DIGITS} cifre (tensiune, capacitate, apoi YY/MM la cifrele 9–12, lot).
             </p>
             <div className="mt-5">
-              <label htmlFor="modal-sn-digits" className="sr-only">
-                Cifre după {WAREHOUSE_SN_FACTORY_PREFIX}
-              </label>
-              <div className="flex rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-slate-400">
-                <span
-                  className="flex items-center px-3 py-2.5 bg-slate-100 text-slate-700 font-mono text-sm font-semibold border-r border-gray-300 shrink-0"
-                  aria-hidden
-                >
-                  {WAREHOUSE_SN_FACTORY_PREFIX}
-                </span>
-                <input
-                  ref={modalSnInputRef}
-                  id="modal-sn-digits"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={modalSnBody}
-                  maxLength={WAREHOUSE_SN_BODY_DIGITS}
-                  onChange={(e) => {
-                    setModalSnBody(e.target.value.replace(/\D/g, '').slice(0, WAREHOUSE_SN_BODY_DIGITS))
-                    setModalError(null)
-                  }}
-                  placeholder="5131400325070001"
-                  className="min-w-0 flex-1 border-0 px-3 py-2.5 text-sm font-mono text-slate-900 focus:outline-none focus:ring-0"
-                />
-              </div>
+              <WarehouseSerialGroupsInput groups={modalSnGroups} onChange={changeModalSnGroups} autoFocus />
               <p className="mt-1.5 text-xs text-slate-400 font-mono font-['Inter']">
-                {modalSnBody.replace(/\D/g, '').length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
+                {modalSnBody.length}/{WAREHOUSE_SN_BODY_DIGITS} cifre
               </p>
             </div>
             {modalError && (

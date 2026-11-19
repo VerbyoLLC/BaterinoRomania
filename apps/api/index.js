@@ -3430,6 +3430,11 @@ app.post('/api/client/registered-products/claim', authMiddleware, clientAuthMidd
         e.code = 'UPDATE_FAILED'
         throw e
       }
+      if (existingClient !== userId) {
+        await tx.warehouseItemEvent.create({
+          data: { warehouseSavedItemId: saved.id, type: 'client_registered', location: 'client_final', actorUserId: userId },
+        })
+      }
       return tx.warehouseSavedItem.findUnique({
         where: { id: saved.id },
         include: registeredProductInclude,
@@ -4404,6 +4409,7 @@ app.post(
             data: {
               warrantyCertificateUrl: internalUrl,
               warrantyCertificateGeneratedAt: new Date(),
+              events: { create: { type: 'warranty_generated', actorUserId: req.userId || null } },
             },
           })
           /* Răspundem cu PDF-ul direct (force download). Browser-ul va salva
@@ -10103,7 +10109,18 @@ const moveWarehouseSavedItemsBatchHandler = async (req, res) => {
         e.code = 'MISSING_ITEMS'
         throw e
       }
-      return tx.warehouseSavedItem.updateMany({ where: { id: { in: ids } }, data })
+      const updated = await tx.warehouseSavedItem.updateMany({ where: { id: { in: ids } }, data })
+      await tx.warehouseItemEvent.createMany({
+        data: ids.map((warehouseSavedItemId) => ({
+          warehouseSavedItemId,
+          type: 'moved',
+          location,
+          name: name || null,
+          actorUserId: req.userId || null,
+          createdAt: warehouseOut,
+        })),
+      })
+      return updated
     })
     res.set('Cache-Control', 'no-store')
     return res.json({ updated: result.count, location, name: name || null, warehouseOut: warehouseOut.toISOString() })
@@ -10126,19 +10143,74 @@ const getWarehouseSavedItemBySerialHandler = async (req, res) => {
       where: { serialNumber },
       include: {
         warehouseStockUnit: {
-          select: { product: { select: { brand: true } } },
+          select: {
+            entryMethod: true,
+            product: { select: { brand: true, title: true, sku: true, cardImage: true, images: true } },
+          },
         },
+        events: { orderBy: { createdAt: 'asc' } },
       },
     })
     res.set('Cache-Control', 'no-store')
     if (!row) {
       return res.status(404).json({ error: `Numărul de serie ${serialNumber} nu există în stocuri.` })
     }
-    const model = await prisma.productModel.findFirst({
-      where: { modelNumber: { equals: row.modelNumber, mode: 'insensitive' } },
-      select: { name: true },
+    const clientId = String(row.client || '').trim()
+    const userIds = [...new Set([clientId, ...row.events.map((ev) => ev.actorUserId)].filter(Boolean))]
+    const [model, users] = await Promise.all([
+      prisma.productModel.findFirst({
+        where: { modelNumber: { equals: row.modelNumber, mode: 'insensitive' } },
+        select: { name: true },
+      }),
+      userIds.length
+        ? prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          })
+        : [],
+    ])
+    const usersById = new Map(users.map((u) => [u.id, u]))
+    const clientUser = clientId ? usersById.get(clientId) : null
+    const history = row.events.map((ev) => {
+      const actor = ev.actorUserId ? usersById.get(ev.actorUserId) : null
+      return {
+        id: ev.id,
+        type: ev.type,
+        location: ev.location,
+        name: ev.name,
+        createdAt: ev.createdAt.toISOString(),
+        actor: actor
+          ? {
+              name: `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email,
+              role: actor.role,
+            }
+          : null,
+      }
     })
-    return res.json({ ...warehouseSavedItemToJson(row), modelName: model?.name || null })
+    const unit = row.warehouseStockUnit
+    const galleryImages = Array.isArray(unit?.product?.images) ? unit.product.images : []
+    const productImage =
+      String(unit?.product?.cardImage || '').trim() ||
+      galleryImages.find((u) => typeof u === 'string' && u.trim()) ||
+      null
+    return res.json({
+      ...warehouseSavedItemToJson(row),
+      modelName: model?.name || null,
+      productTitle: unit?.product?.title || null,
+      productSku: unit?.product?.sku || null,
+      productImage,
+      entryMethod: unit?.entryMethod || null,
+      history,
+      ...(clientUser
+        ? {
+            clientAccount: {
+              email: clientUser.email,
+              firstName: clientUser.firstName || '',
+              lastName: clientUser.lastName || '',
+            },
+          }
+        : {}),
+    })
   } catch (err) {
     console.error('Get warehouse saved item by serial error:', err)
     return res.status(500).json({ error: err?.message || 'Eroare la căutarea numărului de serie.' })
@@ -10234,6 +10306,14 @@ const createWarehouseStockUnitHandler = async (req, res) => {
           producedOn,
           warehouseIn: stockUnit.warehouseReceivedAt,
           location: 'depozit',
+          events: {
+            create: {
+              type: 'warehouse_in',
+              location: 'depozit',
+              actorUserId: req.userId || null,
+              createdAt: stockUnit.warehouseReceivedAt,
+            },
+          },
         },
       })
       return stockUnit

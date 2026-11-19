@@ -61,6 +61,7 @@ import AdminProductModels from './pages/admin/AdminProductModels'
 import AdminStocuriAddItem from './pages/admin/AdminStocuriAddItem'
 import AdminStocuriLista from './pages/admin/AdminStocuriLista'
 import AdminStocuriRemove from './pages/admin/AdminStocuriRemove'
+import AdminStocuriSearch from './pages/admin/AdminStocuriSearch'
 import AdminWarrantyCertificatePreview from './pages/admin/AdminWarrantyCertificatePreview'
 import Blog from './pages/Blog'
 import BlogArticle from './pages/BlogArticle'
@@ -144,6 +145,7 @@ export default function App() {
           <Route path="stocuri/add-item" element={<AdminStocuriAddItem />} />
           <Route path="stocuri/lista" element={<AdminStocuriLista />} />
           <Route path="stocuri/remove" element={<AdminStocuriRemove />} />
+          <Route path="stocuri/search" element={<AdminStocuriSearch />} />
           <Route path="orders"    element={<AdminOrders />} />
           <Route path="oferte" element={<Navigate to={adminOfferNewFreshPath()} replace />} />
           <Route path="oferte/noua" element={<AdminOffersNew />} />

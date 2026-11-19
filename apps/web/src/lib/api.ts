@@ -3237,7 +3237,25 @@ export async function getAdminWarehouseSavedItems(limit = 200): Promise<Warehous
   return Array.isArray(json) ? (json as WarehouseSavedItemRow[]) : []
 }
 
-export type WarehouseSavedItemBySerial = WarehouseSavedItemRow & { modelName?: string | null }
+export type WarehouseSavedItemBySerial = WarehouseSavedItemRow & {
+  modelName?: string | null
+  productTitle?: string | null
+  productSku?: string | null
+  /** Imaginea de card a produsului din catalog (sau prima din galerie). */
+  productImage?: string | null
+  entryMethod?: 'qr_scan' | 'manual' | string | null
+  /** Istoricul unității, în ordine cronologică. */
+  history?: WarehouseItemHistoryEvent[]
+}
+
+export type WarehouseItemHistoryEvent = {
+  id: string
+  type: 'warehouse_in' | 'moved' | 'client_registered' | 'warranty_generated' | string
+  location?: string | null
+  name?: string | null
+  createdAt: string
+  actor?: { name: string; role: string } | null
+}
 
 /** Caută o unitate din depozit după SN; `null` dacă SN-ul nu există în stocuri. */
 export async function getAdminWarehouseSavedItemBySerial(
